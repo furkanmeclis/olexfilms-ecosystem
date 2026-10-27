@@ -2139,6 +2139,7 @@ type Order struct {
 	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 	DeliveryMethodID          pgtype.Int8        `json:"delivery_method_id"`
+	CreatedBySeller           bool               `json:"created_by_seller"`
 }
 
 type OrderItem struct {

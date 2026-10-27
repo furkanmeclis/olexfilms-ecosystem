@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Mode de livraison supprimé.",
   "delivery_methods.delete_failed": "Le mode de livraison n'a pas pu être supprimé.",
   "delivery_methods.empty": "Aucun mode de livraison.",
-  "shipping.download_slip": "Bon de commande (PDF)"
+  "shipping.download_slip": "Bon de commande (PDF)",
+  "center_form.title": "Nouvelle commande pour un revendeur",
+  "center_form.dealer": "Revendeur",
+  "center_form.dealer_placeholder": "Sélectionnez un revendeur",
+  "center_form.dealer_search": "Rechercher un nom ou code de revendeur…",
+  "center_form.dealer_none": "Aucun revendeur rattaché au centre.",
+  "center_form.dealer_required": "Sélectionnez un revendeur.",
+  "center_form.unit_price": "Prix unitaire (facultatif)",
+  "center_form.unit_price_placeholder": "Automatique",
+  "center_form.price_rule": "La commande est créée approuvée et part à l'entrepôt. Sans prix unitaire, le prix d'achat du revendeur s'applique, sinon 0 et la ligne est signalée.",
+  "center_form.create": "Créer la commande",
+  "center_form.created": "Commande {{no}} créée et approuvée.",
+  "center_form.price_missing_warning": "Certaines lignes n'ont pas de prix ; elles ont été enregistrées à 0.",
+  "form.errors.price_invalid": "Le prix unitaire doit être 0 ou plus, avec au plus 4 décimales.",
+  "items.price_missing": "Pas de prix",
+  "detail.created_by_seller": "Créée par le centre"
 }

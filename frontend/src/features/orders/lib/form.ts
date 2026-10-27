@@ -10,6 +10,8 @@ export const MAX_QUANTITY = 1_000_000;
 export const NOTE_MAX = 1000;
 const METERS_RE = /^[0-9]{1,8}(\.[0-9]{1,2})?$/;
 const INT_RE = /^[0-9]+$/;
+/** order_items.unit_price: NUMERIC(14,4), never negative (TEC-1024). */
+const UNIT_PRICE_RE = /^[0-9]{1,10}(\.[0-9]{1,4})?$/;
 
 /** One line of the order form; amount is the raw input. */
 export type OrderFormLine = {
@@ -18,9 +20,11 @@ export type OrderFormLine = {
   name: string;
   unit_type: string;
   amount: string;
+  /** Center order for a dealer only (TEC-1024): typed unit price, "" = none. */
+  unit_price?: string;
 };
 
-export type LineError = "quantity_invalid" | "meters_invalid";
+export type LineError = "quantity_invalid" | "meters_invalid" | "price_invalid";
 
 export type OrderFormErrors = {
   /** Whole-form problem: no line, or more than the API accepts. */
@@ -36,7 +40,14 @@ export function normalizeAmount(raw: string): string {
   return raw.trim().replace(",", ".");
 }
 
+/** A typed unit price: empty (none) or >= 0 with at most 4 decimals. */
+export function unitPriceValid(raw: string | undefined): boolean {
+  const v = normalizeAmount(raw ?? "");
+  return v === "" || UNIT_PRICE_RE.test(v);
+}
+
 function lineError(line: OrderFormLine): LineError | null {
+  if (!unitPriceValid(line.unit_price)) return "price_invalid";
   const v = normalizeAmount(line.amount);
   if (isRoll(line.unit_type)) {
     return METERS_RE.test(v) && Number(v) > 0 ? null : "meters_invalid";
@@ -66,13 +77,21 @@ export function formIsValid(errors: OrderFormErrors): boolean {
   return !errors.form && Object.keys(errors.lines).length === 0;
 }
 
-/** OrderItemInput lines: quantity for pieces, meters for rolls. */
-export function toItemInputs(lines: OrderFormLine[]): OrderItemInput[] {
+/**
+ * OrderItemInput lines: quantity for pieces, meters for rolls; with
+ * withPrice (center order for a dealer, TEC-1024) a typed unit price too.
+ */
+export function toItemInputs(
+  lines: OrderFormLine[],
+  withPrice = false,
+): OrderItemInput[] {
   return lines.map((line) => {
     const v = normalizeAmount(line.amount);
-    return isRoll(line.unit_type)
+    const base: OrderItemInput = isRoll(line.unit_type)
       ? { product_uuid: line.product_uuid, meters: v }
       : { product_uuid: line.product_uuid, quantity: Number(v) };
+    const price = normalizeAmount(line.unit_price ?? "");
+    return withPrice && price !== "" ? { ...base, unit_price: price } : base;
   });
 }
 

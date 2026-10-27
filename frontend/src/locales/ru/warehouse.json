@@ -687,5 +687,7 @@
   "entry_import.save_template": "Сохранить это сопоставление как шаблон",
   "entry_import.template_name": "Название шаблона",
   "entry_import.save": "Сохранить",
-  "entry_import.template_saved": "Шаблон сопоставления сохранён."
+  "entry_import.template_saved": "Шаблон сопоставления сохранён.",
+  "sections.orders.title": "Заказы к подготовке",
+  "sections.orders.description": "Одобренные, готовящиеся и готовые заказы дилеров: комплектация, сканирование штрихкодов и отгрузка."
 }

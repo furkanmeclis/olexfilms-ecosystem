@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { ShoppingCart, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { catalogService } from "@/features/catalog/services/catalog.service";
 import { pricingService } from "@/features/catalog/services/pricing.service";
 import {
   canEditDraft,
@@ -40,8 +39,9 @@ import {
   ordersService,
   type Order,
 } from "@/features/orders/services/orders.service";
+import { CenterOrderForm } from "@/features/orders/components/center-order-form";
+import { ProductSearch } from "@/features/orders/components/product-search";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -62,92 +62,6 @@ function LinePrice({ productUuid }: { productUuid: string }) {
         .map((p) => format.currency(amountNumber(p.purchase_price), p.currency))
         .join(" · ")}
     </span>
-  );
-}
-
-function ProductSearch({
-  onPick,
-  picked,
-}: {
-  onPick: (p: {
-    uuid: string;
-    sku: string;
-    name: string;
-    unit_type: string;
-  }) => void;
-  picked: Set<string>;
-}) {
-  const { t } = useLocale();
-  const [q, setQ] = useState("");
-  const term = useDebounce(q.trim(), 300);
-  const products = useQuery({
-    queryKey: orderKeys.products(term),
-    queryFn: () =>
-      catalogService.listProducts({ q: term, active: true, limit: 10 }),
-    enabled: term.length >= 2,
-  });
-  const items = products.data?.items ?? [];
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="order-product-search">{t("orders.form.product")}</Label>
-      <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
-        <Input
-          id="order-product-search"
-          type="search"
-          className="ps-9"
-          value={q}
-          maxLength={100}
-          placeholder={t("orders.form.product_placeholder")}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-      {term.length < 2 ? (
-        <p className="text-muted-foreground text-xs">
-          {t("orders.form.product_hint")}
-        </p>
-      ) : products.isLoading ? (
-        <p className="text-muted-foreground text-sm">{t("orders.loading")}</p>
-      ) : items.length === 0 ? (
-        <p className="text-muted-foreground text-sm" data-testid="product-none">
-          {t("orders.form.product_none")}
-        </p>
-      ) : (
-        <ul className="divide-y rounded-lg border">
-          {items.map((p) => (
-            <li
-              key={p.uuid}
-              className="flex items-center justify-between gap-2 p-2"
-              data-testid="product-option"
-              data-sku={p.sku}
-            >
-              <div className="min-w-0">
-                <div className="truncate font-medium">{p.name}</div>
-                <div className="text-muted-foreground text-xs" dir="ltr">
-                  {p.sku} ·{" "}
-                  {isRoll(p.unit_type)
-                    ? t("orders.unit.meters")
-                    : t("orders.unit.pieces")}
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={picked.has(p.uuid)}
-                data-testid="product-add"
-                onClick={() => onPick(p)}
-              >
-                <Plus className="size-4" />
-                {picked.has(p.uuid)
-                  ? t("orders.form.product_added")
-                  : t("orders.form.product_add")}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 
@@ -439,13 +353,19 @@ export function OrderFormPage({ slug, uuid }: { slug: string; uuid?: string }) {
   const { can } = usePermission();
   const org = useActiveOrganization(slug);
   const access = resolveOrderListAccess(can, org?.type);
+  // TEC-1024: the center opens a new order for one of its dealers.
+  const forDealer = !uuid && access.canCreateForDealer && Boolean(org);
   const order = useQuery({
     queryKey: orderKeys.detail(uuid ?? ""),
     queryFn: () => ordersService.get(uuid ?? ""),
     enabled: Boolean(uuid) && access.canCreate,
   });
 
-  const title = uuid ? t("orders.form.edit_title") : t("orders.form.title");
+  const title = uuid
+    ? t("orders.form.edit_title")
+    : access.canCreateForDealer
+      ? t("orders.center_form.title")
+      : t("orders.form.title");
   const header = (
     <PageHeader
       title={title}
@@ -469,6 +389,14 @@ export function OrderFormPage({ slug, uuid }: { slug: string; uuid?: string }) {
     />
   );
 
+  if (forDealer && org) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <CenterOrderForm slug={slug} centerUuid={org.uuid} />
+      </div>
+    );
+  }
   if (!access.canCreate) {
     return (
       <div className="space-y-6">

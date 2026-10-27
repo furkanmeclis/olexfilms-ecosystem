@@ -12914,6 +12914,8 @@ export interface paths {
         /**
          * Open a draft order of the active organization to its parent (K6)
          * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
+         *
+         *     TEC-1024: with `buyer_org_uuid` the active organization must be the center (otherwise 403) and the buyer an active dealer directly under it in the same brand (otherwise 400 on `buyer_org_uuid`). The order is opened by the center as seller and starts `approved` (prices locked, rate frozen, `created_by_seller` true), so the warehouse flow (preparing -> unit assignment -> ready -> shipped -> received) continues unchanged; the dealer's members holding orders.read are notified (ORDER_CREATED_BY_SELLER). Prices never block on this path: an item's `unit_price` (>= 0) wins (price_source `manual`), else the dealer's purchase price, else 0 with price_source `missing` and `price_missing` true.
          */
         post: operations["createOrder"];
         delete?: never;
@@ -26564,8 +26566,13 @@ export interface components {
              * @example 80.0000
              */
             unit_price: string;
-            /** @enum {string} */
-            price_source: "list" | "override" | "distributor_dealer";
+            /**
+             * @description manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024)
+             * @enum {string}
+             */
+            price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing";
+            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024) */
+            price_missing: boolean;
             /** @example 240.00 */
             line_total: string;
             note: string | null;
@@ -26613,6 +26620,8 @@ export interface components {
             uuid: string;
             /** @example ORD-00000001 */
             order_no: string;
+            /** @description The center opened the order for the dealer; it started approved (TEC-1024) */
+            created_by_seller: boolean;
             status: components["schemas"]["OrderStatus"];
             /** @description Status in the request language */
             status_label: string;
@@ -26854,10 +26863,12 @@ export interface components {
             data: components["schemas"]["OrderPickList"];
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @description Prices are never accepted from the client (K8). */
+        /** @description Prices are never accepted from the client (K8), except `unit_price` on a center order for a dealer (TEC-1024). */
         OrderItemInput: {
             /** Format: uuid */
             product_uuid: string;
+            /** @description TEC-1024: only with buyer_org_uuid (center for a dealer), >= 0; a JSON number is accepted too. Ignored on the buyer's own order. */
+            unit_price?: string;
             /** @description Pieces (piece/fixed products) */
             quantity?: number;
             /** @description Meters (roll_meter products); a JSON number is accepted too */
@@ -26869,6 +26880,11 @@ export interface components {
         };
         OrderCreateInput: {
             note?: string;
+            /**
+             * Format: uuid
+             * @description TEC-1024: the center opens an approved order for this active dealer directly under it. Only for a center (403 otherwise).
+             */
+            buyer_org_uuid?: string;
             items: components["schemas"]["OrderItemInput"][];
         };
         /** @enum {string} */

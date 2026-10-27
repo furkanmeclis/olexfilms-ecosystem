@@ -687,5 +687,7 @@
   "entry_import.save_template": "Guardar esta asignación como plantilla",
   "entry_import.template_name": "Nombre de la plantilla",
   "entry_import.save": "Guardar",
-  "entry_import.template_saved": "Plantilla de asignación guardada."
+  "entry_import.template_saved": "Plantilla de asignación guardada.",
+  "sections.orders.title": "Pedidos por preparar",
+  "sections.orders.description": "Pedidos de distribuidores aprobados, en preparación y listos: preparación, escaneo de códigos y envío."
 }

@@ -20,6 +20,7 @@ const captured = vi.hoisted(() => ({
   tables: [] as Record<string, unknown>[],
   exports: [] as Record<string, unknown>[],
   push: vi.fn(),
+  search: "" as string,
 }));
 
 vi.mock("next/link", () => ({
@@ -35,6 +36,7 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: captured.push }),
+  useSearchParams: () => new URLSearchParams(captured.search ?? ""),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/providers/locale-provider", () => ({
@@ -104,6 +106,7 @@ beforeEach(() => {
   window.localStorage.clear();
   captured.tables = [];
   captured.exports = [];
+  captured.search = "";
   state.grants = new Set([
     "orders.read",
     "orders.write",
@@ -163,6 +166,7 @@ function order(over: Partial<Order> = {}): Order {
   return {
     uuid: "o1",
     order_no: "ORD-1",
+    created_by_seller: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -352,12 +356,18 @@ describe("OrdersListPage (TEC-374 DataTable)", () => {
     expect(api.transition).toHaveBeenCalledWith("o1", "submitted", undefined);
   });
 
-  it("center: incoming only, no new order, no tabs", async () => {
+  it("center: incoming only, no tabs, new order for a dealer (TEC-1024)", async () => {
     state.orgType = "center";
     await render();
     expect(container.querySelectorAll("[role=tab]")).toHaveLength(0);
     expect(lastQuery()?.side).toBe("seller");
-    expect(container.querySelector("[data-testid=new-order]")).toBeNull();
+    expect(container.querySelector("[data-testid=new-order]")).not.toBeNull();
+  });
+
+  it("seeds the status filter from ?status= (warehouse queue, TEC-1024)", async () => {
+    captured.search = "status=approved,preparing,bogus";
+    await render();
+    expect(lastQuery()?.status).toBe("approved,preparing");
   });
 
   it("dealer: outgoing only, no party filter", async () => {

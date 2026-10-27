@@ -48,16 +48,19 @@ type AssignedUnitView struct {
 // frozen at approval. Assigned is the amount covered by the assigned units
 // (quantity, or meters for roll lines).
 type ItemView struct {
-	UUID        uuid.UUID          `json:"uuid"`
-	Product     ProductRef         `json:"product"`
-	Quantity    *int32             `json:"quantity"`
-	Meters      *string            `json:"meters"`
-	UnitPrice   string             `json:"unit_price"`
-	PriceSource string             `json:"price_source"`
-	LineTotal   string             `json:"line_total"`
-	Note        *string            `json:"note"`
-	Assigned    string             `json:"assigned"`
-	Units       []AssignedUnitView `json:"units"`
+	UUID        uuid.UUID  `json:"uuid"`
+	Product     ProductRef `json:"product"`
+	Quantity    *int32     `json:"quantity"`
+	Meters      *string    `json:"meters"`
+	UnitPrice   string     `json:"unit_price"`
+	PriceSource string     `json:"price_source"`
+	// PriceMissing: the line has no price (0) — a center-opened order
+	// with neither a typed nor a purchase price (TEC-1024).
+	PriceMissing bool               `json:"price_missing"`
+	LineTotal    string             `json:"line_total"`
+	Note         *string            `json:"note"`
+	Assigned     string             `json:"assigned"`
+	Units        []AssignedUnitView `json:"units"`
 }
 
 // HistoryView is one status change.
@@ -85,12 +88,15 @@ type OrderView struct {
 	TryRate      *string         `json:"try_rate"`
 	Note         *string         `json:"note"`
 	CancelReason *string         `json:"cancel_reason"`
-	SubmittedAt  *time.Time      `json:"submitted_at"`
-	ApprovedAt   *time.Time      `json:"approved_at"`
-	ReadyAt      *time.Time      `json:"ready_at"`
-	ShippedAt    *time.Time      `json:"shipped_at"`
-	CancelledAt  *time.Time      `json:"cancelled_at"`
-	ReceivedAt   *time.Time      `json:"received_at"`
+	// CreatedBySeller: the center opened the order for the dealer
+	// (TEC-1024); it started approved.
+	CreatedBySeller bool       `json:"created_by_seller"`
+	SubmittedAt     *time.Time `json:"submitted_at"`
+	ApprovedAt      *time.Time `json:"approved_at"`
+	ReadyAt         *time.Time `json:"ready_at"`
+	ShippedAt       *time.Time `json:"shipped_at"`
+	CancelledAt     *time.Time `json:"cancelled_at"`
+	ReceivedAt      *time.Time `json:"received_at"`
 	// Shipping info (TEC-768): the delivery method chosen at shipping, the
 	// tracking number and its link, and which documents are stored.
 	DeliveryMethod      *DeliveryMethodRef `json:"delivery_method"`
@@ -182,7 +188,8 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		Role:        role, Seller: seller, Buyer: buyer, Currency: strings.TrimSpace(o.Currency),
 		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2),
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
-		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
+		CreatedBySeller: o.CreatedBySeller,
+		SubmittedAt:     tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
 		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), CancelledAt: tsPtr(o.CancelledAt),
 		ReceivedAt: tsPtr(o.ReceivedAt), DeliveryMode: textPtr(o.DeliveryMode), TrackingNo: textPtr(o.TrackingNo),
 		HasShippingDocument: o.ShippingDocumentKey.Valid && o.ShippingDocumentKey.String != "",
@@ -237,7 +244,8 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
 			Meters:    numericTextPtr(it.Meters, 2),
 			UnitPrice: numericText(it.UnitPrice, 4), PriceSource: it.PriceSource,
-			LineTotal: numericText(it.LineTotal, 2), Note: textPtr(it.Note),
+			PriceMissing: it.PriceSource == PriceSourceMissing,
+			LineTotal:    numericText(it.LineTotal, 2), Note: textPtr(it.Note),
 		}
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32

@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Versandart gelöscht.",
   "delivery_methods.delete_failed": "Die Versandart konnte nicht gelöscht werden.",
   "delivery_methods.empty": "Noch keine Versandarten.",
-  "shipping.download_slip": "Bestellschein (PDF)"
+  "shipping.download_slip": "Bestellschein (PDF)",
+  "center_form.title": "Neue Bestellung für einen Händler",
+  "center_form.dealer": "Händler",
+  "center_form.dealer_placeholder": "Händler auswählen",
+  "center_form.dealer_search": "Händlername oder -code suchen…",
+  "center_form.dealer_none": "Kein Händler unter der Zentrale gefunden.",
+  "center_form.dealer_required": "Wählen Sie einen Händler.",
+  "center_form.unit_price": "Stückpreis (optional)",
+  "center_form.unit_price_placeholder": "Automatisch",
+  "center_form.price_rule": "Die Bestellung wird genehmigt angelegt und geht ins Lager. Ohne Stückpreis gilt der Einkaufspreis des Händlers, sonst 0, und die Zeile wird markiert.",
+  "center_form.create": "Bestellung anlegen",
+  "center_form.created": "Bestellung {{no}} angelegt und genehmigt.",
+  "center_form.price_missing_warning": "Einige Zeilen haben keinen Preis; sie wurden mit 0 gespeichert.",
+  "form.errors.price_invalid": "Der Stückpreis muss 0 oder mehr sein, höchstens 4 Dezimalstellen.",
+  "items.price_missing": "Kein Preis",
+  "detail.created_by_seller": "Von der Zentrale angelegt"
 }

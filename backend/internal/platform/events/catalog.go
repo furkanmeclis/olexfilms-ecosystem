@@ -227,6 +227,9 @@ const (
 	OrdersReceived        = "orders.received"
 	OrdersCancelRequested = "orders.cancel_requested"
 	OrdersCancelled       = "orders.cancelled"
+	// OrdersCreatedBySeller: the center opened an approved order for a
+	// dealer (TEC-1024); the dealer's members are notified.
+	OrdersCreatedBySeller = "orders.created_by_seller"
 )
 
 // Announcement domain events (TEC-330): publishing writes one outbox event
@@ -621,6 +624,7 @@ func catalogConstants() []string {
 		OrdersReceived,
 		OrdersCancelRequested,
 		OrdersCancelled,
+		OrdersCreatedBySeller,
 		TransfersRequested,
 		TransfersApproved,
 		TransfersRejected,

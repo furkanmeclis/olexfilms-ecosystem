@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Método de entrega eliminado.",
   "delivery_methods.delete_failed": "No se pudo eliminar el método de entrega.",
   "delivery_methods.empty": "Aún no hay métodos de entrega.",
-  "shipping.download_slip": "Comprobante de pedido (PDF)"
+  "shipping.download_slip": "Comprobante de pedido (PDF)",
+  "center_form.title": "Nuevo pedido para un distribuidor",
+  "center_form.dealer": "Distribuidor",
+  "center_form.dealer_placeholder": "Seleccione un distribuidor",
+  "center_form.dealer_search": "Buscar nombre o código del distribuidor…",
+  "center_form.dealer_none": "No se encontró ningún distribuidor del centro.",
+  "center_form.dealer_required": "Seleccione un distribuidor.",
+  "center_form.unit_price": "Precio unitario (opcional)",
+  "center_form.unit_price_placeholder": "Automático",
+  "center_form.price_rule": "El pedido se crea aprobado y pasa al almacén. Sin precio unitario se usa el precio de compra del distribuidor o, si no existe, 0 y la línea se marca.",
+  "center_form.create": "Crear pedido",
+  "center_form.created": "Pedido {{no}} creado y aprobado.",
+  "center_form.price_missing_warning": "Algunas líneas no tienen precio; se guardaron con 0.",
+  "form.errors.price_invalid": "El precio unitario debe ser 0 o mayor, con 4 decimales como máximo.",
+  "items.price_missing": "Sin precio",
+  "detail.created_by_seller": "Creado por el centro"
 }

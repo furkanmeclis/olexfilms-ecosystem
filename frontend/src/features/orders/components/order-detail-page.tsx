@@ -283,11 +283,23 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
         id: "unit_price",
         accessorFn: (item) => amountNumber(item.unit_price),
         labelKey: "orders.items.unit_price",
-        cell: ({ row }) =>
-          format.currency(
-            amountNumber(row.original.unit_price),
-            order.currency,
-          ),
+        cell: ({ row }) => (
+          <span className="inline-flex flex-wrap items-center gap-1">
+            {format.currency(
+              amountNumber(row.original.unit_price),
+              order.currency,
+            )}
+            {row.original.price_missing ? (
+              <Badge
+                variant="outline"
+                className="border-amber-500 text-amber-700 dark:text-amber-400"
+                data-testid="line-price-missing"
+              >
+                {t("orders.items.price_missing")}
+              </Badge>
+            ) : null}
+          </span>
+        ),
       }) as ColumnDef<OrderItem, unknown>,
       createColumn<OrderItem>({
         id: "line_total",
@@ -562,10 +574,17 @@ export function OrderDetailPage({
       ]}
       actions={
         order ? (
-          <StatusChip
-            label={order.status_label}
-            tone={orderStatusTone(order.status)}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {order.created_by_seller ? (
+              <Badge variant="secondary" data-testid="created-by-seller">
+                {t("orders.detail.created_by_seller")}
+              </Badge>
+            ) : null}
+            <StatusChip
+              label={order.status_label}
+              tone={orderStatusTone(order.status)}
+            />
+          </div>
         ) : null
       }
     />

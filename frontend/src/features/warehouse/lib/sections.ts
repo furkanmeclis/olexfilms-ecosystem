@@ -4,6 +4,7 @@ import {
   Barcode,
   ClipboardCheck,
   FolderTree,
+  PackageCheck,
   PackagePlus,
   ScanLine,
   Settings2,
@@ -30,10 +31,27 @@ export type WarehouseSection = {
   /** Every permission is needed. */
   permissions: string[];
   orgTypes: WarehouseOrgType[];
-  slice: "TEC-231" | "TEC-232" | "TEC-769";
+  slice: "TEC-231" | "TEC-232" | "TEC-769" | "TEC-1024";
 };
 
+/**
+ * TEC-1024: the seller's preparation queue (approved, legacy processing,
+ * preparing, ready) — every order the warehouse still has to pick, scan
+ * and ship, the center-opened dealer orders included.
+ */
+export const PREPARE_QUEUE_STATUSES = "approved,processing,preparing,ready";
+
 export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
+  {
+    id: "orders",
+    key: "warehouse.sections.orders",
+    icon: PackageCheck,
+    href: (slug: string) =>
+      `${routes.tenant.orders.list(slug)}?status=${PREPARE_QUEUE_STATUSES}`,
+    permissions: [Permission.OrdersRead, Permission.OrdersShip],
+    orgTypes: ["center", "distributor"],
+    slice: "TEC-1024",
+  },
   {
     id: "locations",
     key: "warehouse.sections.locations",
