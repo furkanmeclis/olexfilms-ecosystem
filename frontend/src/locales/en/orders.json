@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Some lines have no price; they were saved as 0.",
   "form.errors.price_invalid": "Unit price must be 0 or more, with at most 4 decimals.",
   "items.price_missing": "No price",
-  "detail.created_by_seller": "Created by the center"
+  "detail.created_by_seller": "Created by the center",
+  "actions.deliver.button": "Mark delivered",
+  "actions.deliver.title": "Mark the order as delivered?",
+  "actions.deliver.description": "Records a hand or depot delivery. The stock moves to the dealer when they receive it. You can add a delivery note.",
+  "actions.deliver.confirm": "Mark delivered",
+  "actions.deliver.success": "The order was marked as delivered.",
+  "detail.delivered_at": "Delivered"
 }

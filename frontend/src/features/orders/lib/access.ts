@@ -76,6 +76,7 @@ export type OrderActionKind =
   | "start_preparing"
   | "mark_ready"
   | "ship"
+  | "deliver"
   | "receive"
   | "cancel"
   | "request_cancel"
@@ -93,10 +94,10 @@ export type OrderAction = {
 /**
  * Targets the UI never offers: processing is the legacy warehouse step
  * (the UI uses preparing; a processing order still moves on to preparing or
- * cancelled, TEC-261) and delivered is not used (TEC-168: received follows
- * shipped).
+ * cancelled, TEC-261). delivered is offered again (TEC-1024: the seller
+ * marks a hand / depot delivery, the buyer then receives).
  */
-const HIDDEN_TARGETS = new Set<OrderStatus>(["processing", "delivered"]);
+const HIDDEN_TARGETS = new Set<OrderStatus>(["processing"]);
 
 function actionFor(order: Order, target: OrderStatus): OrderAction | null {
   const seller = order.role === "seller";
@@ -132,6 +133,13 @@ function actionFor(order: Order, target: OrderStatus): OrderAction | null {
     case "shipped":
       return {
         kind: "ship",
+        target,
+        destructive: false,
+        reasonRequired: false,
+      };
+    case "delivered":
+      return {
+        kind: "deliver",
         target,
         destructive: false,
         reasonRequired: false,

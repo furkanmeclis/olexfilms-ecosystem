@@ -323,7 +323,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Statuses after the shipment (documents and tracking apply). */
-const SHIPPED = new Set(["shipped", "received", "cancelling"]);
+const SHIPPED = new Set(["shipped", "delivered", "received", "cancelling"]);
 
 /**
  * Shipping card (TEC-768): delivery method, tracking number with its link,
@@ -346,7 +346,9 @@ export function ShippingCard({
   const buyer =
     order.role === "buyer" &&
     canReceive &&
-    (order.status === "shipped" || order.status === "received");
+    (order.status === "shipped" ||
+      order.status === "delivered" ||
+      order.status === "received");
   const download = useMutation({
     mutationFn: async (kind: OrderDocumentKind) => {
       const { blob, filename } = await ordersService.downloadDocument(

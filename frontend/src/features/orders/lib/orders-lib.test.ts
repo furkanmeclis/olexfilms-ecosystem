@@ -113,7 +113,28 @@ describe("orderActions (role and status)", () => {
     ).toEqual(["cancel"]);
   });
 
-  it("hides processing and delivered", () => {
+  it("seller shipped: deliver and request cancel; buyer delivered: receive (TEC-1024)", () => {
+    expect(
+      kinds(
+        order({
+          role: "seller",
+          status: "shipped",
+          available_transitions: ["delivered", "cancelling"],
+        }),
+      ),
+    ).toEqual(["deliver", "request_cancel"]);
+    expect(
+      kinds(
+        order({
+          role: "buyer",
+          status: "delivered",
+          available_transitions: ["received", "cancelling"],
+        }),
+      ),
+    ).toEqual(["receive", "request_cancel"]);
+  });
+
+  it("hides processing", () => {
     expect(
       kinds(
         order({

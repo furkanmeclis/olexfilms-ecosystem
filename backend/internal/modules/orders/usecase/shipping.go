@@ -316,7 +316,7 @@ func (s *Service) AttachReceipt(ctx context.Context, c Caller, orderUUID uuid.UU
 		if partyOf(c, o) != PartyBuyer || !c.can(rbac.PermOrdersReceive) {
 			return ErrForbidden
 		}
-		if o.Status != StatusShipped && o.Status != StatusReceived {
+		if o.Status != StatusShipped && o.Status != StatusDelivered && o.Status != StatusReceived {
 			return ErrReceiptNotAllowed
 		}
 		seller, err := q.GetOrganizationByID(ctx, o.SellerOrgID)

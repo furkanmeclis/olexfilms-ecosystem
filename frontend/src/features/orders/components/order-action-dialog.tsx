@@ -134,7 +134,7 @@ export function OrderActionDialog({
                 {t(`orders.actions.${action.kind}.description`)}
               </DialogDescription>
             </DialogHeader>
-            {action.destructive ? (
+            {action.destructive || action.kind === "deliver" ? (
               <div className="space-y-1.5">
                 <Label htmlFor="order-reason">
                   {action.reasonRequired
