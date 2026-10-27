@@ -172,5 +172,9 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Хранилище документов или PDF-сервис сейчас недоступны.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "Документ о получении должен быть PDF, JPEG, PNG или WebP (до 10 МБ).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Разместите эту единицу на складе перед назначением.",
-  "page_forbidden_body": "У вас нет прав на просмотр этой страницы."
+  "page_forbidden_body": "У вас нет прав на просмотр этой страницы.",
+  "codes.ORDER_NOT_INVOICEABLE": "Отметить как выставленный счёт можно только полученный заказ.",
+  "codes.ORDER_ITEM_ALREADY_INVOICED": "Одна из выбранных позиций уже выставлена в счёте.",
+  "codes.ORDER_NOTHING_TO_INVOICE": "Все позиции заказа уже выставлены в счёте.",
+  "codes.ORDER_INVOICE_NO_TAKEN": "Этот номер счёта уже записан для заказа."
 }

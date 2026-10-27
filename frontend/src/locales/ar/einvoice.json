@@ -43,7 +43,7 @@
   "list.empty_filtered": "لا توجد فاتورة تطابق عوامل التصفية.",
   "list.export": "تنزيل CSV",
   "billable.title": "سجلات قابلة للفوترة",
-  "billable.description": "طلبات الموزعين المستلمة وفترات كتالوج الخدمات المرحّلة التي ليس لها فاتورة نشطة.",
+  "billable.description": "طلبات الموزعين والوكلاء المستلمة وفترات كتالوج الخدمات المرحّلة التي ليس لها فاتورة نشطة.",
   "billable.columns.source_type": "نوع المصدر",
   "billable.columns.source_no": "المصدر",
   "billable.columns.buyer": "المشتري",

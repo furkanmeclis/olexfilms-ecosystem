@@ -1,5 +1,6 @@
 import type {
   Order,
+  OrderInvoiceStatus,
   OrderItemInput,
   OrderStatus,
 } from "@/features/orders/services/orders.service";
@@ -145,6 +146,13 @@ const STATUS_TONE: Partial<Record<OrderStatus, Tone>> = {
 
 export function orderStatusTone(status: OrderStatus): Tone {
   return STATUS_TONE[status] ?? "default";
+}
+
+/** Tone of the manual invoice status (TEC-1030). */
+export function invoiceStatusTone(status: OrderInvoiceStatus): Tone {
+  if (status === "invoiced") return "success";
+  if (status === "partial") return "warning";
+  return "default";
 }
 
 /** Parses an API decimal string; 0 when absent or invalid. */

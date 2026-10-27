@@ -181,6 +181,7 @@ function order(over: Partial<Order> = {}): Order {
     uuid: "o1",
     order_no: "ORD-00000001",
     created_by_seller: false,
+    invoice_status: "pending",
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -227,6 +228,9 @@ function order(over: Partial<Order> = {}): Order {
         note: null,
         assigned: "0",
         units: [],
+        invoiced: false,
+        invoice_no: null,
+        invoice_uuid: null,
       },
     ],
     history: [

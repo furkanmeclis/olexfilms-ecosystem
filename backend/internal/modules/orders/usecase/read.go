@@ -61,6 +61,11 @@ type ItemView struct {
 	Note         *string            `json:"note"`
 	Assigned     string             `json:"assigned"`
 	Units        []AssignedUnitView `json:"units"`
+	// Invoiced: the line is on a manual invoice record (TEC-1030);
+	// InvoiceNo and InvoiceUUID name it.
+	Invoiced    bool       `json:"invoiced"`
+	InvoiceNo   *string    `json:"invoice_no"`
+	InvoiceUUID *uuid.UUID `json:"invoice_uuid"`
 }
 
 // HistoryView is one status change.
@@ -90,14 +95,17 @@ type OrderView struct {
 	CancelReason *string         `json:"cancel_reason"`
 	// CreatedBySeller: the center opened the order for the dealer
 	// (TEC-1024); it started approved.
-	CreatedBySeller bool       `json:"created_by_seller"`
-	SubmittedAt     *time.Time `json:"submitted_at"`
-	ApprovedAt      *time.Time `json:"approved_at"`
-	ReadyAt         *time.Time `json:"ready_at"`
-	ShippedAt       *time.Time `json:"shipped_at"`
-	DeliveredAt     *time.Time `json:"delivered_at"`
-	CancelledAt     *time.Time `json:"cancelled_at"`
-	ReceivedAt      *time.Time `json:"received_at"`
+	CreatedBySeller bool `json:"created_by_seller"`
+	// InvoiceStatus: pending, partial or invoiced by the seller's manual
+	// invoice records (TEC-1030); meaningful once the order is received.
+	InvoiceStatus string     `json:"invoice_status"`
+	SubmittedAt   *time.Time `json:"submitted_at"`
+	ApprovedAt    *time.Time `json:"approved_at"`
+	ReadyAt       *time.Time `json:"ready_at"`
+	ShippedAt     *time.Time `json:"shipped_at"`
+	DeliveredAt   *time.Time `json:"delivered_at"`
+	CancelledAt   *time.Time `json:"cancelled_at"`
+	ReceivedAt    *time.Time `json:"received_at"`
 	// Shipping info (TEC-768): the delivery method chosen at shipping, the
 	// tracking number and its link, and which documents are stored.
 	DeliveryMethod      *DeliveryMethodRef `json:"delivery_method"`
@@ -112,6 +120,8 @@ type OrderView struct {
 	AvailableTransitions []string      `json:"available_transitions"`
 	Items                []ItemView    `json:"items,omitempty"`
 	History              []HistoryView `json:"history,omitempty"`
+	// Invoices are the manual invoice records (detail only, TEC-1030).
+	Invoices []OrderInvoiceView `json:"invoices,omitempty"`
 	// Split is set on an assignment that cut the meters off a roll as a
 	// new unit (TEC-184): the new barcode to label (printing: TEC-95).
 	Split *SplitView `json:"split,omitempty"`
@@ -189,8 +199,8 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		Role:        role, Seller: seller, Buyer: buyer, Currency: strings.TrimSpace(o.Currency),
 		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2),
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
-		CreatedBySeller: o.CreatedBySeller,
-		SubmittedAt:     tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
+		CreatedBySeller: o.CreatedBySeller, InvoiceStatus: o.InvoiceStatus,
+		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
 		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), DeliveredAt: tsPtr(o.DeliveredAt), CancelledAt: tsPtr(o.CancelledAt),
 		ReceivedAt: tsPtr(o.ReceivedAt), DeliveryMode: textPtr(o.DeliveryMode), TrackingNo: textPtr(o.TrackingNo),
 		HasShippingDocument: o.ShippingDocumentKey.Valid && o.ShippingDocumentKey.String != "",
@@ -234,6 +244,11 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	for _, a := range assigned {
 		byItem[a.OrderItemID] = append(byItem[a.OrderItemID], a)
 	}
+	invoices, invoicedLines, err := invoiceViews(ctx, q, o.ID)
+	if err != nil {
+		return OrderView{}, err
+	}
+	v.Invoices = invoices
 	v.Items = make([]ItemView, 0, len(items))
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
@@ -253,6 +268,10 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			iv.Quantity = &qv
 		}
 		iv.Units, iv.Assigned = assignedUnits(byItem[it.ID], it.Meters.Valid)
+		if l, ok := invoicedLines[it.ID]; ok {
+			no, id := l.InvoiceNo, l.InvoiceUuid
+			iv.Invoiced, iv.InvoiceNo, iv.InvoiceUUID = true, &no, &id
+		}
 		v.Items = append(v.Items, iv)
 	}
 	hist, err := q.ListOrderStatusHistory(ctx, o.ID)
@@ -296,14 +315,16 @@ const (
 // total range is inclusive, Sort is the resolved sort (zero: the default
 // -created_at); SortExplicit marks a sort the request asked for.
 type ListFilter struct {
-	Side           string
-	Statuses       []string
-	CreatedFrom    *time.Time
-	CreatedTo      *time.Time
-	SellerOrgUUIDs []uuid.UUID
-	BuyerOrgUUIDs  []uuid.UUID
-	TotalMin       *float64
-	TotalMax       *float64
+	Side     string
+	Statuses []string
+	// InvoiceStatuses narrows to the manual invoice status (TEC-1030).
+	InvoiceStatuses []string
+	CreatedFrom     *time.Time
+	CreatedTo       *time.Time
+	SellerOrgUUIDs  []uuid.UUID
+	BuyerOrgUUIDs   []uuid.UUID
+	TotalMin        *float64
+	TotalMax        *float64
 	// Q searches the order number, tracking number, external reference
 	// and (index) the parties' names and dealer codes (TEC-210).
 	Q            string
@@ -359,13 +380,14 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		p := sc.params()
 		p.CreatedFrom, p.CreatedBefore, p.Q = tsArg(f.CreatedFrom), tsArg(f.CreatedTo), q
 		p.SellerUuids, p.BuyerUuids = f.SellerOrgUUIDs, f.BuyerOrgUUIDs
+		p.InvoiceStatuses = f.InvoiceStatuses
 		p.TotalMin, p.TotalMax = numArg(f.TotalMin), numArg(f.TotalMax)
 		p.SortKey, p.SortDesc, p.RowLimit, p.RowOffset = key, desc, f.Limit, f.Offset
 		rows, err = s.q.ListOrdersFiltered(ctx, p)
 		if err == nil {
 			total, err = s.q.CountOrdersFiltered(ctx, db.CountOrdersFilteredParams{
 				BrandID: p.BrandID, SellerOrgID: p.SellerOrgID, BuyerOrgID: p.BuyerOrgID, OrgIds: p.OrgIds,
-				Statuses: p.Statuses, CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q,
+				Statuses: p.Statuses, InvoiceStatuses: p.InvoiceStatuses, CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q,
 				SellerUuids: p.SellerUuids, BuyerUuids: p.BuyerUuids, TotalMin: p.TotalMin, TotalMax: p.TotalMax,
 			})
 		}

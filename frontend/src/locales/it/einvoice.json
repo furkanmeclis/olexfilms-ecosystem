@@ -43,7 +43,7 @@
   "list.empty_filtered": "Nessuna fattura corrisponde ai filtri.",
   "list.export": "Scarica CSV",
   "billable.title": "Record fatturabili",
-  "billable.description": "Ordini dei distributori ricevuti e periodi del catalogo servizi contabilizzati senza fattura attiva.",
+  "billable.description": "Ordini di distributori e rivenditori ricevuti e periodi del catalogo servizi contabilizzati senza fattura attiva.",
   "billable.columns.source_type": "Tipo di origine",
   "billable.columns.source_no": "Origine",
   "billable.columns.buyer": "Acquirente",

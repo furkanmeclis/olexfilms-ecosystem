@@ -59,6 +59,9 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 	if f.Statuses, err = apiquery.EnumList(values, QueryStatus, Statuses...); err != nil {
 		return f, err
 	}
+	if f.InvoiceStatuses, err = apiquery.EnumList(values, QueryInvoiceStatus, InvoiceStatuses...); err != nil {
+		return f, err
+	}
 	created, err := apiquery.DateRange(values, "created")
 	if err != nil {
 		return f, err
@@ -99,7 +102,7 @@ func uuidList(values url.Values, key string) ([]uuid.UUID, error) {
 // sqlOnly reports whether the filter uses a parameter the orders index
 // cannot answer (TEC-210 keeps q on the index otherwise).
 func (f ListFilter) sqlOnly() bool {
-	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil ||
+	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil || len(f.InvoiceStatuses) > 0 ||
 		len(f.SellerOrgUUIDs) > 0 || len(f.BuyerOrgUUIDs) > 0 || f.TotalMin != nil || f.TotalMax != nil
 }
 

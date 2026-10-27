@@ -43,7 +43,7 @@
   "list.empty_filtered": "Keine Rechnung entspricht den Filtern.",
   "list.export": "CSV herunterladen",
   "billable.title": "Abrechenbare Datensätze",
-  "billable.description": "Empfangene Distributorbestellungen und gebuchte Servicekatalog-Zeiträume ohne aktive Rechnung.",
+  "billable.description": "Empfangene Distributor- und Händlerbestellungen und gebuchte Servicekatalog-Zeiträume ohne aktive Rechnung.",
   "billable.columns.source_type": "Quelltyp",
   "billable.columns.source_no": "Quelle",
   "billable.columns.buyer": "Käufer",

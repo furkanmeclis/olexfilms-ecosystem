@@ -686,3 +686,34 @@ func TestArchiveAfterMidnightInTurkiye(t *testing.T) {
 			v.Status, v.Number, v.IssueDate, v.ValidationMessages, next.Format(time.DateOnly))
 	}
 }
+
+// TEC-1030: a zero-total (legacy) order and an order marked invoiced by
+// hand are neither listed as billable nor draftable.
+func TestBillableSkipsZeroTotalAndManuallyInvoiced(t *testing.T) {
+	f := newFixture(t)
+	f.withBuyerProfile(t)
+	zero := f.order(t, 1, "0")
+	manual := f.order(t, 2, "40.00")
+	open := f.order(t, 3, "10.00")
+	if _, err := f.tx.Exec(f.ctx, `UPDATE orders SET invoice_status = 'invoiced' WHERE uuid = $1`, manual); err != nil {
+		t.Fatal(err)
+	}
+	items, _, err := f.svc.ListBillable(f.ctx, f.c, db.ListEinvoiceBillableSourcesParams{
+		SourceTypes: []string{SourceOrder}, SortKey: "billable_at", SortDesc: true, RowLimit: 100,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[uuid.UUID]bool{}
+	for _, it := range items {
+		seen[it.SourceUUID] = true
+	}
+	if seen[zero] || seen[manual] || !seen[open] {
+		t.Fatalf("billable: zero=%v manual=%v open=%v", seen[zero], seen[manual], seen[open])
+	}
+	for _, src := range []uuid.UUID{zero, manual} {
+		if _, err := f.svc.CreateDraft(f.ctx, f.c, DraftInput{SourceType: SourceOrder, SourceUUID: src}); !errors.Is(err, ErrSourceNotBillable) {
+			t.Fatalf("draft %s: want ErrSourceNotBillable, got %v", src, err)
+		}
+	}
+}

@@ -251,6 +251,7 @@ type Querier interface {
 	CountGlorianOutbounds(ctx context.Context, arg CountGlorianOutboundsParams) (int64, error)
 	CountGlorianSyncRuns(ctx context.Context, arg CountGlorianSyncRunsParams) (int64, error)
 	CountImportJobsFiltered(ctx context.Context, arg CountImportJobsFilteredParams) (int64, error)
+	CountInvoicedOrderItems(ctx context.Context, orderID int64) (int64, error)
 	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
 	CountLeadsInScope(ctx context.Context, arg CountLeadsInScopeParams) (int64, error)
 	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
@@ -269,6 +270,7 @@ type Querier interface {
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
 	// Used by other flows (stock transfer requests) to respect the lock.
 	CountOpenWarehouseTransferLinesByUnit(ctx context.Context, unitID int64) (int64, error)
+	CountOrderItems(ctx context.Context, orderID int64) (int64, error)
 	CountOrdersByDeliveryMethod(ctx context.Context, deliveryMethodID pgtype.Int8) (int64, error)
 	CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
@@ -476,6 +478,9 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Orders.
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	// TEC-1030: manual "invoiced" marks of received orders (seller accounting).
+	CreateOrderInvoice(ctx context.Context, arg CreateOrderInvoiceParams) (OrderInvoice, error)
+	CreateOrderInvoiceItem(ctx context.Context, arg CreateOrderInvoiceItemParams) error
 	// ---------------------------------------------------------------------------
 	// Order lines.
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
@@ -698,6 +703,7 @@ type Querier interface {
 	// Deleting is the claim: a concurrent second decision finds nothing.
 	DeleteOAuthAuthRequest(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteOldStockForecastSnapshots(ctx context.Context, cutoffOn pgtype.Date) (int64, error)
+	DeleteOrderInvoice(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
@@ -1164,6 +1170,7 @@ type Querier interface {
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
 	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
 	GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrderForIndexRow, error)
+	GetOrderInvoiceByUUID(ctx context.Context, arg GetOrderInvoiceByUUIDParams) (OrderInvoice, error)
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
@@ -1955,6 +1962,7 @@ type Querier interface {
 	// List contract: sort=billable_at|source_no|payable|buyer_name, default
 	// -billable_at; (source_type, id) is the stable tiebreak. Center sales
 	// without an active (non-voided) invoice: received orders to distributors and (TEC-1003) dealers under the center
+	// with a total (zero-priced legacy orders are skipped) not marked invoiced by hand (TEC-1030),
 	// and posted service catalog subscription periods of dealers.
 	ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error)
 	ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, arg ListEinvoiceBillableSubscriptionPeriodsParams) ([]ListEinvoiceBillableSubscriptionPeriodsRow, error)
@@ -2232,6 +2240,8 @@ type Querier interface {
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
 	// Assigned (not yet shipped) serial units of an order with their location.
 	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
+	ListOrderInvoiceItemsByOrder(ctx context.Context, orderID int64) ([]ListOrderInvoiceItemsByOrderRow, error)
+	ListOrderInvoices(ctx context.Context, orderID int64) ([]ListOrderInvoicesRow, error)
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
@@ -3617,6 +3627,7 @@ type Querier interface {
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
+	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
 	// TEC-768: the delivery method, mode and tracking number chosen at shipping.

@@ -32,6 +32,10 @@ const (
 	CodeNotFullyAssigned          = "ORDER_NOT_FULLY_ASSIGNED"
 	CodeStockUnavailable          = "ORDER_STOCK_UNAVAILABLE"
 	CodePriceNotFound             = ord.CodePriceNotFound
+	CodeNotInvoiceable            = "ORDER_NOT_INVOICEABLE"
+	CodeItemAlreadyInvoiced       = "ORDER_ITEM_ALREADY_INVOICED"
+	CodeNothingToInvoice          = "ORDER_NOTHING_TO_INVOICE"
+	CodeInvoiceNoTaken            = "ORDER_INVOICE_NO_TAKEN"
 )
 
 // Handler serves order endpoints.
@@ -97,6 +101,16 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeTransitionUnavailable, "This transition is not available yet")
 	case errors.Is(err, ord.ErrNotEditable):
 		response.Conflict(w, r, CodeNotEditable, "Only draft orders can be edited")
+	case errors.Is(err, ord.ErrInvoiceNotFound):
+		response.NotFound(w, r, "Invoice record not found")
+	case errors.Is(err, ord.ErrNotInvoiceable):
+		response.Conflict(w, r, CodeNotInvoiceable, "Only a received order can be marked invoiced")
+	case errors.Is(err, ord.ErrItemAlreadyInvoiced):
+		response.Conflict(w, r, CodeItemAlreadyInvoiced, "The order line is already invoiced")
+	case errors.Is(err, ord.ErrNothingToInvoice):
+		response.Conflict(w, r, CodeNothingToInvoice, "Every line of the order is invoiced")
+	case errors.Is(err, ord.ErrInvoiceNoTaken):
+		response.Conflict(w, r, CodeInvoiceNoTaken, "This invoice number is already recorded on the order")
 	case errors.Is(err, ord.ErrRateNotFound):
 		response.Error(w, r, http.StatusUnprocessableEntity, response.CodeRateNotFound,
 			"No exchange rate to freeze for the order currency")
@@ -263,6 +277,54 @@ type assignBody struct {
 	Quantity       *int64       `json:"quantity"`
 	Meters         *json.Number `json:"meters"`
 	IdempotencyKey string       `json:"idempotency_key"`
+}
+
+type markInvoicedBody struct {
+	InvoiceNo   string   `json:"invoice_no"`
+	InvoiceDate string   `json:"invoice_date"`
+	Note        *string  `json:"note"`
+	ItemUUIDs   []string `json:"item_uuids"`
+}
+
+// MarkInvoiced (POST /v1/orders/{uuid}/invoices): the seller's accounting
+// records an external invoice on the lines of a received order (TEC-1030).
+func (h *Handler) MarkInvoiced(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var body markInvoicedBody
+	if !decode(w, r, &body) {
+		return
+	}
+	o, err := h.svc.MarkInvoiced(r.Context(), caller(r), id, ord.MarkInvoicedInput{
+		InvoiceNo: body.InvoiceNo, InvoiceDate: body.InvoiceDate, Note: body.Note, ItemUUIDs: body.ItemUUIDs,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, o)
+}
+
+// DeleteInvoice (DELETE /v1/orders/{uuid}/invoices/{invoice_uuid}) undoes
+// a manual invoice record.
+func (h *Handler) DeleteInvoice(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	inv, err := uuid.Parse(r.PathValue("invoice_uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Invoice record not found")
+		return
+	}
+	o, err := h.svc.DeleteInvoice(r.Context(), caller(r), id, inv)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, o)
 }
 
 func pathItem(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {

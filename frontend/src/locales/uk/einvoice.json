@@ -43,7 +43,7 @@
   "list.empty_filtered": "Немає рахунків за фільтрами.",
   "list.export": "Завантажити CSV",
   "billable.title": "Записи до виставлення",
-  "billable.description": "Отримані замовлення дистриб'юторів і проведені періоди каталогу послуг без активного рахунку.",
+  "billable.description": "Отримані замовлення дистриб'юторів і дилерів та проведені періоди каталогу послуг без активного рахунку.",
   "billable.columns.source_type": "Тип джерела",
   "billable.columns.source_no": "Джерело",
   "billable.columns.buyer": "Покупець",

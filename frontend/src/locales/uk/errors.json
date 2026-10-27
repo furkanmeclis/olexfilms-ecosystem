@@ -172,5 +172,9 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Сховище документів або PDF-сервіс зараз недоступні.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "Документ про отримання має бути PDF, JPEG, PNG або WebP (до 10 МБ).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Розмістіть цю одиницю на складі перед призначенням.",
-  "page_forbidden_body": "У вас немає прав на перегляд цієї сторінки."
+  "page_forbidden_body": "У вас немає прав на перегляд цієї сторінки.",
+  "codes.ORDER_NOT_INVOICEABLE": "Позначити як виставлений рахунок можна лише отримане замовлення.",
+  "codes.ORDER_ITEM_ALREADY_INVOICED": "Одна з вибраних позицій уже виставлена в рахунку.",
+  "codes.ORDER_NOTHING_TO_INVOICE": "Усі позиції замовлення вже виставлені в рахунку.",
+  "codes.ORDER_INVOICE_NO_TAKEN": "Цей номер рахунку вже записано для замовлення."
 }

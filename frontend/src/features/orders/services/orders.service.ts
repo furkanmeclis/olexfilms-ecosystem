@@ -23,6 +23,9 @@ export type OrderPickList = Schemas["OrderPickList"];
 export type OrderPickRow = Schemas["OrderPickRow"];
 export type DeliveryMethod = Schemas["DeliveryMethod"];
 export type DeliveryMethodInput = Schemas["DeliveryMethodInput"];
+export type OrderInvoice = Schemas["OrderInvoice"];
+export type OrderInvoiceInput = Schemas["OrderInvoiceInput"];
+export type OrderInvoiceStatus = Schemas["OrderInvoiceStatus"];
 export type OrderDocumentKind = "shipping" | "receipt";
 
 /** Shipping info sent with the ship transition (TEC-768). */
@@ -125,6 +128,18 @@ export const ordersService = {
       "POST",
       `/v1/orders/${enc(uuid)}/items/${enc(item)}/units`,
       { body },
+    );
+  },
+  /** TEC-1030: the seller's accounting records an external invoice. */
+  markInvoiced(uuid: string, body: OrderInvoiceInput) {
+    return platformRequest<Order>("POST", `/v1/orders/${enc(uuid)}/invoices`, {
+      body,
+    });
+  },
+  deleteInvoice(uuid: string, invoice: string) {
+    return platformRequest<Order>(
+      "DELETE",
+      `/v1/orders/${enc(uuid)}/invoices/${enc(invoice)}`,
     );
   },
   unassignUnit(uuid: string, item: string, unit: string) {

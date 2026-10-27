@@ -29,8 +29,15 @@ import {
   resolveOrderListAccess,
   type OrderAction,
 } from "@/features/orders/lib/access";
-import { amountNumber, orderStatusTone } from "@/features/orders/lib/form";
-import { ORDER_FILTER_STATUSES } from "@/features/orders/lib/list-filters";
+import {
+  amountNumber,
+  invoiceStatusTone,
+  orderStatusTone,
+} from "@/features/orders/lib/form";
+import {
+  ORDER_FILTER_STATUSES,
+  ORDER_INVOICE_STATUSES,
+} from "@/features/orders/lib/list-filters";
 import {
   ORDERS_EXPORT_PATH,
   orderKeys,
@@ -145,6 +152,29 @@ export function OrdersListPage({ slug }: { slug: string }) {
             side === "seller"
               ? row.original.buyer.name
               : row.original.seller.name,
+        }),
+        createColumn<Order>({
+          accessorKey: "invoice_status",
+          labelKey: "orders.invoice.column",
+          enableSorting: false,
+          filterVariant: "faceted",
+          filterOptions: ORDER_INVOICE_STATUSES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `orders.invoice.status.${value}`,
+          })),
+          param: "invoice_status",
+          // TEC-1030: meaningful on the seller's received orders.
+          cell: ({ row }) =>
+            row.original.status === "received" &&
+            row.original.role === "seller" ? (
+              <StatusChip
+                label={t(
+                  `orders.invoice.status.${row.original.invoice_status}`,
+                )}
+                tone={invoiceStatusTone(row.original.invoice_status)}
+              />
+            ) : null,
         }),
         createColumn<Order>({
           id: "total",
