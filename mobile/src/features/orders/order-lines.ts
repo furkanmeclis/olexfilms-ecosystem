@@ -10,6 +10,8 @@ export const MAX_QUANTITY = 1_000_000;
 export const NOTE_MAX = 1000;
 
 const METERS_RE = /^[0-9]{1,8}(\.[0-9]{1,2})?$/;
+/** Manual unit price of a center order (TEC-1024): ≥ 0, up to 4 decimals. */
+const PRICE_RE = /^[0-9]{1,12}(\.[0-9]{1,4})?$/;
 const INT_RE = /^[0-9]+$/;
 
 /** One cart line; amount is the raw input (pieces or meters). */
@@ -19,12 +21,14 @@ export type CartLine = {
   name: string;
   unit_type: string;
   amount: string;
+  /** Center orders only: a manual unit price; empty lets the server price the line. */
+  unit_price?: string;
 };
 
-export type LineError = 'quantity_invalid' | 'meters_invalid';
+export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid';
 export type CartErrors = { form?: 'empty' | 'too_many'; lines: Record<string, LineError> };
 
-export type ItemInput = { product_uuid: string; quantity?: number; meters?: string };
+export type ItemInput = { product_uuid: string; quantity?: number; meters?: string; unit_price?: string };
 
 export const isRoll = (unitType: string) => unitType === 'roll_meter';
 
@@ -34,6 +38,8 @@ export function normalizeAmount(raw: string): string {
 }
 
 export function lineError(line: CartLine): LineError | null {
+  const price = normalizeAmount(line.unit_price ?? '');
+  if (price && !PRICE_RE.test(price)) return 'price_invalid';
   const v = normalizeAmount(line.amount);
   if (isRoll(line.unit_type)) return METERS_RE.test(v) && Number(v) > 0 ? null : 'meters_invalid';
   if (!INT_RE.test(v)) return 'quantity_invalid';
@@ -56,11 +62,20 @@ export function cartIsValid(errors: CartErrors): boolean {
   return !errors.form && Object.keys(errors.lines).length === 0;
 }
 
-/** Order item inputs: quantity for pieces, meters for rolls. Prices are never sent (K8). */
-export function toItemInputs(lines: CartLine[]): ItemInput[] {
+/**
+ * Order item inputs: quantity for pieces, meters for rolls. A dealer never
+ * sends prices (K8); the center may send a manual unit price when it orders
+ * for a dealer (`withPrice`, TEC-1024).
+ */
+export function toItemInputs(lines: CartLine[], withPrice = false): ItemInput[] {
   return lines.map((line) => {
     const v = normalizeAmount(line.amount);
-    return isRoll(line.unit_type) ? { product_uuid: line.product_uuid, meters: v } : { product_uuid: line.product_uuid, quantity: Number(v) };
+    const item: ItemInput = isRoll(line.unit_type)
+      ? { product_uuid: line.product_uuid, meters: v }
+      : { product_uuid: line.product_uuid, quantity: Number(v) };
+    const price = normalizeAmount(line.unit_price ?? '');
+    if (withPrice && price) item.unit_price = price;
+    return item;
   });
 }
 

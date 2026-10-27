@@ -44,3 +44,15 @@ test('toItemInputs: quantity for pieces, normalized meters for rolls', () => {
     { product_uuid: 'r1', meters: '7.25' },
   ]);
 });
+
+test('unit price (center orders): optional, ≥ 0, up to 4 decimals, sent only with withPrice', () => {
+  const base: CartLine = { product_uuid: 'p', sku: 'S', name: 'N', unit_type: 'piece', amount: '2' };
+  assert.equal(lineError({ ...base, unit_price: '' }), null);
+  assert.equal(lineError({ ...base, unit_price: '12,5' }), null);
+  assert.equal(lineError({ ...base, unit_price: '0' }), null);
+  assert.equal(lineError({ ...base, unit_price: '-1' }), 'price_invalid');
+  assert.equal(lineError({ ...base, unit_price: '1.23456' }), 'price_invalid');
+  assert.deepEqual(toItemInputs([{ ...base, unit_price: '12,5' }]), [{ product_uuid: 'p', quantity: 2 }]);
+  assert.deepEqual(toItemInputs([{ ...base, unit_price: '12,5' }], true), [{ product_uuid: 'p', quantity: 2, unit_price: '12.5' }]);
+  assert.deepEqual(toItemInputs([{ ...base, unit_price: ' ' }], true), [{ product_uuid: 'p', quantity: 2 }]);
+});

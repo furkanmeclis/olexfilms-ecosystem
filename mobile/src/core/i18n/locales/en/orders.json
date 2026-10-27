@@ -21,5 +21,18 @@
   "errors.quantity_invalid": "Enter a whole number between 1 and 1,000,000.",
   "errors.meters_invalid": "Enter meters above 0, at most two decimals.",
   "errors.too_many": "An order can have at most 200 products.",
-  "draft_kept": "The draft was saved; sending again only retries the submission."
+  "draft_kept": "The draft was saved; sending again only retries the submission.",
+  "buyer_label": "Dealer to order for",
+  "buyer_pick": "Pick a dealer",
+  "buyer_search": "Search dealers",
+  "buyer_none": "No matching dealer.",
+  "buyer_required": "Pick a dealer.",
+  "unit_price": "Unit price",
+  "unit_price_auto": "Automatic",
+  "price_rule_center": "An empty price uses the dealer's purchase price; a product without a price is added at 0 and flagged. The order starts approved, ready for the warehouse.",
+  "create_for_dealer": "Create order",
+  "price_missing_title": "Products without a price",
+  "price_missing_body_one": "{{count}} product had no price; it was added at 0 and flagged.",
+  "price_missing_body_other": "{{count}} products had no price; they were added at 0 and flagged.",
+  "errors.price_invalid": "Enter a price of 0 or more with up to 4 decimals."
 }

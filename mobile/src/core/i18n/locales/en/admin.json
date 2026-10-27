@@ -102,5 +102,6 @@
   "approvals.no_access": "No approvals for you",
   "approvals.no_access_body": "Requests that need your decision appear here.",
   "home.action.new_service": "New service",
-  "home.action.measure": "Measure"
+  "home.action.measure": "Measure",
+  "orders.price_missing": "No price"
 }
