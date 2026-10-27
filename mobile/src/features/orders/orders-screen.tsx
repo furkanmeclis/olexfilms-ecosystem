@@ -67,8 +67,12 @@ export function OrdersScreen() {
   // TEC-1025: the center prepares what it sells in the warehouse screens
   // (assign units, ready, ship, deliver); a seller row opens there when it can.
   const me = useSession((s) => s.me);
+  // In the warehouse space (Menu > Orders) a seller row always opens the
+  // preparation screen, not the read-only detail.
   const openInWarehouse = (o: Order) =>
-    o.role === 'seller' && isCenterWorkplace(me) && kindsOf(me).includes('depo') && pathname.startsWith('/bayi');
+    o.role === 'seller' &&
+    kindsOf(me).includes('depo') &&
+    (pathname.startsWith('/depo') || (isCenterWorkplace(me) && pathname.startsWith('/bayi')));
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());

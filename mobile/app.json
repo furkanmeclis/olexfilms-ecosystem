@@ -48,6 +48,12 @@
       ],
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "color": "#003d25"
+        }
+      ],
+      [
         "expo-localization",
         {
           "supportsRTL": true,

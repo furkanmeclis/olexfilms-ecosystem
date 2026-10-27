@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
+import { usePushNotifications } from '@/core/push';
 import { rememberPath } from '@/core/space-memory';
 import { kindsOf } from '@/core/spaces';
 import { LARGE_TITLES } from '@/features/shell/large-titles';
@@ -20,6 +21,8 @@ export default function AppLayout() {
   const pathname = usePathname();
   // Reopen where the user left off (TEC-1027).
   useEffect(() => rememberPath(me, pathname), [me, pathname]);
+  // Expo push: token registration, inbox refresh, tap opens the record.
+  usePushNotifications();
 
   useQuery({
     queryKey: ['me'],
