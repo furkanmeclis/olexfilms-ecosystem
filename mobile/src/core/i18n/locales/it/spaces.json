@@ -10,5 +10,6 @@
   "active": "Aperto",
   "switching": "Cambio in corso…",
   "none_title": "Nessuno spazio disponibile",
-  "none_body": "Il tuo account non è ancora collegato a un'organizzazione. Contatta l'amministratore."
+  "none_body": "Il tuo account non è ancora collegato a un'organizzazione. Contatta l'amministratore.",
+  "workplace": "Area di lavoro"
 }

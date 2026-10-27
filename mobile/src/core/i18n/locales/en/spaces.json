@@ -10,5 +10,6 @@
   "active": "Open",
   "switching": "Switching…",
   "none_title": "No space available",
-  "none_body": "Your account is not linked to an organization yet. Contact your administrator."
+  "none_body": "Your account is not linked to an organization yet. Contact your administrator.",
+  "workplace": "Workplace"
 }

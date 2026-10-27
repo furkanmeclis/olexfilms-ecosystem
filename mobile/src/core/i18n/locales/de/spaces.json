@@ -10,5 +10,6 @@
   "active": "Offen",
   "switching": "Wird gewechselt…",
   "none_title": "Kein Bereich verfügbar",
-  "none_body": "Ihr Konto ist noch keiner Organisation zugeordnet. Wenden Sie sich an Ihren Administrator."
+  "none_body": "Ihr Konto ist noch keiner Organisation zugeordnet. Wenden Sie sich an Ihren Administrator.",
+  "workplace": "Arbeitsplatz"
 }

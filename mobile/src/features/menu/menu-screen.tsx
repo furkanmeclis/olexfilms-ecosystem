@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
 import { useModule, useModuleFilter } from '@/core/modules';
+import { switchSpace } from '@/core/space-memory';
 import { activeMembership, isCenterWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
 import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
@@ -112,7 +113,7 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
         ) : null}
         {warehouse ? (
           <List>
-            <ListRow icon="warehouse" title={t('menu:warehouse')} subtitle={t('menu:warehouse_hint')} onPress={() => router.push('/depo')} last />
+            <ListRow icon="warehouse" title={t('menu:warehouse')} subtitle={t('menu:warehouse_hint')} onPress={() => switchSpace(me, 'depo')} last />
           </List>
         ) : null}
         <List>

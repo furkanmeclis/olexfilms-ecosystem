@@ -10,5 +10,6 @@
   "active": "Aktif",
   "switching": "Geçiliyor…",
   "none_title": "Kullanılabilir alan yok",
-  "none_body": "Hesabın henüz bir organizasyona bağlı değil. Yöneticinle iletişime geç."
+  "none_body": "Hesabın henüz bir organizasyona bağlı değil. Yöneticinle iletişime geç.",
+  "workplace": "İş alanı"
 }

@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
-import { useResolvedSpace } from '@/core/spaces';
+import { startPath } from '@/core/space-memory';
 import { EmptyState } from '@/ui/empty-state';
 
-/** Opens the last used space; a user without any membership gets a clear message. */
+/** Opens where the user left off (space and tab, TEC-1027); without any membership, a clear message. */
 export default function Entry() {
   const { t } = useTranslation();
-  const space = useResolvedSpace();
-  if (space) return <Redirect href={`/${space}`} />;
+  const path = startPath(useSession((s) => s.me));
+  if (path) return <Redirect href={path as never} />;
   return (
     <View className="flex-1 justify-center bg-background">
       <EmptyState

@@ -10,5 +10,6 @@
   "active": "当前",
   "switching": "正在切换…",
   "none_title": "没有可用空间",
-  "none_body": "你的账号尚未关联任何组织。请联系管理员。"
+  "none_body": "你的账号尚未关联任何组织。请联系管理员。",
+  "workplace": "工作区"
 }

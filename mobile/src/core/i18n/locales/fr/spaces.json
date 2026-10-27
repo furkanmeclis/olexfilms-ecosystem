@@ -10,5 +10,6 @@
   "active": "Ouvert",
   "switching": "Changement…",
   "none_title": "Aucun espace disponible",
-  "none_body": "Votre compte n'est encore lié à aucune organisation. Contactez votre administrateur."
+  "none_body": "Votre compte n'est encore lié à aucune organisation. Contactez votre administrateur.",
+  "workplace": "Espace de travail"
 }

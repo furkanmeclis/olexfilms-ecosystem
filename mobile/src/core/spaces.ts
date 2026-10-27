@@ -1,5 +1,8 @@
+import { useSegments } from 'expo-router';
+
 import type { MobileMe } from '@/core/auth/api';
 import { useSession } from '@/core/auth/session';
+import { readJSON } from '@/core/storage';
 
 /**
  * A space is what one membership opens in the app: its own tabs and home.
@@ -56,10 +59,24 @@ export function listOrganizations(me: MobileMe | null): Membership[] {
   return me?.organizations ?? [];
 }
 
-/** The space to open: always the primary one, there is no switcher. */
+/**
+ * The space the user is in: the open one (workplace or warehouse, TEC-1027)
+ * when it is allowed, else the primary one. Screens outside a space
+ * (notifications, search) route records into it.
+ */
 export function useResolvedSpace(): SpaceKind | null {
   const me = useSession((s) => s.me);
-  return kindsOf(me)[0] ?? null;
+  const open = (useSegments() as string[])[1] as SpaceKind | undefined;
+  const kinds = kindsOf(me);
+  if (open && kinds.includes(open)) return open;
+  return lastSpace(me) ?? kinds[0] ?? null;
+}
+
+/** The last space of the user (TEC-1027 memory) while still allowed. */
+function lastSpace(me: MobileMe | null): SpaceKind | null {
+  const kinds = kindsOf(me);
+  const saved = me?.user.uuid ? readJSON<{ kind: SpaceKind }>(`space.last.v1.${me.user.uuid}`) : null;
+  return saved && kinds.includes(saved.kind) ? saved.kind : null;
 }
 
 export function useCan(permission: string) {
