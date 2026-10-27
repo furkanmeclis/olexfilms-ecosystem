@@ -25,7 +25,7 @@ CREATE TABLE order_invoices (
     CONSTRAINT uq_order_invoices_uuid UNIQUE (uuid),
     CONSTRAINT uq_order_invoices_order_no UNIQUE (order_id, invoice_no),
     CONSTRAINT fk_order_invoices_order FOREIGN KEY (order_id, organization_id, brand_id)
-        REFERENCES orders (id, organization_id, brand_id) ON DELETE CASCADE,
+        REFERENCES orders (id, organization_id, brand_id) ON DELETE CASCADE DEFERRABLE,
     CONSTRAINT chk_order_invoices_no CHECK (btrim(invoice_no) <> '')
 );
 
