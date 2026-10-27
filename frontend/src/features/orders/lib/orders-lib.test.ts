@@ -11,6 +11,7 @@ import {
   addLine,
   formIsValid,
   toItemInputs,
+  unitPriceValid,
   validateOrderForm,
   type OrderFormLine,
 } from "@/features/orders/lib/form";
@@ -25,6 +26,7 @@ function order(over: Partial<Order> = {}): Order {
   return {
     uuid: "o1",
     order_no: "ORD-00000001",
+    created_by_seller: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -73,6 +75,10 @@ describe("resolveOrderListAccess", () => {
   it("the center cannot create; others need orders.write and catalog.read", () => {
     const all = grants("orders.read", "orders.write", "catalog.read");
     expect(resolveOrderListAccess(all, "center").canCreate).toBe(false);
+    expect(resolveOrderListAccess(all, "center").canCreateForDealer).toBe(true);
+    expect(resolveOrderListAccess(all, "dealer").canCreateForDealer).toBe(
+      false,
+    );
     expect(resolveOrderListAccess(all, "dealer").canCreate).toBe(true);
     expect(
       resolveOrderListAccess(grants("orders.read", "orders.write"), "dealer")
@@ -191,6 +197,7 @@ describe("orderActions (role and status)", () => {
       meters,
       unit_price: "1.0000",
       price_source: "list" as const,
+      price_missing: false,
       line_total: "1.00",
       note: null,
       assigned,
@@ -268,5 +275,43 @@ describe("order form validation", () => {
       amount: "1",
     }));
     expect(validateOrderForm(many).form).toBe("too_many");
+  });
+});
+
+describe("center order for a dealer (TEC-1024)", () => {
+  const line = (over: Partial<OrderFormLine> = {}): OrderFormLine => ({
+    product_uuid: "p1",
+    sku: "P1",
+    name: "P1",
+    unit_type: "piece",
+    amount: "2",
+    ...over,
+  });
+
+  it("validates the optional unit price", () => {
+    expect(unitPriceValid(undefined)).toBe(true);
+    expect(unitPriceValid("")).toBe(true);
+    expect(unitPriceValid("0")).toBe(true);
+    expect(unitPriceValid("12,5")).toBe(true);
+    expect(unitPriceValid("-1")).toBe(false);
+    expect(unitPriceValid("1.23456")).toBe(false);
+    expect(validateOrderForm([line({ unit_price: "abc" })]).lines).toEqual({
+      p1: "price_invalid",
+    });
+  });
+
+  it("sends the typed price only for the center path", () => {
+    const lines = [
+      line({ unit_price: "12,5" }),
+      line({ product_uuid: "p2", unit_price: "" }),
+    ];
+    expect(toItemInputs(lines, true)).toEqual([
+      { product_uuid: "p1", quantity: 2, unit_price: "12.5" },
+      { product_uuid: "p2", quantity: 2 },
+    ]);
+    expect(toItemInputs(lines)).toEqual([
+      { product_uuid: "p1", quantity: 2 },
+      { product_uuid: "p2", quantity: 2 },
+    ]);
   });
 });

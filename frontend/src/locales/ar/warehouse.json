@@ -686,5 +686,7 @@
   "entry_import.save_template": "احفظ هذه المطابقة كقالب",
   "entry_import.template_name": "اسم القالب",
   "entry_import.save": "حفظ",
-  "entry_import.template_saved": "تم حفظ قالب المطابقة."
+  "entry_import.template_saved": "تم حفظ قالب المطابقة.",
+  "sections.orders.title": "طلبات للتجهيز",
+  "sections.orders.description": "طلبات الوكلاء المعتمدة وقيد التجهيز والجاهزة: الالتقاط ومسح الباركود والشحن."
 }

@@ -156,6 +156,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.AppointmentReminder, appointmentDispatcher(catalog.EventAppointmentReminder))
 	// TEC-164: a new customer gets the WhatsApp welcome with the portal link.
 	on(events.CustomerCreated, customerWelcomeDispatch)
+	// TEC-1024: the center opened an approved order for a dealer.
+	on(events.OrdersCreatedBySeller, orderCreatedBySellerDispatch)
 	// TEC-200: sibling stock transfer events go to the notified sides
 	// (notify_user_ids resolved by the transfer use case).
 	for name, code := range TransferEventCodes {

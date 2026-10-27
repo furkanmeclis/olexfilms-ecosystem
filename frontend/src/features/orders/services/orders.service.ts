@@ -80,6 +80,26 @@ export const ordersService = {
     );
     return (data.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name }));
   },
+  /**
+   * TEC-1024: dealers the center may order for — active dealers directly
+   * under the active organization (centerUuid), searched by name / code.
+   */
+  async listChildDealers(
+    centerUuid: string,
+    q: string,
+  ): Promise<ScopeOrganization[]> {
+    const data = await platformRequest<{
+      items: (ScopeOrganization & {
+        status?: string;
+        parent?: { uuid: string } | null;
+      })[];
+    }>("GET", "/v1/tenant/organizations", {
+      query: { type: "dealer", limit: 200, ...(q ? { q } : {}) },
+    });
+    return (data.items ?? [])
+      .filter((o) => o.parent?.uuid === centerUuid && o.status === "active")
+      .map((o) => ({ uuid: o.uuid, name: o.name }));
+  },
   create(body: OrderCreateInput) {
     return platformRequest<Order>("POST", "/v1/orders", { body });
   },
@@ -213,6 +233,8 @@ export const orderKeys = {
   list: (params: OrderListQuery) => ["orders", "list", params] as const,
   detail: (uuid: string) => ["orders", "detail", uuid] as const,
   organizations: ["orders", "organizations"] as const,
+  childDealers: (center: string, q: string) =>
+    ["orders", "child-dealers", center, q] as const,
   products: (q: string) => ["orders", "products", q] as const,
   price: (uuid: string) => ["orders", "price", uuid] as const,
   suggestions: (uuid: string, item: string, unlocated: boolean) =>

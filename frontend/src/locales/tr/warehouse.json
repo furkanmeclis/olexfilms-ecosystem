@@ -687,5 +687,7 @@
   "entry_import.save_template": "Bu eşlemeyi şablon olarak kaydet",
   "entry_import.template_name": "Şablon adı",
   "entry_import.save": "Kaydet",
-  "entry_import.template_saved": "Eşleme şablonu kaydedildi."
+  "entry_import.template_saved": "Eşleme şablonu kaydedildi.",
+  "sections.orders.title": "Hazırlanacak siparişler",
+  "sections.orders.description": "Onaylı, hazırlanan ve hazır bayi siparişleri: toplama, barkod okutma ve sevk."
 }

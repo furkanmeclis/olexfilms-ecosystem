@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Ο τρόπος παράδοσης διαγράφηκε.",
   "delivery_methods.delete_failed": "Ο τρόπος παράδοσης δεν διαγράφηκε.",
   "delivery_methods.empty": "Δεν υπάρχουν ακόμη τρόποι παράδοσης.",
-  "shipping.download_slip": "Δελτίο παραγγελίας (PDF)"
+  "shipping.download_slip": "Δελτίο παραγγελίας (PDF)",
+  "center_form.title": "Νέα παραγγελία για αντιπρόσωπο",
+  "center_form.dealer": "Αντιπρόσωπος",
+  "center_form.dealer_placeholder": "Επιλέξτε αντιπρόσωπο",
+  "center_form.dealer_search": "Αναζήτηση ονόματος ή κωδικού αντιπροσώπου…",
+  "center_form.dealer_none": "Δεν βρέθηκε αντιπρόσωπος υπό το κέντρο.",
+  "center_form.dealer_required": "Επιλέξτε αντιπρόσωπο.",
+  "center_form.unit_price": "Τιμή μονάδας (προαιρετικά)",
+  "center_form.unit_price_placeholder": "Αυτόματα",
+  "center_form.price_rule": "Η παραγγελία δημιουργείται εγκεκριμένη και πηγαίνει στην αποθήκη. Χωρίς τιμή ισχύει η τιμή αγοράς του αντιπροσώπου, αλλιώς 0 και η γραμμή επισημαίνεται.",
+  "center_form.create": "Δημιουργία παραγγελίας",
+  "center_form.created": "Η παραγγελία {{no}} δημιουργήθηκε και εγκρίθηκε.",
+  "center_form.price_missing_warning": "Ορισμένες γραμμές δεν έχουν τιμή· αποθηκεύτηκαν με 0.",
+  "form.errors.price_invalid": "Η τιμή μονάδας πρέπει να είναι 0 ή μεγαλύτερη, με έως 4 δεκαδικά.",
+  "items.price_missing": "Χωρίς τιμή",
+  "detail.created_by_seller": "Δημιουργήθηκε από το κέντρο"
 }

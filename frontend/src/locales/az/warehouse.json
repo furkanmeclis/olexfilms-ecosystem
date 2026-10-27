@@ -686,5 +686,7 @@
   "entry_import.save_template": "Bu uyğunlaşdırmanı şablon kimi saxla",
   "entry_import.template_name": "Şablonun adı",
   "entry_import.save": "Yadda saxla",
-  "entry_import.template_saved": "Uyğunlaşdırma şablonu yadda saxlanıldı."
+  "entry_import.template_saved": "Uyğunlaşdırma şablonu yadda saxlanıldı.",
+  "sections.orders.title": "Hazırlanacaq sifarişlər",
+  "sections.orders.description": "Təsdiqlənmiş, hazırlanan və hazır diler sifarişləri: yığım, barkod oxutma və göndərmə."
 }

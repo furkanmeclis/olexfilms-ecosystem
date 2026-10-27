@@ -687,5 +687,7 @@
   "entry_import.save_template": "Salva questo abbinamento come modello",
   "entry_import.template_name": "Nome del modello",
   "entry_import.save": "Salva",
-  "entry_import.template_saved": "Modello di abbinamento salvato."
+  "entry_import.template_saved": "Modello di abbinamento salvato.",
+  "sections.orders.title": "Ordini da preparare",
+  "sections.orders.description": "Ordini dei rivenditori approvati, in preparazione e pronti: prelievo, scansione barcode e spedizione."
 }

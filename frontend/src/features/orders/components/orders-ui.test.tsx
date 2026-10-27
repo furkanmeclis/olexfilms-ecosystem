@@ -52,7 +52,7 @@ vi.mock("@/providers/permission-provider", () => ({
 }));
 vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () =>
-    state.orgType ? { slug: "acme", type: state.orgType } : null,
+    state.orgType ? { uuid: "c1", slug: "acme", type: state.orgType } : null,
 }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
@@ -180,6 +180,7 @@ function order(over: Partial<Order> = {}): Order {
   return {
     uuid: "o1",
     order_no: "ORD-00000001",
+    created_by_seller: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -221,6 +222,7 @@ function order(over: Partial<Order> = {}): Order {
         meters: null,
         unit_price: "80.0000",
         price_source: "list",
+        price_missing: false,
         line_total: "240.00",
         note: null,
         assigned: "0",
@@ -453,10 +455,24 @@ describe("OrderFormPage: validation", () => {
     });
   });
 
-  it("is forbidden for the center", async () => {
+  it("the center gets the dealer order form (TEC-1024)", async () => {
     state.orgType = "center";
     await render(createElement(OrderFormPage, { slug: "acme" }));
     expect($("[data-testid=save-draft]")).toBeNull();
+    expect($("[data-testid=center-order-dealer]")).not.toBeNull();
+    await act(async () => {
+      ($("[data-testid=center-order-create]") as HTMLButtonElement).click();
+    });
+    expect($("[data-testid=dealer-error]")).not.toBeNull();
+    expect($("[data-testid=lines-empty]")?.className).toContain(
+      "text-destructive",
+    );
+  });
+
+  it("is forbidden for the center without orders.write", async () => {
+    state.orgType = "center";
+    state.grants = new Set(["orders.read", "catalog.read"]);
+    await render(createElement(OrderFormPage, { slug: "acme" }));
     expect(container.textContent).toContain("orders.form.forbidden");
   });
 

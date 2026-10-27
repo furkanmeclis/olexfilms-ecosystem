@@ -687,5 +687,7 @@
   "entry_import.save_template": "Enregistrer cette correspondance comme modèle",
   "entry_import.template_name": "Nom du modèle",
   "entry_import.save": "Enregistrer",
-  "entry_import.template_saved": "Modèle de correspondance enregistré."
+  "entry_import.template_saved": "Modèle de correspondance enregistré.",
+  "sections.orders.title": "Commandes à préparer",
+  "sections.orders.description": "Commandes revendeurs approuvées, en préparation et prêtes : prélèvement, scan des codes-barres et expédition."
 }

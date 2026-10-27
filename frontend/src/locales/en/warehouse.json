@@ -687,5 +687,7 @@
   "entry_import.save_template": "Save this mapping as a template",
   "entry_import.template_name": "Template name",
   "entry_import.save": "Save",
-  "entry_import.template_saved": "Mapping template saved."
+  "entry_import.template_saved": "Mapping template saved.",
+  "sections.orders.title": "Orders to prepare",
+  "sections.orders.description": "Approved, preparing and ready dealer orders: picking, barcode scanning and shipping."
 }

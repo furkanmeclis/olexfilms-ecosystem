@@ -686,5 +686,7 @@
   "entry_import.save_template": "Запази това съпоставяне като шаблон",
   "entry_import.template_name": "Име на шаблона",
   "entry_import.save": "Запази",
-  "entry_import.template_saved": "Шаблонът за съпоставяне е запазен."
+  "entry_import.template_saved": "Шаблонът за съпоставяне е запазен.",
+  "sections.orders.title": "Поръчки за подготовка",
+  "sections.orders.description": "Одобрени, в подготовка и готови поръчки на дилъри: събиране, сканиране на баркодове и изпращане."
 }

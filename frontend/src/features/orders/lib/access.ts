@@ -18,6 +18,11 @@ export type OrderListAccess = {
    * for the product search. The center buys from nobody.
    */
   canCreate: boolean;
+  /**
+   * TEC-1024: the center opens an approved order for a dealer directly
+   * under it (orders.write + catalog.read for the product search).
+   */
+  canCreateForDealer: boolean;
   /** Tabs: incoming (sales, side=seller) and outgoing (purchases). */
   sides: OrderSide[];
 };
@@ -56,6 +61,10 @@ export function resolveOrderListAccess(
       can(permissions.orders.write) &&
       can(permissions.catalog.read) &&
       orgType !== "center",
+    canCreateForDealer:
+      can(permissions.orders.write) &&
+      can(permissions.catalog.read) &&
+      orgType === "center",
     sides,
   };
 }

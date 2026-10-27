@@ -187,6 +187,7 @@ function order(over: Partial<Order> = {}): Order {
   return {
     uuid: "o1",
     order_no: "ORD-00000001",
+    created_by_seller: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -228,6 +229,7 @@ function order(over: Partial<Order> = {}): Order {
         meters: null,
         unit_price: "80.0000",
         price_source: "list",
+        price_missing: false,
         line_total: "240.00",
         note: null,
         assigned: "0",

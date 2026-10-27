@@ -13,7 +13,7 @@ import (
 
 const getGlorianOutboundOrder = `-- name: GetGlorianOutboundOrder :one
 
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller FROM orders
 WHERE id = $1
 `
 
@@ -60,6 +60,7 @@ func (q *Queries) GetGlorianOutboundOrder(ctx context.Context, id int64) (Order,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeliveryMethodID,
+		&i.CreatedBySeller,
 	)
 	return i, err
 }
