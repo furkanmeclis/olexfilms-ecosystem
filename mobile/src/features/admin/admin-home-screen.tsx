@@ -5,10 +5,12 @@ import { Pressable, RefreshControl, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
+import { formatDigits } from '@/core/digits';
 import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
+import { usePendingOrderCount } from '@/features/warehouse/orders-api';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -56,13 +58,15 @@ function actionsFor(workplace: boolean): Action[] {
  * network, a distributor its subtree; the API scopes the numbers.
  */
 export function AdminHomeScreen() {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const me = useSession((s) => s.me);
   const org = activeMembership(me);
   const [period, setPeriod] = useState<Period>('30d');
   const canServices = useCan('services.read');
   const perms = new Set(me?.permissions ?? []);
   const moduleOn = useModuleFilter();
+  // Orders waiting for the center's warehouse, as a badge on the Orders shortcut (TEC-1025).
+  const pendingOrders = usePendingOrderCount(isCenterWorkplace(me) && perms.has('orders.read'));
   const actions = actionsFor(isCenterWorkplace(me)).filter(
     (a) => (!a.permission || me?.user.is_super_admin || perms.has(a.permission)) && moduleOn(a.key),
   );
@@ -130,8 +134,17 @@ export function AdminHomeScreen() {
               accessibilityRole="button"
               onPress={() => router.push(a.href)}
               className="min-h-24 grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3.5 active:opacity-80">
-              <View className="size-9 items-center justify-center rounded-md bg-secondary">
-                <Icon name={a.icon} tone="primary" size={20} />
+              <View className="flex-row items-start justify-between">
+                <View className="size-9 items-center justify-center rounded-md bg-secondary">
+                  <Icon name={a.icon} tone="primary" size={20} />
+                </View>
+                {a.key === 'orders' && (pendingOrders.data ?? 0) > 0 ? (
+                  <View className="min-w-6 items-center rounded-full bg-brand px-2 py-0.5">
+                    <Text variant="footnote" className="font-bold tabular-nums" style={{ color: '#002112' }}>
+                      {formatDigits(pendingOrders.data ?? 0, i18n.language)}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               <Text variant="headline">{t(`home.action.${a.key}`)}</Text>
             </Pressable>

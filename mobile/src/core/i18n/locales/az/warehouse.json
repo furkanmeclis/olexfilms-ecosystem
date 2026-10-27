@@ -537,5 +537,6 @@
   "validation.room": "Otaq seçin.",
   "validation.same_warehouse": "Başqa anbar seçin.",
   "validation.too_long": "Ən çox {{max}} simvol.",
-  "validation.warehouse": "Anbar seçin."
+  "validation.warehouse": "Anbar seçin.",
+  "m.open_orders": "İşlənəcək sifarişlər"
 }

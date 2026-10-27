@@ -537,5 +537,6 @@
   "validation.room": "Scegli una stanza.",
   "validation.same_warehouse": "Scegli un altro magazzino.",
   "validation.too_long": "Al massimo {{max}} caratteri.",
-  "validation.warehouse": "Scegliete un magazzino."
+  "validation.warehouse": "Scegliete un magazzino.",
+  "m.open_orders": "Ordini da evadere"
 }

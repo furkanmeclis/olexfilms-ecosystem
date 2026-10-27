@@ -50,6 +50,23 @@ export function useOrders(scope: OrderScope, enabled = true) {
   });
 }
 
+/**
+ * Orders waiting for this organization's warehouse (seller side, approved up to
+ * ready): the count shown on the warehouse and center home shortcuts (TEC-1025).
+ */
+export function usePendingOrderCount(enabled = true) {
+  return useQuery({
+    queryKey: ['warehouse', 'orders', 'pending-count'],
+    enabled,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    queryFn: async () => {
+      const page = await unwrap(api.GET('/v1/orders', { params: { query: { ...SCOPES.prepare, limit: 1, offset: 0 } } }));
+      return page.total;
+    },
+  });
+}
+
 export function useOrder(uuid: string) {
   return useQuery({
     queryKey: orderKeys.order(uuid),

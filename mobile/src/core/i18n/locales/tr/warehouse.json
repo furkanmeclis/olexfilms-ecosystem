@@ -670,5 +670,6 @@
   "labels.no_access_title": "Etiket yetkin yok",
   "labels.no_access_body": "Rolün etiket yazdırmaya izin vermiyor.",
   "labels.ios_only_title": "Bu cihazda etiket yazdırma",
-  "labels.ios_only_body": "Etiket PDF'leri iPhone'da sistem paylaşım menüsünde açılır. Bu cihazda web panelinden yazdır."
+  "labels.ios_only_body": "Etiket PDF'leri iPhone'da sistem paylaşım menüsünde açılır. Bu cihazda web panelinden yazdır.",
+  "m.open_orders": "İşlenecek siparişler"
 }

@@ -537,5 +537,6 @@
   "validation.room": "Выберите помещение.",
   "validation.same_warehouse": "Выберите другой склад.",
   "validation.too_long": "Не более {{max}} символов.",
-  "validation.warehouse": "Выберите склад."
+  "validation.warehouse": "Выберите склад.",
+  "m.open_orders": "Заказы к обработке"
 }

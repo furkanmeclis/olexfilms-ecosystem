@@ -670,5 +670,6 @@
   "labels.no_access_title": "No label access",
   "labels.no_access_body": "Your role cannot print labels.",
   "labels.ios_only_title": "Printing labels on this device",
-  "labels.ios_only_body": "Label PDFs open in the system share sheet on iPhone. On this device, print them from the web panel."
+  "labels.ios_only_body": "Label PDFs open in the system share sheet on iPhone. On this device, print them from the web panel.",
+  "m.open_orders": "Orders to process"
 }

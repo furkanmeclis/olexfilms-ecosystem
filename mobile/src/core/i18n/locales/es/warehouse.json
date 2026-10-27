@@ -537,5 +537,6 @@
   "validation.room": "Elija una sala.",
   "validation.same_warehouse": "Elija otro almacén.",
   "validation.too_long": "Máximo {{max}} caracteres.",
-  "validation.warehouse": "Elija un almacén."
+  "validation.warehouse": "Elija un almacén.",
+  "m.open_orders": "Pedidos por procesar"
 }

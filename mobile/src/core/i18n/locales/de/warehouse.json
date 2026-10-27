@@ -537,5 +537,6 @@
   "validation.room": "Wählen Sie einen Raum.",
   "validation.same_warehouse": "Wählen Sie ein anderes Lager.",
   "validation.too_long": "Höchstens {{max}} Zeichen.",
-  "validation.warehouse": "Wählen Sie ein Lager."
+  "validation.warehouse": "Wählen Sie ein Lager.",
+  "m.open_orders": "Zu bearbeitende Bestellungen"
 }

@@ -537,5 +537,6 @@
   "validation.room": "اختر غرفة.",
   "validation.same_warehouse": "اختر مستودعًا آخر.",
   "validation.too_long": "{{max}} حرفًا كحد أقصى.",
-  "validation.warehouse": "اختر مستودعًا."
+  "validation.warehouse": "اختر مستودعًا.",
+  "m.open_orders": "طلبات بانتظار المعالجة"
 }

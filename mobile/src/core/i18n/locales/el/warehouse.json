@@ -537,5 +537,6 @@
   "validation.room": "Επιλέξτε χώρο.",
   "validation.same_warehouse": "Επιλέξτε άλλη αποθήκη.",
   "validation.too_long": "Έως {{max}} χαρακτήρες.",
-  "validation.warehouse": "Επιλέξτε αποθήκη."
+  "validation.warehouse": "Επιλέξτε αποθήκη.",
+  "m.open_orders": "Παραγγελίες προς επεξεργασία"
 }

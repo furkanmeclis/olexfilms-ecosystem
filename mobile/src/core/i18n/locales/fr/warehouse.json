@@ -537,5 +537,6 @@
   "validation.room": "Choisissez une salle.",
   "validation.same_warehouse": "Choisissez un autre entrepôt.",
   "validation.too_long": "{{max}} caractères maximum.",
-  "validation.warehouse": "Choisissez un entrepôt."
+  "validation.warehouse": "Choisissez un entrepôt.",
+  "m.open_orders": "Commandes à traiter"
 }
