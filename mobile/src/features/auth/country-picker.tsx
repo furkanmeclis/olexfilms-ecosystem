@@ -20,7 +20,16 @@ export function useCountries() {
 }
 
 /** Flag + calling code button; opens a searchable sheet of every country. */
-export function CountryPicker({ value, onChange }: { value: CountryCode; onChange: (c: CountryCode) => void }) {
+export function CountryPicker({
+  value,
+  onChange,
+  bare,
+}: {
+  value: CountryCode;
+  onChange: (c: CountryCode) => void;
+  /** Borderless, for use inside a combined phone field. */
+  bare?: boolean;
+}) {
   const { t } = useTranslation('auth');
   const countries = useCountries();
   const [open, setOpen] = useState(false);
@@ -32,7 +41,11 @@ export function CountryPicker({ value, onChange }: { value: CountryCode; onChang
         accessibilityRole="button"
         accessibilityLabel={t('country_picker_a11y', { country: current.name, dial: current.dial })}
         onPress={() => setOpen(true)}
-        className="min-h-[52px] flex-row items-center gap-1.5 rounded-lg border border-border bg-background px-3 active:opacity-70">
+        className={
+          bare
+            ? 'min-h-14 flex-row items-center gap-1.5 ps-4 pe-3 active:opacity-70'
+            : 'min-h-[52px] flex-row items-center gap-1.5 rounded-lg border border-border bg-background px-3 active:opacity-70'
+        }>
         <Text className="text-[22px] leading-[26px]">{current.flag}</Text>
         <Text variant="body" className="font-semibold tabular-nums">
           {current.dial}

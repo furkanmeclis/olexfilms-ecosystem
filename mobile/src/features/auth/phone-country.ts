@@ -114,3 +114,8 @@ export function filterCountries(list: Country[], query: string): Country[] {
     return fold(c.name).includes(q) || c.code.toLowerCase() === q;
   });
 }
+
+/** An E.164 number in international form for display (`+90 532 123 45 67`); unparsable input is returned as is. */
+export function formatPhone(e164: string): string {
+  return parsePhoneNumberFromString(e164)?.formatInternational() ?? e164;
+}

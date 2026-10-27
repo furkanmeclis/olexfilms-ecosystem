@@ -2,17 +2,17 @@ import { router } from 'expo-router';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isApiError } from '@/core/api/errors';
 import { identify } from '@/core/auth/api';
 import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
-import { GlassCard } from '@/ui/glass-card';
-import { Icon } from '@/ui/icon';
-import { Input } from '@/ui/input';
+import { Text } from '@/ui/text';
 
-import { AuthLayout } from './auth-layout';
+import { AuthField } from './auth-field';
+import { AuthHero, useKeyboardVisible } from './auth-layout';
 import { CountryPicker } from './country-picker';
 import { DevDemoAccounts } from './dev-demo-accounts';
 import { usePendingLogin } from './pending-login';
@@ -25,32 +25,55 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Sign-in start: customers sign in by phone (a WhatsApp code), staff and
  * fleet accounts by e-mail and password. Either screen links to the other,
- * since the backend accepts both for every user.
+ * since the backend accepts both for every user. The brand panel fills the
+ * top; the form sits in a sheet that rises with the keyboard.
  */
 export function SignInScreen({ mode }: { mode: SignInMode }) {
   const { t } = useTranslation('auth');
+  const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardVisible();
   const phone = mode === 'phone';
   const other: SignInMode = phone ? 'email' : 'phone';
 
   return (
-    <AuthLayout
-      brand
-      title={t(phone ? 'phone_title' : 'sign_in_email_title')}
-      subtitle={t(phone ? 'sign_in_phone_subtitle' : 'sign_in_email_subtitle')}>
-      {/* Keyed by mode: switching resets the field, its error and the busy state. */}
-      {phone ? <PhoneForm key="phone" /> : <EmailForm key="email" />}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-background">
+      <AuthHero title={t('welcome_title')} subtitle={t('welcome_subtitle')} />
 
-      <View className="items-center">
+      <View
+        className="-mt-8 gap-6 rounded-t-[32px] bg-background px-6 pt-7"
+        // Over the keyboard the home-indicator inset is not needed.
+        style={{ paddingBottom: keyboard ? 16 : Math.max(insets.bottom, 16) + 8, borderCurve: 'continuous' }}>
+        <View className="gap-1">
+          <Text variant="title">{t(phone ? 'phone_title' : 'sign_in_email_title')}</Text>
+          <Text variant="footnote" tone="muted">
+            {t(phone ? 'sign_in_phone_subtitle' : 'sign_in_email_subtitle')}
+          </Text>
+        </View>
+
+        {/* Keyed by mode: switching resets the field, its error and the busy state. */}
+        {phone ? <PhoneForm key="phone" /> : <EmailForm key="email" />}
+
+        <View className="flex-row items-center gap-3">
+          <View className="h-px flex-1 bg-border" />
+          <Text variant="footnote" tone="muted">
+            {t('or')}
+          </Text>
+          <View className="h-px flex-1 bg-border" />
+        </View>
+
         <Button
-          variant="ghost"
+          variant="outline"
+          size="lg"
           title={t(phone ? 'sign_in_email_title' : 'phone_title')}
-          icon={<Icon name={phone ? 'mail' : 'phone'} tone="primary" size={17} />}
+          icon={phone ? 'mail' : 'phone'}
           onPress={() => router.setParams({ mode: other })}
         />
-      </View>
 
-      {phone ? null : <DevDemoAccounts />}
-    </AuthLayout>
+        {phone ? null : <DevDemoAccounts />}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -96,26 +119,23 @@ function PhoneForm() {
   };
 
   return (
-    <GlassCard className="gap-5">
-      <Input
-        icon="phone"
+    <View className="gap-4">
+      <AuthField
         label={t('phone_label')}
         placeholder={placeholder}
-        leading={<CountryPicker value={country} onChange={onCountry} />}
+        leading={<CountryPicker bare value={country} onChange={onCountry} />}
         value={value}
         onChangeText={onChange}
         error={error}
-        className="bg-background"
         // Digits and "+" never mirror; 'left' is the start edge (RN swaps it in RTL).
         style={{ writingDirection: 'ltr', textAlign: 'left' }}
         keyboardType="phone-pad"
         textContentType="telephoneNumber"
         autoComplete="tel"
-        returnKeyType="next"
-        onSubmitEditing={() => void next()}
+        // No returnKeyType: on the number pad RN adds its own accessory bar with an untranslated "Next".
       />
       <Button title={t('common:continue')} size="lg" loading={busy} disabled={!value.trim()} onPress={() => void next()} />
-    </GlassCard>
+    </View>
   );
 }
 
@@ -133,9 +153,8 @@ function EmailForm() {
   };
 
   return (
-    <GlassCard className="gap-5">
-      <Input
-        icon="mail"
+    <View className="gap-4">
+      <AuthField
         label={t('email_label')}
         placeholder={t('placeholder_email')}
         value={value}
@@ -144,7 +163,6 @@ function EmailForm() {
           setError(undefined);
         }}
         error={error}
-        className="bg-background"
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -154,6 +172,6 @@ function EmailForm() {
         onSubmitEditing={next}
       />
       <Button title={t('common:continue')} size="lg" disabled={!value.trim()} onPress={next} />
-    </GlassCard>
+    </View>
   );
 }
