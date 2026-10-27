@@ -84,8 +84,11 @@ func (s *Service) loadSource(ctx context.Context, q *db.Queries, c Caller, sourc
 	if err != nil {
 		return source{}, err
 	}
-	want := map[string]string{SourceOrder: "distributor", SourceSubscription: "dealer"}[sourceType]
-	if buyer.Type != want {
+	// TEC-1003: with the TR distributor gone the center sells to its
+	// dealers directly, so their received orders are billable too.
+	billable := buyer.Type == "dealer" ||
+		(sourceType == SourceOrder && buyer.Type == "distributor")
+	if !billable {
 		return source{}, ErrSourceNotBillable
 	}
 	country, err := q.GetOrganizationCountryISO2(ctx, buyer.ID)
