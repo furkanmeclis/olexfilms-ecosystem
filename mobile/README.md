@@ -43,18 +43,20 @@ Later native modules (BLE, plate recognition) also need the development build.
 | `npm run uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
 | `npm run doctor` | `expo-doctor` |
 
-## TestFlight and OTA from EAS Workflows (TEC-1011)
+## TestFlight and OTA from CI (TEC-1011)
 
-- Shipping is driven by EAS Workflows, not GitHub Actions: `.eas/workflows/deploy-ios.yml`
-  runs on every push to `main` that touches `mobile/**` or `docs/openapi.yaml` (the Expo
-  GitHub app is connected to this repo with base directory `/mobile`). Skip a run with
-  `[eas skip]` in the commit message; run by hand with
-  `npx eas-cli@latest workflow:run deploy-ios.yml` from `mobile/`.
-- The workflow takes the native fingerprint (production environment) and asks EAS for a
-  finished production build with the same hash:
-  - **found** → JS-only change → `update` job publishes an OTA on channel `production`
-    (the TestFlight binary picks it up on the next foreground/cold start, see below);
-  - **not found** → `build` (iOS production) + `submit` → new TestFlight build.
+- Every green push to `main` that touched `mobile/` (or the OpenAPI spec) runs the
+  `mobile-release` job in `.github/workflows/ci.yml` from `mobile/`. It compares the native
+  fingerprint with the latest finished store build on EAS (`eas fingerprint:compare`):
+  - **unchanged** → JS-only change → `eas update --channel production` from the GitHub
+    runner (about 2 minutes; the TestFlight binary picks it up on next foreground/cold start);
+  - **changed** (native dependency, config plugin, `app.json` native field, SDK) or no
+    previous build → `eas build -p ios --profile production --auto-submit --no-wait` → new
+    TestFlight build on EAS.
+  The job diffs the push itself, so a `ci.yml` edit or the weekly scheduled run never ships.
+- `.eas/workflows/deploy-ios.yml` is the same decision as an EAS Workflow, kept for manual
+  end-to-end runs (`npx eas-cli@latest workflow:run deploy-ios.yml`). It has no push trigger:
+  on 2026-10-26 its Linux jobs waited about an hour each in the EAS queue.
 - Same EAS project (`@furkanmeclis/olexfilms`), bundle id `com.olexfilms.app` and
   App Store Connect record (ascAppId in `eas.json`) as the previous Olexfilms app, so
   builds land in the existing TestFlight app and its internal tester group.
@@ -64,11 +66,11 @@ Later native modules (BLE, plate recognition) also need the development build.
 - `EXPO_PUBLIC_API_URL` for builds and updates comes from the EAS `production`
   environment (`eas env:list --environment production`; the production build profile is
   pinned to it). Until the cutover it is the staging host; switch it there, never in the repo.
-- Credentials live on EAS (`eas credentials -p ios`: distribution certificate, provisioning
-  profile, ASC API key). No GitHub secret is needed any more.
-- Status: `eas workflow:list` / the Workflows tab on expo.dev; `eas submit:status -p ios
-  --profile production` for App Store Connect / TestFlight state; `eas channel:view
-  production` for the latest OTA.
+- Secrets: GitHub repo secret `EXPO_TOKEN` (Expo robot user "GitHub App"); Apple
+  distribution certificate, provisioning profile and ASC API key are stored on EAS
+  (`eas credentials -p ios`).
+- Status: `eas submit:status -p ios --profile production` for App Store Connect / TestFlight
+  state; `eas channel:view production` for the latest OTA.
 - In this monorepo the EAS CLI may pick the wrong root locally; run it with
   `EAS_PROJECT_ROOT=$PWD` from `mobile/`.
 
