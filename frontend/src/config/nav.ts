@@ -463,7 +463,8 @@ export function tenantNav(slug: string) {
             href: routes.tenant.orders.create(slug),
             icon: ShoppingCart,
             permission: [permissions.orders.write, permissions.catalog.read],
-            orgTypes: ["distributor", "dealer"],
+            // TEC-1024: the center opens orders for its dealers.
+            orgTypes: ["center", "distributor", "dealer"],
             feature: "orders",
           },
         ],
