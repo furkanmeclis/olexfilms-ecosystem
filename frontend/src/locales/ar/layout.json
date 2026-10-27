@@ -102,5 +102,8 @@
   "settings_group_data": "البيانات والمراقبة",
   "settings_group_organization": "المؤسسة",
   "settings_group_operations": "العمليات",
-  "settings_group_ai": "الذكاء الاصطناعي"
+  "settings_group_ai": "الذكاء الاصطناعي",
+  "settings_group_accounts": "الحسابات",
+  "nav_team_new": "إضافة موظف",
+  "nav_dealer_new": "وكيل جديد"
 }

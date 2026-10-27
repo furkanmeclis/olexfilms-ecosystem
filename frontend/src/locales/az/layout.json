@@ -102,5 +102,8 @@
   "settings_group_data": "Məlumat və monitorinq",
   "settings_group_organization": "Təşkilat",
   "settings_group_operations": "Əməliyyatlar",
-  "settings_group_ai": "Süni intellekt"
+  "settings_group_ai": "Süni intellekt",
+  "settings_group_accounts": "Hesablar",
+  "nav_team_new": "İşçi əlavə et",
+  "nav_dealer_new": "Yeni diler"
 }

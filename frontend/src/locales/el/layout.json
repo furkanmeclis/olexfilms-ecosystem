@@ -102,5 +102,8 @@
   "settings_group_data": "Δεδομένα και παρακολούθηση",
   "settings_group_organization": "Οργανισμός",
   "settings_group_operations": "Λειτουργίες",
-  "settings_group_ai": "ΤΝ"
+  "settings_group_ai": "ΤΝ",
+  "settings_group_accounts": "Λογαριασμοί",
+  "nav_team_new": "Προσθήκη υπαλλήλου",
+  "nav_dealer_new": "Νέος αντιπρόσωπος"
 }

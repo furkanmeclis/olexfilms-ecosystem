@@ -39,6 +39,9 @@ export const routes = {
     settings: {
       root: (slug: string) => `/t/${slug}/settings`,
       exportDefaults: (slug: string) => `/t/${slug}/settings/export-defaults`,
+      /** Phone-first account opening: staff and a dealer with its owner. */
+      teamNew: (slug: string) => `/t/${slug}/settings/team/new`,
+      dealerNew: (slug: string) => `/t/${slug}/settings/dealers/new`,
     },
     features: {
       root: (slug: string) => `/t/${slug}/settings/modules`,

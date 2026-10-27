@@ -102,5 +102,8 @@
   "settings_group_data": "Данни и наблюдение",
   "settings_group_organization": "Организация",
   "settings_group_operations": "Операции",
-  "settings_group_ai": "ИИ"
+  "settings_group_ai": "ИИ",
+  "settings_group_accounts": "Акаунти",
+  "nav_team_new": "Добавяне на служител",
+  "nav_dealer_new": "Нов дилър"
 }

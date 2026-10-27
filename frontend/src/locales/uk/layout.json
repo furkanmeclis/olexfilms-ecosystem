@@ -102,5 +102,8 @@
   "settings_group_data": "Дані та моніторинг",
   "settings_group_organization": "Організація",
   "settings_group_operations": "Операції",
-  "settings_group_ai": "ШІ"
+  "settings_group_ai": "ШІ",
+  "settings_group_accounts": "Облікові записи",
+  "nav_team_new": "Додати працівника",
+  "nav_dealer_new": "Новий дилер"
 }

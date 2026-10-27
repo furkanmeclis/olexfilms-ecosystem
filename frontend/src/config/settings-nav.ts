@@ -25,8 +25,10 @@ import {
   Settings2,
   Shield,
   SlidersHorizontal,
+  Store,
   Truck,
   Upload,
+  UserPlus,
   Warehouse,
 } from "lucide-react";
 
@@ -376,6 +378,31 @@ export function tenantSettingsNav(slug: string): NavCatalog {
             permission: permissions.photoStandard.override,
             feature: "photo_standard",
             orgTypes: ["distributor"],
+          },
+        ],
+      },
+      {
+        // Phone-first account opening (demo flow): staff of the organization
+        // (members.write) and a dealer with its owner under the center or
+        // distributor (organizations.write).
+        id: "accounts",
+        labelKey: "layout.settings_group_accounts",
+        icon: UserPlus,
+        items: [
+          {
+            id: "team-new",
+            titleKey: "layout.nav_team_new",
+            href: routes.tenant.settings.teamNew(slug),
+            icon: UserPlus,
+            permission: permissions.members.write,
+          },
+          {
+            id: "dealer-new",
+            titleKey: "layout.nav_dealer_new",
+            href: routes.tenant.settings.dealerNew(slug),
+            icon: Store,
+            permission: permissions.organizations.tenantWrite,
+            orgTypes: ["center", "distributor"],
           },
         ],
       },

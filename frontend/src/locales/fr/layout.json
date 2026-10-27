@@ -102,5 +102,8 @@
   "settings_group_data": "Données et supervision",
   "settings_group_organization": "Organisation",
   "settings_group_operations": "Opérations",
-  "settings_group_ai": "IA"
+  "settings_group_ai": "IA",
+  "settings_group_accounts": "Comptes",
+  "nav_team_new": "Ajouter un employé",
+  "nav_dealer_new": "Nouveau revendeur"
 }

@@ -102,5 +102,8 @@
   "settings_group_data": "Veri ve izleme",
   "settings_group_organization": "Organizasyon",
   "settings_group_operations": "Operasyon",
-  "settings_group_ai": "Yapay zekâ"
+  "settings_group_ai": "Yapay zekâ",
+  "settings_group_accounts": "Hesaplar",
+  "nav_team_new": "Personel ekle",
+  "nav_dealer_new": "Yeni bayi"
 }

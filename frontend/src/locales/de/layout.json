@@ -102,5 +102,8 @@
   "settings_group_data": "Daten und Überwachung",
   "settings_group_organization": "Organisation",
   "settings_group_operations": "Betrieb",
-  "settings_group_ai": "KI"
+  "settings_group_ai": "KI",
+  "settings_group_accounts": "Konten",
+  "nav_team_new": "Mitarbeiter hinzufügen",
+  "nav_dealer_new": "Neuer Händler"
 }
