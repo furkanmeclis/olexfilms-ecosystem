@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Дилер или автомобиль не найден.",
   "appointments.error.invalid": "Данные неверны. Проверьте свой выбор.",
   "appointments.error.generic": "Не удалось выполнить действие. Повторите попытку.",
+  "appointments.error.feature_disabled": "Этот дилер сейчас не принимает онлайн-записи.",
   "preferences.campaign_marketing": "Сообщения кампаний",
   "preferences.campaign_marketing_hint": "Получать сообщения кампаний и маркетинга. По умолчанию выключено; отключение сразу отзывает согласие.",
   "fleet.title": "Портал автопарка",

@@ -48,8 +48,9 @@ func RegisterRoutes(
 // RegisterPortalRoutes mounts the customer portal booking routes. TEC-1023:
 // every route answers 403 FEATURE_DISABLED while appointments is closed
 // system wide; availability, create and cancel also answer it when the
-// module is off for the dealer (the use case checks the organization). The
-// "my appointments" list keeps showing history.
+// module is off for the dealer (the use case checks the organization). A
+// dealer switching the module off keeps the customer's past appointments in
+// "my appointments"; only the system-wide switch closes that list too.
 func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader,
 	system middleware.SystemFeatureChecker,
 ) {

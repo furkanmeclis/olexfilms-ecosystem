@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Дилърът или автомобилът не е намерен.",
   "appointments.error.invalid": "Данните са невалидни. Проверете избора си.",
   "appointments.error.generic": "Действието не можа да бъде изпълнено. Опитайте отново.",
+  "appointments.error.feature_disabled": "Този дилър в момента не приема онлайн часове.",
   "preferences.campaign_marketing": "Кампанийни съобщения",
   "preferences.campaign_marketing_hint": "Получавайте кампанийни и маркетингови съобщения. По подразбиране е изключено; изключването веднага оттегля съгласието.",
   "fleet.title": "Флотен портал",

@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Händler oder Fahrzeug nicht gefunden.",
   "appointments.error.invalid": "Die Angaben sind ungültig. Prüfen Sie Ihre Auswahl.",
   "appointments.error.generic": "Der Vorgang konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
+  "appointments.error.feature_disabled": "Dieser Händler nimmt derzeit keine Online-Termine an.",
   "preferences.campaign_marketing": "Kampagnennachrichten",
   "preferences.campaign_marketing_hint": "Kampagnen- und Marketingnachrichten erhalten. Standardmäßig aus; Ausschalten widerruft die Zustimmung sofort.",
   "fleet.title": "Flottenportal",

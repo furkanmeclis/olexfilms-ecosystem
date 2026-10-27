@@ -243,6 +243,9 @@ describe("portal appointment helpers", () => {
     expect(
       portalAppointmentErrorKey({ code: "APPOINTMENT_CANCEL_WINDOW_CLOSED" }),
     ).toBe("portal.appointments.error.cancel_window");
+    expect(
+      portalAppointmentErrorKey({ status: 403, code: "FEATURE_DISABLED" }),
+    ).toBe("portal.appointments.error.feature_disabled");
     expect(portalAppointmentErrorKey({ status: 404, code: null })).toBe(
       "portal.appointments.error.not_found",
     );

@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Rivenditore o veicolo non trovato.",
   "appointments.error.invalid": "I dati non sono validi. Controlla le tue scelte.",
   "appointments.error.generic": "Operazione non riuscita. Riprova.",
+  "appointments.error.feature_disabled": "Questo rivenditore al momento non accetta appuntamenti online.",
   "preferences.campaign_marketing": "Messaggi campagna",
   "preferences.campaign_marketing_hint": "Ricevi messaggi di campagne e marketing. Disattivato per impostazione predefinita; spegnerlo revoca subito il consenso.",
   "fleet.title": "Portale flotta",
