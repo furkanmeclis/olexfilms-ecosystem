@@ -1,5 +1,6 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
+import { useModule } from '@/core/modules';
 import { useFleetRoles } from '@/features/customer-space/lib';
 import { useTabTint } from '@/features/shell/tab-tint';
 
@@ -11,6 +12,9 @@ export default function MusteriTabs() {
   const tint = useTabTint();
   const { t } = useTranslation('nav');
   const { fleet } = useFleetRoles();
+  // A module the admin switched off loses its tab (TEC-1023).
+  const appointments = useModule('appointments');
+  const fleetModule = useModule('fleet');
   return (
     <NativeTabs tintColor={tint}>
       <NativeTabs.Trigger name="(home)">
@@ -21,11 +25,11 @@ export default function MusteriTabs() {
         <NativeTabs.Trigger.Icon sf="checkmark.shield.fill" md="verified_user" />
         <NativeTabs.Trigger.Label>{t('warranties')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="appointments">
+      <NativeTabs.Trigger name="appointments" hidden={!appointments}>
         <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
         <NativeTabs.Trigger.Label>{t('appointments')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="fleet" hidden={!fleet}>
+      <NativeTabs.Trigger name="fleet" hidden={!fleet || !fleetModule}>
         <NativeTabs.Trigger.Icon sf="truck.box.fill" md="local_shipping" />
         <NativeTabs.Trigger.Label>{t('fleet')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

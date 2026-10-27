@@ -11,9 +11,9 @@ import { EmptyState } from '@/ui/empty-state';
  * (reached through a notification, search hit or old link) shows a plain
  * "module closed" message instead of failing on its first request.
  */
-export function ModuleGate({ routeName, children }: { routeName: string; children: ReactElement }) {
+export function ModuleGate({ routeName, module, children }: { routeName: string; module?: string; children: ReactElement }) {
   const { t } = useTranslation();
-  const on = useModule(moduleOfRoute(routeName));
+  const on = useModule(module ?? moduleOfRoute(routeName));
   if (on) return children;
   return (
     <View className="flex-1 justify-center bg-background">

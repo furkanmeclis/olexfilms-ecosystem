@@ -12,6 +12,7 @@ import {
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
+import { useModule } from '@/core/modules';
 import { formatDateTime, formatNumber } from '@/features/services/lib';
 import { NotificationBell } from '@/features/notifications/bell';
 import { errorText } from '@/features/services/ui';
@@ -82,6 +83,8 @@ export function CustomerHomeScreen() {
   const links = useCustomerLinks();
   const { fleet } = useFleetRoles();
   const statusLabel = useServiceStatusLabel();
+  // Booking is a module the admin can switch off (TEC-1023).
+  const booking = useModule('appointments');
   const [page, setPage] = useState(0);
 
   const vehicles = useQuery({
@@ -96,6 +99,7 @@ export function CustomerHomeScreen() {
   });
   const next = useQuery({
     queryKey: ['portal', 'appointments', 'next'],
+    enabled: booking,
     retry: retryPortal,
     queryFn: () => unwrap(api.GET('/v1/portal/appointments', { params: { query: { period: 'upcoming', limit: 1 } } })),
   });
@@ -125,7 +129,7 @@ export function CustomerHomeScreen() {
     await Promise.allSettled([
       vehicles.refetch(),
       services.refetch(),
-      next.refetch(),
+      booking ? next.refetch() : null,
       current ? detail.refetch() : null,
       fleet ? fleetQ.refetch() : null,
     ]);
@@ -221,7 +225,7 @@ export function CustomerHomeScreen() {
 
         <View className="gap-7 px-5 pt-6">
           {/* Next step */}
-          {isHidden(next.error) ? null : (
+          {!booking || isHidden(next.error) ? null : (
             <Rise index={0}>
               {appt ? (
                 <NextStepCard
@@ -247,7 +251,9 @@ export function CustomerHomeScreen() {
 
           {/* Shortcuts */}
           <Rise index={1} className="flex-row gap-3">
-            <QuickAction icon="appointment" label={t('home_book')} onPress={() => router.push('/musteri/appointments/new' as Href)} />
+            {booking ? (
+              <QuickAction icon="appointment" label={t('home_book')} onPress={() => router.push('/musteri/appointments/new' as Href)} />
+            ) : null}
             <QuickAction icon="warranty" label={t('action.warranties')} onPress={() => router.push('/musteri/warranties')} />
             <QuickAction icon="service" label={t('action.services')} onPress={() => router.push('/musteri/services' as Href)} />
             <QuickAction icon="location" label={t('action.find_dealer')} onPress={() => void openDealerFinder()} />

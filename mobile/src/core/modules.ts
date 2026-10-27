@@ -9,27 +9,41 @@ import { useSession } from '@/core/auth/session';
  * and a direct link lands on a "module closed" screen).
  *
  * Staff read `GET /v1/features` (the active organization's enabled keys, the
- * same source as the web menus). Until the answer is known everything shows,
- * so a slow or offline start never hides the app; the answer is cached on disk
- * with the other queries.
+ * same source as the web menus). Customers read `GET /v1/portal/features`
+ * (TEC-1023), which answers only the customer-facing modules in
+ * `PORTAL_MODULES`; every other key stays on for them. Until the answer is
+ * known everything shows, so a slow or offline start never hides the app; the
+ * answer is cached on disk with the other queries.
  */
-export function useEnabledModules(): ReadonlySet<string> | null {
+const PORTAL_MODULES: ReadonlySet<string> = new Set(['appointments', 'warranty_claims', 'reviews', 'fleet']);
+
+function useModuleCheck(): (module: string | undefined) => boolean {
   const me = useSession((s) => s.me);
-  const staff = !!me && me.session_kind !== 'customer';
-  const q = useQuery({
+  const customer = me?.session_kind === 'customer';
+  const staff = useQuery({
     queryKey: ['features', me?.active_organization_uuid ?? ''],
-    enabled: staff && !!me?.active_organization_uuid,
+    enabled: !!me && !customer && !!me.active_organization_uuid,
     staleTime: 5 * 60_000,
     queryFn: () => unwrap(api.GET('/v1/features')),
-    select: (d) => new Set(d.enabled),
+    select: (d) => new Set<string>(d.enabled),
   });
-  return q.data ?? null;
+  const portal = useQuery({
+    queryKey: ['features', 'portal'],
+    enabled: !!me && customer,
+    staleTime: 5 * 60_000,
+    queryFn: () => unwrap(api.GET('/v1/portal/features')),
+    select: (d) => new Set<string>(d.enabled),
+  });
+  return (module) => {
+    if (!module) return true;
+    if (customer) return !PORTAL_MODULES.has(module) || !portal.data || portal.data.has(module);
+    return !staff.data || staff.data.has(module);
+  };
 }
 
 /** False only when the module is known to be off; an empty key is always on. */
 export function useModule(key: string | undefined): boolean {
-  const enabled = useEnabledModules();
-  return !key || !enabled || enabled.has(key);
+  return useModuleCheck()(key);
 }
 
 /**
@@ -68,14 +82,13 @@ const ROUTE_MODULES: Record<string, string> = {
 };
 
 export function moduleOfRoute(routeName: string): string | undefined {
+  // The customer's review form sits under a service (`service/review/[uuid]`).
+  if (routeName.includes('review/')) return 'reviews';
   return ROUTE_MODULES[routeName.split('/')[0] ?? ''];
 }
 
 /** `(routeOrMenuKey) => on?` for lists of rows and shortcuts keyed like routes. */
 export function useModuleFilter() {
-  const enabled = useEnabledModules();
-  return (key: string) => {
-    const m = moduleOfRoute(key);
-    return !m || !enabled || enabled.has(m);
-  };
+  const on = useModuleCheck();
+  return (key: string) => on(moduleOfRoute(key));
 }
