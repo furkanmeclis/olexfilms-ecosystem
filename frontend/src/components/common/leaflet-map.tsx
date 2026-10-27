@@ -20,6 +20,11 @@ export type MapMarker = {
   /** TEC-496: data markers (region circles, clusters) size and color. */
   radius?: number;
   color?: string;
+  /**
+   * TEC-1029: an outlined grey ring with a faint fill (e.g. a province
+   * without dealers on the performance map); `color` tints the outline.
+   */
+  hollow?: boolean;
 };
 
 export type LeafletMapProps = {
@@ -63,6 +68,14 @@ const MARKER_STYLE: Record<
     fillOpacity: 1,
   },
 };
+
+const HOLLOW_STYLE = (color = "#94a3b8"): Leaflet.CircleMarkerOptions => ({
+  color,
+  weight: 2,
+  dashArray: "3 3",
+  fillColor: color,
+  fillOpacity: 0.08,
+});
 
 /**
  * Reusable OpenStreetMap map (TEC-242): the dealer finder, the panel
@@ -148,6 +161,7 @@ export function LeafletMap({
         ...style,
         ...(m.radius ? { radius: m.radius } : {}),
         ...(m.color ? { fillColor: m.color, fillOpacity: 0.7 } : {}),
+        ...(m.hollow ? HOLLOW_STYLE(m.color) : {}),
       });
       if (m.label) marker.bindTooltip(m.label, { direction: "top" });
       marker.on("click", () => markerClickRef.current?.(m.id));

@@ -193,7 +193,7 @@ const OWN = 'own';
  */
 function usePerformers() {
   const me = useSession((s) => s.me);
-  const canList = useCan('tenant.settings.read');
+  const canList = useCan('organizations.read');
   const enabled = isCenterWorkplace(me) && canList;
   const dealers = useQuery({
     queryKey: ['tenant', 'organizations', 'dealers'],

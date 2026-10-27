@@ -205,7 +205,7 @@ export function NewClaimScreen() {
                   onPress={() => setParts((p) => togglePart(p, key))}
                   className={cn('min-h-11 flex-row items-center gap-3 px-4 py-2.5 active:bg-muted', i < available.length - 1 && 'border-b border-border')}>
                   <Text variant="body" className="flex-1">
-                    {key}
+                    {t(`dealer:part.${key}`, { defaultValue: key })}
                   </Text>
                   {on ? <Icon name="check" tone="primary" size={20} /> : null}
                 </Pressable>

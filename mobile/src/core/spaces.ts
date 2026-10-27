@@ -25,7 +25,8 @@ export function activeMembership(me: MobileMe | null): Membership | undefined {
  * - Dealer: `bayi`.
  * - Center (TEC-1003: it also runs the AFM Florya service point): the `bayi`
  *   workplace when it creates services or manages the network; the admin
- *   screens sit in its menu. Warehouse-only staff open `depo`.
+ *   screens sit in its menu. Warehouse staff (no service intake) open `depo`
+ *   first.
  * - Distributor (abroad): `admin`.
  * - `depo` is added when the role reads the warehouse.
  */
@@ -45,13 +46,18 @@ export function kindsOf(me: MobileMe | null): SpaceKind[] {
     kinds.push('admin');
   }
   // Decision 2026-10-16: the warehouse runs fully on mobile, no web needed.
-  if (warehouse) kinds.push('depo');
+  // Warehouse staff of the center (center_warehouse also reads organizations)
+  // open the warehouse first; the workplace stays one switch away.
+  if (warehouse) {
+    if (org.type === 'center' && !all && !p.has('services.write')) kinds.unshift('depo');
+    else kinds.push('depo');
+  }
   return kinds.length ? kinds : [org.type === 'center' ? 'bayi' : 'admin'];
 }
 
 /** True when the center works in the dealer workplace with the admin screens in its menu. */
 export function isCenterWorkplace(me: MobileMe | null): boolean {
-  return activeMembership(me)?.type === 'center' && kindsOf(me)[0] === 'bayi';
+  return activeMembership(me)?.type === 'center' && kindsOf(me).includes('bayi');
 }
 
 /** Organizations the user can switch to; only listed when there is more than one. */
