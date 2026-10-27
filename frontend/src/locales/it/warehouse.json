@@ -689,5 +689,13 @@
   "entry_import.save": "Salva",
   "entry_import.template_saved": "Modello di abbinamento salvato.",
   "sections.orders.title": "Ordini da preparare",
-  "sections.orders.description": "Ordini dei rivenditori approvati, in preparazione e pronti: prelievo, scansione barcode e spedizione."
+  "sections.orders.description": "Ordini dei rivenditori approvati, in preparazione e pronti: prelievo, scansione barcode e spedizione.",
+  "kpis.title": "Indicatori",
+  "kpis.error": "Caricamento non riuscito",
+  "kpis.prepare_queue": "Coda di preparazione",
+  "kpis.ready_shipped": "Pronti / spediti",
+  "kpis.open_orders": "Ordini aperti",
+  "kpis.draft_entries": "Entrate di magazzino in bozza",
+  "kpis.open_transfers": "Trasferimenti aperti",
+  "kpis.open_counts": "Conteggi aperti"
 }

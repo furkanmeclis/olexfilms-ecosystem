@@ -689,5 +689,13 @@
   "entry_import.save": "Enregistrer",
   "entry_import.template_saved": "Modèle de correspondance enregistré.",
   "sections.orders.title": "Commandes à préparer",
-  "sections.orders.description": "Commandes revendeurs approuvées, en préparation et prêtes : prélèvement, scan des codes-barres et expédition."
+  "sections.orders.description": "Commandes revendeurs approuvées, en préparation et prêtes : prélèvement, scan des codes-barres et expédition.",
+  "kpis.title": "Indicateurs",
+  "kpis.error": "Chargement impossible",
+  "kpis.prepare_queue": "File de préparation",
+  "kpis.ready_shipped": "Prêtes / expédiées",
+  "kpis.open_orders": "Commandes ouvertes",
+  "kpis.draft_entries": "Entrées de stock en brouillon",
+  "kpis.open_transfers": "Transferts ouverts",
+  "kpis.open_counts": "Inventaires ouverts"
 }

@@ -11,7 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
@@ -50,6 +50,7 @@ import {
   transferFormSchema,
   type TransferFormValues,
 } from "@/features/warehouse/lib/forms";
+import { statusFilterFromParam } from "@/features/warehouse/lib/list-seed";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import {
   TRANSFER_STATUSES,
@@ -282,8 +283,15 @@ export function TransfersPage({ slug }: { slug: string }) {
 
   // Column meta drives the params: from_/to_warehouse_uuid / status (CSV),
   // created (created_from/_to); sort transfer_no | created_at | status.
+  // TEC-1032: ?status=a,b (the hub KPI link) seeds the status filter.
+  const statusParam = useSearchParams()?.get("status") ?? "";
+  const initialColumnFilters = useMemo(
+    () => statusFilterFromParam(statusParam, TRANSFER_STATUSES),
+    [statusParam],
+  );
   const listState = useServerListState({
     columns,
+    initialColumnFilters,
     initialSort: "-created_at",
     initialPageSize: TRANSFER_PAGE_SIZE,
     persistKey: TRANSFERS_PERSIST_KEY,

@@ -689,5 +689,13 @@
   "entry_import.save": "Сохранить",
   "entry_import.template_saved": "Шаблон сопоставления сохранён.",
   "sections.orders.title": "Заказы к подготовке",
-  "sections.orders.description": "Одобренные, готовящиеся и готовые заказы дилеров: комплектация, сканирование штрихкодов и отгрузка."
+  "sections.orders.description": "Одобренные, готовящиеся и готовые заказы дилеров: комплектация, сканирование штрихкодов и отгрузка.",
+  "kpis.title": "Показатели",
+  "kpis.error": "Не удалось загрузить",
+  "kpis.prepare_queue": "Очередь подготовки",
+  "kpis.ready_shipped": "Готовы / отправлены",
+  "kpis.open_orders": "Открытые заказы",
+  "kpis.draft_entries": "Черновики поступлений",
+  "kpis.open_transfers": "Открытые перемещения",
+  "kpis.open_counts": "Открытые инвентаризации"
 }
