@@ -40910,8 +40910,8 @@ components:
       properties:
         result:
           type: string
-          enum: [matched, already, extra]
-          description: matched - a line is received now; already - scanned before; extra - not on the entry.
+          enum: [matched, already, extra, unscanned]
+          description: matched - a line is received now; already - scanned before; extra - not on the entry; unscanned - a scan was taken back (DELETE).
         barcode: { type: string }
         line:
           oneOf:
