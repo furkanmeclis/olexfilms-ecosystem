@@ -51,6 +51,8 @@
   "fields.logo": "Logo",
   "fields.member": "Kullanıcı",
   "fields.member_role": "Rol",
+  "fields.member_roles": "Yetki rolleri",
+  "fields.member_roles_hint": "Boş bırakılırsa üyelik türünün varsayılan rolü verilir (sahip → tüm bölümler, personel → genel personel). Yalnızca seçilen roller verilir; örneğin sadece muhasebe için yalnızca \"Merkez muhasebe\" seçin.",
   "placeholders.name": "Örnek Bayi",
   "placeholders.city": "İstanbul",
   "placeholders.district": "Kadıköy",

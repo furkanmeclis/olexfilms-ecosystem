@@ -8,6 +8,7 @@ import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
+import { WarehouseKpis } from "@/features/warehouse/components/warehouse-kpis";
 import { visibleSections } from "@/features/warehouse/lib/sections";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
@@ -30,6 +31,9 @@ export function WarehouseHomePage({ slug }: { slug: string }) {
       description={t("warehouse.page.description")}
       icon={<WarehouseIcon className="size-6" />}
     >
+      {access.allowed ? (
+        <WarehouseKpis slug={slug} can={access.can} orgType={access.orgType} />
+      ) : null}
       <div
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
         data-testid="warehouse-sections"

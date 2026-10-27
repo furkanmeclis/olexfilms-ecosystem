@@ -296,10 +296,12 @@ export function broadestScope(
 /** System role slugs (backend `rbac.Roles`). */
 export const Role = {
   SuperAdmin: "super_admin",
+  CenterOwner: "center_owner",
   CenterStaff: "center_staff",
   CenterWarehouse: "center_warehouse",
   CenterAccounting: "center_accounting",
   CenterSocial: "center_social",
+  CenterService: "center_service",
   DistributorOwner: "distributor_owner",
   DistributorStaff: "distributor_staff",
   DistributorWarehouseStaff: "distributor_warehouse_staff",

@@ -39,6 +39,7 @@ const exportsApi = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock("next/navigation", () => ({
   useRouter: () => nav,
   useParams: () => ({ slug: "acme" }),
+  useSearchParams: () => new URLSearchParams(""),
 }));
 vi.mock("next/link", () => ({
   default: ({

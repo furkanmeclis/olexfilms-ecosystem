@@ -32,7 +32,7 @@
   "fields.uuid": "UUID",
   "fields.roles": "Roles",
   "fields.locale": "Locale",
-  "fields.roles_hint": "Permissions are merged from all selected roles.",
+  "fields.roles_hint": "Permissions are merged from all selected roles. Center, distributor and dealer roles are granted from the organization page (\"Add member\"), not here.",
   "fields.email_verified": "Email verified",
   "placeholders.name": "Jane",
   "placeholders.surname": "Doe",

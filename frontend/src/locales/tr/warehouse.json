@@ -689,5 +689,13 @@
   "entry_import.save": "Kaydet",
   "entry_import.template_saved": "Eşleme şablonu kaydedildi.",
   "sections.orders.title": "Hazırlanacak siparişler",
-  "sections.orders.description": "Onaylı, hazırlanan ve hazır bayi siparişleri: toplama, barkod okutma ve sevk."
+  "sections.orders.description": "Onaylı, hazırlanan ve hazır bayi siparişleri: toplama, barkod okutma ve sevk.",
+  "kpis.title": "Göstergeler",
+  "kpis.error": "Yüklenemedi",
+  "kpis.prepare_queue": "Hazırlık kuyruğu",
+  "kpis.ready_shipped": "Hazır / kargoda",
+  "kpis.open_orders": "Açık sipariş",
+  "kpis.draft_entries": "Bekleyen stok girişi",
+  "kpis.open_transfers": "Açık transfer",
+  "kpis.open_counts": "Açık sayım"
 }

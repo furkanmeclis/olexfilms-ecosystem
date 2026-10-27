@@ -689,5 +689,13 @@
   "entry_import.save": "Speichern",
   "entry_import.template_saved": "Zuordnungsvorlage gespeichert.",
   "sections.orders.title": "Zu bearbeitende Bestellungen",
-  "sections.orders.description": "Genehmigte, in Vorbereitung befindliche und bereite Händlerbestellungen: Kommissionierung, Barcode-Scan und Versand."
+  "sections.orders.description": "Genehmigte, in Vorbereitung befindliche und bereite Händlerbestellungen: Kommissionierung, Barcode-Scan und Versand.",
+  "kpis.title": "Kennzahlen",
+  "kpis.error": "Konnte nicht geladen werden",
+  "kpis.prepare_queue": "Vorbereitungswarteschlange",
+  "kpis.ready_shipped": "Bereit / versandt",
+  "kpis.open_orders": "Offene Bestellungen",
+  "kpis.draft_entries": "Offene Lagereingänge",
+  "kpis.open_transfers": "Offene Transfers",
+  "kpis.open_counts": "Offene Zählungen"
 }

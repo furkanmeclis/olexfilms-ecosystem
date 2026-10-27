@@ -34,7 +34,10 @@ const files = vi.hoisted(() => ({
 }));
 const req = vi.hoisted(() => ({ platformRequest: vi.fn() }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => nav }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => nav,
+  useSearchParams: () => new URLSearchParams(""),
+}));
 vi.mock("next/link", () => ({
   default: ({
     href,

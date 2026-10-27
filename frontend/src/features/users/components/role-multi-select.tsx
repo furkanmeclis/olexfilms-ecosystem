@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { rolesService } from "@/features/roles/services/roles.service";
 import { useLocale } from "@/providers/locale-provider";
 
+const ORGANIZATION_ROLE_TYPES = new Set(["center", "distributor", "dealer"]);
+
 type RoleMultiSelectProps = {
   value: string[];
   onChange: (next: string[]) => void;
@@ -28,6 +30,12 @@ export function RoleMultiSelect({
   });
 
   const selected = new Set(value);
+  // TEC-1026: organization roles (center / distributor / dealer) are granted
+  // through a membership (organization detail → add member), never globally;
+  // the API rejects them here, so they are not offered.
+  const roles = (data?.items ?? []).filter(
+    (role) => !ORGANIZATION_ROLE_TYPES.has(role.org_type ?? ""),
+  );
 
   const toggle = (uuid: string, checked: boolean) => {
     if (checked) {
@@ -49,7 +57,7 @@ export function RoleMultiSelect({
         {isLoading ? (
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         ) : null}
-        {(data?.items ?? []).map((role) => (
+        {roles.map((role) => (
           <div key={role.uuid} className="flex items-start gap-2">
             <Checkbox
               id={`role-${role.uuid}`}
@@ -67,7 +75,7 @@ export function RoleMultiSelect({
             </Label>
           </div>
         ))}
-        {!isLoading && (data?.items.length ?? 0) === 0 ? (
+        {!isLoading && roles.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             {t("users.roles_empty")}
           </p>

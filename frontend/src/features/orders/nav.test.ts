@@ -49,9 +49,9 @@ describe("tenant nav: orders (TEC-170)", () => {
     expect(visibleIds(buyer)).toContain("orders-new");
   });
 
-  it("the center has no new order entry (K6)", () => {
+  it("the center opens orders for its dealers (TEC-1024)", () => {
     expect(visibleIds(buyer, "center")).toContain("orders-list");
-    expect(visibleIds(buyer, "center")).not.toContain("orders-new");
+    expect(visibleIds(buyer, "center")).toContain("orders-new");
   });
 });
 

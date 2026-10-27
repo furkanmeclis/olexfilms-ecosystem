@@ -4,6 +4,7 @@ package rbac
 const (
 	RoleSuperAdmin = "super_admin"
 
+	RoleCenterOwner      = "center_owner" // TEC-1026: union of the center roles
 	RoleCenterStaff      = "center_staff"
 	RoleCenterWarehouse  = "center_warehouse"
 	RoleCenterAccounting = "center_accounting"
@@ -374,6 +375,9 @@ func IsOrganizationRoleType(orgType string) bool {
 func DefaultMemberRole(orgType, memberRole string) string {
 	switch orgType {
 	case OrgTypeCenter:
+		if memberRole == "owner" {
+			return RoleCenterOwner
+		}
 		return RoleCenterStaff
 	case OrgTypeDistributor:
 		if memberRole == "owner" {
@@ -395,7 +399,7 @@ func DefaultMemberRole(orgType, memberRole string) string {
 // counterparts. Center roles map to themselves; other roles have none.
 func CenterRoleFor(slug string) (string, bool) {
 	switch slug {
-	case RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService:
+	case RoleCenterOwner, RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService:
 		return slug, true
 	case RoleDistributorOwner, RoleDistributorStaff, RoleDealerOwner:
 		return RoleCenterStaff, true

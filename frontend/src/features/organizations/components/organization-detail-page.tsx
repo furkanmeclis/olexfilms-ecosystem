@@ -276,6 +276,7 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
 
       <OrganizationAddMemberDialog
         organizationUuid={uuid}
+        organizationType={organization?.type}
         open={memberDialogOpen}
         onOpenChange={setMemberDialogOpen}
       />

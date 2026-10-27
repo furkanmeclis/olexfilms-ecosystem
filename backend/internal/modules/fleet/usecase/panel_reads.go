@@ -234,7 +234,7 @@ func (s *Service) Lookup(ctx context.Context, c Caller, taxNumber string) (Fleet
 	if err != nil {
 		return FleetExistsError{}, fmt.Errorf("fleet: opener: %w", err)
 	}
-	if opener.Type != "dealer" && opener.Type != "distributor" {
+	if !CanServeFleets(opener) {
 		return FleetExistsError{}, ErrForbidden
 	}
 	if _, err := repository.New(s.conn).FindByTaxNumber(ctx, opener.BrandID, taxNumber); errors.Is(err, pgx.ErrNoRows) {
