@@ -172,5 +172,15 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Le stockage des documents ou le moteur PDF est indisponible.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "L'accusé de réception doit être un PDF, JPEG, PNG ou WebP (10 Mo max.).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Placez cette unité dans l’entrepôt avant de l’attribuer.",
-  "page_forbidden_body": "Vous n'êtes pas autorisé à consulter cette page."
+  "page_forbidden_body": "Vous n'êtes pas autorisé à consulter cette page.",
+  "codes.ORDER_NOT_INVOICEABLE": "Seule une commande reçue peut être marquée comme facturée.",
+  "codes.ORDER_ITEM_ALREADY_INVOICED": "L'une des lignes sélectionnées est déjà facturée.",
+  "codes.ORDER_NOTHING_TO_INVOICE": "Toutes les lignes de la commande sont déjà facturées.",
+  "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande.",
+  "codes": {
+    "ORDER_NOT_INVOICEABLE": "Seule une commande reçue peut être marquée comme facturée.",
+    "ORDER_ITEM_ALREADY_INVOICED": "L'une des lignes sélectionnées est déjà facturée.",
+    "ORDER_NOTHING_TO_INVOICE": "Toutes les lignes de la commande sont déjà facturées.",
+    "ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande."
+  }
 }
