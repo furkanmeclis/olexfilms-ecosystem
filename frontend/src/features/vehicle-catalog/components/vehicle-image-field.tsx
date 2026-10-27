@@ -22,8 +22,8 @@ const PROBLEM_KEYS = {
 
 /**
  * Logo / hero picker for the vehicle catalog. Checks the file before upload:
- * SVG (refused by the backend) and other types get an inline warning and a
- * toast, never a request.
+ * SVG is fine for a logo (sanitized by the backend) but refused for a hero;
+ * refused files get an inline warning and a toast, never a request.
  */
 export function VehicleImageField({
   kind,
@@ -56,7 +56,7 @@ export function VehicleImageField({
       {preview}
       <div className="flex flex-wrap items-center gap-2">
         <FilePickButton
-          accept={VEHICLE_IMAGE_ACCEPT}
+          accept={VEHICLE_IMAGE_ACCEPT[kind]}
           label={t("vehicles.image.choose")}
           hint={hint}
           pending={pending}

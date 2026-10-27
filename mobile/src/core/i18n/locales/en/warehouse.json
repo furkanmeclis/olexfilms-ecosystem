@@ -670,5 +670,12 @@
   "labels.no_access_title": "No label access",
   "labels.no_access_body": "Your role cannot print labels.",
   "labels.ios_only_title": "Printing labels on this device",
-  "labels.ios_only_body": "Label PDFs open in the system share sheet on iPhone. On this device, print them from the web panel."
+  "labels.ios_only_body": "Label PDFs open in the system share sheet on iPhone. On this device, print them from the web panel.",
+  "m.open_orders": "Orders to process",
+  "orders.actions.deliver.button": "Delivered",
+  "orders.actions.deliver.confirm": "Mark as delivered",
+  "orders.actions.deliver.description": "The order is marked as handed over to the dealer in person or at the warehouse; the dealer closes it with \"Received\".",
+  "orders.actions.deliver.success": "Marked as delivered.",
+  "orders.actions.deliver.title": "Mark as delivered?",
+  "orders.price_missing": "No price"
 }

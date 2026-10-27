@@ -10,5 +10,10 @@
   "active": "Open",
   "switching": "Switching…",
   "none_title": "No space available",
-  "none_body": "Your account is not linked to an organization yet. Contact your administrator."
+  "none_body": "Your account is not linked to an organization yet. Contact your administrator.",
+  "workplace": "Workplace",
+  "title_spaces": "Space and organization",
+  "switch_hint": "Press and hold to switch to the other space",
+  "spaces_title": "Spaces",
+  "orgs_title": "Organizations"
 }

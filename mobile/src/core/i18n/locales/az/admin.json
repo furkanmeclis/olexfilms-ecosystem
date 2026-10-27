@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "Bu sorğu rədd edilsin?",
   "approvals.module_line": "{{module}} · sorğu sahibi: {{name}}",
   "approvals.no_access": "Sizin üçün təsdiq yoxdur",
-  "approvals.no_access_body": "Qərarınızı tələb edən sorğular burada görünəcək."
+  "approvals.no_access_body": "Qərarınızı tələb edən sorğular burada görünəcək.",
+  "home.action.new_service": "Yeni xidmət",
+  "home.action.measure": "Ölçmə",
+  "orders.price_missing": "Qiymət yoxdur"
 }

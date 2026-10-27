@@ -3,6 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, useDebounced, vehicleLabel, warrantyTone } from '@/features/services/lib';
@@ -84,6 +85,7 @@ export function CustomerServicesScreen() {
 export function CustomerServiceDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const { t, i18n } = useTranslation('customer');
+  const reviewsOn = useModule('reviews');
   const links = useCustomerLinks();
   const statusLabel = useServiceStatusLabel();
   const q = useQuery({
@@ -156,7 +158,7 @@ export function CustomerServiceDetailScreen() {
                   }
                 />
               ) : null}
-              {s.status === 'completed' ? (
+              {s.status === 'completed' && reviewsOn ? (
                 <Button
                   title={t('review_service')}
                   variant="outline"

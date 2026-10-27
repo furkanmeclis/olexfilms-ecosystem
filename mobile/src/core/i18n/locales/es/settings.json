@@ -22,5 +22,6 @@
   "watch_intro": "Ver la presentación",
   "digits": "Dígitos",
   "digits.arab": "Dígitos arábigo-índicos (٠١٢٣)",
-  "digits.latn": "Dígitos latinos (0123)"
+  "digits.latn": "Dígitos latinos (0123)",
+  "switch_organization": "Cambiar de organización"
 }

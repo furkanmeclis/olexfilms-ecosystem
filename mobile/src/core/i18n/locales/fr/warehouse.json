@@ -537,5 +537,12 @@
   "validation.room": "Choisissez une salle.",
   "validation.same_warehouse": "Choisissez un autre entrepôt.",
   "validation.too_long": "{{max}} caractères maximum.",
-  "validation.warehouse": "Choisissez un entrepôt."
+  "validation.warehouse": "Choisissez un entrepôt.",
+  "m.open_orders": "Commandes à traiter",
+  "orders.actions.deliver.button": "Livrée",
+  "orders.actions.deliver.confirm": "Marquer comme livrée",
+  "orders.actions.deliver.description": "La commande est marquée comme remise au revendeur en main propre ou à l’entrepôt ; il la clôture avec « Reçue ».",
+  "orders.actions.deliver.success": "Marquée comme livrée.",
+  "orders.actions.deliver.title": "Marquer comme livrée ?",
+  "orders.price_missing": "Sans prix"
 }

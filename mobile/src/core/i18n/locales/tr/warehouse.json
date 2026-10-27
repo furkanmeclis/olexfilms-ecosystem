@@ -670,5 +670,12 @@
   "labels.no_access_title": "Etiket yetkin yok",
   "labels.no_access_body": "Rolün etiket yazdırmaya izin vermiyor.",
   "labels.ios_only_title": "Bu cihazda etiket yazdırma",
-  "labels.ios_only_body": "Etiket PDF'leri iPhone'da sistem paylaşım menüsünde açılır. Bu cihazda web panelinden yazdır."
+  "labels.ios_only_body": "Etiket PDF'leri iPhone'da sistem paylaşım menüsünde açılır. Bu cihazda web panelinden yazdır.",
+  "m.open_orders": "İşlenecek siparişler",
+  "orders.actions.deliver.button": "Teslim edildi",
+  "orders.actions.deliver.confirm": "Teslim edildi olarak işaretle",
+  "orders.actions.deliver.description": "Sipariş bayiye elden ya da depoda teslim edildi olarak işaretlenir; bayi \"Alındı\" ile kapatır.",
+  "orders.actions.deliver.success": "Teslim edildi olarak işaretlendi.",
+  "orders.actions.deliver.title": "Teslim edildi mi?",
+  "orders.price_missing": "Fiyat yok"
 }

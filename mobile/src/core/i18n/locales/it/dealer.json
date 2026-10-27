@@ -204,5 +204,10 @@
   "service_no_taken": "Questo numero è usato da un altro servizio.",
   "service_no_available": "Il numero è disponibile.",
   "service_no_scan": "Scansiona QR",
-  "service_no_label": "Numero servizio"
+  "service_no_label": "Numero servizio",
+  "performer_label": "Eseguito da",
+  "performer_own": "Proprio ({{name}})",
+  "performer_hint": "Cambia per aprirlo per un rivenditore",
+  "scope_own": "I nostri interventi",
+  "scope_network": "Tutta la rete"
 }

@@ -1,1 +1,18 @@
-{}
+{
+  "title": "Benachrichtigungen",
+  "bell": "Benachrichtigungen",
+  "bell_unread_one": "Benachrichtigungen, {{count}} ungelesen",
+  "bell_unread_other": "Benachrichtigungen, {{count}} ungelesen",
+  "filter.all": "Alle",
+  "filter.unread": "Ungelesen",
+  "mark_all": "Alle als gelesen markieren",
+  "mark_read": "Als gelesen markieren",
+  "empty": "Keine Benachrichtigungen",
+  "empty_unread": "Keine ungelesenen Benachrichtigungen",
+  "empty_body": "Neues zu Ihrem Auto erscheint hier.",
+  "error_generic": "Das hat nicht geklappt. Bitte erneut versuchen.",
+  "no_permission": "Sie dürfen Benachrichtigungen nicht sehen.",
+  "today": "Heute",
+  "yesterday": "Gestern",
+  "empty_body_customer": "Neuigkeiten zu Ihrem Auto, Ihrer Garantie und Ihren Terminen erscheinen hier."
+}

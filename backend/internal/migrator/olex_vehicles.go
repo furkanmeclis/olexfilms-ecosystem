@@ -46,11 +46,12 @@ func (s VehicleCatalogStep) system() string {
 }
 
 const carBrandsQuery = `SELECT id, name, COALESCE(external_id, ''), COALESCE(logo, ''), is_active, show_name,
-	logo_height, deleted_at, created_at, updated_at
+	logo_height, deleted_at, created_at, updated_at, COALESCE(hero_car_image_path, '')
 FROM car_brands`
 
 const carModelsQuery = `SELECT id, brand_id, name, COALESCE(external_id, ''), COALESCE(powertrain, ''),
-	yearstart, yearstop, COALESCE(coupe, ''), is_active, deleted_at, created_at, updated_at
+	yearstart, yearstop, COALESCE(coupe, ''), is_active, deleted_at, created_at, updated_at,
+	COALESCE(hero_car_image_path, '')
 FROM car_models`
 
 // Column limits of car_brands / car_models (000044).
@@ -72,6 +73,9 @@ type legacyCarBrand struct {
 	LogoHeight             sql.NullInt64
 	DeletedAt              sql.NullTime
 	CreatedAt, UpdatedAt   sql.NullTime
+	// Hero is hero_car_image_path (TEC-1018), a key on the legacy default
+	// disk such as "hero-cars/brands/01J....png".
+	Hero string
 }
 
 type legacyCarModel struct {
@@ -81,6 +85,7 @@ type legacyCarModel struct {
 	Active                             bool
 	DeletedAt                          sql.NullTime
 	CreatedAt, UpdatedAt               sql.NullTime
+	Hero                               string // hero_car_image_path (TEC-1018)
 }
 
 // Run implements Step.
@@ -100,7 +105,7 @@ func (s VehicleCatalogStep) Run(ctx context.Context, src Sources, dst *Target, m
 	for rows.Next() {
 		var b legacyCarBrand
 		if err := rows.Scan(&b.ID, &b.Name, &b.ExternalID, &b.Logo, &b.Active, &b.ShowName, &b.LogoHeight,
-			&b.DeletedAt, &b.CreatedAt, &b.UpdatedAt); err != nil {
+			&b.DeletedAt, &b.CreatedAt, &b.UpdatedAt, &b.Hero); err != nil {
 			_ = rows.Close()
 			return StepResult{Counts: c}, fmt.Errorf("scan car brand: %w", err)
 		}
@@ -119,6 +124,9 @@ func (s VehicleCatalogStep) Run(ctx context.Context, src Sources, dst *Target, m
 		if err := s.importBrand(ctx, dst, m, b, c); err != nil {
 			return StepResult{Counts: c}, fmt.Errorf("car brand %d: %w", b.ID, err)
 		}
+		if err := s.importHero(ctx, dst, m, heroBrand, b.ID, b.Hero, c); err != nil {
+			return StepResult{Counts: c}, fmt.Errorf("car brand %d: %w", b.ID, err)
+		}
 	}
 
 	rows, err = hub.Query(ctx, carModelsQuery+where+" ORDER BY id", args...)
@@ -129,7 +137,7 @@ func (s VehicleCatalogStep) Run(ctx context.Context, src Sources, dst *Target, m
 	for rows.Next() {
 		var md legacyCarModel
 		if err := rows.Scan(&md.ID, &md.BrandID, &md.Name, &md.ExternalID, &md.Powertrain, &md.YearStart,
-			&md.YearStop, &md.Body, &md.Active, &md.DeletedAt, &md.CreatedAt, &md.UpdatedAt); err != nil {
+			&md.YearStop, &md.Body, &md.Active, &md.DeletedAt, &md.CreatedAt, &md.UpdatedAt, &md.Hero); err != nil {
 			_ = rows.Close()
 			return StepResult{Counts: c}, fmt.Errorf("scan car model: %w", err)
 		}
@@ -145,6 +153,9 @@ func (s VehicleCatalogStep) Run(ctx context.Context, src Sources, dst *Target, m
 			watermark = ts
 		}
 		if err := s.importModel(ctx, dst.Q, m, brandIDs, md, c); err != nil {
+			return StepResult{Counts: c}, fmt.Errorf("car model %d: %w", md.ID, err)
+		}
+		if err := s.importHero(ctx, dst, m, heroModel, md.ID, md.Hero, c); err != nil {
 			return StepResult{Counts: c}, fmt.Errorf("car model %d: %w", md.ID, err)
 		}
 	}
@@ -247,7 +258,8 @@ func (s VehicleCatalogStep) importBrand(ctx context.Context, dst *Target, m *Map
 // copyLogo uploads the legacy logo file of b and points the brand at it.
 // The object key carries a hash of the bytes, so a rerun writes the same key
 // and an unchanged logo is not uploaded again. Missing or unsupported files
-// are reported, not fatal.
+// are reported, not fatal. SVG logos are sanitized and kept as SVG
+// (logo_svg counts them).
 func (s VehicleCatalogStep) copyLogo(ctx context.Context, dst *Target, brandID int64, brandUUID uuid.UUID, b legacyCarBrand, c counts) error {
 	rel := strings.TrimSpace(b.Logo)
 	if rel == "" {
@@ -270,15 +282,28 @@ func (s VehicleCatalogStep) copyLogo(ctx context.Context, dst *Target, brandID i
 	case err != nil:
 		return fmt.Errorf("read logo %q: %w", rel, err)
 	}
-	mime, err := storage.DetectLogoMIME("", body)
-	if err != nil {
-		c.inc("logo_unsupported:brand:" + id)
-		return nil
-	}
-	ext, err := storage.LogoExtForMIME(mime)
-	if err != nil {
-		c.inc("logo_unsupported:brand:" + id)
-		return nil
+	var mime, ext string
+	if storage.IsSVG(body) {
+		// Vector brand logos stay vector (TEC-1020): stored sanitized, the
+		// hash below is over the sanitized bytes so a rerun hits the same key.
+		clean, err := storage.SanitizeSVG(body)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
+		body, mime, ext = clean, storage.SVGMIME, "svg"
+		c.inc("logo_svg")
+	} else {
+		mime, err = storage.DetectLogoMIME("", body)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
+		ext, err = storage.LogoExtForMIME(mime)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
 	}
 	sum := sha256.Sum256(body)
 	objectKey := storage.VehicleBrandLogoObjectKey(brandUUID, hex.EncodeToString(sum[:8]), ext)
@@ -428,6 +453,119 @@ func (s VehicleCatalogStep) importModel(ctx context.Context, q *db.Queries, m *M
 		return fmt.Errorf("update car model: %w", err)
 	}
 	c.inc("models_updated")
+	return nil
+}
+
+// Hero image owners (TEC-1018), also the counter detail ("hero_missing:model:7").
+const (
+	heroBrand = "brand"
+	heroModel = "model"
+)
+
+// importHero copies the legacy hero image (hero_car_image_path) of the brand
+// or model legacyID to the object store and points the row it was imported
+// into (found through migration_map) at it, but only while that row has no
+// hero: one an admin uploaded here, or an earlier run set, is kept (TEC-1018).
+// Like the logo, the object key carries a hash of the bytes, so a rerun
+// writes the same key. Missing, oversized or unsupported files (raster only:
+// PNG, JPEG, WebP; SVG is rejected) are reported, not fatal.
+func (s VehicleCatalogStep) importHero(ctx context.Context, dst *Target, m *Mapper, kind string, legacyID int64, rel string, c counts) error {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return nil
+	}
+	id := strconv.FormatInt(legacyID, 10)
+	table := "car_brands"
+	if kind == heroModel {
+		table = "car_models"
+	}
+	target, found, err := m.Lookup(ctx, s.system(), table, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil // skipped row, already reported by its import
+	}
+	detail := kind + ":" + id
+	if dst.LegacyFiles == nil || dst.Storage == nil {
+		c.inc("hero_skipped_no_storage")
+		return nil
+	}
+	var rowID int64
+	var current pgtype.Text
+	if kind == heroBrand {
+		row, err := dst.Q.MigratorCarBrandHeroByUUID(ctx, target)
+		if err != nil {
+			return fmt.Errorf("read brand hero: %w", err)
+		}
+		rowID, current = row.ID, row.HeroObjectKey
+	} else {
+		row, err := dst.Q.MigratorCarModelHeroByUUID(ctx, target)
+		if err != nil {
+			return fmt.Errorf("read model hero: %w", err)
+		}
+		rowID, current = row.ID, row.HeroObjectKey
+	}
+	if current.Valid {
+		c.inc("hero_kept_existing")
+		return nil
+	}
+
+	body, err := readLegacyFile(dst.LegacyFiles, rel, storage.MaxHeroBytes)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		c.inc("hero_missing")
+		c.inc("hero_missing:" + detail)
+		return nil
+	case errors.Is(err, errFileTooLarge):
+		c.inc("hero_too_large:" + detail)
+		return nil
+	case err != nil:
+		return fmt.Errorf("read hero %q: %w", rel, err)
+	}
+	mime, err := storage.DetectLogoMIME("", body)
+	if err != nil {
+		c.inc("hero_unsupported:" + detail)
+		return nil
+	}
+	ext, err := storage.LogoExtForMIME(mime)
+	if err != nil {
+		c.inc("hero_unsupported:" + detail)
+		return nil
+	}
+	sum := sha256.Sum256(body)
+	version := hex.EncodeToString(sum[:8])
+	objectKey := storage.VehicleModelHeroObjectKey(target, version, ext)
+	if kind == heroBrand {
+		objectKey = storage.VehicleBrandHeroObjectKey(target, version, ext)
+	}
+
+	exists, err := dst.Storage.Exists(ctx, objectKey)
+	if err != nil {
+		return fmt.Errorf("hero exists: %w", err)
+	}
+	if !exists && !dst.DryRun {
+		if err := dst.Storage.Upload(ctx, storage.File{
+			Body: bytes.NewReader(body), Size: int64(len(body)), ContentType: mime, Filename: path.Base(rel),
+		}, objectKey); err != nil {
+			return fmt.Errorf("upload hero: %w", err)
+		}
+		c.inc("heroes_uploaded")
+	}
+	var n int64
+	if kind == heroBrand {
+		n, err = dst.Q.MigratorSetCarBrandHero(ctx, db.MigratorSetCarBrandHeroParams{ID: rowID, HeroObjectKey: objectKey})
+	} else {
+		n, err = dst.Q.MigratorSetCarModelHero(ctx, db.MigratorSetCarModelHeroParams{ID: rowID, HeroObjectKey: objectKey})
+	}
+	if err != nil {
+		return fmt.Errorf("set hero: %w", err)
+	}
+	if n == 0 {
+		c.inc("hero_kept_existing")
+		return nil
+	}
+	c.inc("heroes_set")
 	return nil
 }
 

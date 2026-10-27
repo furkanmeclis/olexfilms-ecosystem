@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Bayi veya araç bulunamadı.",
   "appointments.error.invalid": "Bilgiler geçersiz. Seçimlerinizi kontrol edin.",
   "appointments.error.generic": "İşlem tamamlanamadı. Tekrar deneyin.",
+  "appointments.error.feature_disabled": "Bu bayi şu anda online randevu almıyor.",
   "preferences.campaign_marketing": "Kampanya mesajları",
   "preferences.campaign_marketing_hint": "Kampanya ve pazarlama mesajlarını al. Varsayılan kapalıdır; kapatırsanız geri çekme hemen uygulanır.",
   "fleet.title": "Filo portalı",

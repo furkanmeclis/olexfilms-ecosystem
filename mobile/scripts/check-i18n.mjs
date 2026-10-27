@@ -31,8 +31,13 @@ const warn = (m) => (warnings++, console.warn(`warn   ${m}`));
 for (const ns of namespaces) {
   const en = read('en', ns);
   for (const lang of LANGUAGES) {
-    if (lang === 'en') continue;
     const cat = read(lang, ns);
+    // i18next runs with keySeparator: false, so a nested object never resolves
+    // and the screen shows the raw key (e.g. "filter.all"); keys stay flat.
+    for (const [k, v] of Object.entries(cat ?? {})) {
+      if (v !== null && typeof v === 'object') err(`${lang}/${ns}: nested object under ${k} (use flat "a.b" keys)`);
+    }
+    if (lang === 'en') continue;
     if (!cat) {
       err(`${lang}/${ns}.json missing`);
       continue;

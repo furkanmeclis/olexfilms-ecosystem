@@ -13,5 +13,7 @@
   "coming_soon_title": "Cet écran arrive bientôt",
   "coming_soon_body": "Cette section sera ajoutée à la prochaine étape.",
   "search_placeholder": "Plaque, téléphone, nom ou code-barres",
-  "offline": "Hors ligne"
+  "offline": "Hors ligne",
+  "module_closed_title": "Ce module est désactivé",
+  "module_closed_body": "Votre administrateur a désactivé cette fonction. Elle réapparaîtra ici une fois activée."
 }

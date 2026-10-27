@@ -204,5 +204,10 @@
   "service_no_taken": "Этот номер используется другой услугой.",
   "service_no_available": "Номер свободен.",
   "service_no_scan": "Сканировать QR-код",
-  "service_no_label": "Номер услуги"
+  "service_no_label": "Номер услуги",
+  "performer_label": "Исполнитель",
+  "performer_own": "Мы ({{name}})",
+  "performer_hint": "Измените, чтобы открыть для дилера",
+  "scope_own": "Наши сервисы",
+  "scope_network": "Вся сеть"
 }

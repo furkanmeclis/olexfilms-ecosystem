@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "拒绝此申请？",
   "approvals.module_line": "{{module}} · 申请人 {{name}}",
   "approvals.no_access": "您没有待审批事项",
-  "approvals.no_access_body": "需要您决定的申请会显示在这里。"
+  "approvals.no_access_body": "需要您决定的申请会显示在这里。",
+  "home.action.new_service": "新服务",
+  "home.action.measure": "测量",
+  "orders.price_missing": "无价格"
 }

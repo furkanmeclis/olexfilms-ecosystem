@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, RefreshControl, Switch, View } from 'react-native';
+import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -82,6 +83,7 @@ function NotificationPrefs() {
 
 export function CustomerProfileScreen() {
   const { t } = useTranslation('customer');
+  const claimsOn = useModule('warranty_claims');
   const qc = useQueryClient();
   const user = useSession((s) => s.me?.user);
   const name = [user?.name, user?.surname].filter(Boolean).join(' ');
@@ -125,7 +127,9 @@ export function CustomerProfileScreen() {
         <SectionHeader title={t('documents')} />
         <List>
           <ListRow title={t('contracts')} icon="report" onPress={() => router.push('/musteri/profile/contracts')} />
-          <ListRow title={t('claims')} icon="warrantyClaim" onPress={() => router.push('/musteri/profile/claims')} />
+          {claimsOn ? (
+            <ListRow title={t('claims')} icon="warrantyClaim" onPress={() => router.push('/musteri/profile/claims')} />
+          ) : null}
           <ListRow
             title={t('data_export')}
             subtitle={t('data_export_hint')}

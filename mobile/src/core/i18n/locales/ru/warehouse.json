@@ -537,5 +537,12 @@
   "validation.room": "Выберите помещение.",
   "validation.same_warehouse": "Выберите другой склад.",
   "validation.too_long": "Не более {{max}} символов.",
-  "validation.warehouse": "Выберите склад."
+  "validation.warehouse": "Выберите склад.",
+  "m.open_orders": "Заказы к обработке",
+  "orders.actions.deliver.button": "Доставлен",
+  "orders.actions.deliver.confirm": "Отметить как доставленный",
+  "orders.actions.deliver.description": "Заказ отмечается как переданный дилеру лично или на складе; дилер закрывает его кнопкой «Получен».",
+  "orders.actions.deliver.success": "Отмечен как доставленный.",
+  "orders.actions.deliver.title": "Отметить как доставленный?",
+  "orders.price_missing": "Нет цены"
 }

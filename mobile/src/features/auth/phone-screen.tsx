@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { identify } from '@/core/auth/api';
+import { formatDigits } from '@/core/digits';
 import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -26,13 +27,14 @@ function secondsUntil(iso?: string) {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 1000));
 }
 
-function clock(seconds: number) {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+function clock(seconds: number, locale: string) {
+  const ss = formatDigits(seconds % 60, locale).padStart(2, formatDigits(0, locale));
+  return `${formatDigits(Math.floor(seconds / 60), locale)}:${ss}`;
 }
 
 /** Phone sign-in: the 6-digit code sent over WhatsApp (SMS fallback). */
 export function PhoneScreen() {
-  const { t } = useTranslation('auth');
+  const { t, i18n } = useTranslation('auth');
   const params = useLocalSearchParams<{ phone: string; resendAt?: string }>();
   const phone = usePendingLogin((s) => s.phone) || params.phone || '';
   const [code, setCode] = useState('');
@@ -168,7 +170,7 @@ export function PhoneScreen() {
             <View className="min-h-11 flex-row items-center gap-1.5">
               <Icon name="clock" tone="muted-foreground" size={14} />
               <Text variant="callout" tone="muted" className="tabular-nums">
-                {t('phone_resend_wait', { time: clock(wait) })}
+                {t('phone_resend_wait', { time: clock(wait, i18n.language) })}
               </Text>
             </View>
           ) : (

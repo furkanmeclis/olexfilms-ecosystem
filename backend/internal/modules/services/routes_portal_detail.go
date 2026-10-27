@@ -5,6 +5,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	serviceshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/handler"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
@@ -20,6 +21,7 @@ func RegisterPortalDetailRoutes(
 	h *serviceshandler.PortalDetail,
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
+	system middleware.SystemFeatureChecker,
 ) {
 	portal := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, middleware.Authenticate(tokens, loader),
@@ -31,8 +33,13 @@ func RegisterPortalDetailRoutes(
 	// customer role holds no services.write, so the portal write rides on
 	// services.read like the rest of the portal service routes. A fleet
 	// session is read only (TEC-245): the POST answers 403 PORTAL_READ_ONLY.
-	mux.Handle("GET /v1/portal/services/{uuid}/review", portal(h.GetReview))
+	// TEC-1023: both answer 403 FEATURE_DISABLED while reviews is closed
+	// system wide; the POST also when the service's organization has the
+	// module off (the GET then reports can_review false).
+	reviews := middleware.RequireSystemFeature(system, features.ModuleReviews)
+	mux.Handle("GET /v1/portal/services/{uuid}/review", middleware.Chain(http.HandlerFunc(h.GetReview),
+		middleware.Authenticate(tokens, loader), middleware.RequirePermission(rbac.PermServicesRead), reviews))
 	mux.Handle("POST /v1/portal/services/{uuid}/review", middleware.Chain(http.HandlerFunc(h.CreateReview),
 		middleware.Authenticate(tokens, loader), middleware.RequirePermission(rbac.PermServicesRead),
-		middleware.DenyPortalReadOnly))
+		middleware.DenyPortalReadOnly, reviews))
 }

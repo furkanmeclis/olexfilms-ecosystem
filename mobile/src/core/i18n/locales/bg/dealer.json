@@ -204,5 +204,10 @@
   "service_no_taken": "Този номер се използва от друга услуга.",
   "service_no_available": "Номерът е свободен.",
   "service_no_scan": "Сканирай QR код",
-  "service_no_label": "Номер на услугата"
+  "service_no_label": "Номер на услугата",
+  "performer_label": "Изпълнител",
+  "performer_own": "Собствен ({{name}})",
+  "performer_hint": "Сменете, за да го отворите за дилър",
+  "scope_own": "Нашите обслужвания",
+  "scope_network": "Цялата мрежа"
 }

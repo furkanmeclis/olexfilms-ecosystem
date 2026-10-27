@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "Відхилити цей запит?",
   "approvals.module_line": "{{module}} · запит від {{name}}",
   "approvals.no_access": "Для вас немає погоджень",
-  "approvals.no_access_body": "Запити, що потребують вашого рішення, з’являться тут."
+  "approvals.no_access_body": "Запити, що потребують вашого рішення, з’являться тут.",
+  "home.action.new_service": "Новий сервіс",
+  "home.action.measure": "Замір",
+  "orders.price_missing": "Немає ціни"
 }

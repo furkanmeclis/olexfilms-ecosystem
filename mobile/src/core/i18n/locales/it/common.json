@@ -13,5 +13,7 @@
   "coming_soon_title": "Questa schermata è in arrivo",
   "coming_soon_body": "Questa sezione arriva nel prossimo passo.",
   "search_placeholder": "Targa, telefono, nome o codice a barre",
-  "offline": "Offline"
+  "offline": "Offline",
+  "module_closed_title": "Questo modulo è disattivato",
+  "module_closed_body": "L’amministratore ha disattivato questa funzione. Riapparirà qui quando sarà attiva."
 }

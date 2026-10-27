@@ -4,51 +4,56 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, View } from 'react-native';
 
-import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
+import { intlLocale } from '@/core/digits';
 import { errorMessage } from '@/core/i18n';
-import { useCan, useResolvedSpace } from '@/core/spaces';
-import { Chips, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
+import { useResolvedSpace } from '@/core/spaces';
+import { PagedList, PAGE_SIZE, usePagedQuery } from '@/features/admin/kit';
+import { Segmented } from '@/features/warehouse/parts';
+import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
+import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
-import { type AppNotification, notificationRoute } from './lib';
+import { useInbox } from './inbox';
+import { type AppNotification, notificationIcon, notificationRoute } from './lib';
 
 type Filter = 'all' | 'unread';
 
-/** Staff inbox: newest first, unread marked, tap opens the record when the app has a screen for it. */
+/** "Today 14:20", "Yesterday", or the date; in the language's digits. */
+function when(iso: string, lang: string, t: (k: string) => string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86_400_000);
+  const loc = intlLocale(lang);
+  const time = new Intl.DateTimeFormat(loc, { hour: '2-digit', minute: '2-digit' }).format(d);
+  if (days === 0) return `${t('today')} ${time}`;
+  if (days === 1) return `${t('yesterday')} ${time}`;
+  return new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'short', year: days > 300 ? 'numeric' : undefined }).format(d);
+}
+
+/**
+ * Inbox: newest first, unread rows tinted with a dot, an icon per record kind;
+ * tapping marks the row read and opens the record when the app has a screen for it.
+ */
 export function NotificationsScreen() {
-  const { t } = useTranslation('notifications');
-  const f = useFormat();
+  const { t, i18n } = useTranslation('notifications');
   const qc = useQueryClient();
   const space = useResolvedSpace();
-  const canRead = useCan('notifications.read');
+  const inbox = useInbox();
   const [filter, setFilter] = useState<Filter>('all');
 
-  const list = usePagedQuery<AppNotification>(['notifications', 'list', filter], (offset) =>
-    unwrap(
-      api.GET('/v1/notifications', {
-        params: { query: { unread: filter === 'unread' ? true : undefined, limit: PAGE_SIZE, offset } },
-      }),
-    ),
-    canRead,
+  const list = usePagedQuery<AppNotification>(
+    ['notifications', 'list', filter],
+    (offset) => inbox.list({ unread: filter === 'unread' ? true : undefined, limit: PAGE_SIZE, offset }),
+    inbox.enabled,
   );
 
-  const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ['notifications'] });
-  };
+  const refresh = () => void qc.invalidateQueries({ queryKey: ['notifications'] });
   const onError = (e: unknown) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined, t('error_generic')));
 
-  const read = useMutation({
-    mutationFn: (uuid: string) => unwrap(api.POST('/v1/notifications/{uuid}/read', { params: { path: { uuid } } })),
-    onSuccess: refresh,
-    onError,
-  });
-  const readAll = useMutation({
-    mutationFn: () => unwrap(api.POST('/v1/notifications/read-all')),
-    onSuccess: refresh,
-    onError,
-  });
+  const read = useMutation({ mutationFn: inbox.read, onSuccess: refresh, onError });
+  const readAll = useMutation({ mutationFn: inbox.readAll, onSuccess: refresh, onError });
 
   const hasUnread = list.items.some((n) => !n.read_at);
 
@@ -58,7 +63,7 @@ export function NotificationsScreen() {
     if (href) router.push(href as never);
   };
 
-  if (!canRead) {
+  if (!inbox.enabled) {
     return (
       <>
         <Stack.Screen options={{ title: t('title') }} />
@@ -92,18 +97,23 @@ export function NotificationsScreen() {
         query={list}
         keyOf={(n) => n.uuid}
         header={
-          <Chips
-            options={(['all', 'unread'] as Filter[]).map((k) => ({ key: k, label: t(`filter.${k}`) }))}
-            value={filter}
-            onChange={setFilter}
-          />
+          <View className="px-4 pb-2">
+            <Segmented
+              options={[
+                { value: 'all' as Filter, label: t('filter.all') },
+                { value: 'unread' as Filter, label: t('filter.unread') },
+              ]}
+              value={filter}
+              onChange={setFilter}
+            />
+          </View>
         }
         empty={{
           icon: 'bell',
           title: filter === 'unread' ? t('empty_unread') : t('empty'),
-          body: filter === 'unread' ? undefined : t('empty_body'),
+          body: filter === 'unread' ? undefined : t(inbox.portal ? 'empty_body_customer' : 'empty_body'),
         }}
-        renderItem={({ item }) => <Row n={item} date={f.dateTime(item.created_at)} onPress={() => open(item)} />}
+        renderItem={({ item }) => <Row n={item} date={when(item.created_at, i18n.language, t)} onPress={() => open(item)} />}
       />
     </>
   );
@@ -115,18 +125,27 @@ function Row({ n, date, onPress }: { n: AppNotification; date: string; onPress: 
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      className="mx-4 flex-row items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-70">
-      <View className={unread ? 'mt-1.5 size-2.5 rounded-full bg-primary' : 'mt-1.5 size-2.5 rounded-full'} />
-      <View className="flex-1 gap-0.5">
-        <Text variant="headline" numberOfLines={2} className={unread ? '' : 'font-normal'}>
-          {n.title}
-        </Text>
+      className={cn(
+        'mx-4 flex-row items-start gap-3 rounded-2xl border p-4 active:opacity-80',
+        unread ? 'border-primary/25 bg-primary/5' : 'border-border bg-card',
+      )}
+      style={{ borderCurve: 'continuous' }}>
+      <View className={cn('size-10 items-center justify-center rounded-full', unread ? 'bg-primary/15' : 'bg-muted')}>
+        <Icon name={notificationIcon(n)} tone={unread ? 'primary' : 'muted-foreground'} size={18} />
+      </View>
+      <View className="flex-1 gap-1">
+        <View className="flex-row items-start gap-2">
+          <Text variant="headline" numberOfLines={2} className={cn('flex-1', !unread && 'font-medium')}>
+            {n.title}
+          </Text>
+          {unread ? <View className="mt-1.5 size-2 rounded-full bg-primary" /> : null}
+        </View>
         {n.body ? (
-          <Text variant="footnote" tone="muted" numberOfLines={3}>
+          <Text variant="callout" tone="muted" numberOfLines={3}>
             {n.body}
           </Text>
         ) : null}
-        <Text variant="caption" tone="muted">
+        <Text variant="footnote" tone="muted">
           {date}
         </Text>
       </View>

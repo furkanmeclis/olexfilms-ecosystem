@@ -686,3 +686,47 @@ func TestCreateWithoutSettingsUsesDefaults(t *testing.T) {
 		t.Fatalf("saved capacity = %d, want 3", s.DailyVehicleCapacity)
 	}
 }
+
+// offFeatures turns the appointments module off for the listed organizations.
+type offFeatures map[int64]bool
+
+func (o offFeatures) Enabled(_ context.Context, orgID int64, _ string) (bool, error) {
+	return !o[orgID], nil
+}
+
+// TEC-1023: a dealer whose appointments module is off answers
+// ErrFeatureDisabled (403 FEATURE_DISABLED) on availability, create and
+// cancel; the "my appointments" list keeps the history.
+func TestPortalModuleOffIsFeatureDisabled(t *testing.T) {
+	f := newFixture(t)
+	f.portalSettings(f.dealer, 5, true)
+	f.link(f.user, f.dealer)
+	vehicle := f.vehicle(f.user, f.dealer)
+	c := f.portalCaller(f.user)
+	off := offFeatures{}
+	f.svc.SetFeatureChecker(off)
+	booked, err := f.svc.PortalCreate(f.ctx, c, PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: f.svc.nowFunc().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("create with module on: %v", err)
+	}
+
+	off[f.dealer.ID] = true
+	from := f.svc.nowFunc()
+	if _, err := f.svc.PortalAvailability(f.ctx, c, f.dealer.Uuid, from, from.Add(48*time.Hour)); !errors.Is(err, ErrFeatureDisabled) {
+		t.Fatalf("availability err = %v, want ErrFeatureDisabled", err)
+	}
+	if _, err := f.svc.PortalCreate(f.ctx, c, PortalCreateInput{
+		DealerUUID: f.dealer.Uuid, VehicleUUID: vehicle.Uuid, StartsAt: f.svc.nowFunc().Add(26 * time.Hour),
+	}); !errors.Is(err, ErrFeatureDisabled) {
+		t.Fatalf("create err = %v, want ErrFeatureDisabled", err)
+	}
+	if _, err := f.svc.PortalCancel(f.ctx, c, booked.UUID); !errors.Is(err, ErrFeatureDisabled) {
+		t.Fatalf("cancel err = %v, want ErrFeatureDisabled", err)
+	}
+	items, total, err := f.svc.PortalList(f.ctx, c, PortalListFilter{Period: "upcoming", Limit: 10})
+	if err != nil || total != 1 || len(items) != 1 || items[0].UUID != booked.UUID {
+		t.Fatalf("portal list with module off = %d/%d, %v", len(items), total, err)
+	}
+}

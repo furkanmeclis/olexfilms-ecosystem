@@ -537,5 +537,12 @@
   "validation.room": "Elija una sala.",
   "validation.same_warehouse": "Elija otro almacén.",
   "validation.too_long": "Máximo {{max}} caracteres.",
-  "validation.warehouse": "Elija un almacén."
+  "validation.warehouse": "Elija un almacén.",
+  "m.open_orders": "Pedidos por procesar",
+  "orders.actions.deliver.button": "Entregado",
+  "orders.actions.deliver.confirm": "Marcar como entregado",
+  "orders.actions.deliver.description": "El pedido se marca como entregado al distribuidor en mano o en el almacén; él lo cierra con «Recibido».",
+  "orders.actions.deliver.success": "Marcado como entregado.",
+  "orders.actions.deliver.title": "¿Marcar como entregado?",
+  "orders.price_missing": "Sin precio"
 }

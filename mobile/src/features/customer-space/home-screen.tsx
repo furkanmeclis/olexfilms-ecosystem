@@ -1,38 +1,52 @@
 import { useQuery } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
-import { errorText } from '@/features/services/ui';
-import { HeaderBrand } from '@/features/shell/header-actions';
+import { useModule } from '@/core/modules';
 import { formatDateTime, formatNumber } from '@/features/services/lib';
+import { NotificationBell } from '@/features/notifications/bell';
+import { errorText } from '@/features/services/ui';
+import { HeaderBrand, SpaceButton } from '@/features/shell/header-actions';
 import { Button } from '@/ui/button';
-import { Icon } from '@/ui/icon';
 import { Skeleton } from '@/ui/skeleton';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-import { appointmentTone, isHidden, openDealerFinder, retryPortal, useCustomerLinks, useFleetRoles } from './lib';
-import { PortalServiceRow, StatTile, VehicleCard } from './parts';
-import type { IconName } from '@/ui/icons';
+import {
+  BrandMark,
+  DateStub,
+  NextStepCard,
+  QuickAction,
+  Rise,
+  VehiclePage,
+  WarrantyProgressCard,
+} from './home-parts';
+import { isHidden, nameOf, openDealerFinder, portalServiceTone, retryPortal, useCustomerLinks, useFleetRoles } from './lib';
+import { StatTile, useServiceStatusLabel } from './parts';
 
 const HOME_VEHICLES = 20;
 
 function greetingKey(h: number) {
-  if (h < 12) return 'greeting_morning';
-  if (h < 18) return 'greeting_afternoon';
-  return 'greeting_evening';
+  if (h < 12) return 'home_hello_morning';
+  if (h < 18) return 'home_hello_afternoon';
+  return 'home_hello_evening';
 }
 
 function SectionTitle({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
   const { t } = useTranslation('customer');
   return (
-    <View className="flex-row items-center justify-between px-1">
-      <Text variant="caption" tone="muted">
-        {title}
-      </Text>
+    <View className="flex-row items-end justify-between px-1">
+      <Text variant="title">{title}</Text>
       {onSeeAll ? (
         <Pressable accessibilityRole="button" hitSlop={8} onPress={onSeeAll}>
           <Text variant="footnote" tone="primary" className="font-semibold">
@@ -47,7 +61,7 @@ function SectionTitle({ title, onSeeAll }: { title: string; onSeeAll?: () => voi
 function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const { t } = useTranslation('common');
   return (
-    <View className="items-center gap-2 rounded-lg border border-border bg-card p-4">
+    <View className="items-center gap-2 rounded-2xl border border-border bg-card p-4">
       <Text variant="callout" tone="muted" className="text-center">
         {errorText(error)}
       </Text>
@@ -56,27 +70,22 @@ function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }
   );
 }
 
-function InlineEmpty({ icon, text }: { icon: IconName; text: string }) {
-  return (
-    <View className="items-center gap-2 rounded-lg border border-border bg-card p-5">
-      <Icon name={icon} tone="muted-foreground" />
-      <Text variant="callout" tone="muted" className="text-center">
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 /**
- * Customer home: vehicles (with their warranty counts), latest services and
- * the next appointment, three small parallel requests. Fleet users also get
- * the fleet overview card.
+ * Customer home (TEC-1019): greeting, the customer's cars as a carousel of
+ * cut-out heroes, the warranties of the car on screen with the time left,
+ * the one next step, shortcuts and the latest services. Fleet users also get
+ * the fleet overview.
  */
 export function CustomerHomeScreen() {
   const { t, i18n } = useTranslation('customer');
-  const name = useSession((s) => s.me?.user.name);
+  const { width } = useWindowDimensions();
+  const user = useSession((s) => s.me?.user);
   const links = useCustomerLinks();
   const { fleet } = useFleetRoles();
+  const statusLabel = useServiceStatusLabel();
+  // Booking is a module the admin can switch off (TEC-1023).
+  const booking = useModule('appointments');
+  const [page, setPage] = useState(0);
 
   const vehicles = useQuery({
     queryKey: ['portal', 'vehicles', 'home'],
@@ -90,6 +99,7 @@ export function CustomerHomeScreen() {
   });
   const next = useQuery({
     queryKey: ['portal', 'appointments', 'next'],
+    enabled: booking,
     retry: retryPortal,
     queryFn: () => unwrap(api.GET('/v1/portal/appointments', { params: { query: { period: 'upcoming', limit: 1 } } })),
   });
@@ -101,176 +111,247 @@ export function CustomerHomeScreen() {
     queryFn: () => unwrap(api.GET('/v1/portal/fleet/overview')),
   });
 
-  const refresh = () => {
-    void vehicles.refetch();
-    void services.refetch();
-    void next.refetch();
-    if (fleet) void fleetQ.refetch();
+  const vItems = vehicles.data?.items ?? [];
+  const current = vItems[Math.min(page, Math.max(0, vItems.length - 1))];
+  // The warranties of the car on screen, from its detail (cached per car).
+  const detail = useQuery({
+    queryKey: ['portal', 'vehicles', 'detail', current?.uuid],
+    enabled: !!current,
+    retry: retryPortal,
+    queryFn: () => unwrap(api.GET('/v1/portal/vehicles/{uuid}', { params: { path: { uuid: current!.uuid } } })),
+  });
+
+  // Only a pull shows the spinner: background refetches toggling `refreshing`
+  // made iOS push the content down without giving the inset back.
+  const [pulling, setPulling] = useState(false);
+  const refresh = async () => {
+    setPulling(true);
+    await Promise.allSettled([
+      vehicles.refetch(),
+      services.refetch(),
+      booking ? next.refetch() : null,
+      current ? detail.refetch() : null,
+      fleet ? fleetQ.refetch() : null,
+    ]);
+    setPulling(false);
   };
 
-  const vItems = vehicles.data?.items ?? [];
-  const vTotal = vehicles.data?.total ?? vItems.length;
-  const activeWarranties = vItems.reduce((sum, v) => sum + (v.active_warranty_count ?? 0), 0);
   const appt = next.data?.items?.[0];
   const ov = fleetQ.data;
-
-  const actions: { key: string; icon: IconName; onPress: () => void }[] = [
-    { key: 'appointments', icon: 'appointment', onPress: () => router.push('/musteri/appointments') },
-    { key: 'warranties', icon: 'warranty', onPress: () => router.push('/musteri/warranties') },
-    { key: 'services', icon: 'service', onPress: () => router.push('/musteri/services' as Href) },
-    { key: 'find_dealer', icon: 'location', onPress: () => void openDealerFinder() },
-  ];
+  const warranties = detail.data?.active_warranties ?? [];
+  const brandOf = (vehicleUuid: string) => vItems.find((v) => v.uuid === vehicleUuid)?.car_brand;
+  const hello = t(greetingKey(new Date().getHours()));
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: name ? t(greetingKey(new Date().getHours()), { name }) : t('home'),
-          headerLeft: () => <HeaderBrand />,
-        }}
-      />
+      <Stack.Screen options={{ title: t('home') }} />
       <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
-        contentContainerClassName="gap-4 px-4 pb-12 pt-2"
+        // No native header here (the stack hides it up front); iOS adds the status bar
+        // and floating tab bar insets itself, so the padding stays small.
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
-            refreshing={vehicles.isRefetching || services.isRefetching || next.isRefetching}
-            onRefresh={refresh}
+            refreshing={pulling}
+            onRefresh={() => void refresh()}
           />
         }>
-        <View className="flex-row flex-wrap gap-2.5">
-          {actions.map((a) => (
-            <Pressable
-              key={a.key}
-              accessibilityRole="button"
-              onPress={a.onPress}
-              className="min-h-[76px] grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3 active:opacity-80">
-              <View className="size-8 items-center justify-center rounded-md bg-secondary">
-                <Icon name={a.icon} tone="primary" size={18} />
-              </View>
-              <Text variant="callout" className="font-semibold" numberOfLines={1}>
-                {t(`action.${a.key}`)}
-              </Text>
-            </Pressable>
-          ))}
+        <View className="flex-row items-center justify-between px-5">
+          <HeaderBrand />
+          <View className="flex-row items-center gap-3">
+            <NotificationBell />
+            <SpaceButton />
+          </View>
         </View>
 
-        {fleet && ov ? (
-          <View className="gap-1.5">
-            <SectionTitle title={t('fleet_title', { name: ov.fleet?.name ?? '' })} />
-            <View className="flex-row flex-wrap gap-2.5">
-              <StatTile icon="truck" label={t('fleet_vehicles')} value={formatNumber(ov.vehicle_count ?? 0, i18n.language)} />
-              <StatTile icon="service" label={t('fleet_services')} value={formatNumber(ov.service_count ?? 0, i18n.language)} />
-              <StatTile
-                icon="warranty"
-                label={t('active_warranties')}
-                value={formatNumber(ov.active_warranty_count ?? 0, i18n.language)}
-              />
-              <StatTile
-                icon="building"
-                label={t('fleet_dealers')}
-                value={formatNumber(ov.dealers?.filter((d) => d.link_status === 'active').length ?? 0, i18n.language)}
-              />
-            </View>
-            {(ov.pending_link_count ?? 0) > 0 ? (
-              <Text variant="footnote" tone="muted" className="px-1">
-                {t('fleet_pending_links', { count: ov.pending_link_count })}
-              </Text>
+        <View className="gap-0.5 px-5 pb-2 pt-5">
+          <Text variant="callout" tone="muted" className="font-medium">
+            {hello}
+          </Text>
+          <Text variant="largeTitle" className="text-[38px] leading-[42px] font-extrabold" numberOfLines={2}>
+            {user?.name ?? ''}
+            {user?.surname ? `\n${user.surname}` : ''}
+          </Text>
+        </View>
+
+        {/* Cars */}
+        {isHidden(vehicles.error) ? null : vehicles.isPending ? (
+          <View className="px-5 pt-3">
+            <Skeleton className="h-56 rounded-3xl" />
+          </View>
+        ) : vehicles.error ? (
+          <View className="px-5">
+            <InlineError error={vehicles.error} onRetry={() => void vehicles.refetch()} />
+          </View>
+        ) : vItems.length ? (
+          <View className="gap-3">
+            {vItems.length > 1 ? (
+              // Several cars: pick one by plate; the hero itself never scrolls.
+              <View className="flex-row flex-wrap gap-2 px-5">
+                {vItems.map((v, i) => {
+                  const on = v.uuid === current?.uuid;
+                  return (
+                    <Pressable
+                      key={v.uuid}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => setPage(i)}
+                      className={on ? 'rounded-full bg-primary px-3.5 py-1.5' : 'rounded-full border border-border bg-card px-3.5 py-1.5 active:opacity-70'}>
+                      <Text variant="footnote" tone={on ? 'onPrimary' : 'default'} className="font-semibold tabular-nums">
+                        {v.plate || [v.car_brand?.name, v.car_model?.name].filter(Boolean).join(' ')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+            {current ? (
+              <VehiclePage key={current.uuid} v={current} width={width} onPress={() => router.push(links.vehicle(current.uuid))} />
             ) : null}
           </View>
-        ) : null}
-
-        {vehicles.isPending ? (
-          <View className="flex-row gap-2.5">
-            <Skeleton className="h-20 grow rounded-lg" />
-            <Skeleton className="h-20 grow rounded-lg" />
-          </View>
-        ) : vehicles.data ? (
-          <View className="flex-row flex-wrap gap-2.5">
-            <StatTile
-              icon="vehicle"
-              label={t('vehicles')}
-              value={formatNumber(vTotal, i18n.language)}
-              onPress={() => router.push('/musteri/vehicles' as Href)}
-            />
-            <StatTile
-              icon="warranty"
-              label={t('active_warranties')}
-              value={formatNumber(activeWarranties, i18n.language)}
-              onPress={() => router.push('/musteri/warranties')}
+        ) : (
+          <View className="px-5 pt-2">
+            <NextStepCard
+              icon="location"
+              eyebrow={t('home_no_car_eyebrow')}
+              title={t('home_no_car_title')}
+              body={t('home_no_car_body')}
+              cta={t('action.find_dealer')}
+              onPress={() => void openDealerFinder()}
             />
           </View>
-        ) : null}
+        )}
 
-        {!isHidden(next.error) ? (
-          <View className="gap-2">
-            <SectionTitle title={t('next_appointment')} onSeeAll={() => router.push('/musteri/appointments')} />
-            {next.isPending ? (
-              <Skeleton className="h-[68px] rounded-lg" />
-            ) : next.error ? (
-              <InlineError error={next.error} onRetry={() => void next.refetch()} />
-            ) : appt ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/musteri/appointments')}
-                className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
-                <View className="size-10 items-center justify-center rounded-md bg-secondary">
-                  <Icon name="appointment" tone="primary" size={20} />
-                </View>
-                <View className="flex-1 gap-0.5">
-                  <Text variant="headline" numberOfLines={1}>
-                    {formatDateTime(appt.starts_at, i18n.language)}
-                  </Text>
-                  <Text variant="footnote" tone="muted" numberOfLines={1}>
-                    {[appt.dealer_name, appt.vehicle_plate].filter(Boolean).join(' · ')}
-                  </Text>
-                </View>
-                <StatusPill label={t(`appointment_status.${appt.status}`)} tone={appointmentTone(appt.status)} />
-              </Pressable>
-            ) : (
-              <InlineEmpty icon="appointment" text={t('next_appointment_none')} />
-            )}
-          </View>
-        ) : null}
+        <View className="gap-7 px-5 pt-6">
+          {/* Next step */}
+          {!booking || isHidden(next.error) ? null : (
+            <Rise index={0}>
+              {appt ? (
+                <NextStepCard
+                  icon="appointment"
+                  eyebrow={t('next_appointment')}
+                  title={formatDateTime(appt.starts_at, i18n.language)}
+                  body={[appt.dealer_name, appt.vehicle_plate].filter(Boolean).join(' · ')}
+                  cta={t('home_view_appointment')}
+                  onPress={() => router.push('/musteri/appointments')}
+                />
+              ) : !next.isPending && vItems.length ? (
+                <NextStepCard
+                  icon="appointment"
+                  eyebrow={t('home_care_eyebrow')}
+                  title={t('home_care_title')}
+                  body={t('home_care_body')}
+                  cta={t('home_book')}
+                  onPress={() => router.push('/musteri/appointments/new' as Href)}
+                />
+              ) : null}
+            </Rise>
+          )}
 
-        {!isHidden(vehicles.error) ? (
-          <View className="gap-2">
-            <SectionTitle
-              title={t('vehicles')}
-              onSeeAll={vTotal > 3 ? () => router.push('/musteri/vehicles' as Href) : undefined}
-            />
-            {vehicles.isPending ? (
-              [0, 1].map((i) => <Skeleton key={i} className="h-[76px] rounded-lg" />)
-            ) : vehicles.error ? (
-              <InlineError error={vehicles.error} onRetry={() => void vehicles.refetch()} />
-            ) : vItems.length > 0 ? (
-              vItems.slice(0, 3).map((v) => (
-                <VehicleCard key={v.uuid} v={v} onPress={() => router.push(links.vehicle(v.uuid))} />
-              ))
-            ) : (
-              <InlineEmpty icon="vehicle" text={t('vehicles_empty_body')} />
-            )}
-          </View>
-        ) : null}
+          {/* Shortcuts */}
+          <Rise index={1} className="flex-row gap-3">
+            {booking ? (
+              <QuickAction icon="appointment" label={t('home_book')} onPress={() => router.push('/musteri/appointments/new' as Href)} />
+            ) : null}
+            <QuickAction icon="warranty" label={t('action.warranties')} onPress={() => router.push('/musteri/warranties')} />
+            <QuickAction icon="service" label={t('action.services')} onPress={() => router.push('/musteri/services' as Href)} />
+            <QuickAction icon="location" label={t('action.find_dealer')} onPress={() => void openDealerFinder()} />
+          </Rise>
 
-        {!isHidden(services.error) ? (
-          <View className="gap-2">
-            <SectionTitle title={t('latest_services')} onSeeAll={() => router.push('/musteri/services' as Href)} />
-            {services.isPending ? (
-              [0, 1].map((i) => <Skeleton key={i} className="h-[76px] rounded-lg" />)
-            ) : services.error ? (
-              <InlineError error={services.error} onRetry={() => void services.refetch()} />
-            ) : (services.data?.items?.length ?? 0) > 0 ? (
-              services.data!.items.map((s) => (
-                <PortalServiceRow key={s.uuid} s={s} onPress={() => router.push(links.service(s.uuid))} />
-              ))
-            ) : (
-              <InlineEmpty icon="service" text={t('services_empty_body')} />
-            )}
-          </View>
-        ) : null}
+          {/* Warranties of the car on screen */}
+          {current && !isHidden(detail.error) ? (
+            <View className="gap-3">
+              <SectionTitle title={t('home_protection')} onSeeAll={() => router.push('/musteri/warranties')} />
+              {detail.isPending ? (
+                <Skeleton className="h-28 rounded-2xl" />
+              ) : detail.error ? (
+                <InlineError error={detail.error} onRetry={() => void detail.refetch()} />
+              ) : warranties.length ? (
+                warranties.slice(0, 3).map((w, i) => (
+                  <Rise key={w.uuid} index={i + 2}>
+                    <WarrantyProgressCard w={w} onPress={() => router.push(links.warranty(w.uuid))} />
+                  </Rise>
+                ))
+              ) : (
+                <Text variant="callout" tone="muted" className="px-1">
+                  {t('home_no_warranty')}
+                </Text>
+              )}
+            </View>
+          ) : null}
+
+          {/* Fleet */}
+          {fleet && ov ? (
+            <View className="gap-3">
+              <SectionTitle title={t('fleet_title', { name: ov.fleet?.name ?? '' })} />
+              <View className="flex-row flex-wrap gap-2.5">
+                <StatTile icon="truck" label={t('fleet_vehicles')} value={formatNumber(ov.vehicle_count ?? 0, i18n.language)} />
+                <StatTile icon="service" label={t('fleet_services')} value={formatNumber(ov.service_count ?? 0, i18n.language)} />
+                <StatTile
+                  icon="warranty"
+                  label={t('active_warranties')}
+                  value={formatNumber(ov.active_warranty_count ?? 0, i18n.language)}
+                />
+                <StatTile
+                  icon="building"
+                  label={t('fleet_dealers')}
+                  value={formatNumber(ov.dealers?.filter((d) => d.link_status === 'active').length ?? 0, i18n.language)}
+                />
+              </View>
+              {(ov.pending_link_count ?? 0) > 0 ? (
+                <Text variant="footnote" tone="muted" className="px-1">
+                  {t('fleet_pending_links', { count: ov.pending_link_count })}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* Latest services */}
+          {isHidden(services.error) ? null : (
+            <View className="gap-3">
+              <SectionTitle title={t('latest_services')} onSeeAll={() => router.push('/musteri/services' as Href)} />
+              {services.isPending ? (
+                [0, 1].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)
+              ) : services.error ? (
+                <InlineError error={services.error} onRetry={() => void services.refetch()} />
+              ) : (services.data?.items?.length ?? 0) > 0 ? (
+                services.data!.items.map((s, i) => {
+                  const brand = brandOf(s.vehicle_uuid);
+                  return (
+                    <Rise key={s.uuid} index={i + 5}>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => router.push(links.service(s.uuid))}
+                        className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5 active:opacity-85"
+                        style={{ borderCurve: 'continuous' }}>
+                        <BrandMark uuid={brand?.uuid} name={s.car_brand_name} />
+                        <View className="flex-1 gap-0.5">
+                          <Text variant="headline" numberOfLines={1}>
+                            {[s.car_brand_name, s.car_model_name].filter(Boolean).join(' ')}
+                          </Text>
+                          <Text variant="footnote" tone="muted" numberOfLines={1}>
+                            {[nameOf(s.organization), s.plate].filter(Boolean).join(' · ')}
+                          </Text>
+                          <View className="flex-row pt-1">
+                            <StatusPill label={statusLabel(s.status)} tone={portalServiceTone(s.status)} />
+                          </View>
+                        </View>
+                        <DateStub iso={s.completed_at ?? s.created_at} />
+                      </Pressable>
+                    </Rise>
+                  );
+                })
+              ) : (
+                <Text variant="callout" tone="muted" className="px-1">
+                  {t('services_empty_body')}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </>
   );
 }
+

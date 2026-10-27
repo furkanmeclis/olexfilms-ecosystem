@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Dealer or vehicle not found.",
   "appointments.error.invalid": "The details are invalid. Check your choices.",
   "appointments.error.generic": "The action could not be completed. Try again.",
+  "appointments.error.feature_disabled": "This dealer is not taking online appointments right now.",
   "preferences.campaign_marketing": "Campaign messages",
   "preferences.campaign_marketing_hint": "Receive campaign and marketing messages. Off by default; turning it off withdraws consent immediately.",
   "fleet.title": "Fleet portal",

@@ -239,6 +239,18 @@ export function OrderScreen() {
           </View>
         ) : null}
 
+        {/* Seller: hand delivery or pickup at the warehouse closes the trip (TEC-1025); by courier the buyer receives directly. */}
+        {seller && can('delivered') ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            title={t('orders.actions.deliver.button')}
+            icon={<Icon name="packageCheck" tone="secondary-foreground" />}
+            loading={busy === 'deliver'}
+            onPress={() => transition('delivered', 'deliver')}
+          />
+        ) : null}
+
         {/* Buyer actions */}
         {!seller && canReceive && can('received') ? (
           <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => transition('received', 'receive')} />
@@ -337,6 +349,11 @@ export function OrderScreen() {
                     <Text variant="footnote" tone="muted" className="font-mono">
                       {i.product.sku}
                     </Text>
+                    {i.price_missing ? (
+                      <View className="self-start pt-1">
+                        <StatusPill tone="problem" label={t('orders.price_missing')} />
+                      </View>
+                    ) : null}
                   </View>
                   <View className="items-end">
                     <Text variant="headline" className={covered(i) ? 'text-success' : ''}>

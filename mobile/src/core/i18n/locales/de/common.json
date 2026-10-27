@@ -13,5 +13,7 @@
   "coming_soon_title": "Dieser Bildschirm ist in Arbeit",
   "coming_soon_body": "Dieser Bereich kommt im nächsten Schritt.",
   "search_placeholder": "Kennzeichen, Telefon, Name oder Barcode",
-  "offline": "Offline"
+  "offline": "Offline",
+  "module_closed_title": "Dieses Modul ist deaktiviert",
+  "module_closed_body": "Ihr Administrator hat diese Funktion deaktiviert. Sie erscheint wieder, sobald sie aktiv ist."
 }

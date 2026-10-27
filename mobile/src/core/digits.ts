@@ -39,3 +39,11 @@ export function toLatinDigits(value: string): string {
     return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
   });
 }
+
+/**
+ * A number in the language's digits (Arabic-Indic for Arabic unless Latin is
+ * chosen). Four-digit values such as years get no grouping separator.
+ */
+export function formatDigits(value: number, locale: string): string {
+  return new Intl.NumberFormat(intlLocale(locale), { useGrouping: Math.abs(value) >= 10000 }).format(value);
+}

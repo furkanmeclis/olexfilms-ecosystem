@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "Rifiutare questa richiesta?",
   "approvals.module_line": "{{module}} · richiesto da {{name}}",
   "approvals.no_access": "Nessuna approvazione per te",
-  "approvals.no_access_body": "Le richieste che attendono la tua decisione compaiono qui."
+  "approvals.no_access_body": "Le richieste che attendono la tua decisione compaiono qui.",
+  "home.action.new_service": "Nuovo intervento",
+  "home.action.measure": "Misura",
+  "orders.price_missing": "Senza prezzo"
 }

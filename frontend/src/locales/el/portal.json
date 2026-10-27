@@ -277,6 +277,7 @@
   "appointments.error.not_found": "Ο αντιπρόσωπος ή το όχημα δεν βρέθηκε.",
   "appointments.error.invalid": "Τα στοιχεία δεν είναι έγκυρα. Ελέγξτε τις επιλογές σας.",
   "appointments.error.generic": "Η ενέργεια απέτυχε. Δοκιμάστε ξανά.",
+  "appointments.error.feature_disabled": "Αυτός ο αντιπρόσωπος δεν δέχεται online ραντεβού αυτή τη στιγμή.",
   "preferences.campaign_marketing": "Μηνύματα καμπάνιας",
   "preferences.campaign_marketing_hint": "Λήψη μηνυμάτων καμπάνιας και μάρκετινγκ. Είναι κλειστό από προεπιλογή· η απενεργοποίηση ανακαλεί άμεσα τη συναίνεση.",
   "fleet.title": "Πύλη στόλου",

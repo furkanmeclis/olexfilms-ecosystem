@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "Diese Anfrage ablehnen?",
   "approvals.module_line": "{{module}} · angefragt von {{name}}",
   "approvals.no_access": "Keine Freigaben für Sie",
-  "approvals.no_access_body": "Anfragen, die Ihre Entscheidung brauchen, erscheinen hier."
+  "approvals.no_access_body": "Anfragen, die Ihre Entscheidung brauchen, erscheinen hier.",
+  "home.action.new_service": "Neuer Service",
+  "home.action.measure": "Messung",
+  "orders.price_missing": "Kein Preis"
 }

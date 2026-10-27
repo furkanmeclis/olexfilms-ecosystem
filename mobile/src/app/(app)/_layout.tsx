@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
+import { rememberPath } from '@/core/space-memory';
 import { kindsOf } from '@/core/spaces';
 import { LARGE_TITLES } from '@/features/shell/large-titles';
 
@@ -13,7 +15,11 @@ import { LARGE_TITLES } from '@/features/shell/large-titles';
  */
 export default function AppLayout() {
   const { t } = useTranslation();
-  const kinds = kindsOf(useSession((s) => s.me));
+  const me = useSession((s) => s.me);
+  const kinds = kindsOf(me);
+  const pathname = usePathname();
+  // Reopen where the user left off (TEC-1027).
+  useEffect(() => rememberPath(me, pathname), [me, pathname]);
 
   useQuery({
     queryKey: ['me'],
@@ -40,7 +46,8 @@ export default function AppLayout() {
 
       <Stack.Screen
         name="spaces"
-        options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: [0.55, 1], sheetGrabberVisible: true }}
+        // Sized to its rows (two spaces, maybe a few organizations), no empty half sheet.
+        options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, presentation: 'modal' }} />
       <Stack.Screen name="intro" options={{ presentation: 'modal' }} />

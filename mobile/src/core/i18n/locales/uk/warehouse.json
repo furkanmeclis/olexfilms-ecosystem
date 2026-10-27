@@ -537,5 +537,12 @@
   "validation.room": "Виберіть приміщення.",
   "validation.same_warehouse": "Виберіть інший склад.",
   "validation.too_long": "Не більше {{max}} символів.",
-  "validation.warehouse": "Виберіть склад."
+  "validation.warehouse": "Виберіть склад.",
+  "m.open_orders": "Замовлення до обробки",
+  "orders.actions.deliver.button": "Доставлено",
+  "orders.actions.deliver.confirm": "Позначити як доставлене",
+  "orders.actions.deliver.description": "Замовлення позначається як передане дилеру особисто або на складі; дилер закриває його кнопкою «Отримано».",
+  "orders.actions.deliver.success": "Позначено як доставлене.",
+  "orders.actions.deliver.title": "Позначити як доставлене?",
+  "orders.price_missing": "Немає ціни"
 }

@@ -1,1 +1,18 @@
-{}
+{
+  "title": "通知",
+  "bell": "通知",
+  "bell_unread_one": "通知，{{count}} 条未读",
+  "bell_unread_other": "通知，{{count}} 条未读",
+  "filter.all": "全部",
+  "filter.unread": "未读",
+  "mark_all": "全部标为已读",
+  "mark_read": "标为已读",
+  "empty": "暂无通知",
+  "empty_unread": "暂无未读通知",
+  "empty_body": "与爱车相关的新动态会显示在这里。",
+  "error_generic": "操作未完成，请重试。",
+  "no_permission": "您无权查看通知。",
+  "today": "今天",
+  "yesterday": "昨天",
+  "empty_body_customer": "与爱车、质保和预约相关的新动态会显示在这里。"
+}

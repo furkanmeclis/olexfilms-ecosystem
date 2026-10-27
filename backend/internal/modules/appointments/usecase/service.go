@@ -53,6 +53,9 @@ var (
 	ErrDayClosed         = errors.New("appointments: day closed")
 	ErrClosureExists     = errors.New("appointments: closure already exists")
 	ErrCancelWindow      = errors.New("appointments: cancel window closed")
+	// ErrFeatureDisabled: the appointments module is off for the dealer a
+	// portal action targets (TEC-1023; 403 FEATURE_DISABLED).
+	ErrFeatureDisabled = errors.New("appointments: module disabled")
 )
 
 type TxBeginner interface {
@@ -471,6 +474,9 @@ func (s *Service) PortalCancel(ctx context.Context, c PortalCaller, id uuid.UUID
 	}
 	if err != nil {
 		return Appointment{}, fmt.Errorf("appointments: portal get: %w", err)
+	}
+	if err := s.portalModuleOn(ctx, cur.OrganizationID); err != nil {
+		return Appointment{}, err
 	}
 	if cur.StartsAt.Time.UTC().Sub(s.nowFunc().UTC()) < 2*time.Hour {
 		return Appointment{}, ErrCancelWindow
@@ -986,10 +992,26 @@ func (s *Service) portalDealer(ctx context.Context, c PortalCaller, id uuid.UUID
 			return db.GetPortalAppointmentDealerRow{}, fmt.Errorf("appointments: portal feature: %w", err)
 		}
 		if !on {
-			return db.GetPortalAppointmentDealerRow{}, ErrNotFound
+			return db.GetPortalAppointmentDealerRow{}, ErrFeatureDisabled
 		}
 	}
 	return dealer, nil
+}
+
+// portalModuleOn returns ErrFeatureDisabled when the appointments module is
+// off for the organization of a portal action (TEC-1023).
+func (s *Service) portalModuleOn(ctx context.Context, orgID int64) error {
+	if s.features == nil {
+		return nil
+	}
+	on, err := s.features.Enabled(ctx, orgID, features.ModuleAppointments)
+	if err != nil {
+		return fmt.Errorf("appointments: portal feature: %w", err)
+	}
+	if !on {
+		return ErrFeatureDisabled
+	}
+	return nil
 }
 
 // scopedOrgIDs resolves organization uuids to the ids the caller may read

@@ -22,5 +22,6 @@
   "watch_intro": "Revoir la présentation",
   "digits": "Chiffres",
   "digits.arab": "Chiffres arabes orientaux (٠١٢٣)",
-  "digits.latn": "Chiffres latins (0123)"
+  "digits.latn": "Chiffres latins (0123)",
+  "switch_organization": "Changer d’organisation"
 }

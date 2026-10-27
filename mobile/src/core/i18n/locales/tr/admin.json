@@ -102,5 +102,6 @@
   "approvals.no_access": "Size ait onay yok",
   "approvals.no_access_body": "Kararınızı bekleyen talepler burada görünür.",
   "home.action.new_service": "Yeni hizmet",
-  "home.action.measure": "Ölçüm"
+  "home.action.measure": "Ölçüm",
+  "orders.price_missing": "Fiyat yok"
 }

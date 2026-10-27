@@ -1,1 +1,18 @@
-{}
+{
+  "title": "Notificaciones",
+  "bell": "Notificaciones",
+  "bell_unread_one": "Notificaciones, {{count}} sin leer",
+  "bell_unread_other": "Notificaciones, {{count}} sin leer",
+  "filter.all": "Todas",
+  "filter.unread": "Sin leer",
+  "mark_all": "Marcar todas como leídas",
+  "mark_read": "Marcar como leída",
+  "empty": "No hay notificaciones",
+  "empty_unread": "No hay notificaciones sin leer",
+  "empty_body": "Las novedades de tu coche aparecen aquí.",
+  "error_generic": "No se pudo completar. Inténtalo de nuevo.",
+  "no_permission": "No tienes acceso a las notificaciones.",
+  "today": "Hoy",
+  "yesterday": "Ayer",
+  "empty_body_customer": "Las novedades de tu coche, tu garantía y tus citas aparecen aquí."
+}

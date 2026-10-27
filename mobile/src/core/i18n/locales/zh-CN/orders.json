@@ -1,1 +1,15 @@
-{}
+{
+  "buyer_label": "下单经销商",
+  "buyer_pick": "选择经销商",
+  "buyer_search": "搜索经销商",
+  "buyer_none": "没有匹配的经销商。",
+  "buyer_required": "请选择一个经销商。",
+  "unit_price": "单价",
+  "unit_price_auto": "自动",
+  "price_rule_center": "留空则使用经销商的采购价；无价格的产品按 0 添加并标记。订单直接为已批准，可交仓库处理。",
+  "create_for_dealer": "创建订单",
+  "price_missing_title": "无价格的产品",
+  "price_missing_body_one": "{{count}} 个产品没有价格，已按 0 添加并标记。",
+  "price_missing_body_other": "{{count}} 个产品没有价格，已按 0 添加并标记。",
+  "errors.price_invalid": "请输入大于等于 0、最多 4 位小数的价格。"
+}

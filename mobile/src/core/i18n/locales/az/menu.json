@@ -14,5 +14,9 @@
   "assistant": "AI köməkçi",
   "ai_actions": "Təsdiq gözləyən AI əməliyyatları",
   "disputes": "Etirazlar",
-  "einvoices": "e-Fakturalar"
+  "einvoices": "e-Fakturalar",
+  "approvals": "Təsdiqlər",
+  "network": "Diler şəbəkəsi",
+  "warehouse": "Anbar",
+  "warehouse_hint": "Stok, tapşırıqlar və sayım"
 }

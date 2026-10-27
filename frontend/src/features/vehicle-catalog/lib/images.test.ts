@@ -10,16 +10,35 @@ import {
 const UUID = "0b5c4a39-6a43-4d47-9a3f-1f3a2b4c5d6e";
 
 describe("vehicleImageProblem", () => {
-  it("refuses SVG by type or extension", () => {
+  it("accepts SVG for logos (TEC-1020) but not for heroes", () => {
     expect(
       vehicleImageProblem(
         { name: "bmw.svg", type: "image/svg+xml", size: 100 },
         "logo",
       ),
-    ).toBe("svg");
+    ).toBeNull();
     expect(
       vehicleImageProblem({ name: "BMW.SVG", type: "", size: 100 }, "logo"),
+    ).toBeNull();
+    expect(
+      vehicleImageProblem(
+        { name: "bmw.svg", type: "image/svg+xml", size: 100 },
+        "hero",
+      ),
     ).toBe("svg");
+    expect(
+      vehicleImageProblem({ name: "bmw.svgz", type: "", size: 100 }, "logo"),
+    ).toBe("svg");
+    expect(
+      vehicleImageProblem(
+        {
+          name: "bmw.svg",
+          type: "image/svg+xml",
+          size: VEHICLE_IMAGE_LIMITS.logo + 1,
+        },
+        "logo",
+      ),
+    ).toBe("size");
   });
 
   it("accepts JPEG, PNG and WebP within the limit", () => {

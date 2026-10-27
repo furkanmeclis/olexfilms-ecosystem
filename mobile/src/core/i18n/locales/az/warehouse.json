@@ -537,5 +537,12 @@
   "validation.room": "Otaq seçin.",
   "validation.same_warehouse": "Başqa anbar seçin.",
   "validation.too_long": "Ən çox {{max}} simvol.",
-  "validation.warehouse": "Anbar seçin."
+  "validation.warehouse": "Anbar seçin.",
+  "m.open_orders": "İşlənəcək sifarişlər",
+  "orders.actions.deliver.button": "Təhvil verildi",
+  "orders.actions.deliver.confirm": "Təhvil verildi kimi işarələ",
+  "orders.actions.deliver.description": "Sifariş dilerə əl ilə və ya anbarda təhvil verilmiş kimi işarələnir; diler onu «Alındı» ilə bağlayır.",
+  "orders.actions.deliver.success": "Təhvil verildi kimi işarələndi.",
+  "orders.actions.deliver.title": "Təhvil verildi kimi işarələnsin?",
+  "orders.price_missing": "Qiymət yoxdur"
 }

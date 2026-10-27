@@ -53,6 +53,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeCancelWindow, "Appointment can no longer be cancelled")
 	case errors.Is(err, usecase.ErrIntakeStarted):
 		response.Conflict(w, r, usecase.CodeIntakeStarted, "Appointment intake is already started")
+	case errors.Is(err, usecase.ErrFeatureDisabled):
+		response.Error(w, r, http.StatusForbidden, response.CodeFeatureDisabled, "Appointments are not enabled for this dealer")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "Appointment action is not allowed")
 	case errors.Is(err, usecase.ErrNotFound):

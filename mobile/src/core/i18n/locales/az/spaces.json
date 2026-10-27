@@ -10,5 +10,10 @@
   "active": "Açıq",
   "switching": "Keçid edilir…",
   "none_title": "Əlçatan sahə yoxdur",
-  "none_body": "Hesabınız hələ heç bir təşkilata bağlı deyil. Administratorla əlaqə saxlayın."
+  "none_body": "Hesabınız hələ heç bir təşkilata bağlı deyil. Administratorla əlaqə saxlayın.",
+  "workplace": "İş sahəsi",
+  "title_spaces": "Sahə və təşkilat",
+  "switch_hint": "Basılı saxla: digər sahəyə keç",
+  "spaces_title": "Sahələr",
+  "orgs_title": "Təşkilatlar"
 }

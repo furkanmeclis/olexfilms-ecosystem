@@ -35,7 +35,7 @@ import (
 const (
 	CacheControlImage       = "public, max-age=86400"
 	CacheControlPlaceholder = "public, max-age=3600"
-	// svgPolicy locks down the embedded placeholder SVGs (no scripts, no
+	// svgPolicy locks down the embedded placeholder SVG (no scripts, no
 	// external loads) in case a browser opens them as a document.
 	svgPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 )
@@ -43,22 +43,28 @@ const (
 //go:embed assets/placeholder-logo.svg
 var placeholderLogo []byte
 
-//go:embed assets/default-hero.svg
+// defaultHero is the legacy system's default hero car
+// (hero-cars/default/porsche_car.png, TEC-1018), resized to 1200 px and stored
+// as WebP with alpha (1.8 MB → ~110 KB): the last fallback of every
+// hero route.
+//
+//go:embed assets/default-hero.webp
 var defaultHero []byte
 
 type staticImage struct {
-	body []byte
-	etag string
+	body        []byte
+	etag        string
+	contentType string
 }
 
-func newStatic(body []byte) staticImage {
+func newStatic(body []byte, contentType string) staticImage {
 	sum := sha256.Sum256(body)
-	return staticImage{body: body, etag: `"static-` + hex.EncodeToString(sum[:8]) + `"`}
+	return staticImage{body: body, etag: `"static-` + hex.EncodeToString(sum[:8]) + `"`, contentType: contentType}
 }
 
 var (
-	placeholderImage = newStatic(placeholderLogo)
-	defaultHeroImage = newStatic(defaultHero)
+	placeholderImage = newStatic(placeholderLogo, "image/svg+xml")
+	defaultHeroImage = newStatic(defaultHero, "image/webp")
 )
 
 // Handler serves vehicle catalog endpoints.
@@ -443,6 +449,13 @@ func newVersion() string {
 // it under keyFor(ext). It returns the object key.
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request, field string, maxBytes int64,
 	validateSize func(int64) error, keyFor func(ext string) string) (string, bool) {
+	return h.uploadImage(w, r, field, maxBytes, validateSize, keyFor, false)
+}
+
+// uploadImage is upload; with allowSVG (brand logos only, TEC-1020) an SVG
+// body is sanitized (storage.SanitizeSVG) and stored as image/svg+xml.
+func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request, field string, maxBytes int64,
+	validateSize func(int64) error, keyFor func(ext string) string, allowSVG bool) (string, bool) {
 	if h.store == nil {
 		response.ServiceUnavailable(w, r, response.CodeInternalError, "storage is not configured")
 		return "", false
@@ -461,6 +474,9 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request, field string, m
 	defer func() { _ = file.Close() }()
 	head := make([]byte, 512)
 	n, _ := io.ReadFull(file, head)
+	if allowSVG && storage.IsSVG(head[:n]) {
+		return h.uploadSVG(w, r, io.MultiReader(bytes.NewReader(head[:n]), file), header.Filename, maxBytes, validateSize, keyFor)
+	}
 	mime, err := storage.DetectLogoMIME(header.Header.Get("Content-Type"), head[:n])
 	if err != nil {
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
@@ -479,6 +495,33 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request, field string, m
 	body := io.MultiReader(bytes.NewReader(head[:n]), file)
 	if err := h.store.Upload(r.Context(), storage.File{
 		Body: body, Size: header.Size, ContentType: mime, Filename: header.Filename,
+	}, key); err != nil {
+		response.InternalErr(w, r, err, "image upload failed")
+		return "", false
+	}
+	return key, true
+}
+
+// uploadSVG sanitizes an uploaded SVG and stores the cleaned document.
+func (h *Handler) uploadSVG(w http.ResponseWriter, r *http.Request, src io.Reader, filename string,
+	maxBytes int64, validateSize func(int64) error, keyFor func(ext string) string) (string, bool) {
+	raw, err := io.ReadAll(io.LimitReader(src, maxBytes+1))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+		return "", false
+	}
+	if err := validateSize(int64(len(raw))); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		return "", false
+	}
+	clean, err := storage.SanitizeSVG(raw)
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		return "", false
+	}
+	key := keyFor("svg")
+	if err := h.store.Upload(r.Context(), storage.File{
+		Body: bytes.NewReader(clean), Size: int64(len(clean)), ContentType: storage.SVGMIME, Filename: filename,
 	}, key); err != nil {
 		response.InternalErr(w, r, err, "image upload failed")
 		return "", false
@@ -505,7 +548,7 @@ func (h *Handler) setBrandImage(w http.ResponseWriter, r *http.Request, kind str
 			maxBytes, validate = storage.MaxHeroBytes, storage.ValidateHeroSize
 			keyFor = func(ext string) string { return storage.VehicleBrandHeroObjectKey(id, newVersion(), ext) }
 		}
-		if key, ok = h.upload(w, r, kind, maxBytes, validate, keyFor); !ok {
+		if key, ok = h.uploadImage(w, r, kind, maxBytes, validate, keyFor, kind == usecase.ImageLogo); !ok {
 			return
 		}
 	}
@@ -596,8 +639,11 @@ func serveStatic(w http.ResponseWriter, r *http.Request, img staticImage) {
 	if notModified(w, r, img.etag, CacheControlPlaceholder) {
 		return
 	}
-	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Content-Security-Policy", svgPolicy)
+	w.Header().Set("Content-Type", img.contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if img.contentType == "image/svg+xml" {
+		w.Header().Set("Content-Security-Policy", svgPolicy)
+	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.body)))
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
@@ -626,7 +672,12 @@ func (h *Handler) serveObject(w http.ResponseWriter, r *http.Request, key string
 	w.Header().Set("ETag", etag)
 	w.Header().Set("Cache-Control", CacheControlImage)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Type", storage.MIMEFromLogoKey(key))
+	mime := storage.MIMEFromLogoKey(key)
+	w.Header().Set("Content-Type", mime)
+	if mime == storage.SVGMIME {
+		// Stored SVGs are sanitized; the policy is the second fence.
+		w.Header().Set("Content-Security-Policy", storage.SVGContentSecurityPolicy)
+	}
 	if size > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	}

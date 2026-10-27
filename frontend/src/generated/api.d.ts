@@ -2002,13 +2002,13 @@ export interface paths {
         };
         /**
          * Review state of a service of the signed-in customer
-         * @description TEC-244. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns the stored review (null when none), whether the user can send one now (completed service without a review) and the dealer's Google review link (null when the dealer has none).
+         * @description TEC-244. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns the stored review (null when none), whether the user can send one now (completed service without a review) and the dealer's Google review link (null when the dealer has none). TEC-1023: 403 FEATURE_DISABLED while reviews is closed system wide; can_review is false when the service's organization has the module off.
          */
         get: operations["getPortalServiceReview"];
         put?: never;
         /**
          * Review a service of the signed-in customer
-         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet session 403 PORTAL_READ_ONLY (TEC-245).
+         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet session 403 PORTAL_READ_ONLY (TEC-245). TEC-1023: 403 FEATURE_DISABLED when reviews is closed system wide or off for the service's organization.
          */
         post: operations["createPortalServiceReview"];
         delete?: never;
@@ -4174,6 +4174,50 @@ export interface paths {
          * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it. TEC-508: every item carries its `description` in the request locale (Accept-Language; 13 languages), `free_default` (on by default, free, no service record), `price` (cheapest active `module_bundle` service catalog item containing the module, with the distributor override) or `contact_for_price` (paid, no bundle on sale) and the organization's newest module `request`.
          */
         get: operations["listFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Customer-facing modules the portal session may use
+         * @description TEC-1023. Portal session (customer or fleet; a panel token is 403
+         *     REALM_FORBIDDEN). The portal has no active organization, so the
+         *     state of a module comes from the organizations behind the session.
+         *     `enabled` lists, in this order, the keys that apply; the mobile app
+         *     hides (and does not open) any customer area whose key is missing.
+         *
+         *     - A module closed system wide (platform admin) is never listed.
+         *     - `appointments`: at least one dealer of the request brand that takes
+         *       portal bookings (active, access window open, portal bookings on in
+         *       its appointment settings) has the module on. Booking is brand wide
+         *       (any dealer from the dealer finder), so a customer without a linked
+         *       organization can still book.
+         *     - `warranty_claims`, `reviews`: at least one organization the customer
+         *       is linked to (customer_organizations, or the organization of a
+         *       service the user owns or holds a warranty of) has the module on.
+         *     - `fleet`: the user is an active fleet user of the brand and at least
+         *       one actively linked dealer of the fleet has the module on (the
+         *       rule that opens `/v1/portal/fleet/*`).
+         *
+         *     Vehicle transfer, services, warranties and the other portal areas
+         *     ride on core modules (customers, services) and are always open, so
+         *     they are not listed. The per-organization gates still apply on the
+         *     routes: a dealer with appointments off answers 403 FEATURE_DISABLED
+         *     on availability, booking and cancel; reviews off answers 403 on the
+         *     review POST.
+         */
+        get: operations["listPortalFeatures"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7635,7 +7679,7 @@ export interface paths {
         };
         /**
          * Car brand logo (public, cacheable)
-         * @description No auth, no signed URL. The frontend serves it at the fixed URL `/brand-logos/{uuid}`. Answers the stored logo (JPEG/PNG/WebP) with a strong `ETag` and `Cache-Control: public, max-age=86400`; a matching `If-None-Match` gets 304. The ETag changes with every upload. A brand without a logo gets an SVG placeholder (`max-age=3600`).
+         * @description No auth, no signed URL. The frontend serves it at the fixed URL `/brand-logos/{uuid}`. Answers the stored logo (JPEG/PNG/WebP, or a sanitized SVG sent with `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox` and `X-Content-Type-Options: nosniff`) with a strong `ETag` and `Cache-Control: public, max-age=86400`; a matching `If-None-Match` gets 304. The ETag changes with every upload. A brand without a logo gets an SVG placeholder (`max-age=3600`).
          */
         get: operations["getPublicBrandLogo"];
         put?: never;
@@ -7653,7 +7697,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Default vehicle hero image (public) */
+        /**
+         * Default vehicle hero image (public)
+         * @description The legacy default hero car (transparent PNG), also the last fallback of the brand and model hero routes.
+         */
         get: operations["getPublicDefaultVehicleHero"];
         put?: never;
         post?: never;
@@ -8320,7 +8367,7 @@ export interface paths {
         get?: never;
         /**
          * Upload a car brand logo (super_admin)
-         * @description multipart field `logo`, JPEG/PNG/WebP up to 2 MiB, detected from the bytes. SVG (or anything else) is refused with 400.
+         * @description multipart field `logo`, JPEG/PNG/WebP or SVG up to 2 MiB, detected from the bytes. An SVG is sanitized server-side (allowlisted elements, no script/foreignObject/event handlers/external references) and stored as image/svg+xml; a malformed SVG or any other type is refused with 400.
          */
         put: operations["uploadVehicleBrandLogo"];
         post?: never;
@@ -11947,7 +11994,7 @@ export interface paths {
         };
         /**
          * Narrow warranty claim statuses for the portal user
-         * @description Descriptions and photos are intentionally omitted.
+         * @description Descriptions and photos are intentionally omitted. TEC-1023: 403 FEATURE_DISABLED while warranty_claims is closed system wide; a dealer that turned the module off keeps its claims in the list (history).
          */
         get: operations["listPortalWarrantyClaims"];
         put?: never;
@@ -13769,7 +13816,7 @@ export interface paths {
         };
         /**
          * Get portal appointment availability for a dealer
-         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand, the appointments module is enabled and portal booking is enabled for the dealer.
+         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand and portal booking is enabled for the dealer. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the dealer.
          */
         get: operations["getPortalDealerAvailability"];
         put?: never;
@@ -13787,12 +13834,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List my portal appointments */
+        /**
+         * List my portal appointments
+         * @description TEC-1023: 403 FEATURE_DISABLED while appointments is closed system wide. A dealer that turned the module off keeps its appointments in the list (history).
+         */
         get: operations["listPortalAppointments"];
         put?: never;
         /**
          * Book an appointment from the customer portal
-         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments.
+         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the dealer.
          */
         post: operations["createPortalAppointment"];
         delete?: never;
@@ -13812,7 +13862,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel my portal appointment
-         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED.
+         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the appointment's dealer.
          */
         post: operations["cancelPortalAppointment"];
         delete?: never;
@@ -14257,6 +14307,91 @@ export interface paths {
         get: operations["getPortalContractPdf"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own in-app inbox from the portal (TEC-1021)
+         * @description Customer / fleet portal mirror of GET /v1/notifications (the panel path answers 403
+         *     REALM_FORBIDDEN to a portal token). Only the session user's own `inapp` rows; no
+         *     permission is required. Supports `limit`,`offset`,`q`,`sort`,`unread` (`status` and
+         *     `channel` are not portal filters and are ignored). `sort` keys as the panel inbox;
+         *     default `-created_at`; unknown field → 400. The mobile customer app reaches it
+         *     through /v1/mobile/portal/notifications.
+         */
+        get: operations["getPortalNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own unread in-app count from the portal (TEC-1021)
+         * @description Same handler as GET /v1/notifications/unread-count, for the portal realm.
+         */
+        get: operations["getPortalNotificationsUnreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark all own in-app notifications read from the portal (TEC-1021)
+         * @description Same handler as POST /v1/notifications/read-all. Account state like the preferences, so a read-only fleet session may call it too.
+         */
+        post: operations["postPortalNotificationsReadAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/notifications/{uuid}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an own notification read from the portal (TEC-1021)
+         * @description Same handler as POST /v1/notifications/{uuid}/read. Another user's notification (or a non in-app row) answers 404.
+         */
+        post: operations["postPortalNotificationRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21139,6 +21274,21 @@ export interface components {
                 items: components["schemas"]["FeatureListItem"][];
                 enabled: string[];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-1023. GET /v1/portal/features: the customer-facing module keys the portal session may use (see the operation for the rule). */
+        PortalFeatures: {
+            enabled: components["schemas"]["PortalModuleKey"][];
+        };
+        /**
+         * @description TEC-1023. Customer-facing module: appointments (booking at a dealer), warranty_claims (claim statuses), reviews (service review form), fleet (fleet portal).
+         * @enum {string}
+         */
+        PortalModuleKey: "appointments" | "warranty_claims" | "reviews" | "fleet";
+        EnvelopePortalFeatures: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalFeatures"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @description TEC-508. A module state with the Özellikler page meta. */
@@ -38551,6 +38701,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listPortalFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enabled customer-facing module keys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalFeatures"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     requestFeature: {
         parameters: {
             query?: never;
@@ -44944,13 +45116,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Default hero (SVG) */
+            /** @description Default hero (WebP with alpha) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/svg+xml": string;
+                    "image/webp": string;
                 };
             };
             /** @description Not modified */
@@ -44982,7 +45154,6 @@ export interface operations {
                     "image/png": string;
                     "image/jpeg": string;
                     "image/webp": string;
-                    "image/svg+xml": string;
                 };
             };
             /** @description Not modified */
@@ -45016,7 +45187,6 @@ export interface operations {
                     "image/png": string;
                     "image/jpeg": string;
                     "image/webp": string;
-                    "image/svg+xml": string;
                 };
             };
             /** @description Not modified */
@@ -56080,6 +56250,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createPortalAppointment: {
@@ -57024,6 +57195,106 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalNotifications: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                unread?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of notifications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotificationPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPortalNotificationsUnreadCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeUnreadCount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPortalNotificationsReadAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postPortalNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated notification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeNotification"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

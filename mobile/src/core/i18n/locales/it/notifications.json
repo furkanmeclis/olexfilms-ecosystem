@@ -1,1 +1,18 @@
-{}
+{
+  "title": "Notifiche",
+  "bell": "Notifiche",
+  "bell_unread_one": "Notifiche, {{count}} non letta",
+  "bell_unread_other": "Notifiche, {{count}} non lette",
+  "filter.all": "Tutte",
+  "filter.unread": "Non lette",
+  "mark_all": "Segna tutte come lette",
+  "mark_read": "Segna come letta",
+  "empty": "Nessuna notifica",
+  "empty_unread": "Nessuna notifica non letta",
+  "empty_body": "Le novità sulla tua auto compaiono qui.",
+  "error_generic": "Operazione non riuscita. Riprova.",
+  "no_permission": "Non hai accesso alle notifiche.",
+  "today": "Oggi",
+  "yesterday": "Ieri",
+  "empty_body_customer": "Le novità su auto, garanzia e appuntamenti compaiono qui."
+}

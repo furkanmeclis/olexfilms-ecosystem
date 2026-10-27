@@ -1,6 +1,7 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
 
+import { useModule } from '@/core/modules';
 import { useCan } from '@/core/spaces';
 import { useTabTint } from '@/features/shell/tab-tint';
 
@@ -12,6 +13,9 @@ export default function BayiTabs() {
   const tint = useTabTint();
   const { t } = useTranslation('nav');
   const measures = useCan('services.write');
+  // A switched-off module loses its tab (module flags, TEC-1023).
+  const measurements = useModule('measurements');
+  const stock = useModule('stock');
   return (
     <NativeTabs tintColor={tint}>
       <NativeTabs.Trigger name="(home)">
@@ -26,11 +30,11 @@ export default function BayiTabs() {
         <NativeTabs.Trigger.Icon sf="qrcode.viewfinder" md="qr_code_scanner" />
         <NativeTabs.Trigger.Label>{t('scan')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="measure" hidden={!measures}>
+      <NativeTabs.Trigger name="measure" hidden={!measures || !measurements}>
         <NativeTabs.Trigger.Icon sf="gauge.with.needle.fill" md="speed" />
         <NativeTabs.Trigger.Label>{t('measure')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="stock" hidden={measures}>
+      <NativeTabs.Trigger name="stock" hidden={measures || !stock}>
         <NativeTabs.Trigger.Icon sf="shippingbox.fill" md="inventory_2" />
         <NativeTabs.Trigger.Label>{t('stock')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

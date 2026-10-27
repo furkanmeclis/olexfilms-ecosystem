@@ -74,6 +74,8 @@ const ERROR_KEYS: Record<string, string> = {
   APPOINTMENT_CANCEL_WINDOW_CLOSED: "portal.appointments.error.cancel_window",
   APPOINTMENT_INVALID_TRANSITION: "portal.appointments.error.invalid_status",
   PORTAL_READ_ONLY: "portal.appointments.error.read_only",
+  // TEC-1023: appointments switched off system wide or at this dealer.
+  FEATURE_DISABLED: "portal.appointments.error.feature_disabled",
 };
 
 /** Message key of a failed booking or cancellation. */

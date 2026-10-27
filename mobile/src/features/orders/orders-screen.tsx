@@ -6,8 +6,10 @@ import { Alert, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
+import { useSession } from '@/core/auth/session';
 import type { paths } from '@/core/api/schema';
 import { errorMessage } from '@/core/i18n';
+import { isCenterWorkplace, kindsOf } from '@/core/spaces';
 import {
   CardRow,
   Chips,
@@ -62,6 +64,11 @@ export function OrdersScreen() {
   const pathname = usePathname();
   const canOrder = useCanOrder();
   const cart = canOrder && pathname.startsWith('/bayi');
+  // TEC-1025: the center prepares what it sells in the warehouse screens
+  // (assign units, ready, ship, deliver); a seller row opens there when it can.
+  const me = useSession((s) => s.me);
+  const openInWarehouse = (o: Order) =>
+    o.role === 'seller' && isCenterWorkplace(me) && kindsOf(me).includes('depo') && pathname.startsWith('/bayi');
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
@@ -113,7 +120,7 @@ export function OrdersScreen() {
               }
               meta={`${f.money(item.total, item.currency)} · ${f.date(item.created_at)}`}
               trailing={<StatusPill label={item.status_label} tone={orderTone(item.status)} />}
-              onPress={() => router.push(href(item.uuid))}
+              onPress={() => router.push(openInWarehouse(item) ? (`/depo/jobs/order/${item.uuid}` as never) : href(item.uuid))}
             />
           );
         }}
@@ -220,6 +227,11 @@ export function OrderDetailScreen() {
                     <Text variant="body" numberOfLines={2}>
                       {it.product.name}
                     </Text>
+                    {it.price_missing ? (
+                      <View className="self-start">
+                        <StatusPill tone="problem" label={t('orders.price_missing')} />
+                      </View>
+                    ) : null}
                     <View className="flex-row justify-between gap-3">
                       <Text variant="footnote" tone="muted">
                         {it.product.sku} ·{' '}

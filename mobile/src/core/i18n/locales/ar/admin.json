@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "رفض هذا الطلب؟",
   "approvals.module_line": "{{module}} · بطلب من {{name}}",
   "approvals.no_access": "لا توجد موافقات لك",
-  "approvals.no_access_body": "تظهر هنا الطلبات التي تحتاج إلى قرارك."
+  "approvals.no_access_body": "تظهر هنا الطلبات التي تحتاج إلى قرارك.",
+  "home.action.new_service": "خدمة جديدة",
+  "home.action.measure": "قياس",
+  "orders.price_missing": "بلا سعر"
 }

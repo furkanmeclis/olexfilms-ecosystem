@@ -87,6 +87,24 @@ func RegisterRoutes(
 		http.HandlerFunc(h.PutPreferences), authn,
 	))
 
+	// TEC-1021: the user's own in-app inbox from the customer / fleet portal
+	// (and the mobile customer app through /v1/mobile/portal/*). Rows are
+	// always the session user's own, so there is no permission gate; marking
+	// one's own notifications read is account state like the preferences
+	// above, so a read-only fleet session may do it too.
+	mux.Handle("GET /v1/portal/notifications", middleware.Chain(
+		http.HandlerFunc(h.PortalList), authn,
+	))
+	mux.Handle("GET /v1/portal/notifications/unread-count", middleware.Chain(
+		http.HandlerFunc(h.UnreadCount), authn,
+	))
+	mux.Handle("POST /v1/portal/notifications/read-all", middleware.Chain(
+		http.HandlerFunc(h.MarkAllRead), authn,
+	))
+	mux.Handle("POST /v1/portal/notifications/{uuid}/read", middleware.Chain(
+		http.HandlerFunc(h.MarkRead), authn,
+	))
+
 	mux.Handle("GET /v1/platform/notifications/meta", middleware.Chain(
 		http.HandlerFunc(h.PlatformMeta), authn, requirePerm(rbac.PermPlatformNotificationsRead),
 	))

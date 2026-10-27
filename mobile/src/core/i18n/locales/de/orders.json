@@ -1,1 +1,15 @@
-{}
+{
+  "buyer_label": "Händler für die Bestellung",
+  "buyer_pick": "Händler wählen",
+  "buyer_search": "Händler suchen",
+  "buyer_none": "Kein passender Händler.",
+  "buyer_required": "Wählen Sie einen Händler.",
+  "unit_price": "Stückpreis",
+  "unit_price_auto": "Automatisch",
+  "price_rule_center": "Ohne Preis gilt der Einkaufspreis des Händlers; ein Produkt ohne Preis wird mit 0 hinzugefügt und markiert. Die Bestellung startet freigegeben, bereit fürs Lager.",
+  "create_for_dealer": "Bestellung anlegen",
+  "price_missing_title": "Produkte ohne Preis",
+  "price_missing_body_one": "{{count}} Produkt hatte keinen Preis; es wurde mit 0 hinzugefügt und markiert.",
+  "price_missing_body_other": "{{count}} Produkte hatten keinen Preis; sie wurden mit 0 hinzugefügt und markiert.",
+  "errors.price_invalid": "Geben Sie einen Preis ab 0 mit höchstens 4 Nachkommastellen ein."
+}

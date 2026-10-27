@@ -14,6 +14,7 @@ import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
 import { useWarehouseSummary } from './api';
+import { usePendingOrderCount } from './orders-api';
 import { useCurrentWarehouse } from './context';
 import { go } from './format';
 import { ErrorState } from './parts';
@@ -36,12 +37,16 @@ export function WarehouseHome() {
   const stockRead = useCan('stock.read');
   const { warehouse, warehouses, isLoading, isError, refetch, select } = useCurrentWarehouse();
   const summary = useWarehouseSummary(true);
+  const pendingOrders = usePendingOrderCount(orders);
   const [picking, setPicking] = useState(false);
 
   const counters: { key: string; label: string; value: number | null | undefined; icon: IconName; tab: string }[] = [
     { key: 'transfers', label: t('m.open_transfers'), value: summary.data?.transfers, icon: 'transfer', tab: 'transfers' },
     { key: 'counts', label: t('m.open_counts'), value: summary.data?.counts, icon: 'task', tab: 'counts' },
     { key: 'entries', label: t('m.open_entries'), value: summary.data?.entries, icon: 'packageIn', tab: 'entries' },
+    ...(orders
+      ? [{ key: 'orders', label: t('m.open_orders'), value: pendingOrders.data, icon: 'package' as IconName, tab: 'orders' }]
+      : []),
   ];
 
   const actions: { key: string; label: string; icon: IconName; path: string; show: boolean }[] = [

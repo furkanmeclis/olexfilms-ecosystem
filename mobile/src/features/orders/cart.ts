@@ -29,6 +29,7 @@ type Cart = Saved & {
   key: string | null;
   add: (product: { uuid: string; sku: string; name: string; unit_type: string }) => void;
   setAmount: (productUuid: string, amount: string) => void;
+  setPrice: (productUuid: string, price: string) => void;
   remove: (productUuid: string) => void;
   setNote: (note: string) => void;
   clear: () => void;
@@ -48,6 +49,8 @@ export const useCart = create<Cart>((set, get) => {
     add: (product) => update({ lines: addLine(get().lines, product) }),
     setAmount: (productUuid, amount) =>
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, amount } : l)) }),
+    setPrice: (productUuid, unit_price) =>
+      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, unit_price } : l)) }),
     remove: (productUuid) => update({ lines: get().lines.filter((l) => l.product_uuid !== productUuid) }),
     setNote: (note) => update({ note }),
     clear: () => update(EMPTY),

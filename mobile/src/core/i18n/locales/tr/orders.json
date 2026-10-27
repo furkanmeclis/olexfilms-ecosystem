@@ -21,5 +21,18 @@
   "errors.quantity_invalid": "1 ile 1.000.000 arasında tam sayı gir.",
   "errors.meters_invalid": "0'dan büyük, en fazla iki ondalıklı metre gir.",
   "errors.too_many": "Bir siparişte en fazla 200 ürün olabilir.",
-  "draft_kept": "Taslak kaydedildi; yeniden gönderince yalnızca gönderim tekrar denenir."
+  "draft_kept": "Taslak kaydedildi; yeniden gönderince yalnızca gönderim tekrar denenir.",
+  "buyer_label": "Sipariş verilecek bayi",
+  "buyer_pick": "Bayi seç",
+  "buyer_search": "Bayi ara",
+  "buyer_none": "Eşleşen bayi yok.",
+  "buyer_required": "Bir bayi seç.",
+  "unit_price": "Birim fiyat",
+  "unit_price_auto": "Otomatik",
+  "price_rule_center": "Fiyat boş bırakılırsa bayinin alış fiyatı kullanılır; fiyatı olmayan ürün 0 ile eklenir ve işaretlenir. Sipariş onaylı açılır, depo hazırlamaya başlayabilir.",
+  "create_for_dealer": "Siparişi oluştur",
+  "price_missing_title": "Fiyatı olmayan ürünler",
+  "price_missing_body_one": "{{count}} ürünün fiyatı yoktu; 0 ile eklendi ve işaretlendi.",
+  "price_missing_body_other": "{{count}} ürünün fiyatı yoktu; 0 ile eklendi ve işaretlendi.",
+  "errors.price_invalid": "0 veya daha büyük, en fazla 4 ondalıklı fiyat gir."
 }

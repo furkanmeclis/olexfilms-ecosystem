@@ -100,5 +100,8 @@
   "approvals.confirm_reject": "¿Rechazar esta solicitud?",
   "approvals.module_line": "{{module}} · solicitado por {{name}}",
   "approvals.no_access": "No tiene aprobaciones",
-  "approvals.no_access_body": "Las solicitudes que requieren su decisión aparecen aquí."
+  "approvals.no_access_body": "Las solicitudes que requieren su decisión aparecen aquí.",
+  "home.action.new_service": "Nuevo servicio",
+  "home.action.measure": "Medición",
+  "orders.price_missing": "Sin precio"
 }

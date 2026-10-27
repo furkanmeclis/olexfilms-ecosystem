@@ -537,5 +537,12 @@
   "validation.room": "Scegli una stanza.",
   "validation.same_warehouse": "Scegli un altro magazzino.",
   "validation.too_long": "Al massimo {{max}} caratteri.",
-  "validation.warehouse": "Scegliete un magazzino."
+  "validation.warehouse": "Scegliete un magazzino.",
+  "m.open_orders": "Ordini da evadere",
+  "orders.actions.deliver.button": "Consegnato",
+  "orders.actions.deliver.confirm": "Segna come consegnato",
+  "orders.actions.deliver.description": "L’ordine è segnato come consegnato al rivenditore a mano o in magazzino; il rivenditore lo chiude con «Ricevuto».",
+  "orders.actions.deliver.success": "Segnato come consegnato.",
+  "orders.actions.deliver.title": "Segnare come consegnato?",
+  "orders.price_missing": "Senza prezzo"
 }

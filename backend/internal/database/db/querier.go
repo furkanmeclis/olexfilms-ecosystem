@@ -2363,10 +2363,22 @@ type Querier interface {
 	ListPnlSums(ctx context.Context, arg ListPnlSumsParams) ([]ListPnlSumsRow, error)
 	// TEC-327: the dealer and vehicle labels the portal list shows.
 	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]ListPortalAppointmentsRow, error)
+	// The dealers a portal customer may book at (GetPortalAppointmentDealer
+	// rule without the module check, which the features service resolves).
+	ListPortalBookableDealerIDs(ctx context.Context, brandID int64) ([]int64, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
 	// warranty holder sees it, within the domain brand, excluding Glorian.
 	ListPortalContracts(ctx context.Context, arg ListPortalContractsParams) ([]ListPortalContractsRow, error)
+	// TEC-1023: the organizations whose module state decides what a portal
+	// session (GET /v1/portal/features) may use.
+	// The organizations a portal customer is linked to in a brand: the
+	// customer_organizations rows plus the organizations of the services the
+	// user owns or holds a warranty of (the GET /v1/portal/services rule).
+	ListPortalCustomerOrgIDs(ctx context.Context, arg ListPortalCustomerOrgIDsParams) ([]int64, error)
+	// The dealers actively linked to the fleet of a signed-in fleet user in a
+	// brand (the fleet portal opens while one of them has the fleet module).
+	ListPortalFleetActiveDealerIDs(ctx context.Context, arg ListPortalFleetActiveDealerIDsParams) ([]int64, error)
 	// Services of the user across every organization of the brand (one list,
 	// newest first by default). vehicle_id narrows to one vehicle (vehicle
 	// detail). TEC-377 (DT-BE-7): statuses / organization_uuids (multi-value),
@@ -3073,7 +3085,10 @@ type Querier interface {
 	// warehouse product match). Written only by cmd/migrator inside a step
 	// transaction.
 	MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandByUUIDRow, error)
+	// TEC-1018: the hero a brand already has; the migrator fills only an empty one.
+	MigratorCarBrandHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandHeroByUUIDRow, error)
 	MigratorCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelByUUIDRow, error)
+	MigratorCarModelHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelHeroByUUIDRow, error)
 	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
 	// TEC-1006: one primary warehouse per organization.
@@ -3231,7 +3246,10 @@ type Querier interface {
 	MigratorServiceNoTaken(ctx context.Context, arg MigratorServiceNoTakenParams) (bool, error)
 	// A unit of the brand with its product and the category's part keys.
 	MigratorServiceUnit(ctx context.Context, arg MigratorServiceUnitParams) (MigratorServiceUnitRow, error)
+	// Sets a legacy hero only when the brand has none (an admin upload wins).
+	MigratorSetCarBrandHero(ctx context.Context, arg MigratorSetCarBrandHeroParams) (int64, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	MigratorSetCarModelHero(ctx context.Context, arg MigratorSetCarModelHeroParams) (int64, error)
 	MigratorSetPrimaryWarehouse(ctx context.Context, arg MigratorSetPrimaryWarehouseParams) (int64, error)
 	// The legacy status of a service that is not final yet. A final status is
 	// written after the items, which are locked afterwards.

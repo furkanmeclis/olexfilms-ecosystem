@@ -13,5 +13,7 @@
   "coming_soon_title": "Bu ekran hazırlanır",
   "coming_soon_body": "Bu bölmə növbəti addımda əlavə olunacaq.",
   "search_placeholder": "Nömrə, telefon, ad və ya barkod",
-  "offline": "Oflayn"
+  "offline": "Oflayn",
+  "module_closed_title": "Bu modul bağlıdır",
+  "module_closed_body": "Administrator bu funksiyanı bağlayıb. Açılanda yenidən burada görünəcək."
 }

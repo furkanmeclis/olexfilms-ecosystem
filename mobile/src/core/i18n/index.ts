@@ -3,6 +3,7 @@ import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { I18nManager, Platform, Settings } from 'react-native';
 
+import { formatDigits, hasDigitChoice } from '@/core/digits';
 import { storage } from '@/core/storage';
 
 import { NAMESPACES, resources } from './resources';
@@ -48,6 +49,20 @@ function detect(): Language {
   return 'en';
 }
 
+/**
+ * TEC-1009: numbers interpolated into texts ({{count}}, {{years}}, ...) follow the
+ * language's digits. Only Arabic has a choice; identifiers are passed as strings
+ * and keep Latin digits. `format` is still read by i18next 26's interpolator
+ * (with `alwaysFormat` it runs for every value) although its typings dropped it,
+ * hence a variable instead of an inline literal.
+ */
+const interpolation = {
+  escapeValue: false,
+  alwaysFormat: true,
+  format: (value: unknown, _format?: string, lng?: string) =>
+    typeof value === 'number' && Number.isFinite(value) && lng && hasDigitChoice(lng) ? formatDigits(value, lng) : value,
+};
+
 export const i18n = createInstance();
 
 i18n.use(initReactI18next).init({
@@ -59,7 +74,7 @@ i18n.use(initReactI18next).init({
   // Keys are flat ("fields.email"), like the web catalogs.
   keySeparator: false,
   nsSeparator: ':',
-  interpolation: { escapeValue: false },
+  interpolation,
   returnNull: false,
   initAsync: false,
 });
