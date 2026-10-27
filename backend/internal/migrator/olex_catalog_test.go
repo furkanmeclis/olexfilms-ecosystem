@@ -30,6 +30,10 @@ var (
 // legacy hero of the brand it links to must not replace it.
 const adminHeroKey = "vehicle-brands/admin/hero-admin.png"
 
+// fixtureSVGLogo is brand B's vector logo (TEC-1020) with a script and an
+// event handler the migrator must strip before storing it.
+const fixtureSVGLogo = `<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)" viewBox="0 0 10 10"><script>alert(2)</script><path d="M0 0h10v10z"/></svg>`
+
 var (
 	fixtureCarBrands = []string{"sentetik marka a", "sentetik marka b"}
 	fixtureSKUs      = []string{"SYN-PPF-GLOSS", "SYN-PPF-MATTE", "SYN-WIN-01", "SYN-OLD-01"}
@@ -101,10 +105,11 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 		LegacyFiles: fstest.MapFS{
 			"app/public/car-brands/syn-a.png": {Data: fixtureLogo},
 			// Hero files sit at the root of the mirrored legacy bucket.
-			"hero-cars/brands/syn-a.png":   {Data: fixtureBrandHero},
-			"hero-cars/brands/syn-b.png":   {Data: fixtureBrandHero},
-			"hero-cars/models/syn-a1.webp": {Data: fixtureModelHero},
-			"hero-cars/models/syn-b1.svg":  {Data: fixtureSVGHero},
+			"hero-cars/brands/syn-a.png":      {Data: fixtureBrandHero},
+			"hero-cars/brands/syn-b.png":      {Data: fixtureBrandHero},
+			"hero-cars/models/syn-a1.webp":    {Data: fixtureModelHero},
+			"hero-cars/models/syn-b1.svg":     {Data: fixtureSVGHero},
+			"app/public/car-brands/syn-b.svg": {Data: []byte(fixtureSVGLogo)},
 		},
 	}
 	run := func() RunReport {
@@ -141,7 +146,7 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 	vc := stepCounts(t, first, "vehicle_catalog")
 	for k, want := range map[string]int64{
 		"brands_read": 2, "brands_created": 1, "brands_linked_existing": 1,
-		"models_read": 3, "models_created": 3, "logos_uploaded": 1, "logos_set": 1, "logo_missing": 0,
+		"models_read": 3, "models_created": 3, "logos_uploaded": 2, "logos_set": 2, "logo_svg": 1, "logo_missing": 0,
 		"heroes_uploaded": 2, "heroes_set": 2, "hero_missing": 1, "hero_missing:model:2": 1,
 		"hero_unsupported:model:3": 1, "hero_kept_existing": 1,
 	} {
@@ -253,6 +258,27 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 		t.Errorf("model hero content type = %q", ct)
 	}
 
+	// Brand B (linked to the seeded brand) gets its SVG logo, sanitized.
+	var svgKey string
+	if err := pool.QueryRow(ctx, `SELECT COALESCE(logo_object_key, '') FROM car_brands WHERE id = $1`, seedID).Scan(&svgKey); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(svgKey, ".svg") {
+		t.Fatalf("brand B logo key = %q", svgKey)
+	}
+	if ct, _, _ := store.GetMeta(svgKey); ct != storage.SVGMIME {
+		t.Errorf("svg logo content type = %q", ct)
+	}
+	svgBody, _, err := store.Download(ctx, svgKey)
+	if err != nil {
+		t.Fatalf("svg logo not uploaded: %v", err)
+	}
+	svgGot, _ := io.ReadAll(svgBody)
+	_ = svgBody.Close()
+	if s := string(svgGot); strings.Contains(s, "script") || strings.Contains(s, "onload") || !strings.Contains(s, `<path d="M0 0h10v10z">`) {
+		t.Errorf("stored svg logo not sanitized: %s", s)
+	}
+
 	// The warehouse product and the hub product are one catalog record of the
 	// olex brand, owned by the center.
 	var hubTarget, whTarget uuid.UUID
@@ -303,7 +329,8 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 	if c := stepCounts(t, second, "vehicle_catalog"); c["hero_kept_existing"] != 3 || c["hero_missing"] != 1 {
 		t.Errorf("rerun hero counts = %v", c)
 	}
-	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-brands/"}); len(objs.Objects) != 2 {
+	// Brand A logo + hero, brand B SVG logo (TEC-1018 + TEC-1020).
+	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-brands/"}); len(objs.Objects) != 3 {
 		t.Errorf("brand objects after rerun = %+v", objs.Objects)
 	}
 	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-models/"}); len(objs.Objects) != 1 {

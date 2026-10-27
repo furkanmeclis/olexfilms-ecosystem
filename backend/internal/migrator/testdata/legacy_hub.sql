@@ -472,9 +472,10 @@ INSERT INTO legacy_hub.customers (id, dealer_id, created_by, type, tc_no, tax_no
 
 -- hero_car_image_path (TEC-1018): A ve A1 dosyası var, B'nin yeni sistemde
 -- admin hero'su var (korunur), A2'nin dosyası yok, B1 SVG (reddedilir).
+-- logo (TEC-1020): B'nin logosu SVG (temizlenip yüklenir).
 INSERT INTO legacy_hub.car_brands (id, name, external_id, logo, hero_car_image_path, is_active, show_name, logo_height, created_at, updated_at) VALUES
     (1, 'Sentetik Marka A', 'syn-brand-a', 'car-brands/syn-a.png', 'hero-cars/brands/syn-a.png', true, true, 25, '2025-01-01 08:00:00', '2025-01-01 08:00:00'),
-    (2, 'Sentetik Marka B', 'syn-brand-b', NULL, 'hero-cars/brands/syn-b.png', true, false, 30, '2025-01-01 08:00:00', '2025-01-01 08:00:00');
+    (2, 'Sentetik Marka B', 'syn-brand-b', 'car-brands/syn-b.svg', 'hero-cars/brands/syn-b.png', true, false, 30, '2025-01-01 08:00:00', '2025-01-01 08:00:00');
 
 INSERT INTO legacy_hub.car_models (id, brand_id, name, external_id, hero_car_image_path, powertrain, yearstart, yearstop, coupe, is_active, created_at, updated_at) VALUES
     (1, 1, 'Model A1', 'syn-model-a1', 'hero-cars/models/syn-a1.webp', 'petrol', 2018, NULL, 'sedan', true, '2025-01-01 08:00:00', '2025-01-01 08:00:00'),
