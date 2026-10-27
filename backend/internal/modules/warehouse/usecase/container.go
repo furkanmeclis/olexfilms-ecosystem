@@ -338,7 +338,7 @@ func (s *StockEntries) Unscan(ctx context.Context, c EntryCaller, id uuid.UUID, 
 	if err != nil {
 		return ArrivalScan{}, err
 	}
-	res := ArrivalScan{Barcode: code}
+	res := ArrivalScan{Barcode: code, Result: "unscanned"}
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		e, err := s.lockWritable(ctx, q, c, org, id)
 		if err != nil {

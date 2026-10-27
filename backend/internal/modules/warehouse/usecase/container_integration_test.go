@@ -135,7 +135,7 @@ func TestContainerEntryImportScanAndUndo(t *testing.T) {
 	if err != nil || report.Expected != 4 || report.Scanned != 1 || len(report.Missing) != 3 || len(report.Extras) != 1 {
 		t.Fatalf("report %+v %v", report, err)
 	}
-	if res, err = e.entries.Unscan(e.ctx, c, entry.UUID, "STRAY-"+e.suffix); err != nil || res.Extras != 0 {
+	if res, err = e.entries.Unscan(e.ctx, c, entry.UUID, "STRAY-"+e.suffix); err != nil || res.Extras != 0 || res.Result != "unscanned" {
 		t.Fatalf("unscan %+v %v", res, err)
 	}
 	if res, err = e.entries.Unscan(e.ctx, c, entry.UUID, code("1")); err != nil || res.Scanned != 0 {

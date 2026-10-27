@@ -697,5 +697,15 @@
   "kpis.open_orders": "Ordini aperti",
   "kpis.draft_entries": "Entrate di magazzino in bozza",
   "kpis.open_transfers": "Trasferimenti aperti",
-  "kpis.open_counts": "Conteggi aperti"
+  "kpis.open_counts": "Conteggi aperti",
+  "arrival.result.unscanned": "Scansione annullata",
+  "labels.print_all": "Stampa tutte le etichette",
+  "labels.print_selected": "Stampa etichette selezionate ({{count}})",
+  "labels.print_range": "Etichette {{from}}–{{to}}",
+  "entry.unit_status": "Stato unità",
+  "entry.created_at": "Creata",
+  "entry.confirmed_at": "Confermata",
+  "entry.cancelled_at": "Annullata",
+  "entry.fixed_quantity_title": "Prodotto con codice a barre fisso",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: quanti pezzi sono stati ricevuti?"
 }

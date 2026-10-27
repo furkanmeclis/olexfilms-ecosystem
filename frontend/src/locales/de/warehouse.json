@@ -697,5 +697,15 @@
   "kpis.open_orders": "Offene Bestellungen",
   "kpis.draft_entries": "Offene Lagereingänge",
   "kpis.open_transfers": "Offene Transfers",
-  "kpis.open_counts": "Offene Zählungen"
+  "kpis.open_counts": "Offene Zählungen",
+  "arrival.result.unscanned": "Scan zurückgenommen",
+  "labels.print_all": "Alle Etiketten drucken",
+  "labels.print_selected": "Ausgewählte Etiketten drucken ({{count}})",
+  "labels.print_range": "Etiketten {{from}}–{{to}}",
+  "entry.unit_status": "Einheitsstatus",
+  "entry.created_at": "Erstellt",
+  "entry.confirmed_at": "Bestätigt",
+  "entry.cancelled_at": "Storniert",
+  "entry.fixed_quantity_title": "Produkt mit festem Barcode",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: wie viele Stück wurden empfangen?"
 }

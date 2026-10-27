@@ -16,6 +16,15 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsyncCombobox } from "@/components/ui/async-combobox";
 import {
@@ -28,6 +37,10 @@ import {
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ImportWizard } from "@/features/io/components/import-wizard";
+import {
+  MAX_UNIT_LABELS,
+  unitLabelsPath,
+} from "@/features/stock/services/stock.service";
 import {
   ArrivalScanCard,
   ContainerDeliveryCard,
@@ -94,7 +107,7 @@ export function StockEntryDetailPage({
   slug: string;
   uuid: string;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
   const qc = useQueryClient();
@@ -105,6 +118,10 @@ export function StockEntryDetailPage({
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [fixedPending, setFixedPending] = useState<{
+    barcode: string;
+    product: string;
+  } | null>(null);
 
   const key = warehouseKeys.entry(uuid);
   const entryQuery = useQuery({
@@ -229,18 +246,32 @@ export function StockEntryDetailPage({
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
 
-  const onBarcode = async (code: string) => {
-    if (scanKind(code) === "location") {
-      setLineError(t("warehouse.entry.scan_location_here"));
-      return;
-    }
+  const addBarcode = async (barcode: string, fixedQuantity?: number) => {
     try {
-      await addLines.mutateAsync({ barcodes: [unitBarcode(code)] });
+      await addLines.mutateAsync({
+        barcodes: [barcode],
+        ...(fixedQuantity ? { fixed_quantity: fixedQuantity } : {}),
+      });
     } catch (err) {
       setLineError(
         warehouseErrorMessage(err, t, t("warehouse.entry.add_failed")),
       );
     }
+  };
+  const onBarcode = async (code: string) => {
+    if (scanKind(code) === "location") {
+      setLineError(t("warehouse.entry.scan_location_here"));
+      return;
+    }
+    const barcode = unitBarcode(code);
+    // TEC-1032: a fixed barcode stands for N boxes; ask how many arrived
+    // (the API takes fixed_quantity, default 1).
+    const scan = await warehouseService.scan(barcode).catch(() => null);
+    if (scan?.unit?.unit_kind === "fixed") {
+      setFixedPending({ barcode, product: scan.product?.name ?? "" });
+      return;
+    }
+    await addBarcode(barcode);
   };
 
   const placeBody = (
@@ -421,6 +452,23 @@ export function StockEntryDetailPage({
                   })}
                 </span>
               </Info>
+              <Info label={t("warehouse.entry.created_at")}>
+                <span data-testid="entry-created-at">
+                  {format.dateTime(entry.created_at)}
+                </span>
+              </Info>
+              {entry.confirmed_at ? (
+                <Info label={t("warehouse.entry.confirmed_at")}>
+                  <span data-testid="entry-confirmed-at">
+                    {format.dateTime(entry.confirmed_at)}
+                  </span>
+                </Info>
+              ) : null}
+              {entry.cancelled_at ? (
+                <Info label={t("warehouse.entry.cancelled_at")}>
+                  {format.dateTime(entry.cancelled_at)}
+                </Info>
+              ) : null}
               {entry.note ? (
                 <div className="sm:col-span-4">
                   <Info label={t("warehouse.fields.note")}>{entry.note}</Info>
@@ -603,6 +651,41 @@ export function StockEntryDetailPage({
                     testId="entry-batch-labels"
                   />
                 ))}
+                {/* TEC-1032: print every line (chunks of MAX_UNIT_LABELS) or the selection, in any mode. */}
+                {editable && selected.length > 0 ? (
+                  <LabelButton
+                    path={unitLabelsPath(
+                      lines
+                        .filter((l) => selected.includes(l.uuid))
+                        .map((l) => l.barcode),
+                    )}
+                    filename="entry-labels-selected.pdf"
+                    label={t("warehouse.labels.print_selected", {
+                      count: selected.length,
+                    })}
+                    testId="entry-selected-labels"
+                  />
+                ) : null}
+                {lines.length > 0 && !(entry.label_batches ?? []).length
+                  ? labelChunks(lines.map((l) => l.barcode)).map(
+                      (chunk, i, all) => (
+                        <LabelButton
+                          key={`all-${i}`}
+                          path={unitLabelsPath(chunk)}
+                          filename={`entry-labels-${i + 1}.pdf`}
+                          label={
+                            all.length === 1
+                              ? t("warehouse.labels.print_all")
+                              : t("warehouse.labels.print_range", {
+                                  from: i * MAX_UNIT_LABELS + 1,
+                                  to: i * MAX_UNIT_LABELS + chunk.length,
+                                })
+                          }
+                          testId="entry-all-labels"
+                        />
+                      ),
+                    )
+                  : null}
               </div>
             </CardHeader>
             <CardContent>
@@ -625,9 +708,105 @@ export function StockEntryDetailPage({
               )}
             </CardContent>
           </Card>
+          <EntryFixedQuantityDialog
+            key={fixedPending?.barcode ?? "closed"}
+            pending={fixedPending}
+            busy={addLines.isPending}
+            onCancel={() => setFixedPending(null)}
+            onConfirm={(quantity) => {
+              const barcode = fixedPending?.barcode;
+              setFixedPending(null);
+              if (barcode) void addBarcode(barcode, quantity);
+            }}
+          />
         </>
       )}
     </WarehouseShell>
+  );
+}
+
+/** Line barcodes in chunks the label endpoint accepts (≤ MAX_UNIT_LABELS). */
+function labelChunks(barcodes: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < barcodes.length; i += MAX_UNIT_LABELS)
+    chunks.push(barcodes.slice(i, i + MAX_UNIT_LABELS));
+  return chunks;
+}
+
+/**
+ * TEC-1032: how many pieces of a fixed-barcode product arrived. A fixed
+ * barcode is shared by every box of the product, so one scan may stand for
+ * N boxes (`fixed_quantity`).
+ */
+function EntryFixedQuantityDialog({
+  pending,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  pending: { barcode: string; product: string } | null;
+  busy: boolean;
+  onConfirm: (quantity: number) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useLocale();
+  const [quantity, setQuantity] = useState("1");
+  const count = Number(quantity);
+  const valid = Number.isInteger(count) && count >= 1;
+  return (
+    <Dialog open={pending !== null} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent data-testid="entry-fixed-dialog">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid) onConfirm(count);
+          }}
+          className="space-y-4"
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t("warehouse.entry.fixed_quantity_title")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("warehouse.entry.fixed_quantity_description", {
+                barcode: pending?.barcode ?? "",
+                product: pending?.product ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="entry-fixed-quantity">
+              {t("warehouse.fixed.quantity_label")}
+            </Label>
+            <Input
+              id="entry-fixed-quantity"
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              autoFocus
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              aria-invalid={!valid}
+              data-testid="entry-fixed-quantity"
+            />
+            {!valid ? (
+              <p className="text-destructive text-sm">
+                {t("warehouse.fixed.quantity_invalid")}
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" disabled={!valid || busy}>
+              {t("warehouse.fixed.add")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
