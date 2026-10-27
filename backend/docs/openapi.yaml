@@ -14374,12 +14374,13 @@ paths:
       tags: [VehicleCatalog]
       operationId: getPublicDefaultVehicleHero
       summary: Default vehicle hero image (public)
+      description: The legacy default hero car (transparent PNG), also the last fallback of the brand and model hero routes.
       security: []
       responses:
         "200":
-          description: Default hero (SVG)
+          description: Default hero (WebP with alpha)
           content:
-            image/svg+xml: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
         "304":
           description: Not modified
 
@@ -14399,7 +14400,6 @@ paths:
             image/png: { schema: { type: string, format: binary } }
             image/jpeg: { schema: { type: string, format: binary } }
             image/webp: { schema: { type: string, format: binary } }
-            image/svg+xml: { schema: { type: string, format: binary } }
         "304":
           description: Not modified
         "400":
@@ -14423,7 +14423,6 @@ paths:
             image/png: { schema: { type: string, format: binary } }
             image/jpeg: { schema: { type: string, format: binary } }
             image/webp: { schema: { type: string, format: binary } }
-            image/svg+xml: { schema: { type: string, format: binary } }
         "304":
           description: Not modified
         "400":

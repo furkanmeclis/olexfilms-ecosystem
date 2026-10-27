@@ -35,7 +35,7 @@ import (
 const (
 	CacheControlImage       = "public, max-age=86400"
 	CacheControlPlaceholder = "public, max-age=3600"
-	// svgPolicy locks down the embedded placeholder SVGs (no scripts, no
+	// svgPolicy locks down the embedded placeholder SVG (no scripts, no
 	// external loads) in case a browser opens them as a document.
 	svgPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 )
@@ -43,22 +43,28 @@ const (
 //go:embed assets/placeholder-logo.svg
 var placeholderLogo []byte
 
-//go:embed assets/default-hero.svg
+// defaultHero is the legacy system's default hero car
+// (hero-cars/default/porsche_car.png, TEC-1018), resized to 1200 px and stored
+// as WebP with alpha (1.8 MB → ~110 KB): the last fallback of every
+// hero route.
+//
+//go:embed assets/default-hero.webp
 var defaultHero []byte
 
 type staticImage struct {
-	body []byte
-	etag string
+	body        []byte
+	etag        string
+	contentType string
 }
 
-func newStatic(body []byte) staticImage {
+func newStatic(body []byte, contentType string) staticImage {
 	sum := sha256.Sum256(body)
-	return staticImage{body: body, etag: `"static-` + hex.EncodeToString(sum[:8]) + `"`}
+	return staticImage{body: body, etag: `"static-` + hex.EncodeToString(sum[:8]) + `"`, contentType: contentType}
 }
 
 var (
-	placeholderImage = newStatic(placeholderLogo)
-	defaultHeroImage = newStatic(defaultHero)
+	placeholderImage = newStatic(placeholderLogo, "image/svg+xml")
+	defaultHeroImage = newStatic(defaultHero, "image/webp")
 )
 
 // Handler serves vehicle catalog endpoints.
@@ -596,8 +602,11 @@ func serveStatic(w http.ResponseWriter, r *http.Request, img staticImage) {
 	if notModified(w, r, img.etag, CacheControlPlaceholder) {
 		return
 	}
-	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Content-Security-Policy", svgPolicy)
+	w.Header().Set("Content-Type", img.contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if img.contentType == "image/svg+xml" {
+		w.Header().Set("Content-Security-Policy", svgPolicy)
+	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.body)))
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
