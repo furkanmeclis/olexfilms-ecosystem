@@ -43,7 +43,7 @@
   "list.empty_filtered": "Ninguna factura coincide con los filtros.",
   "list.export": "Descargar CSV",
   "billable.title": "Registros facturables",
-  "billable.description": "Pedidos de distribuidores recibidos y periodos del catálogo de servicios contabilizados sin factura activa.",
+  "billable.description": "Pedidos de distribuidores y concesionarios recibidos y periodos del catálogo de servicios contabilizados sin factura activa.",
   "billable.columns.source_type": "Tipo de origen",
   "billable.columns.source_no": "Origen",
   "billable.columns.buyer": "Comprador",

@@ -51,7 +51,9 @@ func (s *Service) loadSource(ctx context.Context, q *db.Queries, c Caller, sourc
 		if err != nil {
 			return source{}, err
 		}
-		if o.Status != "received" {
+		// TEC-1030: an order marked invoiced by hand, or a zero-total
+		// (legacy) order, is not billable.
+		if o.Status != "received" || o.InvoiceStatus == "invoiced" || numericSign(o.Total) <= 0 {
 			return source{}, ErrSourceNotBillable
 		}
 		rows, err := q.ListEinvoiceOrderLines(ctx, o.ID)
@@ -84,8 +86,11 @@ func (s *Service) loadSource(ctx context.Context, q *db.Queries, c Caller, sourc
 	if err != nil {
 		return source{}, err
 	}
-	want := map[string]string{SourceOrder: "distributor", SourceSubscription: "dealer"}[sourceType]
-	if buyer.Type != want {
+	// TEC-1003: with the TR distributor gone the center sells to its
+	// dealers directly, so their received orders are billable too.
+	billable := buyer.Type == "dealer" ||
+		(sourceType == SourceOrder && buyer.Type == "distributor")
+	if !billable {
 		return source{}, ErrSourceNotBillable
 	}
 	country, err := q.GetOrganizationCountryISO2(ctx, buyer.ID)
@@ -310,4 +315,12 @@ func takeSnapshot(doc ubl.Document, inv *invoice.Invoice) (snapshot, error) {
 func date(t time.Time) pgtype.Date {
 	t = t.In(trTime)
 	return pgtype.Date{Time: time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), Valid: true}
+}
+
+// numericSign is the sign of a NUMERIC (0 for NULL / NaN).
+func numericSign(n pgtype.Numeric) int {
+	if !n.Valid || n.NaN || n.Int == nil {
+		return 0
+	}
+	return n.Int.Sign()
 }

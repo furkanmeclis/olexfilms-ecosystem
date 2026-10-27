@@ -43,7 +43,7 @@
   "list.empty_filtered": "Няма фактури, отговарящи на филтрите.",
   "list.export": "Изтегли CSV",
   "billable.title": "Записи за фактуриране",
-  "billable.description": "Получени поръчки на дистрибутори и осчетоводени периоди от каталога с услуги без активна фактура.",
+  "billable.description": "Получени поръчки на дистрибутори и дилъри и осчетоводени периоди от каталога с услуги без активна фактура.",
   "billable.columns.source_type": "Тип източник",
   "billable.columns.source_no": "Източник",
   "billable.columns.buyer": "Купувач",

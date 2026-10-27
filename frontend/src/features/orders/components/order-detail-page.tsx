@@ -8,8 +8,10 @@ import {
   History,
   Package,
   Pencil,
+  Receipt,
   ScanBarcode,
   ShoppingCart,
+  Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +35,7 @@ import {
   OrderActionDialog,
   useStoreOrder,
 } from "@/features/orders/components/order-action-dialog";
+import { OrderInvoiceDialog } from "@/features/orders/components/order-invoice-dialog";
 import {
   LinePickingActions,
   ShippingCard,
@@ -50,6 +53,7 @@ import {
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
   amountNumber,
+  invoiceStatusTone,
   isRoll,
   orderStatusTone,
 } from "@/features/orders/lib/form";
@@ -249,6 +253,8 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
     "approved",
     "cancelled",
   ].includes(order.status);
+  // TEC-1030: the seller sees which lines it invoiced once received.
+  const showInvoice = order.status === "received" && order.role === "seller";
 
   const columns = useMemo(() => {
     const cols: ColumnDef<OrderItem, unknown>[] = [
@@ -316,6 +322,29 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
         ),
       }) as ColumnDef<OrderItem, unknown>,
     ];
+    if (showInvoice) {
+      cols.push(
+        createColumn<OrderItem>({
+          id: "invoice",
+          accessorFn: (item) => item.invoice_no ?? "",
+          labelKey: "orders.items.invoice",
+          cell: ({ row }) =>
+            row.original.invoiced ? (
+              <Badge
+                variant="success"
+                data-testid="line-invoiced"
+                title={row.original.invoice_no ?? undefined}
+              >
+                <span dir="ltr">{row.original.invoice_no}</span>
+              </Badge>
+            ) : (
+              <Badge variant="outline" data-testid="line-invoice-pending">
+                {t("orders.invoice.line_pending")}
+              </Badge>
+            ),
+        }) as ColumnDef<OrderItem, unknown>,
+      );
+    }
     if (showAssigned) {
       cols.push(
         createColumn<OrderItem>({
@@ -390,7 +419,16 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
       );
     }
     return cols;
-  }, [assign, format, order, showAssigned, t, unassignPending, unassignUnit]);
+  }, [
+    assign,
+    format,
+    order,
+    showAssigned,
+    showInvoice,
+    t,
+    unassignPending,
+    unassignUnit,
+  ]);
 
   return (
     <Section
@@ -432,6 +470,118 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
           </dd>
         </div>
       </dl>
+    </Section>
+  );
+}
+
+/**
+ * TEC-1030: the seller's manual invoice records on a received order, the
+ * "mark invoiced" entry (einvoice.manage) and the undo of a record.
+ */
+function InvoicesCard({
+  order,
+  canManage,
+}: {
+  order: Order;
+  canManage: boolean;
+}) {
+  const { t, format } = useLocale();
+  const store = useStoreOrder();
+  const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: (invoice: string) =>
+      ordersService.deleteInvoice(order.uuid, invoice),
+    onSuccess: (updated) => {
+      store(updated);
+      toast.success(t("orders.invoice.removed"));
+    },
+    onError: (err) =>
+      toast.error(orderErrorMessage(err, t, t("orders.invoice.remove_failed"))),
+  });
+  const invoices = order.invoices ?? [];
+  const remaining = (order.items ?? []).some((it) => !it.invoiced);
+  return (
+    <Section
+      title={t("orders.invoice.section")}
+      icon={<Receipt className="size-4" />}
+      testId="order-invoices"
+    >
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <StatusChip
+            label={t(`orders.invoice.status.${order.invoice_status}`)}
+            tone={invoiceStatusTone(order.invoice_status)}
+          />
+          {canManage && remaining ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setOpen(true)}
+              data-testid="order-mark-invoiced"
+            >
+              <Receipt className="size-4" />
+              {t("orders.invoice.mark")}
+            </Button>
+          ) : null}
+        </div>
+        {invoices.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            {t("orders.invoice.empty")}
+          </p>
+        ) : (
+          <ul className="divide-y text-sm">
+            {invoices.map((inv) => (
+              <li
+                key={inv.uuid}
+                className="flex items-start justify-between gap-2 py-2"
+                data-testid="order-invoice"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className="font-medium" dir="ltr">
+                    {inv.invoice_no}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {format.date(inv.invoice_date)} ·{" "}
+                    {t("orders.invoice.items_count", {
+                      count: inv.item_uuids.length,
+                    })}
+                    {inv.created_by
+                      ? ` · ${t("orders.invoice.recorded_by", { name: inv.created_by })}`
+                      : ""}
+                  </div>
+                  {inv.note ? (
+                    <div className="text-muted-foreground text-xs">
+                      {inv.note}
+                    </div>
+                  ) : null}
+                </div>
+                {canManage ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("orders.invoice.remove")}
+                    title={t("orders.invoice.remove")}
+                    disabled={remove.isPending}
+                    data-testid="order-invoice-remove"
+                    onClick={() => {
+                      if (window.confirm(t("orders.invoice.remove_confirm")))
+                        remove.mutate(inv.uuid);
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <OrderInvoiceDialog
+        order={order}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </Section>
   );
 }
@@ -585,6 +735,12 @@ export function OrderDetailPage({
                 {t("orders.detail.created_by_seller")}
               </Badge>
             ) : null}
+            {order.status === "received" && order.role === "seller" ? (
+              <StatusChip
+                label={t(`orders.invoice.status.${order.invoice_status}`)}
+                tone={invoiceStatusTone(order.invoice_status)}
+              />
+            ) : null}
             <StatusChip
               label={order.status_label}
               tone={orderStatusTone(order.status)}
@@ -684,6 +840,12 @@ export function OrderDetailPage({
         <Items order={order} assign={assign} />
         <div className="space-y-6">
           <Parties order={order} />
+          {order.status === "received" && order.role === "seller" ? (
+            <InvoicesCard
+              order={order}
+              canManage={can(permissions.einvoice.manage)}
+            />
+          ) : null}
           <ShippingCard
             order={order}
             canShip={can(permissions.orders.ship)}

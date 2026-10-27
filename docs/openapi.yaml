@@ -24731,6 +24731,12 @@ paths:
             preparing, ready, processing, shipped, delivered, received,
             cancelling, cancelled); unknown value → 400.
           schema: { type: string }
+        - name: invoice_status
+          in: query
+          description: >-
+            TEC-1030. Comma separated manual invoice statuses (pending,
+            partial, invoiced); unknown value → 400.
+          schema: { type: string }
         - name: created_from
           in: query
           description: >-
@@ -25430,6 +25436,83 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/invoices:
+    post:
+      tags: [Orders]
+      operationId: markOrderInvoiced
+      summary: Record an external invoice on order lines (seller, einvoice.manage)
+      description: >-
+        TEC-1030. The seller's accounting marks lines of a received order as
+        invoiced by hand (no integrator): the invoice number and date, the
+        lines (empty item_uuids = every line not invoiced yet). The order's
+        invoice_status follows (partial / invoiced). 403 for the buyer side,
+        409 ORDER_NOT_INVOICEABLE before receipt, ORDER_ITEM_ALREADY_INVOICED,
+        ORDER_NOTHING_TO_INVOICE, ORDER_INVOICE_NO_TAKEN (same number twice on
+        one order).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInvoiceInput"
+      responses:
+        "200":
+          description: Order with its invoice records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/invoices/{invoice_uuid}:
+    delete:
+      tags: [Orders]
+      operationId: deleteOrderInvoice
+      summary: Undo a manual invoice record (seller, einvoice.manage)
+      description: >-
+        TEC-1030. Removes the invoice record and its line marks; the order's
+        invoice_status is recomputed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: invoice_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order without the record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/delivery-methods:
     get:
@@ -45518,8 +45601,11 @@ components:
 
     OrderItem:
       type: object
-      required: [uuid, product, quantity, meters, unit_price, price_source, price_missing, line_total, note, assigned, units]
+      required: [uuid, product, quantity, meters, unit_price, price_source, price_missing, line_total, note, assigned, units, invoiced, invoice_no, invoice_uuid]
       properties:
+        invoiced: { type: boolean, description: The line is on a manual invoice record (TEC-1030) }
+        invoice_no: { type: [string, "null"], description: Number of that invoice record }
+        invoice_uuid: { type: [string, "null"], format: uuid }
         uuid: { type: string, format: uuid }
         product: { $ref: "#/components/schemas/OrderProductRef" }
         quantity: { type: [integer, "null"], description: Pieces (null for roll_meter products) }
@@ -45544,6 +45630,38 @@ components:
         units:
           type: array
           items: { $ref: "#/components/schemas/OrderAssignedUnit" }
+
+    OrderInvoiceStatus:
+      type: string
+      description: Manual invoice status of an order (TEC-1030)
+      enum: [pending, partial, invoiced]
+
+    OrderInvoice:
+      type: object
+      description: A manual invoice record of an order (TEC-1030)
+      required: [uuid, invoice_no, invoice_date, note, item_uuids, created_by, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        invoice_no: { type: string, maxLength: 64 }
+        invoice_date: { type: string, format: date }
+        note: { type: [string, "null"] }
+        item_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        created_by: { type: [string, "null"], description: Name of the user who recorded it }
+        created_at: { type: string, format: date-time }
+
+    OrderInvoiceInput:
+      type: object
+      required: [invoice_no, invoice_date]
+      properties:
+        invoice_no: { type: string, minLength: 1, maxLength: 64 }
+        invoice_date: { type: string, format: date }
+        note: { type: [string, "null"], maxLength: 1000 }
+        item_uuids:
+          type: array
+          description: Lines on the invoice; empty or missing = every line not invoiced yet
+          items: { type: string, format: uuid }
 
     OrderHistoryEntry:
       type: object
@@ -45619,9 +45737,15 @@ components:
         - has_shipping_document
         - has_receipt_document
         - created_by_seller
+        - invoice_status
       properties:
         uuid: { type: string, format: uuid }
         order_no: { type: string, example: ORD-00000001 }
+        invoice_status: { $ref: "#/components/schemas/OrderInvoiceStatus" }
+        invoices:
+          type: array
+          description: Manual invoice records (detail responses only, TEC-1030)
+          items: { $ref: "#/components/schemas/OrderInvoice" }
         created_by_seller:
           type: boolean
           description: The center opened the order for the dealer; it started approved (TEC-1024)

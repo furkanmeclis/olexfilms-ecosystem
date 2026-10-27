@@ -43,7 +43,7 @@
   "list.empty_filtered": "没有符合筛选条件的发票。",
   "list.export": "下载 CSV",
   "billable.title": "可开票记录",
-  "billable.description": "已收货的经销商订单和已过账的服务目录周期，且尚无有效发票。",
+  "billable.description": "已收货的经销商和代理商订单以及已过账的服务目录周期，且尚无有效发票。",
   "billable.columns.source_type": "来源类型",
   "billable.columns.source_no": "来源",
   "billable.columns.buyer": "买方",

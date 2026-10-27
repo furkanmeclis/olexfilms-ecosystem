@@ -1,4 +1,14 @@
-import type { OrderStatus } from "@/features/orders/services/orders.service";
+import type {
+  OrderInvoiceStatus,
+  OrderStatus,
+} from "@/features/orders/services/orders.service";
+
+/** Manual invoice statuses offered in the filter (TEC-1030). */
+export const ORDER_INVOICE_STATUSES = [
+  "pending",
+  "partial",
+  "invoiced",
+] as const satisfies readonly OrderInvoiceStatus[];
 
 /**
  * Statuses offered in the filter, in flow order. delivered is in the schema

@@ -60,6 +60,11 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/orders/{uuid}/documents/{kind}", route(h.Document))
 	receive := middleware.RequirePermission(rbac.PermOrdersReceive)
 	mux.Handle("POST /v1/orders/{uuid}/receipt-document", route(h.AttachReceipt, receive))
+	// TEC-1030: manual "invoiced" marks by the seller's accounting
+	// (einvoice.manage, the center accounting grant).
+	invoice := middleware.RequirePermission(rbac.PermEinvoiceManage)
+	mux.Handle("POST /v1/orders/{uuid}/invoices", route(h.MarkInvoiced, invoice))
+	mux.Handle("DELETE /v1/orders/{uuid}/invoices/{invoice_uuid}", route(h.DeleteInvoice, invoice))
 	mux.Handle("GET /v1/delivery-methods", route(h.ListDeliveryMethods))
 	mux.Handle("POST /v1/delivery-methods", route(h.CreateDeliveryMethod, ship))
 	mux.Handle("PUT /v1/delivery-methods/{uuid}", route(h.UpdateDeliveryMethod, ship))

@@ -172,5 +172,9 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Belge deposu veya PDF motoru şu an kullanılamıyor.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "Teslim belgesi PDF, JPEG, PNG veya WebP olmalı (en fazla 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Atamadan önce bu birimi depoda bir konuma yerleştirin.",
-  "page_forbidden_body": "Bu sayfayı görüntüleme yetkiniz yok."
+  "page_forbidden_body": "Bu sayfayı görüntüleme yetkiniz yok.",
+  "codes.ORDER_NOT_INVOICEABLE": "Yalnızca teslim alınmış sipariş faturalandı olarak işaretlenebilir.",
+  "codes.ORDER_ITEM_ALREADY_INVOICED": "Seçilen kalemlerden biri zaten faturalandırılmış.",
+  "codes.ORDER_NOTHING_TO_INVOICE": "Siparişin tüm kalemleri zaten faturalandırılmış.",
+  "codes.ORDER_INVOICE_NO_TAKEN": "Bu fatura numarası bu siparişte zaten kayıtlı."
 }

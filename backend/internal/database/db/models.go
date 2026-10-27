@@ -2140,6 +2140,25 @@ type Order struct {
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 	DeliveryMethodID          pgtype.Int8        `json:"delivery_method_id"`
 	CreatedBySeller           bool               `json:"created_by_seller"`
+	InvoiceStatus             string             `json:"invoice_status"`
+}
+
+type OrderInvoice struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrderID        int64              `json:"order_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	InvoiceNo      string             `json:"invoice_no"`
+	InvoiceDate    pgtype.Date        `json:"invoice_date"`
+	Note           pgtype.Text        `json:"note"`
+	CreatedBy      pgtype.Int8        `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type OrderInvoiceItem struct {
+	OrderInvoiceID int64 `json:"order_invoice_id"`
+	OrderItemID    int64 `json:"order_item_id"`
 }
 
 type OrderItem struct {

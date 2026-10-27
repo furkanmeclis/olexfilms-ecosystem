@@ -43,7 +43,7 @@
   "list.empty_filtered": "Filtrlərə uyğun faktura yoxdur.",
   "list.export": "CSV yüklə",
   "billable.title": "Fakturalandırıla bilən qeydlər",
-  "billable.description": "Aktiv fakturası olmayan qəbul edilmiş distribyutor sifarişləri və işlənmiş xidmət kataloqu dövrləri.",
+  "billable.description": "Aktiv fakturası olmayan qəbul edilmiş distribyutor və diler sifarişləri və işlənmiş xidmət kataloqu dövrləri.",
   "billable.columns.source_type": "Mənbə növü",
   "billable.columns.source_no": "Mənbə",
   "billable.columns.buyer": "Alıcı",

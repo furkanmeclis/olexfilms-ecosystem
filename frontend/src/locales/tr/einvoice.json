@@ -43,7 +43,7 @@
   "list.empty_filtered": "Filtrelere uyan fatura yok.",
   "list.export": "CSV indir",
   "billable.title": "Faturalanabilir kayıtlar",
-  "billable.description": "Etkin faturası olmayan teslim alınmış distribütör siparişleri ve işlenmiş hizmet kataloğu dönemleri.",
+  "billable.description": "Etkin faturası olmayan teslim alınmış bayi/distribütör siparişleri ve işlenmiş hizmet kataloğu dönemleri. Elle faturalandı işaretlenen siparişler listede görünmez.",
   "billable.columns.source_type": "Kaynak türü",
   "billable.columns.source_no": "Kaynak",
   "billable.columns.buyer": "Alıcı",

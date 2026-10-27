@@ -43,7 +43,7 @@
   "list.empty_filtered": "Aucune facture ne correspond aux filtres.",
   "list.export": "Télécharger le CSV",
   "billable.title": "Enregistrements facturables",
-  "billable.description": "Commandes distributeur reçues et périodes du catalogue de services comptabilisées sans facture active.",
+  "billable.description": "Commandes distributeur et revendeur reçues et périodes du catalogue de services comptabilisées sans facture active.",
   "billable.columns.source_type": "Type de source",
   "billable.columns.source_no": "Source",
   "billable.columns.buyer": "Acheteur",

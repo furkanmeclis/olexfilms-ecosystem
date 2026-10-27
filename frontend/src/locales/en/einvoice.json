@@ -43,7 +43,7 @@
   "list.empty_filtered": "No invoice matches the filters.",
   "list.export": "Download CSV",
   "billable.title": "Billable records",
-  "billable.description": "Received distributor orders and posted service catalog periods without an active invoice.",
+  "billable.description": "Received distributor and dealer orders and posted service catalog periods without an active invoice. Orders marked invoiced by hand are left out.",
   "billable.columns.source_type": "Source type",
   "billable.columns.source_no": "Source",
   "billable.columns.buyer": "Buyer",

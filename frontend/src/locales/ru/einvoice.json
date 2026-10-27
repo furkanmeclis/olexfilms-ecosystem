@@ -43,7 +43,7 @@
   "list.empty_filtered": "Нет счетов по фильтрам.",
   "list.export": "Скачать CSV",
   "billable.title": "Записи к выставлению",
-  "billable.description": "Полученные заказы дистрибьюторов и проведённые периоды каталога услуг без активного счёта.",
+  "billable.description": "Полученные заказы дистрибьюторов и дилеров и проведённые периоды каталога услуг без активного счёта.",
   "billable.columns.source_type": "Тип источника",
   "billable.columns.source_no": "Источник",
   "billable.columns.buyer": "Покупатель",

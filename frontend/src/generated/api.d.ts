@@ -13251,6 +13251,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an external invoice on order lines (seller, einvoice.manage)
+         * @description TEC-1030. The seller's accounting marks lines of a received order as invoiced by hand (no integrator): the invoice number and date, the lines (empty item_uuids = every line not invoiced yet). The order's invoice_status follows (partial / invoiced). 403 for the buyer side, 409 ORDER_NOT_INVOICEABLE before receipt, ORDER_ITEM_ALREADY_INVOICED, ORDER_NOTHING_TO_INVOICE, ORDER_INVOICE_NO_TAKEN (same number twice on one order).
+         */
+        post: operations["markOrderInvoiced"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/invoices/{invoice_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Undo a manual invoice record (seller, einvoice.manage)
+         * @description TEC-1030. Removes the invoice record and its line marks; the order's invoice_status is recomputed.
+         */
+        delete: operations["deleteOrderInvoice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/delivery-methods": {
         parameters: {
             query?: never;
@@ -26704,6 +26744,12 @@ export interface components {
             idempotency_key?: string;
         };
         OrderItem: {
+            /** @description The line is on a manual invoice record (TEC-1030) */
+            invoiced: boolean;
+            /** @description Number of that invoice record */
+            invoice_no: string | null;
+            /** Format: uuid */
+            invoice_uuid: string | null;
             /** Format: uuid */
             uuid: string;
             product: components["schemas"]["OrderProductRef"];
@@ -26732,6 +26778,33 @@ export interface components {
              */
             assigned: string;
             units: components["schemas"]["OrderAssignedUnit"][];
+        };
+        /**
+         * @description Manual invoice status of an order (TEC-1030)
+         * @enum {string}
+         */
+        OrderInvoiceStatus: "pending" | "partial" | "invoiced";
+        /** @description A manual invoice record of an order (TEC-1030) */
+        OrderInvoice: {
+            /** Format: uuid */
+            uuid: string;
+            invoice_no: string;
+            /** Format: date */
+            invoice_date: string;
+            note: string | null;
+            item_uuids: string[];
+            /** @description Name of the user who recorded it */
+            created_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        OrderInvoiceInput: {
+            invoice_no: string;
+            /** Format: date */
+            invoice_date: string;
+            note?: string | null;
+            /** @description Lines on the invoice; empty or missing = every line not invoiced yet */
+            item_uuids?: string[];
         };
         OrderHistoryEntry: {
             from_status: components["schemas"]["OrderStatus"] | null;
@@ -26770,6 +26843,9 @@ export interface components {
             uuid: string;
             /** @example ORD-00000001 */
             order_no: string;
+            invoice_status: components["schemas"]["OrderInvoiceStatus"];
+            /** @description Manual invoice records (detail responses only, TEC-1030) */
+            invoices?: components["schemas"]["OrderInvoice"][];
             /** @description The center opened the order for the dealer; it started approved (TEC-1024) */
             created_by_seller: boolean;
             status: components["schemas"]["OrderStatus"];
@@ -54632,6 +54708,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Comma separated order statuses (draft, submitted, approved, preparing, ready, processing, shipped, delivered, received, cancelling, cancelled); unknown value → 400. */
                 status?: string;
+                /** @description TEC-1030. Comma separated manual invoice statuses (pending, partial, invoiced); unknown value → 400. */
+                invoice_status?: string;
                 /** @description Inclusive lower bound of created_at (TEC-170): RFC3339, or a YYYY-MM-DD day in UTC. */
                 created_from?: string;
                 /** @description Upper bound of created_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before created_from. */
@@ -55116,6 +55194,63 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    markOrderInvoiced: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderInvoiceInput"];
+            };
+        };
+        responses: {
+            /** @description Order with its invoice records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteOrderInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                invoice_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order without the record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listDeliveryMethods: {
