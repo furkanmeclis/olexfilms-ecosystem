@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Metodo di consegna eliminato.",
   "delivery_methods.delete_failed": "Impossibile eliminare il metodo di consegna.",
   "delivery_methods.empty": "Ancora nessun metodo di consegna.",
-  "shipping.download_slip": "Buono d’ordine (PDF)"
+  "shipping.download_slip": "Buono d’ordine (PDF)",
+  "center_form.title": "Nuovo ordine per un rivenditore",
+  "center_form.dealer": "Rivenditore",
+  "center_form.dealer_placeholder": "Seleziona un rivenditore",
+  "center_form.dealer_search": "Cerca nome o codice del rivenditore…",
+  "center_form.dealer_none": "Nessun rivenditore del centro trovato.",
+  "center_form.dealer_required": "Seleziona un rivenditore.",
+  "center_form.unit_price": "Prezzo unitario (facoltativo)",
+  "center_form.unit_price_placeholder": "Automatico",
+  "center_form.price_rule": "L'ordine nasce approvato e passa al magazzino. Senza prezzo unitario vale il prezzo d'acquisto del rivenditore, altrimenti 0 e la riga viene segnalata.",
+  "center_form.create": "Crea ordine",
+  "center_form.created": "Ordine {{no}} creato e approvato.",
+  "center_form.price_missing_warning": "Alcune righe non hanno prezzo; sono state salvate a 0.",
+  "form.errors.price_invalid": "Il prezzo unitario deve essere 0 o superiore, con al massimo 4 decimali.",
+  "items.price_missing": "Nessun prezzo",
+  "detail.created_by_seller": "Creato dal centro"
 }

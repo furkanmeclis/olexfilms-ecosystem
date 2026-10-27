@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "تم حذف طريقة التسليم.",
   "delivery_methods.delete_failed": "تعذّر حذف طريقة التسليم.",
   "delivery_methods.empty": "لا توجد طرق تسليم بعد.",
-  "shipping.download_slip": "إيصال الطلب (PDF)"
+  "shipping.download_slip": "إيصال الطلب (PDF)",
+  "center_form.title": "طلب جديد لوكيل",
+  "center_form.dealer": "الوكيل",
+  "center_form.dealer_placeholder": "اختر وكيلًا",
+  "center_form.dealer_search": "ابحث باسم الوكيل أو رمزه…",
+  "center_form.dealer_none": "لم يتم العثور على وكيل تابع للمركز.",
+  "center_form.dealer_required": "اختر وكيلًا.",
+  "center_form.unit_price": "سعر الوحدة (اختياري)",
+  "center_form.unit_price_placeholder": "تلقائي",
+  "center_form.price_rule": "يُنشأ الطلب معتمدًا ويذهب إلى المستودع. إذا كان سعر الوحدة فارغًا يُستخدم سعر شراء الوكيل، وإلا 0 مع تمييز السطر.",
+  "center_form.create": "إنشاء الطلب",
+  "center_form.created": "تم إنشاء الطلب {{no}} واعتماده.",
+  "center_form.price_missing_warning": "بعض الأسطر بلا سعر؛ تم حفظها بقيمة 0.",
+  "form.errors.price_invalid": "يجب أن يكون سعر الوحدة 0 أو أكثر، بحد أقصى 4 منازل عشرية.",
+  "items.price_missing": "بلا سعر",
+  "detail.created_by_seller": "أنشأه المركز"
 }

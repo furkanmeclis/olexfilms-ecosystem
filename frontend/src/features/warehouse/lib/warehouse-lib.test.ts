@@ -252,4 +252,17 @@ describe("section registry (slice 1 + slice 2)", () => {
     expect(visibleSections(can(all), "dealer")).toEqual([]);
     expect(visibleSections(can([]), "center")).toEqual([]);
   });
+
+  it("links the order preparation queue (TEC-1024)", () => {
+    const perms = [Permission.OrdersRead, Permission.OrdersShip];
+    const orders = visibleSections(can(perms), "center").find(
+      (x) => x.id === "orders",
+    );
+    expect(orders?.href?.("acme")).toBe(
+      "/t/acme/orders?status=approved,processing,preparing,ready",
+    );
+    expect(
+      visibleSections(can([Permission.OrdersRead]), "center").map((x) => x.id),
+    ).not.toContain("orders");
+  });
 });

@@ -686,5 +686,7 @@
   "entry_import.save_template": "将此映射保存为模板",
   "entry_import.template_name": "模板名称",
   "entry_import.save": "保存",
-  "entry_import.template_saved": "映射模板已保存。"
+  "entry_import.template_saved": "映射模板已保存。",
+  "sections.orders.title": "待备货订单",
+  "sections.orders.description": "已批准、备货中和已就绪的经销商订单：拣货、扫码和发货。"
 }

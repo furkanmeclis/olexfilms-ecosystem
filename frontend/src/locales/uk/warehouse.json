@@ -687,5 +687,7 @@
   "entry_import.save_template": "Зберегти це зіставлення як шаблон",
   "entry_import.template_name": "Назва шаблону",
   "entry_import.save": "Зберегти",
-  "entry_import.template_saved": "Шаблон зіставлення збережено."
+  "entry_import.template_saved": "Шаблон зіставлення збережено.",
+  "sections.orders.title": "Замовлення до підготовки",
+  "sections.orders.description": "Схвалені, у підготовці та готові замовлення дилерів: комплектація, сканування штрихкодів і відвантаження."
 }

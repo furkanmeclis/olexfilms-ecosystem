@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Delivery method deleted.",
   "delivery_methods.delete_failed": "The delivery method could not be deleted.",
   "delivery_methods.empty": "No delivery methods yet.",
-  "shipping.download_slip": "Order Slip (PDF)"
+  "shipping.download_slip": "Order Slip (PDF)",
+  "center_form.title": "New order for a dealer",
+  "center_form.dealer": "Dealer",
+  "center_form.dealer_placeholder": "Select a dealer",
+  "center_form.dealer_search": "Search dealer name or code…",
+  "center_form.dealer_none": "No dealer under the center found.",
+  "center_form.dealer_required": "Select a dealer.",
+  "center_form.unit_price": "Unit price (optional)",
+  "center_form.unit_price_placeholder": "Automatic",
+  "center_form.price_rule": "The order opens approved and goes to the warehouse. An empty unit price uses the dealer's purchase price, or 0 when there is none, and the line is flagged.",
+  "center_form.create": "Create order",
+  "center_form.created": "Order {{no}} created and approved.",
+  "center_form.price_missing_warning": "Some lines have no price; they were saved as 0.",
+  "form.errors.price_invalid": "Unit price must be 0 or more, with at most 4 decimals.",
+  "items.price_missing": "No price",
+  "detail.created_by_seller": "Created by the center"
 }

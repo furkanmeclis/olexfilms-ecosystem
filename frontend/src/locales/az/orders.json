@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Çatdırılma üsulu silindi.",
   "delivery_methods.delete_failed": "Çatdırılma üsulu silinmədi.",
   "delivery_methods.empty": "Hələ çatdırılma üsulu yoxdur.",
-  "shipping.download_slip": "Sifariş qəbzi (PDF)"
+  "shipping.download_slip": "Sifariş qəbzi (PDF)",
+  "center_form.title": "Diler üçün yeni sifariş",
+  "center_form.dealer": "Diler",
+  "center_form.dealer_placeholder": "Diler seçin",
+  "center_form.dealer_search": "Diler adı və ya kodu axtar…",
+  "center_form.dealer_none": "Mərkəzə bağlı diler tapılmadı.",
+  "center_form.dealer_required": "Diler seçin.",
+  "center_form.unit_price": "Vahid qiyməti (istəyə bağlı)",
+  "center_form.unit_price_placeholder": "Avtomatik",
+  "center_form.price_rule": "Sifariş təsdiqlənmiş açılır və anbara düşür. Vahid qiyməti boşdursa dilerin alış qiyməti, o da yoxdursa 0 tətbiq olunur və sətir işarələnir.",
+  "center_form.create": "Sifarişi yarat",
+  "center_form.created": "{{no}} sifarişi yaradıldı və təsdiqləndi.",
+  "center_form.price_missing_warning": "Bəzi sətirlərdə qiymət yoxdur; 0 kimi saxlanıldı.",
+  "form.errors.price_invalid": "Vahid qiyməti 0 və ya daha çox olmalı, ən çox 4 onluq.",
+  "items.price_missing": "Qiymət yoxdur",
+  "detail.created_by_seller": "Mərkəz tərəfindən yaradılıb"
 }

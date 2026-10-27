@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Спосіб доставки видалено.",
   "delivery_methods.delete_failed": "Не вдалося видалити спосіб доставки.",
   "delivery_methods.empty": "Способів доставки ще немає.",
-  "shipping.download_slip": "Бланк замовлення (PDF)"
+  "shipping.download_slip": "Бланк замовлення (PDF)",
+  "center_form.title": "Нове замовлення для дилера",
+  "center_form.dealer": "Дилер",
+  "center_form.dealer_placeholder": "Оберіть дилера",
+  "center_form.dealer_search": "Пошук за назвою або кодом дилера…",
+  "center_form.dealer_none": "Дилерів центру не знайдено.",
+  "center_form.dealer_required": "Оберіть дилера.",
+  "center_form.unit_price": "Ціна за одиницю (необов'язково)",
+  "center_form.unit_price_placeholder": "Автоматично",
+  "center_form.price_rule": "Замовлення створюється схваленим і йде на склад. Без ціни застосовується закупівельна ціна дилера, а якщо її немає — 0, і рядок позначається.",
+  "center_form.create": "Створити замовлення",
+  "center_form.created": "Замовлення {{no}} створено та схвалено.",
+  "center_form.price_missing_warning": "Деякі рядки без ціни; їх збережено як 0.",
+  "form.errors.price_invalid": "Ціна за одиницю має бути 0 або більше, не більше 4 знаків після коми.",
+  "items.price_missing": "Немає ціни",
+  "detail.created_by_seller": "Створено центром"
 }

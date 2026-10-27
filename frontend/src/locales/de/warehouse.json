@@ -687,5 +687,7 @@
   "entry_import.save_template": "Diese Zuordnung als Vorlage speichern",
   "entry_import.template_name": "Vorlagenname",
   "entry_import.save": "Speichern",
-  "entry_import.template_saved": "Zuordnungsvorlage gespeichert."
+  "entry_import.template_saved": "Zuordnungsvorlage gespeichert.",
+  "sections.orders.title": "Zu bearbeitende Bestellungen",
+  "sections.orders.description": "Genehmigte, in Vorbereitung befindliche und bereite Händlerbestellungen: Kommissionierung, Barcode-Scan und Versand."
 }

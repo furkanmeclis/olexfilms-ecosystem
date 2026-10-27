@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Начинът на доставка е изтрит.",
   "delivery_methods.delete_failed": "Начинът на доставка не можа да се изтрие.",
   "delivery_methods.empty": "Все още няма начини на доставка.",
-  "shipping.download_slip": "Разписка за поръчка (PDF)"
+  "shipping.download_slip": "Разписка за поръчка (PDF)",
+  "center_form.title": "Нова поръчка за дилър",
+  "center_form.dealer": "Дилър",
+  "center_form.dealer_placeholder": "Изберете дилър",
+  "center_form.dealer_search": "Търсене по име или код на дилър…",
+  "center_form.dealer_none": "Няма намерен дилър към центъра.",
+  "center_form.dealer_required": "Изберете дилър.",
+  "center_form.unit_price": "Единична цена (по избор)",
+  "center_form.unit_price_placeholder": "Автоматично",
+  "center_form.price_rule": "Поръчката се създава одобрена и отива в склада. При празна цена се използва покупната цена на дилъра, а ако няма — 0 и редът се маркира.",
+  "center_form.create": "Създай поръчка",
+  "center_form.created": "Поръчка {{no}} е създадена и одобрена.",
+  "center_form.price_missing_warning": "Някои редове нямат цена; записани са с 0.",
+  "form.errors.price_invalid": "Единичната цена трябва да е 0 или повече, с до 4 десетични знака.",
+  "items.price_missing": "Няма цена",
+  "detail.created_by_seller": "Създадена от центъра"
 }

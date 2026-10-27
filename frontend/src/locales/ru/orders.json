@@ -229,5 +229,20 @@
   "delivery_methods.deleted": "Способ доставки удалён.",
   "delivery_methods.delete_failed": "Не удалось удалить способ доставки.",
   "delivery_methods.empty": "Способов доставки пока нет.",
-  "shipping.download_slip": "Бланк заказа (PDF)"
+  "shipping.download_slip": "Бланк заказа (PDF)",
+  "center_form.title": "Новый заказ для дилера",
+  "center_form.dealer": "Дилер",
+  "center_form.dealer_placeholder": "Выберите дилера",
+  "center_form.dealer_search": "Поиск по названию или коду дилера…",
+  "center_form.dealer_none": "Дилеры центра не найдены.",
+  "center_form.dealer_required": "Выберите дилера.",
+  "center_form.unit_price": "Цена за единицу (необязательно)",
+  "center_form.unit_price_placeholder": "Автоматически",
+  "center_form.price_rule": "Заказ создаётся одобренным и уходит на склад. Без цены применяется закупочная цена дилера, а если её нет — 0, и строка отмечается.",
+  "center_form.create": "Создать заказ",
+  "center_form.created": "Заказ {{no}} создан и одобрен.",
+  "center_form.price_missing_warning": "У некоторых строк нет цены; они сохранены как 0.",
+  "form.errors.price_invalid": "Цена за единицу должна быть 0 или больше, не более 4 знаков после запятой.",
+  "items.price_missing": "Нет цены",
+  "detail.created_by_seller": "Создан центром"
 }

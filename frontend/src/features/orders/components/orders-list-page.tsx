@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowRightLeft, Eye, Pencil, Plus, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -252,8 +252,17 @@ export function OrdersListPage({ slug }: { slug: string }) {
 
   // Column meta drives the params: status / party (CSV), total
   // (total_min/_max), created (created_from/_to).
+  // TEC-1024: ?status=a,b (the warehouse preparation queue link) seeds the
+  // status filter.
+  const statusParam = useSearchParams()?.get("status") ?? "";
+  const initialColumnFilters = useMemo(() => {
+    const allowed = new Set<string>(ORDER_FILTER_STATUSES);
+    const value = statusParam.split(",").filter((v) => allowed.has(v));
+    return value.length ? [{ id: "status", value }] : undefined;
+  }, [statusParam]);
   const listState = useServerListState({
     columns,
+    initialColumnFilters,
     initialSort: "-created_at",
     initialPageSize: ORDER_PAGE_SIZE,
     persistKey: ORDERS_PERSIST_KEY,
@@ -300,7 +309,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
         { label: title },
       ]}
       actions={
-        access.canCreate ? (
+        access.canCreate || access.canCreateForDealer ? (
           <Button asChild>
             <Link
               href={routes.tenant.orders.create(slug)}
