@@ -176,11 +176,5 @@
   "codes.ORDER_NOT_INVOICEABLE": "Solo un ordine ricevuto può essere segnato come fatturato.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Una delle righe selezionate è già fatturata.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Tutte le righe dell'ordine sono già fatturate.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine.",
-  "codes": {
-    "ORDER_NOT_INVOICEABLE": "Solo un ordine ricevuto può essere segnato come fatturato.",
-    "ORDER_ITEM_ALREADY_INVOICED": "Una delle righe selezionate è già fatturata.",
-    "ORDER_NOTHING_TO_INVOICE": "Tutte le righe dell'ordine sono già fatturate.",
-    "ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine."
-  }
+  "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine."
 }

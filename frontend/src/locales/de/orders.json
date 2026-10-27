@@ -259,7 +259,7 @@
   "invoice.empty": "Für diese Bestellung gibt es noch keinen Rechnungseintrag.",
   "invoice.mark": "Als fakturiert markieren",
   "invoice.mark_title": "Als fakturiert markieren",
-  "invoice.mark_description": "Nummer und Datum der ausgestellten Rechnung eingeben und die enthaltenen Positionen wählen.",
+  "invoice.mark_description": "Geben Sie Nummer und Datum der ausgestellten Rechnung ein und wählen Sie die enthaltenen Positionen.",
   "invoice.invoice_no": "Rechnungsnr.",
   "invoice.invoice_date": "Rechnungsdatum",
   "invoice.note": "Notiz",
@@ -267,42 +267,12 @@
   "invoice.lines_hint": "{{count}} Positionen ausgewählt",
   "invoice.marked": "Die Bestellung wurde als fakturiert markiert.",
   "invoice.mark_failed": "Der Rechnungseintrag konnte nicht gespeichert werden.",
-  "invoice.remove": "Eintrag zurücknehmen",
+  "invoice.remove": "Eintrag rückgängig machen",
   "invoice.remove_confirm": "Dieser Rechnungseintrag und seine Positionsmarkierungen werden entfernt. Fortfahren?",
   "invoice.removed": "Der Rechnungseintrag wurde entfernt.",
   "invoice.remove_failed": "Der Rechnungseintrag konnte nicht entfernt werden.",
   "invoice.items_count": "{{count}} Positionen",
   "invoice.recorded_by": "Erfasst von {{name}}",
   "invoice.line_pending": "Zu fakturieren",
-  "items.invoice": "Rechnung",
-  "invoice": {
-    "status": {
-      "pending": "Zu fakturieren",
-      "partial": "Teilweise fakturiert",
-      "invoiced": "Fakturiert"
-    },
-    "column": "Rechnungsstatus",
-    "section": "Rechnungen",
-    "empty": "Für diese Bestellung gibt es noch keinen Rechnungseintrag.",
-    "mark": "Als fakturiert markieren",
-    "mark_title": "Als fakturiert markieren",
-    "mark_description": "Geben Sie Nummer und Datum der ausgestellten Rechnung ein und wählen Sie die enthaltenen Positionen.",
-    "invoice_no": "Rechnungsnr.",
-    "invoice_date": "Rechnungsdatum",
-    "note": "Notiz",
-    "lines": "Positionen auf der Rechnung",
-    "lines_hint": "{{count}} Positionen ausgewählt",
-    "marked": "Die Bestellung wurde als fakturiert markiert.",
-    "mark_failed": "Der Rechnungseintrag konnte nicht gespeichert werden.",
-    "remove": "Eintrag rückgängig machen",
-    "remove_confirm": "Dieser Rechnungseintrag und seine Positionsmarkierungen werden entfernt. Fortfahren?",
-    "removed": "Der Rechnungseintrag wurde entfernt.",
-    "remove_failed": "Der Rechnungseintrag konnte nicht entfernt werden.",
-    "items_count": "{{count}} Positionen",
-    "recorded_by": "Erfasst von {{name}}",
-    "line_pending": "Zu fakturieren"
-  },
-  "items": {
-    "invoice": "Rechnung"
-  }
+  "items.invoice": "Rechnung"
 }

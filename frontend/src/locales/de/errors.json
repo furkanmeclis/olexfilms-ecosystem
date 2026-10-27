@@ -174,13 +174,7 @@
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Lagern Sie diese Einheit vor der Zuweisung ein.",
   "page_forbidden_body": "Sie haben keine Berechtigung, diese Seite anzuzeigen.",
   "codes.ORDER_NOT_INVOICEABLE": "Nur eine empfangene Bestellung kann als fakturiert markiert werden.",
-  "codes.ORDER_ITEM_ALREADY_INVOICED": "Eine der gewählten Positionen ist bereits fakturiert.",
+  "codes.ORDER_ITEM_ALREADY_INVOICED": "Eine der ausgewählten Positionen ist bereits fakturiert.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Alle Positionen der Bestellung sind bereits fakturiert.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst.",
-  "codes": {
-    "ORDER_NOT_INVOICEABLE": "Nur eine empfangene Bestellung kann als fakturiert markiert werden.",
-    "ORDER_ITEM_ALREADY_INVOICED": "Eine der ausgewählten Positionen ist bereits fakturiert.",
-    "ORDER_NOTHING_TO_INVOICE": "Alle Positionen der Bestellung sind bereits fakturiert.",
-    "ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst."
-  }
+  "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst."
 }

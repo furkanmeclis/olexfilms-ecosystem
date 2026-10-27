@@ -176,11 +176,5 @@
   "codes.ORDER_NOT_INVOICEABLE": "Solo un pedido recibido puede marcarse como facturado.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Una de las líneas seleccionadas ya está facturada.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Todas las líneas del pedido ya están facturadas.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido.",
-  "codes": {
-    "ORDER_NOT_INVOICEABLE": "Solo un pedido recibido puede marcarse como facturado.",
-    "ORDER_ITEM_ALREADY_INVOICED": "Una de las líneas seleccionadas ya está facturada.",
-    "ORDER_NOTHING_TO_INVOICE": "Todas las líneas del pedido ya están facturadas.",
-    "ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido."
-  }
+  "codes.ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido."
 }
