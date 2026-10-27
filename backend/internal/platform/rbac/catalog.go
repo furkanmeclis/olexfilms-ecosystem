@@ -1016,7 +1016,7 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
-			// TEC-1026 (000158): the center opens claims for its own service
+			// TEC-1026 (000159): the center opens claims for its own service
 			// point (TEC-1003, K4); managed = the center's own records.
 			PermWarrantyClaimsWrite: ScopeManaged,
 			// TEC-479 (000111).
@@ -1127,7 +1127,7 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
-			// TEC-501 (000124); settings since TEC-1026 (000158).
+			// TEC-501 (000124); settings since TEC-1026 (000159).
 			PermEinvoiceRead:     ScopeBrand,
 			PermEinvoiceManage:   ScopeBrand,
 			PermEinvoiceSettings: ScopeBrand,
