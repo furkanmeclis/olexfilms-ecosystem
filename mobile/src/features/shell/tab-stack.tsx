@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Platform } from 'react-native';
 
 import { LARGE_TITLES } from './large-titles';
+import { ModuleGate } from './module-gate';
 
 /**
  * Stack inside every tab: native large titles that collapse on scroll.
@@ -12,6 +13,8 @@ import { LARGE_TITLES } from './large-titles';
 export function TabStack({ children }: { children?: ReactNode } = {}) {
   return (
     <Stack
+      // A screen of a switched-off module never opens (TEC-1023 / module flags).
+      screenLayout={({ route, children: screen }) => <ModuleGate routeName={route.name}>{screen}</ModuleGate>}
       screenOptions={{
         headerLargeTitle: LARGE_TITLES,
         headerTransparent: Platform.OS === 'ios',

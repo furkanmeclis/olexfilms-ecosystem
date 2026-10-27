@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
+import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { AdminHomeScreen } from '@/features/admin/admin-home-screen';
 import { formatNumber, useLinks } from '@/features/services/lib';
@@ -50,15 +51,18 @@ export function DealerHome() {
 
   const cards = overview.data?.series.find((s) => s.key === 'cards')?.points ?? overview.data?.series[0]?.points ?? [];
 
-  const actions: Action[] = [
-    { key: 'new_service', icon: 'add', href: links.newService, show: canWrite },
-    { key: 'scan', icon: 'scan', href: '/bayi/scan', show: true },
-    { key: 'measure', icon: 'gauge', href: '/bayi/measure', show: canWrite },
-    { key: 'customers', icon: 'customers', href: '/bayi/menu/customers' as Href, show: canCustomers },
-    // TEC-866: the warranty list is closed to dealers; its shortcut became the
-    // services list (warranties open from the service detail).
-    { key: 'services', icon: 'service', href: '/bayi/services', show: canServices },
-  ];
+  const moduleOn = useModuleFilter();
+  const actions = (
+    [
+      { key: 'new_service', icon: 'add', href: links.newService, show: canWrite },
+      { key: 'scan', icon: 'scan', href: '/bayi/scan', show: true },
+      { key: 'measure', icon: 'gauge', href: '/bayi/measure', show: canWrite },
+      { key: 'customers', icon: 'customers', href: '/bayi/menu/customers' as Href, show: canCustomers },
+      // TEC-866: the warranty list is closed to dealers; its shortcut became the
+      // services list (warranties open from the service detail).
+      { key: 'services', icon: 'service', href: '/bayi/services', show: canServices },
+    ] satisfies Action[]
+  ).filter((a) => moduleOn(a.key));
 
   const refresh = () => {
     void overview.refetch();

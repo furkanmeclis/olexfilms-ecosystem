@@ -2,6 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
+import { useEnabledModules, useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
 import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
@@ -78,11 +79,15 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
   const workplace = space === 'bayi' && isCenterWorkplace(me);
   const shows = (i: Item) => i.spaces.includes(space) || (workplace && (i.spaces.includes('admin') || i.spaces.length === 0));
   const built = (i: Item) => !!i.built?.includes(space) || (workplace && (i.built?.includes('admin') || i.spaces.length === 0));
+  // A switched-off module has no row (its key is also its route name).
+  const modules = useEnabledModules();
+  const moduleOn = useModuleFilter();
   const items = ITEMS.filter(
-    (i) => shows(i) && can(i.permission) && (!i.orgTypes || (!!orgType && i.orgTypes.includes(orgType))),
+    (i) =>
+      shows(i) && can(i.permission) && moduleOn(i.key) && (!i.orgTypes || (!!orgType && i.orgTypes.includes(orgType))),
   );
   // Warehouse screens open over this space; swiping back returns here (no space switcher).
-  const warehouse = space !== 'depo' && kindsOf(me).includes('depo');
+  const warehouse = space !== 'depo' && kindsOf(me).includes('depo') && (!modules || modules.has('warehouse'));
 
   return (
     <>

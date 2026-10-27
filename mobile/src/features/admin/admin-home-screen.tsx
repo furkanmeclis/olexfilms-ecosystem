@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
+import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
@@ -61,7 +62,10 @@ export function AdminHomeScreen() {
   const [period, setPeriod] = useState<Period>('30d');
   const canServices = useCan('services.read');
   const perms = new Set(me?.permissions ?? []);
-  const actions = actionsFor(isCenterWorkplace(me)).filter((a) => !a.permission || me?.user.is_super_admin || perms.has(a.permission));
+  const moduleOn = useModuleFilter();
+  const actions = actionsFor(isCenterWorkplace(me)).filter(
+    (a) => (!a.permission || me?.user.is_super_admin || perms.has(a.permission)) && moduleOn(a.key),
+  );
 
   const overview = useReport('overview', { period });
   const trend = useReport('services.trend', { period, enabled: canServices });

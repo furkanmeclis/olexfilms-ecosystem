@@ -13,5 +13,7 @@
   "coming_soon_title": "此页面即将推出",
   "coming_soon_body": "此部分将在下一步添加。",
   "search_placeholder": "车牌、电话、姓名或条码",
-  "offline": "离线"
+  "offline": "离线",
+  "module_closed_title": "此模块已关闭",
+  "module_closed_body": "管理员已关闭此功能，开启后会重新显示在这里。"
 }

@@ -13,5 +13,7 @@
   "coming_soon_title": "Esta pantalla está en camino",
   "coming_soon_body": "Esta sección se añade en el siguiente paso.",
   "search_placeholder": "Matrícula, teléfono, nombre o código de barras",
-  "offline": "Sin conexión"
+  "offline": "Sin conexión",
+  "module_closed_title": "Este módulo está desactivado",
+  "module_closed_body": "Tu administrador desactivó esta función. Volverá a aparecer aquí cuando se active."
 }

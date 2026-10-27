@@ -19,5 +19,7 @@
   "placeholder_plate": "34 ABC 123",
   "placeholder_vin": "17 karakter şasi no",
   "placeholder_year": "2024",
-  "placeholder_km": "45000 km"
+  "placeholder_km": "45000 km",
+  "module_closed_title": "Bu modül kapalı",
+  "module_closed_body": "Yöneticin bu özelliği kapattı. Açıldığında burada yeniden görünür."
 }
