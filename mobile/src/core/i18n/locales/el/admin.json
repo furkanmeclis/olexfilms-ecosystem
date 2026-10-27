@@ -100,5 +100,7 @@
   "approvals.confirm_reject": "Απόρριψη αυτού του αιτήματος;",
   "approvals.module_line": "{{module}} · αίτημα από {{name}}",
   "approvals.no_access": "Καμία έγκριση για εσάς",
-  "approvals.no_access_body": "Τα αιτήματα που περιμένουν την απόφασή σας εμφανίζονται εδώ."
+  "approvals.no_access_body": "Τα αιτήματα που περιμένουν την απόφασή σας εμφανίζονται εδώ.",
+  "home.action.new_service": "Νέο σέρβις",
+  "home.action.measure": "Μέτρηση"
 }

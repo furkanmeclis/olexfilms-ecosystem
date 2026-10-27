@@ -14,5 +14,9 @@
   "assistant": "Assistente IA",
   "ai_actions": "Azioni IA in attesa",
   "disputes": "Contestazioni",
-  "einvoices": "Fatture elettroniche"
+  "einvoices": "Fatture elettroniche",
+  "approvals": "Approvazioni",
+  "network": "Rete rivenditori",
+  "warehouse": "Magazzino",
+  "warehouse_hint": "Stock, lavori e inventari"
 }

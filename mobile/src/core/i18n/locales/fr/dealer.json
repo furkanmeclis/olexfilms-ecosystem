@@ -204,5 +204,10 @@
   "service_no_taken": "Ce numéro est utilisé par un autre service.",
   "service_no_available": "Le numéro est disponible.",
   "service_no_scan": "Scanner le QR code",
-  "service_no_label": "Numéro de service"
+  "service_no_label": "Numéro de service",
+  "performer_label": "Réalisé par",
+  "performer_own": "Nous ({{name}})",
+  "performer_hint": "Modifier pour l’ouvrir pour un revendeur",
+  "scope_own": "Nos interventions",
+  "scope_network": "Tout le réseau"
 }

@@ -100,5 +100,7 @@
   "approvals.confirm_reject": "Да се отхвърли ли тази заявка?",
   "approvals.module_line": "{{module}} · заявено от {{name}}",
   "approvals.no_access": "Няма одобрения за вас",
-  "approvals.no_access_body": "Заявките, които чакат вашето решение, се появяват тук."
+  "approvals.no_access_body": "Заявките, които чакат вашето решение, се появяват тук.",
+  "home.action.new_service": "Ново обслужване",
+  "home.action.measure": "Измерване"
 }

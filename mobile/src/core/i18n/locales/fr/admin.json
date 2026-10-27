@@ -100,5 +100,7 @@
   "approvals.confirm_reject": "Refuser cette demande ?",
   "approvals.module_line": "{{module}} · demandé par {{name}}",
   "approvals.no_access": "Aucune validation pour vous",
-  "approvals.no_access_body": "Les demandes nécessitant votre décision apparaissent ici."
+  "approvals.no_access_body": "Les demandes nécessitant votre décision apparaissent ici.",
+  "home.action.new_service": "Nouvelle intervention",
+  "home.action.measure": "Mesure"
 }

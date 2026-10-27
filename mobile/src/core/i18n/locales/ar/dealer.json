@@ -204,5 +204,10 @@
   "service_no_taken": "هذا الرقم مستخدم في خدمة أخرى.",
   "service_no_available": "الرقم متاح.",
   "service_no_scan": "مسح رمز QR",
-  "service_no_label": "رقم الخدمة"
+  "service_no_label": "رقم الخدمة",
+  "performer_label": "المنفّذ",
+  "performer_own": "خاص بنا ({{name}})",
+  "performer_hint": "غيّره لفتحها باسم وكيل",
+  "scope_own": "خدماتنا",
+  "scope_network": "كل الشبكة"
 }

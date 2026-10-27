@@ -3,10 +3,8 @@
   "bell": "Notifications",
   "bell_unread_one": "Notifications, {{count}} unread",
   "bell_unread_other": "Notifications, {{count}} unread",
-  "filter": {
-    "all": "All",
-    "unread": "Unread"
-  },
+  "filter.all": "All",
+  "filter.unread": "Unread",
   "mark_all": "Mark all read",
   "mark_read": "Mark read",
   "empty": "No notifications",

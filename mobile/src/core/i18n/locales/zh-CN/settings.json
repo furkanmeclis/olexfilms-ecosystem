@@ -22,5 +22,6 @@
   "watch_intro": "观看介绍",
   "digits": "数字",
   "digits.arab": "阿拉伯-印度数字 (٠١٢٣)",
-  "digits.latn": "拉丁数字 (0123)"
+  "digits.latn": "拉丁数字 (0123)",
+  "switch_organization": "切换组织"
 }

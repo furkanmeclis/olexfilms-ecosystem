@@ -204,5 +204,10 @@
   "service_no_taken": "Bu nömrə başqa xidmətdə istifadə olunur.",
   "service_no_available": "Nömrə istifadə edilə bilər.",
   "service_no_scan": "QR kodu oxut",
-  "service_no_label": "Xidmət nömrəsi"
+  "service_no_label": "Xidmət nömrəsi",
+  "performer_label": "İcra edən",
+  "performer_own": "Öz ({{name}})",
+  "performer_hint": "Diler adına açmaq üçün dəyiş",
+  "scope_own": "Öz xidmətlərimiz",
+  "scope_network": "Bütün şəbəkə"
 }

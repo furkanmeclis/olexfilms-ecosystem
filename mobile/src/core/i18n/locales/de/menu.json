@@ -14,5 +14,9 @@
   "assistant": "KI-Assistent",
   "ai_actions": "Ausstehende KI-Aktionen",
   "disputes": "Einsprüche",
-  "einvoices": "E-Rechnungen"
+  "einvoices": "E-Rechnungen",
+  "approvals": "Freigaben",
+  "network": "Händlernetz",
+  "warehouse": "Lager",
+  "warehouse_hint": "Bestand, Aufträge und Inventur"
 }

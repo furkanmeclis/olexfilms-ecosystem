@@ -14,5 +14,9 @@
   "assistant": "AI асистент",
   "ai_actions": "Чакащи AI действия",
   "disputes": "Възражения",
-  "einvoices": "Електронни фактури"
+  "einvoices": "Електронни фактури",
+  "approvals": "Одобрения",
+  "network": "Дилърска мрежа",
+  "warehouse": "Склад",
+  "warehouse_hint": "Наличност, задачи и инвентаризация"
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { intlLocale, setDigitStyle, toLatinDigits } from './digits.ts';
+import { formatDigits, intlLocale, setDigitStyle, toLatinDigits } from './digits.ts';
 
 describe('digits', () => {
   it('formats Arabic with Arabic-Indic digits by default and Latin by choice', () => {
@@ -10,6 +10,17 @@ describe('digits', () => {
     assert.equal(intlLocale('tr'), 'tr');
     setDigitStyle('latn');
     assert.equal(new Intl.NumberFormat(intlLocale('ar')).format(12), '12');
+    setDigitStyle('arab');
+  });
+
+  it('formats plain numbers for texts: years without grouping, Latin outside Arabic', () => {
+    setDigitStyle('arab');
+    assert.equal(formatDigits(2025, 'ar'), '٢٠٢٥');
+    assert.equal(formatDigits(3, 'ar'), '٣');
+    assert.equal(formatDigits(12345, 'ar'), '١٢٬٣٤٥');
+    assert.equal(formatDigits(2025, 'tr'), '2025');
+    setDigitStyle('latn');
+    assert.equal(formatDigits(30, 'ar'), '30');
     setDigitStyle('arab');
   });
 

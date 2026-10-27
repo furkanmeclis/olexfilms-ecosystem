@@ -204,5 +204,10 @@
   "service_no_taken": "Diese Nummer wird von einem anderen Service verwendet.",
   "service_no_available": "Die Nummer ist verfügbar.",
   "service_no_scan": "QR-Code scannen",
-  "service_no_label": "Servicenummer"
+  "service_no_label": "Servicenummer",
+  "performer_label": "Ausgeführt von",
+  "performer_own": "Eigen ({{name}})",
+  "performer_hint": "Ändern, um ihn für einen Händler anzulegen",
+  "scope_own": "Unsere Services",
+  "scope_network": "Gesamtes Netz"
 }

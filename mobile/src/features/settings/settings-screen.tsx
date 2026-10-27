@@ -1,31 +1,37 @@
-import { reloadAppAsync } from 'expo';
-import { router, Stack } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { Alert, Platform } from 'react-native';
+import { reloadAppAsync } from "expo";
+import { router, Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { Alert, Platform } from "react-native";
 
-import { useSession } from '@/core/auth/session';
-import { API_URL, APP_VERSION } from '@/core/config';
-import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
-import type { DigitStyle } from '@/core/digits';
-import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
-import { getUpdateInfo } from '@/core/updates';
-import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
-import { Icon } from '@/ui/icon';
-import { List, ListRow, SectionHeader } from '@/ui/list';
-import { Screen } from '@/ui/screen';
-import { Text } from '@/ui/text';
+import { useSession } from "@/core/auth/session";
+import { API_URL, APP_VERSION } from "@/core/config";
+import { type Language, LANGUAGES, setLanguage } from "@/core/i18n";
+import type { DigitStyle } from "@/core/digits";
+import {
+  type ThemePreference,
+  type ThicknessUnit,
+  usePreferences,
+} from "@/core/preferences";
+import { getUpdateInfo } from "@/core/updates";
+import { PlateRecognitionSettings } from "@/features/plate-scan/plate-settings";
+import { Icon } from "@/ui/icon";
+import { List, ListRow, SectionHeader } from "@/ui/list";
+import { Screen } from "@/ui/screen";
+import { Text } from "@/ui/text";
 
-const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
-const UNITS: ThicknessUnit[] = ['um', 'mil'];
-const DIGITS: DigitStyle[] = ['arab', 'latn'];
+const THEMES: ThemePreference[] = ["system", "light", "dark"];
+const UNITS: ThicknessUnit[] = ["um", "mil"];
+const DIGITS: DigitStyle[] = ["arab", "latn"];
 
 function Checked({ on }: { on: boolean }) {
   return on ? <Icon name="check" tone="primary" size={20} /> : null;
 }
 
 export function SettingsScreen() {
-  const { t, i18n } = useTranslation('settings');
+  const { t, i18n } = useTranslation("settings");
   const me = useSession((s) => s.me);
+  // Customers see their preferences only: no plate reading, no build / server details.
+  const customer = me?.session_kind === "customer";
   const theme = usePreferences((s) => s.theme);
   const unit = usePreferences((s) => s.unit);
   const digits = usePreferences((s) => s.digits);
@@ -38,20 +44,22 @@ export function SettingsScreen() {
     const tl = (key: string) => i18n.t(`settings:${key}`, { lng: lang });
     // iOS reads the app language at process start; a JS reload is not enough
     // and an app cannot relaunch itself there.
-    if (Platform.OS === 'ios') {
-      Alert.alert(tl('restart_title'), tl('restart_reopen_body'), [{ text: tl('restart_ok') }]);
+    if (Platform.OS === "ios") {
+      Alert.alert(tl("restart_title"), tl("restart_reopen_body"), [
+        { text: tl("restart_ok") },
+      ]);
       return;
     }
-    Alert.alert(tl('restart_title'), tl('restart_body'), [
-      { text: tl('restart_now'), onPress: () => void reloadAppAsync() },
+    Alert.alert(tl("restart_title"), tl("restart_body"), [
+      { text: tl("restart_now"), onPress: () => void reloadAppAsync() },
     ]);
   };
 
   return (
     <>
-      <Stack.Screen options={{ title: t('title') }} />
+      <Stack.Screen options={{ title: t("title") }} />
       <Screen>
-        <SectionHeader title={t('language')} />
+        <SectionHeader title={t("language")} />
         <List>
           {LANGUAGES.map((l, i) => (
             <ListRow
@@ -64,7 +72,7 @@ export function SettingsScreen() {
           ))}
         </List>
 
-        <SectionHeader title={t('theme')} />
+        <SectionHeader title={t("theme")} />
         <List>
           {THEMES.map((th, i) => (
             <ListRow
@@ -77,7 +85,7 @@ export function SettingsScreen() {
           ))}
         </List>
 
-        <SectionHeader title={t('unit')} />
+        <SectionHeader title={t("unit")} />
         <List>
           {UNITS.map((u, i) => (
             <ListRow
@@ -90,9 +98,9 @@ export function SettingsScreen() {
           ))}
         </List>
 
-        {i18n.language === 'ar' ? (
+        {i18n.language === "ar" ? (
           <>
-            <SectionHeader title={t('digits')} />
+            <SectionHeader title={t("digits")} />
             <List>
               {DIGITS.map((d, i) => (
                 <ListRow
@@ -107,38 +115,79 @@ export function SettingsScreen() {
           </>
         ) : null}
 
-        <PlateRecognitionSettings />
+        {customer ? null : <PlateRecognitionSettings />}
 
-        <SectionHeader title={t('about')} />
-        <List>
-          <ListRow icon="network" title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
-          <ListRow icon="info" title={APP_VERSION} subtitle={t('app_version')} />
-          {ota.enabled ? (
-            <>
-              <ListRow icon="download" title={ota.channel ?? '-'} subtitle={t('ota_channel')} />
-              <ListRow icon="info" title={ota.runtimeVersion ?? '-'} subtitle={t('ota_runtime')} />
+        {customer ? null : (
+          <>
+            <SectionHeader title={t("about")} />
+            <List>
+              <ListRow
+                icon="network"
+                title={API_URL.replace(/^https?:\/\//, "")}
+                subtitle={t("api_server")}
+              />
               <ListRow
                 icon="info"
-                title={ota.embedded ? t('ota_embedded') : (ota.updateId ?? '-')}
-                subtitle={t('ota_update_id')}
-                last
+                title={APP_VERSION}
+                subtitle={t("app_version")}
               />
-            </>
-          ) : (
-            <ListRow icon="download" title={t('ota_off')} subtitle={t('ota_channel')} last />
-          )}
-        </List>
+              {ota.enabled ? (
+                <>
+                  <ListRow
+                    icon="download"
+                    title={ota.channel ?? "-"}
+                    subtitle={t("ota_channel")}
+                  />
+                  <ListRow
+                    icon="info"
+                    title={ota.runtimeVersion ?? "-"}
+                    subtitle={t("ota_runtime")}
+                  />
+                  <ListRow
+                    icon="info"
+                    title={
+                      ota.embedded ? t("ota_embedded") : (ota.updateId ?? "-")
+                    }
+                    subtitle={t("ota_update_id")}
+                    last
+                  />
+                </>
+              ) : (
+                <ListRow
+                  icon="download"
+                  title={t("ota_off")}
+                  subtitle={t("ota_channel")}
+                  last
+                />
+              )}
+            </List>
+          </>
+        )}
 
         <List className="mt-4">
-          <ListRow icon="intro" title={t('watch_intro')} onPress={() => router.push('/intro')} />
+          <ListRow
+            icon="intro"
+            title={t("watch_intro")}
+            onPress={() => router.push("/intro")}
+          />
           {(me?.organizations?.length ?? 0) > 1 ? (
-            <ListRow icon="spaces" title={t('switch_organization')} onPress={() => router.push('/spaces')} />
+            <ListRow
+              icon="spaces"
+              title={t("switch_organization")}
+              onPress={() => router.push("/spaces")}
+            />
           ) : null}
-          <ListRow icon="signOut" title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
+          <ListRow
+            icon="signOut"
+            title={t("sign_out")}
+            tone="danger"
+            onPress={() => void useSession.getState().signOut()}
+            last
+          />
         </List>
 
         <Text variant="footnote" tone="muted" className="text-center">
-          {t('version', { version: APP_VERSION })}
+          {t("version", { version: APP_VERSION })}
         </Text>
       </Screen>
     </>

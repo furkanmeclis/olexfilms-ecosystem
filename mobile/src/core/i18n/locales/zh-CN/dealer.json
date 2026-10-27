@@ -204,5 +204,10 @@
   "service_no_taken": "该编号已被其他服务使用。",
   "service_no_available": "编号可用。",
   "service_no_scan": "扫描二维码",
-  "service_no_label": "服务编号"
+  "service_no_label": "服务编号",
+  "performer_label": "执行方",
+  "performer_own": "本店（{{name}}）",
+  "performer_hint": "更改以代经销商开单",
+  "scope_own": "我们的服务",
+  "scope_network": "整个网络"
 }

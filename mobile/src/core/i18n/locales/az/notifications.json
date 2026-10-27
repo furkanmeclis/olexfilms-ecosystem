@@ -1,1 +1,15 @@
-{}
+{
+  "title": "Bildirişlər",
+  "bell": "Bildirişlər",
+  "bell_unread_one": "Bildirişlər, {{count}} oxunmamış",
+  "bell_unread_other": "Bildirişlər, {{count}} oxunmamış",
+  "filter.all": "Hamısı",
+  "filter.unread": "Oxunmamış",
+  "mark_all": "Hamısını oxunmuş et",
+  "mark_read": "Oxunmuş et",
+  "empty": "Bildiriş yoxdur",
+  "empty_unread": "Oxunmamış bildiriş yoxdur",
+  "empty_body": "Avtomobilinlə bağlı yeniliklər burada görünür.",
+  "error_generic": "Əməliyyat tamamlanmadı. Yenidən cəhd et.",
+  "no_permission": "Bildirişləri görmək icazən yoxdur."
+}

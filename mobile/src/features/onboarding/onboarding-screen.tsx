@@ -23,6 +23,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { formatDigits } from '@/core/digits';
 import { useOnboarding } from '@/core/onboarding';
 import { BrandLogo } from '@/ui/brand-logo';
 import { Icon } from '@/ui/icon';
@@ -53,7 +54,7 @@ type Mode = 'first-run' | 'replay';
  * finished or skipped; `replay` (from Settings) ends in "Done".
  */
 export function OnboardingScreen({ mode }: { mode: Mode }) {
-  const { t } = useTranslation('onboarding');
+  const { t, i18n } = useTranslation('onboarding');
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
@@ -67,9 +68,9 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
       title: t('film_p1_title'),
       body: t('film_p1_body'),
       stats: [
-        { value: '30+', label: t('film_stat_years') },
-        { value: '10+', label: t('film_stat_countries') },
-        { value: '50+', label: t('film_stat_products') },
+        { value: `${formatDigits(30, i18n.language)}+`, label: t('film_stat_years') },
+        { value: `${formatDigits(10, i18n.language)}+`, label: t('film_stat_countries') },
+        { value: `${formatDigits(50, i18n.language)}+`, label: t('film_stat_products') },
       ],
       reserve: 430,
     },

@@ -204,5 +204,10 @@
   "service_no_taken": "Ο αριθμός χρησιμοποιείται από άλλη υπηρεσία.",
   "service_no_available": "Ο αριθμός είναι διαθέσιμος.",
   "service_no_scan": "Σάρωση QR",
-  "service_no_label": "Αριθμός υπηρεσίας"
+  "service_no_label": "Αριθμός υπηρεσίας",
+  "performer_label": "Εκτελείται από",
+  "performer_own": "Δικό μας ({{name}})",
+  "performer_hint": "Αλλάξτε για να το ανοίξετε για αντιπρόσωπο",
+  "scope_own": "Τα σέρβις μας",
+  "scope_network": "Όλο το δίκτυο"
 }

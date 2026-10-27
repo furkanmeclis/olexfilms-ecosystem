@@ -3,10 +3,8 @@
   "bell": "Bildirimler",
   "bell_unread_one": "Bildirimler, {{count}} okunmamış",
   "bell_unread_other": "Bildirimler, {{count}} okunmamış",
-  "filter": {
-    "all": "Tümü",
-    "unread": "Okunmamış"
-  },
+  "filter.all": "Tümü",
+  "filter.unread": "Okunmamış",
   "mark_all": "Tümünü okundu yap",
   "mark_read": "Okundu yap",
   "empty": "Bildirim yok",
