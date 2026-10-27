@@ -261,7 +261,8 @@ func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 		events = append(events, n)
 	}
 	rows.Close()
-	wantEv := []string{"orders.created", "orders.submitted", "orders.approved", "orders.preparing", "orders.cancelled"}
+	// TEC-1028: the approval also tells the seller's warehouse staff.
+	wantEv := []string{"orders.created", "orders.submitted", "orders.approved", "orders.warehouse_new", "orders.preparing", "orders.cancelled"}
 	if strings.Join(events, ",") != strings.Join(wantEv, ",") {
 		t.Fatalf("outbox = %v, want %v", events, wantEv)
 	}

@@ -6,12 +6,13 @@
 -- order for a dealer (TEC-1024), else the seller's primary warehouse
 -- (TEC-1006). Picking suggestions and pick locations are limited to it, and
 -- its staff (warehouse_members, orders.ship) are told about the new order.
--- The warehouse belongs to the seller (composite FK, like the location).
+-- The warehouse belongs to the seller (composite FK, like the location;
+-- deferrable for org merges, TEC-1003).
 ALTER TABLE orders ADD COLUMN seller_warehouse_id BIGINT NULL;
 
 ALTER TABLE orders ADD CONSTRAINT fk_orders_seller_warehouse
     FOREIGN KEY (seller_warehouse_id, seller_org_id)
-    REFERENCES warehouses (id, organization_id) ON DELETE RESTRICT;
+    REFERENCES warehouses (id, organization_id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE;
 
 CREATE INDEX idx_orders_seller_warehouse ON orders (seller_warehouse_id)
     WHERE seller_warehouse_id IS NOT NULL;
