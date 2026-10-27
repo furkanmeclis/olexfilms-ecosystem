@@ -163,12 +163,18 @@ type ItemInput struct {
 	Quantity    *int64
 	Meters      *string
 	Note        *string
+	// UnitPrice is read only when the center orders for a dealer
+	// (TEC-1024); on the buyer's own order it is ignored (K8).
+	UnitPrice *string
 }
 
 // CreateInput is a new draft order of the active organization.
 type CreateInput struct {
 	Note  *string
 	Items []ItemInput
+	// BuyerOrgUUID: the center opens the order for this dealer directly
+	// under it (TEC-1024); empty = the active organization is the buyer.
+	BuyerOrgUUID *string
 }
 
 // DraftResult reports whether a stock-forecast draft reused an existing open
@@ -354,6 +360,9 @@ func (s *Service) supplier(ctx context.Context, q *db.Queries, buyer db.Organiza
 func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderView, error) {
 	if c.Org.InternalID == 0 || !c.can(rbac.PermOrdersWrite) {
 		return OrderView{}, ErrForbidden
+	}
+	if in.BuyerOrgUUID != nil && strings.TrimSpace(*in.BuyerOrgUUID) != "" {
+		return s.createForBuyer(ctx, c, in)
 	}
 	var created db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -762,6 +771,15 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 	if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 		return o, nil, fmt.Errorf("orders: totals: %w", err)
 	}
+	return s.freezeApproval(ctx, q, c, o, buyer)
+}
+
+// freezeApproval freezes the rate to TRY (and to each party's ledger
+// currency) and marks the order approved; the line prices are already
+// locked. It is the approval step shared by the seller's approval and an
+// order the center opens for a dealer (TEC-1024).
+func (s *Service) freezeApproval(ctx context.Context, q *db.Queries, c Caller, o db.Order,
+	buyer db.Organization) (db.Order, map[string]any, error) {
 	// The rate day is the UTC day, like the ledger's fallback day
 	// (accounting.go) and the stored rate days; the process zone must not
 	// move it (TEC-775).

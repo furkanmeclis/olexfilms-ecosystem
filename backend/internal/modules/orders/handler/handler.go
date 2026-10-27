@@ -115,8 +115,8 @@ func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 }
 
 // decode reads a JSON body. Unknown fields are ignored on purpose: a client
-// sending unit_price or line_total must not be able to set them (K8), and
-// the price fields are simply not part of the body.
+// sending line_total must not be able to set it (K8); unit_price is read
+// only when the center orders for a dealer (TEC-1024) and ignored otherwise.
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
 		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
@@ -130,6 +130,8 @@ type itemBody struct {
 	Quantity    *int64       `json:"quantity"`
 	Meters      *json.Number `json:"meters"`
 	Note        *string      `json:"note"`
+	// UnitPrice is read only on a center order for a dealer (TEC-1024).
+	UnitPrice *json.Number `json:"unit_price"`
 }
 
 func toItems(in []itemBody) []ord.ItemInput {
@@ -140,7 +142,13 @@ func toItems(in []itemBody) []ord.ItemInput {
 			m := it.Meters.String()
 			meters = &m
 		}
-		out = append(out, ord.ItemInput{ProductUUID: it.ProductUUID, Quantity: it.Quantity, Meters: meters, Note: it.Note})
+		var price *string
+		if it.UnitPrice != nil {
+			p := it.UnitPrice.String()
+			price = &p
+		}
+		out = append(out, ord.ItemInput{ProductUUID: it.ProductUUID, Quantity: it.Quantity, Meters: meters,
+			Note: it.Note, UnitPrice: price})
 	}
 	return out
 }
@@ -177,18 +185,22 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 type createBody struct {
-	Note  *string    `json:"note"`
-	Items []itemBody `json:"items"`
+	Note         *string    `json:"note"`
+	Items        []itemBody `json:"items"`
+	BuyerOrgUUID *string    `json:"buyer_org_uuid"`
 }
 
 // Create (POST /v1/orders): a draft order of the active organization to its
-// parent organization.
+// parent organization, or — with buyer_org_uuid — an approved order the
+// center opens for a dealer directly under it (TEC-1024).
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createBody
 	if !decode(w, r, &body) {
 		return
 	}
-	o, err := h.svc.Create(r.Context(), caller(r), ord.CreateInput{Note: body.Note, Items: toItems(body.Items)})
+	o, err := h.svc.Create(r.Context(), caller(r), ord.CreateInput{
+		Note: body.Note, Items: toItems(body.Items), BuyerOrgUUID: body.BuyerOrgUUID,
+	})
 	if err != nil {
 		writeError(w, r, err)
 		return
