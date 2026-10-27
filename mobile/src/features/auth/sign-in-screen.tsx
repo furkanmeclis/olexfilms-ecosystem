@@ -11,7 +11,7 @@ import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
-import { AuthField as Field } from './auth-field';
+import { AuthField } from './auth-field';
 import { AuthHero, useKeyboardVisible } from './auth-layout';
 import { CountryPicker } from './country-picker';
 import { DevDemoAccounts } from './dev-demo-accounts';
@@ -120,7 +120,7 @@ function PhoneForm() {
 
   return (
     <View className="gap-4">
-      <Field
+      <AuthField
         label={t('phone_label')}
         placeholder={placeholder}
         leading={<CountryPicker bare value={country} onChange={onCountry} />}
@@ -154,7 +154,7 @@ function EmailForm() {
 
   return (
     <View className="gap-4">
-      <Field
+      <AuthField
         label={t('email_label')}
         placeholder={t('placeholder_email')}
         value={value}

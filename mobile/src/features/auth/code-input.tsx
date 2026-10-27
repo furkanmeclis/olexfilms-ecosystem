@@ -117,6 +117,8 @@ export function CodeInput({
         onBlur={() => setFocused(false)}
         // Stays editable while busy: a non-editable field drops the keyboard and it would jump back.
         maxLength={length}
+        // Never visible (the field is transparent); the boxes are the placeholder.
+        placeholder={'0'.repeat(length)}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="one-time-code"

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Every text field in src/**\/*.tsx must carry a non-empty placeholder:
- *   - literal <Input …/> (ui/input) and raw <TextInput …/>;
+ *   - literal <Input …/> (ui/input), <AuthField …/> (sign-in) and raw <TextInput …/>;
  *   - placeholder="" / placeholder={''} counts as missing;
  *   - comments are ignored (a commented-out field, an apostrophe in a comment);
  *   - a field whose props are spread ({...rest}) without its own placeholder is
@@ -18,9 +18,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src');
 
 /** Field components checked at every use. */
-const FIELDS = ['Input', 'TextInput'];
+const FIELDS = ['Input', 'TextInput', 'AuthField'];
 /** Files (relative to src/) that define a field wrapper: the spread there forwards the caller's placeholder. */
-const WRAPPERS = new Set(['ui/input.tsx']);
+const WRAPPERS = new Set(['ui/input.tsx', 'features/auth/auth-field.tsx']);
 
 const walk = (d) =>
   fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => {
