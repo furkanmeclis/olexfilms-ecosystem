@@ -13,6 +13,9 @@ export default function BayiTabs() {
   const tint = useTabTint();
   const { t } = useTranslation('nav');
   const measures = useCan('services.write');
+  // Roles without services or stock (center/dealer accounting) lose those tabs instead of a 403.
+  const services = useCan('services.read');
+  const canStock = useCan('stock.read');
   // A switched-off module loses its tab (module flags, TEC-1023).
   const measurements = useModule('measurements');
   const stock = useModule('stock');
@@ -22,7 +25,7 @@ export default function BayiTabs() {
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="services">
+      <NativeTabs.Trigger name="services" hidden={!services}>
         <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" md="build" />
         <NativeTabs.Trigger.Label>{t('services')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
@@ -34,7 +37,7 @@ export default function BayiTabs() {
         <NativeTabs.Trigger.Icon sf="gauge.with.needle.fill" md="speed" />
         <NativeTabs.Trigger.Label>{t('measure')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="stock" hidden={measures || !stock}>
+      <NativeTabs.Trigger name="stock" hidden={measures || !stock || !canStock}>
         <NativeTabs.Trigger.Icon sf="shippingbox.fill" md="inventory_2" />
         <NativeTabs.Trigger.Label>{t('stock')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

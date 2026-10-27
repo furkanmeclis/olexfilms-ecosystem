@@ -31,8 +31,8 @@ const ITEMS: Item[] = [
   { key: 'customers', icon: 'customers', permission: 'customers.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   // TEC-866: no warranty list row for dealers (bayi); warranties open from the service detail.
   { key: 'appointments', icon: 'appointment', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
-  // TEC-958: the dealer has its stock tab; the admin space gets the center's own stock (read only).
-  { key: 'stock', icon: 'stock', permission: 'stock.read', spaces: ['bayi', 'admin'], built: ['admin'] },
+  // TEC-958: the organization's own stock (the dealer's stock tab gives way to Measure).
+  { key: 'stock', icon: 'stock', permission: 'stock.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   // TEC-958: dealer sales (web Dealer sales; accounting + dealer_accounting modules behind each permission).
   { key: 'quick_sale', icon: 'cart', permission: 'product_sales.write', spaces: ['bayi'], built: ['bayi'] },
   { key: 'sale_prices', icon: 'accounting', permission: 'dealer_pricing.write', spaces: ['bayi'], built: ['bayi'] },

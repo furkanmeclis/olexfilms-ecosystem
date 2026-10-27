@@ -203,7 +203,7 @@ export function ClaimDetailScreen() {
               {c.parts && c.parts.length > 0 ? (
                 c.parts.map((p, i) => (
                   <View key={p.uuid} className={`gap-0.5 px-4 py-2.5 ${i < (c.parts?.length ?? 0) - 1 ? 'border-b border-border' : ''}`}>
-                    <Text variant="callout">{p.part_key}</Text>
+                    <Text variant="callout">{t(`dealer:part.${p.part_key}`, { defaultValue: p.part_key })}</Text>
                     {p.note ? (
                       <Text variant="footnote" tone="muted">
                         {p.note}
@@ -275,7 +275,7 @@ export function ClaimDetailScreen() {
             {c.reapply_service ? (
               <Section title={t('reapply')}>
                 <InfoRow label={t('service')} value={c.reapply_service.service_no} />
-                <InfoRow label={t('reapply_status')} value={c.reapply_service.status} last />
+                <InfoRow label={t('reapply_status')} value={t(`dealer:service_status.${c.reapply_service.status}`, { defaultValue: c.reapply_service.status })} last />
               </Section>
             ) : null}
 
