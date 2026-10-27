@@ -214,3 +214,26 @@ JOIN staff_payments p ON p.staff_id = sp.id
 WHERE sp.organization_id = sqlc.arg(organization_id)
 GROUP BY sp.id
 ORDER BY sp.name, sp.id;
+
+-- TEC-1035: order detail of statement rows. ListStatementOrderItems returns
+-- the lines of the orders a statement shows (source "order"), restricted to
+-- orders the book is a party of (seller or buyer), in order/line order.
+-- name: ListStatementOrderItems :many
+SELECT o.uuid AS order_uuid, o.order_no, o.status AS order_status, o.currency,
+       oi.id AS item_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+JOIN products p ON p.id = oi.product_id
+WHERE o.uuid = ANY(sqlc.arg(order_uuids)::uuid[])
+  AND (o.seller_org_id = sqlc.arg(organization_id) OR o.buyer_org_id = sqlc.arg(organization_id))
+ORDER BY o.id, oi.id;
+
+-- ListStatementOrderItemUnits returns the units assigned to order lines
+-- (the barcodes that went out with the order), by line and barcode.
+-- name: ListStatementOrderItemUnits :many
+SELECT oiu.order_item_id, u.uuid AS unit_uuid, u.barcode, oiu.quantity, oiu.meters
+FROM order_item_units oiu
+JOIN units u ON u.id = oiu.unit_id
+WHERE oiu.order_item_id = ANY(sqlc.arg(item_ids)::bigint[])
+ORDER BY oiu.order_item_id, u.barcode, oiu.id;

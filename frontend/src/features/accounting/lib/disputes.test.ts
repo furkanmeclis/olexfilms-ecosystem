@@ -77,6 +77,7 @@ const line = (over: Partial<CariStatementLine> = {}): CariStatementLine => ({
   debit: "0.00",
   credit: "100.00",
   balance: "-100.00",
+  order: null,
   ...over,
 });
 

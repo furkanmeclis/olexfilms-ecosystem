@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Базовый счёт (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Коммерческий счёт (TICARIFATURA)",
   "einvoice.source_type.order": "Заказ",
-  "einvoice.source_type.service_subscription": "Период каталога услуг"
+  "einvoice.source_type.service_subscription": "Период каталога услуг",
+  "order_detail.open": "Позиции и штрихкоды",
+  "order_detail.title": "Детали заказа",
+  "order_detail.done": "Закрыть",
+  "order_detail.empty": "Для этой записи нет деталей заказа.",
+  "order_detail.pieces": "{{n}} шт.",
+  "order_detail.meters": "{{n}} м",
+  "order_detail.barcodes": "Штрихкоды",
+  "order_detail.no_barcodes": "Штрихкоды не назначены"
 }

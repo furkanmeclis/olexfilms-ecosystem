@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Əsas faktura (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Kommersiya fakturası (TICARIFATURA)",
   "einvoice.source_type.order": "Sifariş",
-  "einvoice.source_type.service_subscription": "Xidmət kataloqu dövrü"
+  "einvoice.source_type.service_subscription": "Xidmət kataloqu dövrü",
+  "order_detail.open": "Sətirlər və barkodlar",
+  "order_detail.title": "Sifariş təfərrüatı",
+  "order_detail.done": "Bağla",
+  "order_detail.empty": "Bu qeyd üçün sifariş təfərrüatı yoxdur.",
+  "order_detail.pieces": "{{n}} əd.",
+  "order_detail.meters": "{{n}} metr",
+  "order_detail.barcodes": "Barkodlar",
+  "order_detail.no_barcodes": "Təyin edilmiş barkod yoxdur"
 }

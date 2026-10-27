@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Basisrechnung (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Handelsrechnung (TICARIFATURA)",
   "einvoice.source_type.order": "Bestellung",
-  "einvoice.source_type.service_subscription": "Servicekatalog-Zeitraum"
+  "einvoice.source_type.service_subscription": "Servicekatalog-Zeitraum",
+  "order_detail.open": "Positionen und Strichcodes",
+  "order_detail.title": "Bestelldetails",
+  "order_detail.done": "Schließen",
+  "order_detail.empty": "Keine Bestelldetails für diese Buchung.",
+  "order_detail.pieces": "{{n}} Stk.",
+  "order_detail.meters": "{{n}} Meter",
+  "order_detail.barcodes": "Strichcodes",
+  "order_detail.no_barcodes": "Keine Strichcodes zugeordnet"
 }

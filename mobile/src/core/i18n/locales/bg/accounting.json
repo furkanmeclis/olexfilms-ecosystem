@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Основна фактура (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Търговска фактура (TICARIFATURA)",
   "einvoice.source_type.order": "Поръчка",
-  "einvoice.source_type.service_subscription": "Период от каталога с услуги"
+  "einvoice.source_type.service_subscription": "Период от каталога с услуги",
+  "order_detail.open": "Редове и баркодове",
+  "order_detail.title": "Детайли на поръчката",
+  "order_detail.done": "Затвори",
+  "order_detail.empty": "Няма детайли на поръчка за този ред.",
+  "order_detail.pieces": "{{n}} бр.",
+  "order_detail.meters": "{{n}} м",
+  "order_detail.barcodes": "Баркодове",
+  "order_detail.no_barcodes": "Няма зачислени баркодове"
 }
