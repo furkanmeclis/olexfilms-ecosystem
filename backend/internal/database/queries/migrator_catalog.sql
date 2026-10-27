@@ -33,6 +33,22 @@ WHERE id = sqlc.arg(id);
 -- name: MigratorSetCarBrandLogo :exec
 UPDATE car_brands SET logo_object_key = sqlc.arg(logo_object_key)::text WHERE id = sqlc.arg(id);
 
+-- name: MigratorCarBrandHeroByUUID :one
+-- TEC-1018: the hero a brand already has; the migrator fills only an empty one.
+SELECT id, hero_object_key FROM car_brands WHERE uuid = $1;
+
+-- name: MigratorSetCarBrandHero :execrows
+-- Sets a legacy hero only when the brand has none (an admin upload wins).
+UPDATE car_brands SET hero_object_key = sqlc.arg(hero_object_key)::text
+WHERE id = sqlc.arg(id) AND hero_object_key IS NULL;
+
+-- name: MigratorCarModelHeroByUUID :one
+SELECT id, hero_object_key FROM car_models WHERE uuid = $1;
+
+-- name: MigratorSetCarModelHero :execrows
+UPDATE car_models SET hero_object_key = sqlc.arg(hero_object_key)::text
+WHERE id = sqlc.arg(id) AND hero_object_key IS NULL;
+
 -- name: MigratorCarModelIDByUUID :one
 SELECT id FROM car_models WHERE uuid = $1;
 

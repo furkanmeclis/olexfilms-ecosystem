@@ -220,7 +220,8 @@ func TestIntegrationVehicleCatalog(t *testing.T) {
 
 	// Hero: default → brand hero (inherited by the model) → model hero.
 	heroPath := "/v1/public/vehicle-heroes/models/" + mdl.UUID
-	if rec := it.raw("GET", heroPath, "", "", nil, nil); rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "image/svg+xml" {
+	if rec := it.raw("GET", heroPath, "", "", nil, nil); rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "image/png" ||
+		!bytes.HasPrefix(rec.Body.Bytes(), []byte("\x89PNG")) || rec.Header().Get("ETag") == "" {
 		t.Fatalf("default hero: %d %v", rec.Code, rec.Header())
 	}
 	brandHero := append([]byte(nil), pngBytes...)

@@ -7653,7 +7653,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Default vehicle hero image (public) */
+        /**
+         * Default vehicle hero image (public)
+         * @description The legacy default hero car (transparent PNG), also the last fallback of the brand and model hero routes.
+         */
         get: operations["getPublicDefaultVehicleHero"];
         put?: never;
         post?: never;
@@ -44923,13 +44926,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Default hero (SVG) */
+            /** @description Default hero (PNG) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/svg+xml": string;
+                    "image/png": string;
                 };
             };
             /** @description Not modified */
@@ -44961,7 +44964,6 @@ export interface operations {
                     "image/png": string;
                     "image/jpeg": string;
                     "image/webp": string;
-                    "image/svg+xml": string;
                 };
             };
             /** @description Not modified */
@@ -44995,7 +44997,6 @@ export interface operations {
                     "image/png": string;
                     "image/jpeg": string;
                     "image/webp": string;
-                    "image/svg+xml": string;
                 };
             };
             /** @description Not modified */

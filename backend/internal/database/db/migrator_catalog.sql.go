@@ -33,6 +33,39 @@ func (q *Queries) MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID)
 	return i, err
 }
 
+const migratorCarBrandHeroByUUID = `-- name: MigratorCarBrandHeroByUUID :one
+SELECT id, hero_object_key FROM car_brands WHERE uuid = $1
+`
+
+type MigratorCarBrandHeroByUUIDRow struct {
+	ID            int64       `json:"id"`
+	HeroObjectKey pgtype.Text `json:"hero_object_key"`
+}
+
+// TEC-1018: the hero a brand already has; the migrator fills only an empty one.
+func (q *Queries) MigratorCarBrandHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandHeroByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, migratorCarBrandHeroByUUID, argUuid)
+	var i MigratorCarBrandHeroByUUIDRow
+	err := row.Scan(&i.ID, &i.HeroObjectKey)
+	return i, err
+}
+
+const migratorCarModelHeroByUUID = `-- name: MigratorCarModelHeroByUUID :one
+SELECT id, hero_object_key FROM car_models WHERE uuid = $1
+`
+
+type MigratorCarModelHeroByUUIDRow struct {
+	ID            int64       `json:"id"`
+	HeroObjectKey pgtype.Text `json:"hero_object_key"`
+}
+
+func (q *Queries) MigratorCarModelHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelHeroByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, migratorCarModelHeroByUUID, argUuid)
+	var i MigratorCarModelHeroByUUIDRow
+	err := row.Scan(&i.ID, &i.HeroObjectKey)
+	return i, err
+}
+
 const migratorCarModelIDByUUID = `-- name: MigratorCarModelIDByUUID :one
 SELECT id FROM car_models WHERE uuid = $1
 `
@@ -353,6 +386,25 @@ func (q *Queries) MigratorProductIDByUUID(ctx context.Context, arg MigratorProdu
 	return id, err
 }
 
+const migratorSetCarBrandHero = `-- name: MigratorSetCarBrandHero :execrows
+UPDATE car_brands SET hero_object_key = $1::text
+WHERE id = $2 AND hero_object_key IS NULL
+`
+
+type MigratorSetCarBrandHeroParams struct {
+	HeroObjectKey string `json:"hero_object_key"`
+	ID            int64  `json:"id"`
+}
+
+// Sets a legacy hero only when the brand has none (an admin upload wins).
+func (q *Queries) MigratorSetCarBrandHero(ctx context.Context, arg MigratorSetCarBrandHeroParams) (int64, error) {
+	result, err := q.db.Exec(ctx, migratorSetCarBrandHero, arg.HeroObjectKey, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const migratorSetCarBrandLogo = `-- name: MigratorSetCarBrandLogo :exec
 UPDATE car_brands SET logo_object_key = $1::text WHERE id = $2
 `
@@ -365,6 +417,24 @@ type MigratorSetCarBrandLogoParams struct {
 func (q *Queries) MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error {
 	_, err := q.db.Exec(ctx, migratorSetCarBrandLogo, arg.LogoObjectKey, arg.ID)
 	return err
+}
+
+const migratorSetCarModelHero = `-- name: MigratorSetCarModelHero :execrows
+UPDATE car_models SET hero_object_key = $1::text
+WHERE id = $2 AND hero_object_key IS NULL
+`
+
+type MigratorSetCarModelHeroParams struct {
+	HeroObjectKey string `json:"hero_object_key"`
+	ID            int64  `json:"id"`
+}
+
+func (q *Queries) MigratorSetCarModelHero(ctx context.Context, arg MigratorSetCarModelHeroParams) (int64, error) {
+	result, err := q.db.Exec(ctx, migratorSetCarModelHero, arg.HeroObjectKey, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const migratorUpdateCarBrand = `-- name: MigratorUpdateCarBrand :exec

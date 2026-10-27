@@ -3073,7 +3073,10 @@ type Querier interface {
 	// warehouse product match). Written only by cmd/migrator inside a step
 	// transaction.
 	MigratorCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandByUUIDRow, error)
+	// TEC-1018: the hero a brand already has; the migrator fills only an empty one.
+	MigratorCarBrandHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarBrandHeroByUUIDRow, error)
 	MigratorCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelByUUIDRow, error)
+	MigratorCarModelHeroByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelHeroByUUIDRow, error)
 	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
 	// TEC-1006: one primary warehouse per organization.
@@ -3231,7 +3234,10 @@ type Querier interface {
 	MigratorServiceNoTaken(ctx context.Context, arg MigratorServiceNoTakenParams) (bool, error)
 	// A unit of the brand with its product and the category's part keys.
 	MigratorServiceUnit(ctx context.Context, arg MigratorServiceUnitParams) (MigratorServiceUnitRow, error)
+	// Sets a legacy hero only when the brand has none (an admin upload wins).
+	MigratorSetCarBrandHero(ctx context.Context, arg MigratorSetCarBrandHeroParams) (int64, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	MigratorSetCarModelHero(ctx context.Context, arg MigratorSetCarModelHeroParams) (int64, error)
 	MigratorSetPrimaryWarehouse(ctx context.Context, arg MigratorSetPrimaryWarehouseParams) (int64, error)
 	// The legacy status of a service that is not final yet. A final status is
 	// written after the items, which are locked afterwards.

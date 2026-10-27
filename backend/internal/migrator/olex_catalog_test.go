@@ -18,6 +18,18 @@ import (
 // fixtureLogo is a PNG signature plus filler: enough for content sniffing.
 var fixtureLogo = append([]byte("\x89PNG\r\n\x1a\n"), bytes.Repeat([]byte{0}, 32)...)
 
+// Legacy hero files (TEC-1018): a PNG brand hero, a WebP model hero and an
+// SVG one the raster-only rule rejects.
+var (
+	fixtureBrandHero = append([]byte("\x89PNG\r\n\x1a\n"), bytes.Repeat([]byte{1}, 32)...)
+	fixtureModelHero = append([]byte("RIFF\x00\x00\x00\x00WEBPVP8 "), bytes.Repeat([]byte{0}, 32)...)
+	fixtureSVGHero   = []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`)
+)
+
+// adminHeroKey is the hero an admin already uploaded to the seeded brand; the
+// legacy hero of the brand it links to must not replace it.
+const adminHeroKey = "vehicle-brands/admin/hero-admin.png"
+
 var (
 	fixtureCarBrands = []string{"sentetik marka a", "sentetik marka b"}
 	fixtureSKUs      = []string{"SYN-PPF-GLOSS", "SYN-PPF-MATTE", "SYN-WIN-01", "SYN-OLD-01"}
@@ -54,7 +66,8 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 	// A brand the new app already has (seed / created by hand), spelled in
 	// another case: the legacy brand must link to it, not duplicate it.
 	var seedID int64
-	if err := pool.QueryRow(ctx, `INSERT INTO car_brands (name) VALUES ('SENTETIK MARKA B') RETURNING id`).Scan(&seedID); err != nil {
+	if err := pool.QueryRow(ctx, `INSERT INTO car_brands (name, hero_object_key) VALUES ('SENTETIK MARKA B', $1) RETURNING id`,
+		adminHeroKey).Scan(&seedID); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
@@ -84,8 +97,15 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 		Open: func(_ context.Context, name string) (source.LegacySource, error) {
 			return source.NewPostgres(name, pool, source.FixtureSchemas[name])
 		},
-		Storage:     store,
-		LegacyFiles: fstest.MapFS{"app/public/car-brands/syn-a.png": {Data: fixtureLogo}},
+		Storage: store,
+		LegacyFiles: fstest.MapFS{
+			"app/public/car-brands/syn-a.png": {Data: fixtureLogo},
+			// Hero files sit at the root of the mirrored legacy bucket.
+			"hero-cars/brands/syn-a.png":   {Data: fixtureBrandHero},
+			"hero-cars/brands/syn-b.png":   {Data: fixtureBrandHero},
+			"hero-cars/models/syn-a1.webp": {Data: fixtureModelHero},
+			"hero-cars/models/syn-b1.svg":  {Data: fixtureSVGHero},
+		},
 	}
 	run := func() RunReport {
 		t.Helper()
@@ -122,6 +142,8 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 	for k, want := range map[string]int64{
 		"brands_read": 2, "brands_created": 1, "brands_linked_existing": 1,
 		"models_read": 3, "models_created": 3, "logos_uploaded": 1, "logos_set": 1, "logo_missing": 0,
+		"heroes_uploaded": 2, "heroes_set": 2, "hero_missing": 1, "hero_missing:model:2": 1,
+		"hero_unsupported:model:3": 1, "hero_kept_existing": 1,
 	} {
 		if vc[k] != want {
 			t.Errorf("vehicle_catalog.%s = %d, want %d (%v)", k, vc[k], want, vc)
@@ -176,6 +198,61 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 		t.Errorf("logo content type = %q", ct)
 	}
 
+	// Heroes (TEC-1018): brand A and model A1 point at the uploaded legacy
+	// files, the admin hero of the seeded brand is kept, A2 (missing file) and
+	// B1 (SVG) stay empty.
+	heroes := map[string]string{}
+	hrows, err := pool.Query(ctx, `
+		SELECT 'brand:' || lower(name), COALESCE(hero_object_key, '') FROM car_brands WHERE lower(name) = ANY($2)
+		UNION ALL
+		SELECT 'model:' || m.name, COALESCE(m.hero_object_key, '') FROM car_models m
+		JOIN migration_map mm ON mm.target_uuid = m.uuid AND mm.source_system = $1 AND mm.target_table = 'car_models'`,
+		hubSys, fixtureCarBrands)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for hrows.Next() {
+		var k, v string
+		if err := hrows.Scan(&k, &v); err != nil {
+			t.Fatal(err)
+		}
+		heroes[k] = v
+	}
+	hrows.Close()
+	var modelA1UUID string
+	if err := pool.QueryRow(ctx, `SELECT m.uuid::text FROM car_models m JOIN migration_map mm ON mm.target_uuid = m.uuid
+		WHERE mm.source_system = $1 AND mm.source_table = 'car_models' AND mm.source_id = '1'`, hubSys).Scan(&modelA1UUID); err != nil {
+		t.Fatal(err)
+	}
+	brandHero, modelHero := heroes["brand:sentetik marka a"], heroes["model:Model A1"]
+	if !strings.HasPrefix(brandHero, "vehicle-brands/"+brandUUID+"/hero-") || !strings.HasSuffix(brandHero, ".png") {
+		t.Errorf("brand A hero key = %q", brandHero)
+	}
+	if !strings.HasPrefix(modelHero, "vehicle-models/"+modelA1UUID+"/hero-") || !strings.HasSuffix(modelHero, ".webp") {
+		t.Errorf("model A1 hero key = %q", modelHero)
+	}
+	if heroes["brand:sentetik marka b"] != adminHeroKey {
+		t.Errorf("seeded brand hero = %q, want the admin upload kept", heroes["brand:sentetik marka b"])
+	}
+	if heroes["model:Model A2"] != "" || heroes["model:Model B1"] != "" {
+		t.Errorf("heroes of A2/B1 = %q/%q, want empty", heroes["model:Model A2"], heroes["model:Model B1"])
+	}
+	for key, want := range map[string][]byte{brandHero: fixtureBrandHero, modelHero: fixtureModelHero} {
+		rc, _, err := store.Download(ctx, key)
+		if err != nil {
+			t.Errorf("hero %q not uploaded: %v", key, err)
+			continue
+		}
+		got, _ := io.ReadAll(rc)
+		_ = rc.Close()
+		if !bytes.Equal(got, want) {
+			t.Errorf("hero %q bytes differ from the legacy file", key)
+		}
+	}
+	if ct, _, _ := store.GetMeta(modelHero); ct != "image/webp" {
+		t.Errorf("model hero content type = %q", ct)
+	}
+
 	// The warehouse product and the hub product are one catalog record of the
 	// olex brand, owned by the center.
 	var hubTarget, whTarget uuid.UUID
@@ -211,7 +288,8 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 		c := stepCounts(t, second, step)
 		for k, v := range c {
 			if v != 0 && (strings.HasSuffix(k, "_created") || strings.HasSuffix(k, "_updated") ||
-				strings.HasSuffix(k, "_linked_existing") || strings.HasPrefix(k, "wh_matched") || k == "logos_uploaded" || k == "logos_set") {
+				strings.HasSuffix(k, "_linked_existing") || strings.HasPrefix(k, "wh_matched") || k == "logos_uploaded" || k == "logos_set" ||
+				k == "heroes_uploaded" || k == "heroes_set") {
 				t.Errorf("rerun %s.%s = %d, want 0 (%v)", step, k, v, c)
 			}
 		}
@@ -222,7 +300,13 @@ func TestOlexVehicleAndProductCatalog(t *testing.T) {
 	if after := tableCounts(); after != before {
 		t.Errorf("rerun changed rows: %+v -> %+v", before, after)
 	}
-	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-brands/"}); len(objs.Objects) != 1 {
-		t.Errorf("objects after rerun = %+v", objs.Objects)
+	if c := stepCounts(t, second, "vehicle_catalog"); c["hero_kept_existing"] != 3 || c["hero_missing"] != 1 {
+		t.Errorf("rerun hero counts = %v", c)
+	}
+	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-brands/"}); len(objs.Objects) != 2 {
+		t.Errorf("brand objects after rerun = %+v", objs.Objects)
+	}
+	if objs, _ := store.List(ctx, storage.ListObjectsInput{Prefix: "vehicle-models/"}); len(objs.Objects) != 1 {
+		t.Errorf("model objects after rerun = %+v", objs.Objects)
 	}
 }
