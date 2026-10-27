@@ -50,6 +50,22 @@ export const routes = {
     photoStandard: {
       root: (slug: string) => `/t/${slug}/settings/photo-standard`,
     },
+    /**
+     * TEC-1033: the center's brand catalogs (same screens as the platform
+     * settings, opened in the center's organization context).
+     */
+    centerCatalogs: {
+      certificateTypes: (slug: string) =>
+        `/t/${slug}/settings/certificate-types`,
+      photoAngles: (slug: string) => `/t/${slug}/settings/photo-angles`,
+      reviewQuestions: (slug: string) => `/t/${slug}/settings/review-questions`,
+      contractTemplates: (slug: string) =>
+        `/t/${slug}/settings/contract-templates`,
+      contractTemplateEdit: (slug: string, uuid: string) =>
+        `/t/${slug}/settings/contract-templates/${uuid}`,
+      partConsumptionExpectations: (slug: string) =>
+        `/t/${slug}/settings/part-consumption-expectations`,
+    },
     /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
     catalog: {
       products: (slug: string) => `/t/${slug}/catalog/products`,

@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Star, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
@@ -57,7 +57,8 @@ export const CONTRACT_TEMPLATES_PERSIST_KEY = "platform-contract-templates-v1";
  * full array with kind / active / default filters and row actions (edit,
  * make default, delete).
  */
-export function ContractTemplatesPage() {
+/** `slug`: opened from the center's tenant settings (TEC-1033). */
+export function ContractTemplatesPage({ slug }: { slug?: string } = {}) {
   const { t, format } = useLocale();
   const router = useRouter();
   const { confirmDelete } = useDialogs();
@@ -67,6 +68,13 @@ export function ContractTemplatesPage() {
   const remove = removeTemplate.mutate;
   const [pending, setPending] = useState<ContractTemplate | null>(null);
   const [creating, setCreating] = useState(false);
+  const editHref = useCallback(
+    (uuid: string) =>
+      slug
+        ? routes.tenant.centerCatalogs.contractTemplateEdit(slug, uuid)
+        : routes.platform.contractTemplates.edit(uuid),
+    [slug],
+  );
   const items = query.data?.items ?? [];
   const moduleOff =
     query.error instanceof ApiError && query.error.code === "FEATURE_DISABLED";
@@ -149,10 +157,7 @@ export function ContractTemplatesPage() {
               id: "edit",
               label: t("contract_templates.actions.edit"),
               icon: Pencil,
-              onSelect: () =>
-                router.push(
-                  routes.platform.contractTemplates.edit(template.uuid),
-                ),
+              onSelect: () => router.push(editHref(template.uuid)),
             },
           ];
           if (!template.is_default && template.is_active) {
@@ -185,7 +190,7 @@ export function ContractTemplatesPage() {
         },
       }) as ColumnDef<ContractTemplate, unknown>,
     ],
-    [confirmDelete, format, remove, router, t],
+    [confirmDelete, editHref, format, remove, router, t],
   );
 
   return (
@@ -200,7 +205,10 @@ export function ContractTemplatesPage() {
         />
       }
       breadcrumbs={[
-        { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        {
+          label: t("layout.breadcrumb_home"),
+          href: slug ? routes.tenant.home(slug) : routes.platform.home,
+        },
         { label: t("contract_templates.title") },
       ]}
       actions={
@@ -224,9 +232,7 @@ export function ContractTemplatesPage() {
         onRetry={moduleOff ? undefined : () => void query.refetch()}
         emptyTitle={t("contract_templates.empty")}
         emptyDescription=""
-        onRowClick={(row) =>
-          router.push(routes.platform.contractTemplates.edit(row.uuid))
-        }
+        onRowClick={(row) => router.push(editHref(row.uuid))}
         initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
         features={{
           persistKey: CONTRACT_TEMPLATES_PERSIST_KEY,
@@ -257,13 +263,22 @@ export function ContractTemplatesPage() {
       />
 
       {creating ? (
-        <CreateTemplateDialog onClose={() => setCreating(false)} />
+        <CreateTemplateDialog
+          editHref={editHref}
+          onClose={() => setCreating(false)}
+        />
       ) : null}
     </EntityPage>
   );
 }
 
-function CreateTemplateDialog({ onClose }: { onClose: () => void }) {
+function CreateTemplateDialog({
+  editHref,
+  onClose,
+}: {
+  editHref: (uuid: string) => string;
+  onClose: () => void;
+}) {
   const { t } = useLocale();
   const router = useRouter();
   const create = useCreateContractTemplate();
@@ -277,7 +292,7 @@ function CreateTemplateDialog({ onClose }: { onClose: () => void }) {
       is_active: true,
     });
     onClose();
-    router.push(routes.platform.contractTemplates.edit(row.uuid));
+    router.push(editHref(row.uuid));
   };
 
   return (
