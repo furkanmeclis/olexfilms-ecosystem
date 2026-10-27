@@ -11,7 +11,9 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 const EventCustomerWelcome = "CUSTOMER_WELCOME"
 
 // CustomerWelcomeChannels are the default channels of the welcome message.
-var CustomerWelcomeChannels = []string{ChannelWhatsApp}
+// The in-app row (portal/mobile inbox, TEC-1034) has its own text: the
+// customer already is in the portal, so no link or sign-in hint.
+var CustomerWelcomeChannels = []string{ChannelInapp, ChannelWhatsApp}
 
 var customerWelcomeTexts = map[string]localizedText{
 	"tr": {"Hoş geldiniz",
@@ -43,20 +45,9 @@ var customerWelcomeTexts = map[string]localizedText{
 }
 
 func customerWelcomeTemplates() []DefaultTemplate {
-	out := make([]DefaultTemplate, 0, len(customerWelcomeTexts)*len(CustomerWelcomeChannels))
-	for _, lang := range msgtemplate.Locales {
-		t, ok := customerWelcomeTexts[lang]
-		if !ok {
-			continue // TestCustomerWelcomeTemplatesCoverEveryLocale reports it
-		}
-		for _, ch := range CustomerWelcomeChannels {
-			out = append(out, DefaultTemplate{
-				Role: RoleGeneric, Channel: ch, Language: lang,
-				Subject: t.subject, Body: t.body, Format: "text",
-			})
-		}
-	}
-	return out
+	return channelTemplates(CustomerWelcomeChannels, map[string]map[string]localizedText{
+		ChannelInapp: customerWelcomeInappTexts, ChannelWhatsApp: customerWelcomeTexts,
+	})
 }
 
 func init() {

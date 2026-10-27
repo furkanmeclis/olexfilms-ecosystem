@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Linking, Pressable, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { intlLocale } from '@/core/digits';
@@ -16,7 +16,7 @@ import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 import { useInbox } from './inbox';
-import { type AppNotification, notificationIcon, notificationRoute } from './lib';
+import { type AppNotification, notificationExternalUrl, notificationIcon, notificationRoute } from './lib';
 
 type Filter = 'all' | 'unread';
 
@@ -60,7 +60,12 @@ export function NotificationsScreen() {
   const open = (n: AppNotification) => {
     if (!n.read_at) read.mutate(n.uuid);
     const href = notificationRoute(n, space);
-    if (href) router.push(href as never);
+    if (href) {
+      router.push(href as never);
+      return;
+    }
+    const external = notificationExternalUrl(n, space);
+    if (external) void Linking.openURL(external);
   };
 
   if (!inbox.enabled) {

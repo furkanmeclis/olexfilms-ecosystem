@@ -339,6 +339,9 @@ func (s *Service) enqueueQuoteSent(ctx context.Context, tx pgx.Tx, row db.Quote,
 	}
 	if r.CustomerUserID.Valid {
 		payload["recipient_user_id"] = r.CustomerUserID.Int64
+		// TEC-1034: WhatsApp follows the user's dispatch only when the quote
+		// goes to the user's own phone (not the lead's candidate phone).
+		payload["recipient_phone_is_customer"] = phone != "" && phone == textValue(r.CustomerPhoneE164)
 	}
 	ev := events.New(events.QuoteSent).
 		WithTenant(row.OrganizationID).

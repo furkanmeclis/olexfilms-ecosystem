@@ -272,6 +272,9 @@ export type FleetPortalAccountLine =
   components["schemas"]["FleetPortalAccountLine"];
 export type FleetPortalReport = components["schemas"]["FleetPortalReport"];
 
+/** An in-app inbox row of the portal session (TEC-1021). */
+export type PortalNotification = components["schemas"]["Notification"];
+
 export type PortalPage<T> = {
   items: T[];
   total: number;
@@ -404,6 +407,34 @@ export const portalApi = {
     return portalRequest<PortalPage<PortalContract>>(
       `portal/contracts?limit=${limit}&offset=${offset}`,
     );
+  },
+  /** Own in-app inbox, newest first (TEC-1021, TEC-1034). */
+  listNotifications(q: { unread?: boolean; limit: number; offset: number }) {
+    const params = new URLSearchParams({
+      limit: String(q.limit),
+      offset: String(q.offset),
+    });
+    if (q.unread) params.set("unread", "true");
+    return portalRequest<PortalPage<PortalNotification>>(
+      `portal/notifications?${params.toString()}`,
+    );
+  },
+  notificationsUnreadCount() {
+    return portalRequest<components["schemas"]["UnreadCount"]>(
+      "portal/notifications/unread-count",
+    );
+  },
+  markNotificationRead(uuid: string) {
+    return portalRequest<PortalNotification>(
+      `portal/notifications/${encodeURIComponent(uuid)}/read`,
+      { method: "POST", body: {} },
+    );
+  },
+  markAllNotificationsRead() {
+    return portalRequest<{ status: string }>("portal/notifications/read-all", {
+      method: "POST",
+      body: {},
+    });
   },
   /** Own notification preferences from the portal (TEC-245). */
   getNotificationPreferences() {

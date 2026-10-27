@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { notificationRoute, notificationTarget } from './lib.ts';
+import { notificationExternalUrl, notificationRoute, notificationTarget } from './lib.ts';
 
 const U = '3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b';
 
@@ -26,5 +26,25 @@ describe('notificationRoute', () => {
   it('returns null when the space has no screen for it', () => {
     assert.equal(notificationRoute({ action_url: `/t/acme/appointments/${U}` }, 'admin'), null);
     assert.equal(notificationRoute({ action_url: `/t/acme/orders/${U}` }, null), null);
+  });
+});
+
+// TEC-1034: customer rows carry web portal paths.
+describe('customer portal links', () => {
+  it('opens the customer screens', () => {
+    assert.equal(notificationRoute({ action_url: `/portal/services/${U}#review` }, 'musteri'), `/musteri/service/review/${U}`);
+    assert.equal(notificationRoute({ action_url: `/portal/services/${U}` }, 'musteri'), `/musteri/service/${U}`);
+    assert.equal(notificationRoute({ action_url: '/portal/appointments', payload: { appointment_uuid: U } }, 'musteri'), '/musteri/appointments');
+    assert.equal(notificationRoute({ action_url: '/portal/warranties', payload: { claim_uuid: 'c', warranty_uuid: U } }, 'musteri'), '/musteri/profile/claims');
+    assert.equal(notificationRoute({ action_url: '/portal/warranties' }, 'musteri'), '/musteri/warranties');
+    assert.equal(notificationRoute({ action_url: '/portal' }, 'musteri'), '/musteri');
+    assert.equal(notificationRoute({ action_url: 'https://olexfilms.app/portal' }, 'musteri'), '/musteri');
+  });
+  it('opens an unmapped web link in the browser for customers only', () => {
+    const quote = { action_url: 'https://olexfilms.app/s/AbCdEfGhIj', payload: { quote_uuid: U } };
+    assert.equal(notificationRoute(quote, 'musteri'), null);
+    assert.equal(notificationExternalUrl(quote, 'musteri'), quote.action_url);
+    assert.equal(notificationExternalUrl(quote, 'bayi'), null);
+    assert.equal(notificationExternalUrl({ action_url: '/portal' }, 'musteri'), null);
   });
 });
