@@ -13,6 +13,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// Customer portal paths carried as the action link of customer facing
+// in-app rows (TEC-1034): the web portal opens them as routes, the mobile
+// inbox maps them to its customer screens.
+const (
+	portalHomePath         = "/portal"
+	portalAppointmentsPath = "/portal/appointments"
+	portalWarrantiesPath   = "/portal/warranties"
+)
+
+// portalServiceReviewPath is the portal service page scrolled to its review
+// card; the WhatsApp short link (form_url) stays in the message body.
+func portalServiceReviewPath(serviceUUID string) string {
+	return "/portal/services/" + serviceUUID + "#review"
+}
+
 type eventHandlerConfig struct {
 	announcementTargets announcementsusecase.TargetResolver
 	announcementQueue   announcementsusecase.TaskEnqueuer
@@ -149,7 +164,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-352: low review scores notify the dealer owner(s).
 	on(events.ServiceReviewLowScore, serviceReviewLowScoreDispatch)
 	// TEC-325: appointment lifecycle messages go to the customer over
-	// WhatsApp; reschedules reuse the created template.
+	// WhatsApp and the in-app inbox (TEC-1034); reschedules reuse the
+	// created template.
 	on(events.AppointmentCreated, appointmentDispatcher(catalog.EventAppointmentCreated))
 	on(events.AppointmentRescheduled, appointmentDispatcher(catalog.EventAppointmentCreated))
 	on(events.AppointmentCancelled, appointmentDispatcher(catalog.EventAppointmentCancelled))
@@ -356,12 +372,17 @@ func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand
 	}
+	if code == catalog.EventWarrantyClaimResult {
+		u := portalWarrantiesPath
+		in.ActionURL = &u
+	}
 	return in, true
 }
 
 // serviceReviewDispatch maps service.review_requested to a dispatch for the
 // customer; the brand is the service brand (K20). form_url is always the
-// platform review form; review_url is the dealer's optional Google link.
+// platform review form; review_url is the dealer's optional Google link. The
+// in-app row opens the portal service page at its review card.
 func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
 	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
 	formURL := stringFromPayload(event.Payload, "form_url")
@@ -379,6 +400,10 @@ func serviceReviewDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 			"service_no":   vars["service_no"],
 		},
 		ActionURL: &formURL,
+	}
+	if svc := stringFromPayload(event.Payload, "service_uuid"); svc != "" {
+		u := portalServiceReviewPath(svc)
+		in.ActionURL = &u
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand
@@ -419,6 +444,7 @@ func appointmentDispatcher(code string) func(events.Event) (notifmodel.DispatchI
 		for _, k := range []string{"organization_name", "starts_at", "plate"} {
 			vars[k] = stringFromPayload(event.Payload, k)
 		}
+		action := portalAppointmentsPath
 		in := notifmodel.DispatchInput{
 			EventCode: code,
 			UserIDs:   []int64{customer},
@@ -426,6 +452,7 @@ func appointmentDispatcher(code string) func(events.Event) (notifmodel.DispatchI
 			Payload: map[string]any{
 				"appointment_uuid": stringFromPayload(event.Payload, "appointment_uuid"),
 			},
+			ActionURL: &action,
 		}
 		if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 			in.BrandID = &brand
@@ -437,7 +464,8 @@ func appointmentDispatcher(code string) func(events.Event) (notifmodel.DispatchI
 // customerWelcomeDispatch maps customer.created to the welcome message for
 // the new customer; a customer without a phone (or an event without the
 // portal link) sends nothing. The brand is the creating organization's
-// (K20).
+// (K20). The WhatsApp body carries portal_url; the in-app row opens the
+// portal home.
 func customerWelcomeDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
 	customer, ok := int64FromPayload(event.Payload, "customer_user_id")
 	url := stringFromPayload(event.Payload, "portal_url")
@@ -451,10 +479,11 @@ func customerWelcomeDispatch(event events.Event) (notifmodel.DispatchInput, bool
 	for _, k := range []string{"customer_name", "organization_name", "portal_url"} {
 		vars[k] = stringFromPayload(event.Payload, k)
 	}
+	action := portalHomePath
 	in := notifmodel.DispatchInput{
 		EventCode: catalog.EventCustomerWelcome, UserIDs: []int64{customer}, Vars: vars,
 		Payload:   map[string]any{"customer_uuid": stringFromPayload(event.Payload, "customer_uuid")},
-		ActionURL: &url,
+		ActionURL: &action,
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand

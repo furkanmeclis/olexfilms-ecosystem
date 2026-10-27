@@ -61,7 +61,8 @@ func TestServiceReviewDispatch(t *testing.T) {
 	if in.EventCode != catalog.EventServiceReviewRequest || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
 		t.Fatalf("dispatch = %+v", in)
 	}
-	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/s/AbCdEfGhIj" {
+	// TEC-1034: the in-app row opens the portal service page at its review card.
+	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "/portal/services/u-1#review" {
 		t.Fatalf("brand/action = %v %v", in.BrandID, in.ActionURL)
 	}
 	if in.Vars["review_url"] != "https://g.page/r/x/review" || in.Vars["form_url"] != "https://olexfilms.app/s/AbCdEfGhIj" ||
@@ -110,6 +111,9 @@ func TestAppointmentDispatch(t *testing.T) {
 	if in.BrandID == nil || *in.BrandID != 3 {
 		t.Fatalf("brand = %v", in.BrandID)
 	}
+	if in.ActionURL == nil || *in.ActionURL != "/portal/appointments" {
+		t.Fatalf("action = %v", in.ActionURL)
+	}
 	if in.Vars["organization_name"] != "Tech Oto" || in.Vars["starts_at"] != "2026-10-06T09:00:00Z" ||
 		in.Vars["plate"] != "34 ABC 123" {
 		t.Fatalf("vars = %v", in.Vars)
@@ -134,7 +138,7 @@ func TestCustomerWelcomeDispatch(t *testing.T) {
 	if in.EventCode != catalog.EventCustomerWelcome || len(in.UserIDs) != 1 || in.UserIDs[0] != 42 {
 		t.Fatalf("dispatch = %+v", in)
 	}
-	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/portal" {
+	if in.BrandID == nil || *in.BrandID != 3 || in.ActionURL == nil || *in.ActionURL != "/portal" {
 		t.Fatalf("brand/action = %v %v", in.BrandID, in.ActionURL)
 	}
 	if in.Vars["portal_url"] != "https://olexfilms.app/portal" || in.Vars["customer_name"] != "Ahmet Yilmaz" ||

@@ -4,10 +4,13 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 
 // Quote sent notifications (TEC-315). Quotes are delivered over the single
 // WhatsApp provider number (K16/K21); the use case writes quote.sent with a
-// recipient phone and public short URL.
+// recipient phone and public short URL. A lead linked to a customer user also
+// gets the in-app row (TEC-1034).
 const EventQuoteSent = "QUOTE_SENT"
 
-var QuoteSentChannels = []string{ChannelWhatsApp}
+// QuoteSentChannels: WhatsApp plus the customer user's in-app row (TEC-1034);
+// the in-app text carries no URL, its action link opens the quote.
+var QuoteSentChannels = []string{ChannelInapp, ChannelWhatsApp}
 
 var quoteSentTexts = map[string]localizedText{
 	"tr":    {"Teklifiniz hazır", "Merhaba {{recipient_name}}, {{organization_name}} teklifiniz hazır: {{quote_url}} Toplam: {{total_amount}}"},
@@ -26,20 +29,9 @@ var quoteSentTexts = map[string]localizedText{
 }
 
 func quoteSentTemplates() []DefaultTemplate {
-	out := make([]DefaultTemplate, 0, len(quoteSentTexts)*len(QuoteSentChannels))
-	for _, lang := range msgtemplate.Locales {
-		t, ok := quoteSentTexts[lang]
-		if !ok {
-			continue
-		}
-		for _, ch := range QuoteSentChannels {
-			out = append(out, DefaultTemplate{
-				Role: RoleGeneric, Channel: ch, Language: lang,
-				Subject: t.subject, Body: t.body, Format: "text",
-			})
-		}
-	}
-	return out
+	return channelTemplates(QuoteSentChannels, map[string]map[string]localizedText{
+		ChannelInapp: quoteSentInappTexts, ChannelWhatsApp: quoteSentTexts,
+	})
 }
 
 func init() {

@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,8 +13,8 @@ func TestQuoteSentTemplatesCoverEveryLocale(t *testing.T) {
 	if !ok {
 		t.Fatal("QUOTE_SENT not registered")
 	}
-	if len(ev.DefaultChannels) != 1 || ev.DefaultChannels[0] != ChannelWhatsApp {
-		t.Fatalf("default channels = %v, want whatsapp", ev.DefaultChannels)
+	if !slices.Equal(ev.DefaultChannels, []string{ChannelInapp, ChannelWhatsApp}) {
+		t.Fatalf("default channels = %v, want inapp+whatsapp", ev.DefaultChannels)
 	}
 	seen := map[string]bool{}
 	for _, tpl := range ev.Templates {
@@ -27,13 +28,18 @@ func TestQuoteSentTemplatesCoverEveryLocale(t *testing.T) {
 		if unknown := msgtemplate.Unknown(ev.Spec(), tpl.Subject, tpl.Body); len(unknown) > 0 {
 			t.Errorf("%s/%s: unknown placeholders %v", tpl.Channel, tpl.Language, unknown)
 		}
-		if !strings.Contains(tpl.Body, "{{quote_url}}") || !strings.Contains(tpl.Body, "{{total_amount}}") {
-			t.Errorf("%s/%s: body misses quote_url or total_amount", tpl.Channel, tpl.Language)
+		if !strings.Contains(tpl.Body, "{{total_amount}}") {
+			t.Errorf("%s/%s: body misses total_amount", tpl.Channel, tpl.Language)
+		}
+		if (tpl.Channel == ChannelWhatsApp) != strings.Contains(tpl.Body, "{{quote_url}}") {
+			t.Errorf("%s/%s: quote_url only belongs to the WhatsApp body", tpl.Channel, tpl.Language)
 		}
 	}
-	for _, l := range msgtemplate.Locales {
-		if !seen[ChannelWhatsApp+"/"+l] {
-			t.Errorf("no whatsapp template in %s", l)
+	for _, ch := range ev.DefaultChannels {
+		for _, l := range msgtemplate.Locales {
+			if !seen[ch+"/"+l] {
+				t.Errorf("no %s template in %s", ch, l)
+			}
 		}
 	}
 }

@@ -11,7 +11,9 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 const EventServiceReviewRequest = "SERVICE_REVIEW_REQUEST"
 
 // ServiceReviewChannels are the default channels of the review request.
-var ServiceReviewChannels = []string{ChannelWhatsApp}
+// The in-app row (portal/mobile inbox, TEC-1034) has its own short text: its
+// action link opens the review form, so the body carries no URL.
+var ServiceReviewChannels = []string{ChannelInapp, ChannelWhatsApp}
 
 var serviceReviewRequestTexts = map[string]localizedText{
 	"tr": {"Hizmetimizi değerlendirir misiniz?",
@@ -43,20 +45,9 @@ var serviceReviewRequestTexts = map[string]localizedText{
 }
 
 func serviceReviewTemplates() []DefaultTemplate {
-	out := make([]DefaultTemplate, 0, len(serviceReviewRequestTexts)*len(ServiceReviewChannels))
-	for _, lang := range msgtemplate.Locales {
-		t, ok := serviceReviewRequestTexts[lang]
-		if !ok {
-			continue // TestServiceReviewTemplatesCoverEveryLocale reports it
-		}
-		for _, ch := range ServiceReviewChannels {
-			out = append(out, DefaultTemplate{
-				Role: RoleGeneric, Channel: ch, Language: lang,
-				Subject: t.subject, Body: t.body, Format: "text",
-			})
-		}
-	}
-	return out
+	return channelTemplates(ServiceReviewChannels, map[string]map[string]localizedText{
+		ChannelInapp: serviceReviewRequestInappTexts, ChannelWhatsApp: serviceReviewRequestTexts,
+	})
 }
 
 func init() {

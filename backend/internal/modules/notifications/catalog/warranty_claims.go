@@ -10,7 +10,10 @@ const (
 )
 
 var warrantyClaimStaffChannels = []string{ChannelInapp}
-var warrantyClaimResultChannels = []string{ChannelWhatsApp}
+
+// warrantyClaimResultChannels: the customer's result over WhatsApp and in
+// the portal/mobile inbox (TEC-1034).
+var warrantyClaimResultChannels = []string{ChannelInapp, ChannelWhatsApp}
 
 var warrantyClaimOpenedTexts = map[string]localizedText{
 	"tr":    {"Yeni garanti talebi", "{{claim_no}} numaralı garanti talebi {{organization_name}} tarafından açıldı. Ürün: {{product_name}}, araç: {{plate}}."},

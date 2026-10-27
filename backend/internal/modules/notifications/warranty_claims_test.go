@@ -21,6 +21,9 @@ func TestWarrantyClaimDispatch(t *testing.T) {
 	if in.BrandID == nil || *in.BrandID != 2 || in.Vars["claim_no"] != "42" || in.Vars["to"] != "approved" {
 		t.Fatalf("result vars = %+v", in)
 	}
+	if in.ActionURL == nil || *in.ActionURL != "/portal/warranties" {
+		t.Fatalf("result action = %v", in.ActionURL)
+	}
 
 	openedPayload := map[string]any{}
 	for k, v := range base {

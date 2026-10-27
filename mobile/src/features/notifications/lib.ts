@@ -70,9 +70,45 @@ export function notificationIcon(n: Pick<AppNotification, 'action_url' | 'payloa
   }
 }
 
+/**
+ * TEC-1034: customer rows (appointments, review request, welcome, warranty
+ * claim result) carry web portal paths; the customer space opens its own
+ * screens for them. The first match wins.
+ */
+const PORTAL_ROUTES: [RegExp, (m: RegExpExecArray, n: Pick<AppNotification, 'payload'>) => string][] = [
+  [new RegExp(`^/portal/services/(${UUID})#review$`, 'i'), (m) => `/musteri/service/review/${m[1]}`],
+  [new RegExp(`^/portal/services/(${UUID})(?:[/?#]|$)`, 'i'), (m) => `/musteri/service/${m[1]}`],
+  [/^\/portal\/appointments(?:[/?#]|$)/i, () => '/musteri/appointments'],
+  [/^\/portal\/warranties(?:[/?#]|$)/i, (_m, n) => (typeof n.payload?.claim_uuid === 'string' ? '/musteri/profile/claims' : '/musteri/warranties')],
+  [/^\/portal\/?(?:[?#]|$)/i, () => '/musteri'],
+];
+
+function portalRoute(n: Pick<AppNotification, 'action_url' | 'payload'>): string | null {
+  const path = n.action_url?.replace(/^https?:\/\/[^/]+/i, '');
+  if (!path) return null;
+  for (const [re, to] of PORTAL_ROUTES) {
+    const m = re.exec(path);
+    if (m) return to(m, n);
+  }
+  return null;
+}
+
 /** App route for a notification in the given space, or null when none exists. */
 export function notificationRoute(n: Pick<AppNotification, 'action_url' | 'payload'>, space: SpaceKind | null): string | null {
+  if (space === 'musteri') {
+    const portal = portalRoute(n);
+    if (portal) return portal;
+  }
   const target = notificationTarget(n);
   if (!target || !space) return null;
   return ROUTES[space][target.kind]?.(target.uuid) ?? null;
+}
+
+/**
+ * Web link a customer row opens in the browser when the app has no screen for
+ * it (TEC-1034: the public quote link); staff rows never leave the app.
+ */
+export function notificationExternalUrl(n: Pick<AppNotification, 'action_url' | 'payload'>, space: SpaceKind | null): string | null {
+  if (space !== 'musteri' || !n.action_url || !/^https?:\/\//i.test(n.action_url)) return null;
+  return notificationRoute(n, space) ? null : n.action_url;
 }

@@ -698,6 +698,9 @@ export async function installF4Portal(page: Page, baseURL: string) {
         roles: ["customer"],
       });
     }
+    if (method === "GET" && path === "portal/notifications/unread-count") {
+      return ok({ count: 0 });
+    }
     if (method === "GET" && path === "portal/consents/pending") {
       return ok({ items: [] });
     }

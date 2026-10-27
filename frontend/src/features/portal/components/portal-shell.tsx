@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { routes } from "@/config/routes";
 import { PortalNav } from "@/features/portal/components/portal-nav";
+import { PortalNotificationInbox } from "@/features/portal/components/portal-notification-inbox";
 import { portalApi, portalSignOut } from "@/features/portal/lib/portal-client";
 import {
   isPortalReadOnly,
@@ -100,6 +101,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             {t(fleet ? "portal.fleet.title" : "portal.nav.title")}
           </span>
           <div className="ms-auto flex items-center gap-1">
+            <PortalNotificationInbox />
             <LocaleSwitch />
             <ThemeSwitch />
           </div>

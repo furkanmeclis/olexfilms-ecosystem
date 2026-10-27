@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -13,8 +14,8 @@ func TestAppointmentTemplatesCoverEveryLocale(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s not registered", code)
 		}
-		if len(ev.DefaultChannels) != 1 || ev.DefaultChannels[0] != ChannelWhatsApp {
-			t.Fatalf("%s channels = %v, want whatsapp", code, ev.DefaultChannels)
+		if !slices.Equal(ev.DefaultChannels, []string{ChannelInapp, ChannelWhatsApp}) {
+			t.Fatalf("%s channels = %v, want inapp+whatsapp", code, ev.DefaultChannels)
 		}
 		seen := map[string]bool{}
 		for _, tpl := range ev.Templates {
@@ -29,9 +30,11 @@ func TestAppointmentTemplatesCoverEveryLocale(t *testing.T) {
 				t.Errorf("%s %s/%s: body misses starts_at or organization_name", code, tpl.Channel, tpl.Language)
 			}
 		}
-		for _, l := range msgtemplate.Locales {
-			if !seen[ChannelWhatsApp+"/"+l] {
-				t.Errorf("%s: no whatsapp template in %s", code, l)
+		for _, ch := range ev.DefaultChannels {
+			for _, l := range msgtemplate.Locales {
+				if !seen[ch+"/"+l] {
+					t.Errorf("%s: no %s template in %s", code, ch, l)
+				}
 			}
 		}
 	}

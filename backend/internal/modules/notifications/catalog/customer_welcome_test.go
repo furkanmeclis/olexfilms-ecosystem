@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -8,14 +9,15 @@ import (
 )
 
 // TEC-164: the customer welcome ships a WhatsApp template in every locale
-// (13), each linking the portal.
+// (13), each linking the portal; TEC-1034 adds the in-app row (no link, the
+// action opens the portal).
 func TestCustomerWelcomeTemplatesCoverEveryLocale(t *testing.T) {
 	ev, ok := Lookup(EventCustomerWelcome)
 	if !ok {
 		t.Fatal("CUSTOMER_WELCOME not registered")
 	}
-	if len(ev.DefaultChannels) != 1 || ev.DefaultChannels[0] != ChannelWhatsApp {
-		t.Fatalf("default channels = %v, want whatsapp", ev.DefaultChannels)
+	if !slices.Equal(ev.DefaultChannels, []string{ChannelInapp, ChannelWhatsApp}) {
+		t.Fatalf("default channels = %v, want inapp+whatsapp", ev.DefaultChannels)
 	}
 	seen := map[string]bool{}
 	for _, tpl := range ev.Templates {
@@ -29,15 +31,23 @@ func TestCustomerWelcomeTemplatesCoverEveryLocale(t *testing.T) {
 		if unknown := msgtemplate.Unknown(ev.Spec(), tpl.Subject, tpl.Body); len(unknown) > 0 {
 			t.Errorf("%s/%s: unknown placeholders %v", tpl.Channel, tpl.Language, unknown)
 		}
-		for _, p := range []string{"{{portal_url}}", "{{organization_name}}", "{{customer_name}}"} {
+		want := []string{"{{organization_name}}", "{{customer_name}}"}
+		if tpl.Channel == ChannelWhatsApp {
+			want = append(want, "{{portal_url}}")
+		} else if strings.Contains(tpl.Body, "{{portal_url}}") {
+			t.Errorf("%s/%s: in-app body carries the portal link", tpl.Channel, tpl.Language)
+		}
+		for _, p := range want {
 			if !strings.Contains(tpl.Body, p) {
 				t.Errorf("%s/%s: body misses %s", tpl.Channel, tpl.Language, p)
 			}
 		}
 	}
-	for _, l := range msgtemplate.Locales {
-		if !seen[ChannelWhatsApp+"/"+l] {
-			t.Errorf("no whatsapp template in %s", l)
+	for _, ch := range ev.DefaultChannels {
+		for _, l := range msgtemplate.Locales {
+			if !seen[ch+"/"+l] {
+				t.Errorf("no %s template in %s", ch, l)
+			}
 		}
 	}
 }

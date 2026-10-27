@@ -8,7 +8,9 @@ const (
 	EventAppointmentReminder  = "APPOINTMENT_REMINDER"
 )
 
-var AppointmentChannels = []string{ChannelWhatsApp}
+// AppointmentChannels: WhatsApp plus the in-app row of the portal/mobile
+// inbox (TEC-1034); both use the same text (no links in the body).
+var AppointmentChannels = []string{ChannelInapp, ChannelWhatsApp}
 
 var appointmentCreatedTexts = map[string]localizedText{
 	"tr":    {"Randevunuz oluşturuldu", "Merhaba, {{organization_name}} randevunuz {{starts_at}} için oluşturuldu. Araç: {{plate}}"},
@@ -59,20 +61,9 @@ var appointmentReminderTexts = map[string]localizedText{
 }
 
 func appointmentTemplates(texts map[string]localizedText) []DefaultTemplate {
-	out := make([]DefaultTemplate, 0, len(texts)*len(AppointmentChannels))
-	for _, lang := range msgtemplate.Locales {
-		t, ok := texts[lang]
-		if !ok {
-			continue
-		}
-		for _, ch := range AppointmentChannels {
-			out = append(out, DefaultTemplate{
-				Role: RoleGeneric, Channel: ch, Language: lang,
-				Subject: t.subject, Body: t.body, Format: "text",
-			})
-		}
-	}
-	return out
+	return channelTemplates(AppointmentChannels, map[string]map[string]localizedText{
+		ChannelInapp: texts, ChannelWhatsApp: texts,
+	})
 }
 
 func appointmentPlaceholders() []msgtemplate.Placeholder {
