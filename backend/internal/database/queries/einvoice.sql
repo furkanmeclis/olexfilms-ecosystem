@@ -194,7 +194,7 @@ LEFT JOIN einvoices e
 WHERE o.brand_id = sqlc.arg(brand_id)
   AND o.seller_org_id = sqlc.arg(center_org_id)
   AND seller.type = 'center'
-  AND buyer.type = 'distributor'
+  AND buyer.type IN ('distributor', 'dealer')
   AND o.status = 'received'
   AND e.id IS NULL
 ORDER BY o.received_at ASC NULLS LAST, o.id ASC
@@ -230,7 +230,7 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: ListEinvoiceBillableSources :many
 -- List contract: sort=billable_at|source_no|payable|buyer_name, default
 -- -billable_at; (source_type, id) is the stable tiebreak. Center sales
--- without an active (non-voided) invoice: received orders to distributors
+-- without an active (non-voided) invoice: received orders to distributors and (TEC-1003) dealers under the center
 -- and posted service catalog subscription periods of dealers.
 WITH src AS (
     SELECT 'order'::text AS source_type, o.id, o.uuid AS source_uuid, o.order_no::text AS source_no,
@@ -244,7 +244,7 @@ WITH src AS (
     WHERE o.brand_id = sqlc.arg(brand_id)
       AND o.seller_org_id = sqlc.arg(center_org_id)
       AND seller.type = 'center'
-      AND buyer.type = 'distributor'
+      AND buyer.type IN ('distributor', 'dealer')
       AND o.status = 'received'
       AND NOT EXISTS (
           SELECT 1 FROM einvoices e

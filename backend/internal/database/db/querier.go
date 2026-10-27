@@ -1954,7 +1954,7 @@ type Querier interface {
 	// TEC-503 (F5-08c): e-Invoice use case and API -------------------------------
 	// List contract: sort=billable_at|source_no|payable|buyer_name, default
 	// -billable_at; (source_type, id) is the stable tiebreak. Center sales
-	// without an active (non-voided) invoice: received orders to distributors
+	// without an active (non-voided) invoice: received orders to distributors and (TEC-1003) dealers under the center
 	// and posted service catalog subscription periods of dealers.
 	ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error)
 	ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, arg ListEinvoiceBillableSubscriptionPeriodsParams) ([]ListEinvoiceBillableSubscriptionPeriodsRow, error)

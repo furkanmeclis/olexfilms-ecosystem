@@ -843,7 +843,7 @@ LEFT JOIN einvoices e
 WHERE o.brand_id = $1
   AND o.seller_org_id = $2
   AND seller.type = 'center'
-  AND buyer.type = 'distributor'
+  AND buyer.type IN ('distributor', 'dealer')
   AND o.status = 'received'
   AND e.id IS NULL
 ORDER BY o.received_at ASC NULLS LAST, o.id ASC
@@ -925,7 +925,7 @@ WITH src AS (
     WHERE o.brand_id = $12
       AND o.seller_org_id = $13
       AND seller.type = 'center'
-      AND buyer.type = 'distributor'
+      AND buyer.type IN ('distributor', 'dealer')
       AND o.status = 'received'
       AND NOT EXISTS (
           SELECT 1 FROM einvoices e
@@ -1022,7 +1022,7 @@ type ListEinvoiceBillableSourcesRow struct {
 // TEC-503 (F5-08c): e-Invoice use case and API -------------------------------
 // List contract: sort=billable_at|source_no|payable|buyer_name, default
 // -billable_at; (source_type, id) is the stable tiebreak. Center sales
-// without an active (non-voided) invoice: received orders to distributors
+// without an active (non-voided) invoice: received orders to distributors and (TEC-1003) dealers under the center
 // and posted service catalog subscription periods of dealers.
 func (q *Queries) ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error) {
 	rows, err := q.db.Query(ctx, listEinvoiceBillableSources,
