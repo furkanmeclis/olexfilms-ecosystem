@@ -689,5 +689,13 @@
   "entry_import.save": "Save",
   "entry_import.template_saved": "Mapping template saved.",
   "sections.orders.title": "Orders to prepare",
-  "sections.orders.description": "Approved, preparing and ready dealer orders: picking, barcode scanning and shipping."
+  "sections.orders.description": "Approved, preparing and ready dealer orders: picking, barcode scanning and shipping.",
+  "kpis.title": "Indicators",
+  "kpis.error": "Could not load",
+  "kpis.prepare_queue": "Preparation queue",
+  "kpis.ready_shipped": "Ready / shipped",
+  "kpis.open_orders": "Open orders",
+  "kpis.draft_entries": "Draft stock entries",
+  "kpis.open_transfers": "Open transfers",
+  "kpis.open_counts": "Open counts"
 }

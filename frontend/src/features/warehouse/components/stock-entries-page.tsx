@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, PackagePlus, Plus, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
@@ -39,6 +39,7 @@ import {
   ENTRY_STATUSES,
 } from "@/features/warehouse/lib/entries";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import { statusFilterFromParam } from "@/features/warehouse/lib/list-seed";
 import {
   entryFormSchema,
   type EntryFormValues,
@@ -235,8 +236,15 @@ export function StockEntriesPage({ slug }: { slug: string }) {
 
   // Column meta drives the params: warehouse_uuid / status / mode (CSV),
   // created (created_from/_to); sort created_at | status | warehouse.
+  // TEC-1032: ?status=a,b (the hub KPI link) seeds the status filter.
+  const statusParam = useSearchParams()?.get("status") ?? "";
+  const initialColumnFilters = useMemo(
+    () => statusFilterFromParam(statusParam, ENTRY_STATUSES),
+    [statusParam],
+  );
   const listState = useServerListState({
     columns,
+    initialColumnFilters,
     initialSort: "-created_at",
     initialPageSize: ENTRY_PAGE_SIZE,
     persistKey: ENTRIES_PERSIST_KEY,

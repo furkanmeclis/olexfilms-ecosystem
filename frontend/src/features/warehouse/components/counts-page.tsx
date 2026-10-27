@@ -12,7 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
@@ -64,6 +64,7 @@ import {
   type CountFormState,
 } from "@/features/warehouse/lib/counts";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import { statusFilterFromParam } from "@/features/warehouse/lib/list-seed";
 import {
   warehouseKeys,
   warehouseService,
@@ -335,8 +336,15 @@ export function CountsPage({ slug }: { slug: string }) {
 
   // Column meta drives the params: warehouse_uuid / method / visibility /
   // scope_type / status (CSV), created (created_from/_to).
+  // TEC-1032: ?status=a,b (the hub KPI link) seeds the status filter.
+  const statusParam = useSearchParams()?.get("status") ?? "";
+  const initialColumnFilters = useMemo(
+    () => statusFilterFromParam(statusParam, COUNT_STATUSES),
+    [statusParam],
+  );
   const listState = useServerListState({
     columns,
+    initialColumnFilters,
     initialSort: "-created_at",
     initialPageSize: COUNT_PAGE_SIZE,
     persistKey: COUNTS_PERSIST_KEY,
