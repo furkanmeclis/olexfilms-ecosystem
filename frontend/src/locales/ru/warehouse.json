@@ -711,5 +711,12 @@
   "transfer.created_at": "Создано",
   "transfer.shipped_at": "Отправлено",
   "transfer.completed_at": "Получено",
-  "transfer.cancelled_at": "Отменено"
+  "transfer.cancelled_at": "Отменено",
+  "count.progress_guided": "{{counted}} / {{expected}} ожидаемых единиц посчитано",
+  "count.progress_blind": "сканирований (слепая инвентаризация)",
+  "count.kpi.accuracy": "Точность",
+  "count.kpi.expected_counted": "Ожидалось / посчитано",
+  "count.kpi.scans": "Сканирования",
+  "count.kpi.duration": "Длительность",
+  "count.duration_minutes": "{{minutes}} мин"
 }

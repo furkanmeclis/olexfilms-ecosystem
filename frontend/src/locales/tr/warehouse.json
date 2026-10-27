@@ -711,5 +711,12 @@
   "transfer.created_at": "Oluşturma",
   "transfer.shipped_at": "Sevk",
   "transfer.completed_at": "Kabul",
-  "transfer.cancelled_at": "İptal"
+  "transfer.cancelled_at": "İptal",
+  "count.progress_guided": "{{counted}} / {{expected}} beklenen birim sayıldı",
+  "count.progress_blind": "okutma (kör sayım)",
+  "count.kpi.accuracy": "Doğruluk",
+  "count.kpi.expected_counted": "Beklenen / sayılan",
+  "count.kpi.scans": "Okutma",
+  "count.kpi.duration": "Süre",
+  "count.duration_minutes": "{{minutes}} dk"
 }

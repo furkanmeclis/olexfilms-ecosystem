@@ -711,5 +711,12 @@
   "transfer.created_at": "Creado",
   "transfer.shipped_at": "Enviado",
   "transfer.completed_at": "Recibido",
-  "transfer.cancelled_at": "Cancelado"
+  "transfer.cancelled_at": "Cancelado",
+  "count.progress_guided": "{{counted}} / {{expected}} unidades esperadas contadas",
+  "count.progress_blind": "escaneos (recuento ciego)",
+  "count.kpi.accuracy": "Exactitud",
+  "count.kpi.expected_counted": "Esperado / contado",
+  "count.kpi.scans": "Escaneos",
+  "count.kpi.duration": "Duración",
+  "count.duration_minutes": "{{minutes}} min"
 }
