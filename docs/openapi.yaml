@@ -27503,6 +27503,110 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/portal/notifications:
+    get:
+      tags: [Portal]
+      operationId: getPortalNotifications
+      summary: Own in-app inbox from the portal (TEC-1021)
+      description: |
+        Customer / fleet portal mirror of GET /v1/notifications (the panel path answers 403
+        REALM_FORBIDDEN to a portal token). Only the session user's own `inapp` rows; no
+        permission is required. Supports `limit`,`offset`,`q`,`sort`,`unread` (`status` and
+        `channel` are not portal filters and are ignored). `sort` keys as the panel inbox;
+        default `-created_at`; unknown field → 400. The mobile customer app reaches it
+        through /v1/mobile/portal/notifications.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: unread
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Page of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotificationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/notifications/unread-count:
+    get:
+      tags: [Portal]
+      operationId: getPortalNotificationsUnreadCount
+      summary: Own unread in-app count from the portal (TEC-1021)
+      description: Same handler as GET /v1/notifications/unread-count, for the portal realm.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeUnreadCount"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/notifications/read-all:
+    post:
+      tags: [Portal]
+      operationId: postPortalNotificationsReadAll
+      summary: Mark all own in-app notifications read from the portal (TEC-1021)
+      description: >-
+        Same handler as POST /v1/notifications/read-all. Account state like
+        the preferences, so a read-only fleet session may call it too.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/portal/notifications/{uuid}/read:
+    post:
+      tags: [Portal]
+      operationId: postPortalNotificationRead
+      summary: Mark an own notification read from the portal (TEC-1021)
+      description: >-
+        Same handler as POST /v1/notifications/{uuid}/read. Another user's
+        notification (or a non in-app row) answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNotification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/portal/notification-preferences:
     get:
       tags: [Portal]
