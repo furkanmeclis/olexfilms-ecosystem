@@ -94,10 +94,10 @@ WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
        OR s.plate ILIKE '%' || sqlc.narg(q)::text || '%')
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text END
   END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text END
   END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
     CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
