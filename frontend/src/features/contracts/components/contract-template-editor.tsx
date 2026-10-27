@@ -39,7 +39,14 @@ import { useLocale } from "@/providers/locale-provider";
 const EDITOR_EXTENSIONS = [ContractVariablesExtension];
 
 /** Contract template editor: settings, 13 language tabs, Lexical body. */
-export function ContractTemplateEditor({ uuid }: { uuid: string }) {
+export function ContractTemplateEditor({
+  uuid,
+  slug,
+}: {
+  uuid: string;
+  /** Opened from the center's tenant settings (TEC-1033). */
+  slug?: string;
+}) {
   const { t } = useLocale();
   const query = useContractTemplate(uuid);
 
@@ -55,10 +62,15 @@ export function ContractTemplateEditor({ uuid }: { uuid: string }) {
         />
       }
       breadcrumbs={[
-        { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        {
+          label: t("layout.breadcrumb_home"),
+          href: slug ? routes.tenant.home(slug) : routes.platform.home,
+        },
         {
           label: t("contract_templates.title"),
-          href: routes.platform.contractTemplates.root,
+          href: slug
+            ? routes.tenant.centerCatalogs.contractTemplates(slug)
+            : routes.platform.contractTemplates.root,
         },
         { label: t("contract_templates.editor.title") },
       ]}

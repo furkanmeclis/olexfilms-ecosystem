@@ -48,12 +48,12 @@ export const PHOTO_ANGLES_PERSIST_KEY = "platform-photo-angles-v1";
 type AngleList = { items: PhotoAngle[] };
 
 /**
- * Platform > Fotoğraf açıları (TEC-500): the central intake angles of the
+ * Platform > Fotoğraf açıları (TEC-500; center settings with `slug`, TEC-1033): the central intake angles of the
  * photo standard. Client-side DataTable (the API returns the whole list)
  * with search, required / active filters and inline toggles, drag-to-
  * reorder (sort_order PUTs) and a 13-language form with the example image.
  */
-export function PhotoAnglesPage() {
+export function PhotoAnglesPage({ slug }: { slug?: string } = {}) {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<PhotoAngle | null>(null);
@@ -283,7 +283,10 @@ export function PhotoAnglesPage() {
         />
       }
       breadcrumbs={[
-        { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        {
+          label: t("layout.breadcrumb_home"),
+          href: slug ? routes.tenant.home(slug) : routes.platform.home,
+        },
         { label: t(`${T}.title`) },
       ]}
       actions={

@@ -57,7 +57,7 @@ type QuestionList = { items: ReviewQuestion[] };
  * list) with search, type / target / required / active filters, inline
  * required / active toggles and drag-to-reorder (sort_order PATCHes).
  */
-export function ReviewQuestionsPage() {
+export function ReviewQuestionsPage({ slug }: { slug?: string } = {}) {
   const { t, locale, format } = useLocale();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<ReviewQuestion | null>(null);
@@ -289,7 +289,10 @@ export function ReviewQuestionsPage() {
         />
       }
       breadcrumbs={[
-        { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        {
+          label: t("layout.breadcrumb_home"),
+          href: slug ? routes.tenant.home(slug) : routes.platform.home,
+        },
         { label: t("services.review_questions.title") },
       ]}
       actions={

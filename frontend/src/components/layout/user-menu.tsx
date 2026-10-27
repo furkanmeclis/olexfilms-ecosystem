@@ -32,15 +32,20 @@ function tenantSlugFromPath(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
-function resolveProfileHref(
+export function resolveProfileHref(
   pathname: string,
   user: ReturnType<typeof useAuth>["user"],
 ) {
-  if (isPlatformUser(user)) {
-    return routes.platform.profile.root;
-  }
+  // TEC-1033: center roles hold platform.* grants (showcase review), so
+  // isPlatformUser is true for them too; only the platform admin, or a
+  // platform user without an organization, gets the platform profile.
+  const platformAdmin =
+    Boolean(user?.isSuperAdmin) || Boolean(user?.roles.includes("super_admin"));
   const slug =
     tenantSlugFromPath(pathname) ?? primaryOrganizationSlug(user) ?? null;
+  if (platformAdmin || (isPlatformUser(user) && !slug)) {
+    return routes.platform.profile.root;
+  }
   if (slug) {
     return routes.tenant.profile.root(slug);
   }

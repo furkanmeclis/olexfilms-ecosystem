@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
+import { routes } from "@/config/routes";
 import {
   CertificateStatusChip,
   WarningDecisionChip,
@@ -209,7 +210,8 @@ function TypeDialog({
   );
 }
 
-export function CertificateTypesPage() {
+/** `slug`: opened from the center's tenant settings (TEC-1033). */
+export function CertificateTypesPage({ slug }: { slug?: string } = {}) {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<CertificateType | null>(null);
@@ -322,6 +324,17 @@ export function CertificateTypesPage() {
     <EntityPage
       title={t("certificates.types.title")}
       description={t("certificates.types.description")}
+      breadcrumbs={
+        slug
+          ? [
+              {
+                label: t("layout.breadcrumb_home"),
+                href: routes.tenant.home(slug),
+              },
+              { label: t("certificates.types.title") },
+            ]
+          : undefined
+      }
       permission={permissions.certificates.typesManage}
       actions={
         <Button

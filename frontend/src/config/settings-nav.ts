@@ -335,8 +335,11 @@ export const platformSettingsNav = defineNav({
  * Tenant settings. Gates mirror the backend role catalog
  * (backend/internal/platform/rbac/catalog.go): showcase.read for dealer and
  * distributor, photo_standard.override for the distributor owner,
- * measurement_devices.manage, ai.usage.read, and the owner-only data
- * transfer pages (tenant.imports.read / tenant.settings.read).
+ * measurement_devices.manage, ai.usage.read, the center's brand catalogs
+ * (certificate_types / photo_standard / efficiency.expectations /
+ * reviews.questions / contracts.templates manage, TEC-1033), and the
+ * owner-only data transfer pages (tenant.imports.read /
+ * tenant.settings.read).
  */
 export function tenantSettingsNav(slug: string): NavCatalog {
   return defineNav({
@@ -373,6 +376,63 @@ export function tenantSettingsNav(slug: string): NavCatalog {
             permission: permissions.photoStandard.override,
             feature: "photo_standard",
             orgTypes: ["distributor"],
+          },
+        ],
+      },
+      {
+        // TEC-1033: the center's brand catalogs. Center roles hold these
+        // grants at brand scope; the screens are the platform settings
+        // ones, opened in the center's organization context.
+        id: "center-catalogs",
+        labelKey: "layout.settings_group_catalogs",
+        icon: ClipboardList,
+        items: [
+          {
+            id: "center-certificate-types",
+            titleKey: "certificates.types.nav",
+            href: routes.tenant.centerCatalogs.certificateTypes(slug),
+            icon: BadgeCheck,
+            permission: permissions.certificates.typesManage,
+            feature: "certificates",
+            orgTypes: ["center"],
+          },
+          {
+            id: "center-photo-angles",
+            titleKey: "photo_standard.angles.nav",
+            href: routes.tenant.centerCatalogs.photoAngles(slug),
+            icon: Camera,
+            permission: permissions.photoStandard.manage,
+            feature: "photo_standard",
+            orgTypes: ["center"],
+          },
+          {
+            id: "center-part-consumption-expectations",
+            titleKey: "efficiency.expectations.nav",
+            href: routes.tenant.centerCatalogs.partConsumptionExpectations(
+              slug,
+            ),
+            icon: Recycle,
+            permission: permissions.efficiency.expectationsManage,
+            feature: "efficiency",
+            orgTypes: ["center"],
+          },
+          {
+            id: "center-review-questions",
+            titleKey: "layout.nav_review_questions",
+            href: routes.tenant.centerCatalogs.reviewQuestions(slug),
+            icon: MessageSquareText,
+            permission: permissions.reviews.questionsManage,
+            feature: "services",
+            orgTypes: ["center"],
+          },
+          {
+            id: "center-contract-templates",
+            titleKey: "layout.nav_contract_templates",
+            href: routes.tenant.centerCatalogs.contractTemplates(slug),
+            icon: FileSignature,
+            permission: permissions.contractTemplates.manage,
+            feature: "intake_contracts",
+            orgTypes: ["center"],
           },
         ],
       },

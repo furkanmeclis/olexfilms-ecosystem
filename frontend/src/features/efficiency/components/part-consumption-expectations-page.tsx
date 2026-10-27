@@ -241,7 +241,10 @@ function CreateDialog({
   );
 }
 
-export function PartConsumptionExpectationsPage() {
+/** `slug`: opened from the center's tenant settings (TEC-1033). */
+export function PartConsumptionExpectationsPage({
+  slug,
+}: { slug?: string } = {}) {
   const { t, format } = useLocale();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -451,7 +454,10 @@ export function PartConsumptionExpectationsPage() {
         />
       }
       breadcrumbs={[
-        { label: t("layout.breadcrumb_home"), href: routes.platform.home },
+        {
+          label: t("layout.breadcrumb_home"),
+          href: slug ? routes.tenant.home(slug) : routes.platform.home,
+        },
         { label: title },
       ]}
       actions={
@@ -528,7 +534,10 @@ export function PartConsumptionExpectationsPage() {
         paths={EXPECTATIONS_IMPORT_PATHS}
         open={importOpen}
         onOpenChange={setImportOpen}
-        jobsHref={routes.platform.imports.root}
+        scope={slug ? "tenant" : "platform"}
+        jobsHref={
+          slug ? routes.tenant.imports.root(slug) : routes.platform.imports.root
+        }
         onComplete={invalidate}
       />
       <EntityDeleteDialog

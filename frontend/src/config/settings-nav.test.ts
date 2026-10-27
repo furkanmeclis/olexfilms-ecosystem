@@ -96,3 +96,27 @@ describe("settings area (TEC-771)", () => {
     }
   });
 });
+
+describe("center catalogs in tenant settings (TEC-1033)", () => {
+  it("lists the five brand catalogs for center organizations", () => {
+    const group = tenantSettingsNav("acme").groups.find(
+      (g) => g.id === "center-catalogs",
+    );
+    const items = group?.items ?? [];
+    expect(items.map((i) => i.permission)).toEqual([
+      "certificate_types.manage",
+      "photo_standard.manage",
+      "efficiency.expectations.manage",
+      "reviews.questions.manage",
+      "contracts.templates.manage",
+    ]);
+    for (const item of items) {
+      expect(item.orgTypes, item.id).toEqual(["center"]);
+      expect(item.feature, item.id).toBeTruthy();
+      expect(hasPage(item.href), item.href).toBe(true);
+    }
+    expect(
+      hasPage(routes.tenant.centerCatalogs.contractTemplateEdit("acme", "x")),
+    ).toBe(true);
+  });
+});
