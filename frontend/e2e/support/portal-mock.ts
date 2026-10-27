@@ -111,6 +111,8 @@ export class PortalMock {
   /** TEC-353: admin review questions of the form and the posted reviews. */
   reviewQuestions: Json[] = [];
   reviews: Json[] = [];
+  /** TEC-1034: in-app inbox rows of the signed-in user. */
+  notifications: { uuid: string; read_at?: string | null }[] = [];
 
   /** Latest code the fake WhatsApp sender delivered to `phone`. */
   lastCode(phone: string, purpose: string): string | undefined {
@@ -499,6 +501,27 @@ export class PortalMock {
     if (method === "GET" && path === "portal/contracts") {
       const items = owns ? this.contracts : [];
       return ok({ items, total: items.length, limit: 20, offset: 0 });
+    }
+
+    // TEC-1034: the portal header's inbox (empty unless a spec fills it).
+    if (method === "GET" && path === "portal/notifications/unread-count") {
+      return ok({ count: this.notifications.filter((n) => !n.read_at).length });
+    }
+    if (method === "GET" && path === "portal/notifications") {
+      const items = this.notifications;
+      return ok({ items, total: items.length, limit: 20, offset: 0 });
+    }
+    if (method === "POST" && path === "portal/notifications/read-all") {
+      const now = new Date().toISOString();
+      for (const n of this.notifications) n.read_at ??= now;
+      return ok({ status: "ok" });
+    }
+    const read = /^portal\/notifications\/([^/]+)\/read$/.exec(path);
+    if (method === "POST" && read) {
+      const n = this.notifications.find((x) => x.uuid === read[1]);
+      if (!n) return fail(404, "NOT_FOUND");
+      n.read_at ??= new Date().toISOString();
+      return ok(n);
     }
 
     const appointment = this.handleAppointments(method, path, url, body);
