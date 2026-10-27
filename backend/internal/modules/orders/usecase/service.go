@@ -735,7 +735,11 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			return err
 		}
 		result = o
-		if err := s.emit(ctx, tx, eventFor(to), o, from, c); err != nil {
+		notice, err := s.statusNotice(ctx, q, o, to, c)
+		if err != nil {
+			return err
+		}
+		if err := s.emitWith(ctx, tx, eventFor(to), o, from, c, notice); err != nil {
 			return err
 		}
 		if to == StatusApproved {
@@ -876,6 +880,13 @@ func (s *Service) history(ctx context.Context, q *db.Queries, o db.Order, from, 
 }
 
 func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, o db.Order, from string, c Caller) error {
+	return s.emitWith(ctx, tx, name, o, from, c, nil)
+}
+
+// emitWith writes the order event with extra payload fields (e.g. the
+// notification recipients of shipped, delivered and received).
+func (s *Service) emitWith(ctx context.Context, tx pgx.Tx, name string, o db.Order, from string, c Caller,
+	extra map[string]any) error {
 	id, uid := o.ID, o.Uuid
 	payload := map[string]any{
 		"order_uuid":    o.Uuid.String(),
@@ -889,6 +900,9 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, o db.Order, 
 	}
 	if from != "" && from != o.Status {
 		payload["from_status"] = from
+	}
+	for k, v := range extra {
+		payload[k] = v
 	}
 	ev := events.New(name).WithTenant(o.OrganizationID).WithEntity("order", &id, &uid).WithPayload(payload)
 	if c.Principal.UserInternal != 0 {

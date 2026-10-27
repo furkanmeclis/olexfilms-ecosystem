@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // dealer directly under it. The orders use case resolves the recipients
 // (notify_user_ids: the dealer's members holding orders.read, minus the
 // actor) and the party names into the event payload. Default templates ship
-// in all 13 locales for in-app and WhatsApp, like the transfer events.
+// in all 13 locales for in-app, WhatsApp, web push and Expo push.
 const EventOrderCreatedBySeller = "ORDER_CREATED_BY_SELLER"
 
 // EventOrderWarehouseNew (TEC-1028): a new approved order fell into a
@@ -18,8 +18,9 @@ const EventOrderWarehouseNew = "ORDER_WAREHOUSE_NEW"
 // OrderWarehouseChannels are the default channels of ORDER_WAREHOUSE_NEW.
 var OrderWarehouseChannels = []string{ChannelInapp, ChannelWebPush, ChannelExpoPush}
 
-// OrderChannels are the default channels of the order events.
-var OrderChannels = []string{ChannelInapp, ChannelWhatsApp}
+// OrderChannels are the default channels of ORDER_CREATED_BY_SELLER: the
+// dealer is told in-app, on WhatsApp and on the phone (web and Expo push).
+var OrderChannels = []string{ChannelInapp, ChannelWhatsApp, ChannelWebPush, ChannelExpoPush}
 
 var orderTexts = map[string]localizedText{
 	"tr": {"Merkez sizin için sipariş açtı: {{order_no}}",

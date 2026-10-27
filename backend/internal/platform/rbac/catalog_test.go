@@ -1146,6 +1146,9 @@ func TestCenterOwnerUnion(t *testing.T) {
 				held = true
 			}
 		}
+		if _, extra := CenterOwnerExtras[perm]; extra {
+			held = true
+		}
 		if !held {
 			t.Fatalf("center_owner holds %s that no center role holds", perm)
 		}

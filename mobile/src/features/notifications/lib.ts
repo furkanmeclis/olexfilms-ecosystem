@@ -112,3 +112,30 @@ export function notificationExternalUrl(n: Pick<AppNotification, 'action_url' | 
   if (space !== 'musteri' || !n.action_url || !/^https?:\/\//i.test(n.action_url)) return null;
   return notificationRoute(n, space) ? null : n.action_url;
 }
+
+/** Warehouse work (a new order to prepare) opens in the warehouse space when the user has it. */
+const WAREHOUSE_EVENTS = new Set(['ORDER_WAREHOUSE_NEW']);
+
+/** Space a notification opens in: warehouse work goes to `depo`, the rest stays in the current space. */
+export function notificationSpace(eventCode: string | null | undefined, space: SpaceKind | null, kinds: readonly SpaceKind[]): SpaceKind | null {
+  if (eventCode && WAREHOUSE_EVENTS.has(eventCode) && kinds.includes('depo')) return 'depo';
+  return space;
+}
+
+/**
+ * A push's data (`notification_uuid`, `action_url`, `event_code` and the
+ * record ids such as `order_uuid`) read as a notification row, so a tap opens
+ * the same screen as the inbox.
+ */
+export function pushNotification(data: Record<string, unknown> | null | undefined): Pick<AppNotification, 'action_url' | 'payload'> & {
+  event_code?: string;
+  notification_uuid?: string;
+} {
+  const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+  return {
+    action_url: str(data?.action_url),
+    payload: data ?? {},
+    event_code: str(data?.event_code),
+    notification_uuid: str(data?.notification_uuid),
+  };
+}

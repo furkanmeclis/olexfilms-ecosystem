@@ -1581,6 +1581,15 @@ var CenterOwnerMembers = []string{
 	RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService,
 }
 
+// CenterOwnerExtras are the grants only the center owner holds on top of
+// the union: opening accounts of the center (staff with their warehouses)
+// and dealers with their owner directly under the center (migration
+// 000165, POST /v1/tenant/members and /v1/tenant/dealers).
+var CenterOwnerExtras = map[string]Scope{
+	PermMembersWrite:       ScopeBrand,
+	PermOrganizationsWrite: ScopeBrand,
+}
+
 func init() {
 	for i, p := range Permissions {
 		permIndex[p.Slug] = i
@@ -1588,7 +1597,15 @@ func init() {
 	for i, r := range Roles {
 		roleIndex[r.Slug] = i
 	}
-	Roles[roleIndex[RoleCenterOwner]].Grants = unionGrants(CenterOwnerMembers...)
+	owner := unionGrants(CenterOwnerMembers...)
+	for perm, scope := range CenterOwnerExtras {
+		if cur, ok := owner[perm]; ok {
+			owner[perm] = Broader(cur, scope)
+		} else {
+			owner[perm] = scope
+		}
+	}
+	Roles[roleIndex[RoleCenterOwner]].Grants = owner
 	BrandIndependentGrants[RoleCenterOwner] = unionBrandIndependent(CenterOwnerMembers...)
 }
 

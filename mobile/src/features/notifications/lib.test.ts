@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { notificationExternalUrl, notificationRoute, notificationTarget } from './lib.ts';
+import { notificationExternalUrl, notificationRoute, notificationSpace, notificationTarget, pushNotification } from './lib.ts';
 
 const U = '3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b';
 
@@ -46,5 +46,23 @@ describe('customer portal links', () => {
     assert.equal(notificationExternalUrl(quote, 'musteri'), quote.action_url);
     assert.equal(notificationExternalUrl(quote, 'bayi'), null);
     assert.equal(notificationExternalUrl({ action_url: '/portal' }, 'musteri'), null);
+  });
+});
+
+// Demo flow: a push tap opens the order; a new warehouse order opens the preparation screen.
+describe('push taps', () => {
+  it('reads the order from the push data', () => {
+    const n = pushNotification({ notification_uuid: 'n', event_code: 'ORDER_SHIPPED', order_uuid: U });
+    assert.equal(n.event_code, 'ORDER_SHIPPED');
+    assert.equal(notificationRoute(n, 'bayi'), `/bayi/menu/orders/${U}`);
+  });
+  it('sends warehouse work to the warehouse space', () => {
+    assert.equal(notificationSpace('ORDER_WAREHOUSE_NEW', 'bayi', ['bayi', 'depo']), 'depo');
+    assert.equal(notificationSpace('ORDER_WAREHOUSE_NEW', 'bayi', ['bayi']), 'bayi');
+    assert.equal(notificationSpace('ORDER_SHIPPED', 'bayi', ['bayi', 'depo']), 'bayi');
+    assert.equal(notificationRoute(pushNotification({ event_code: 'ORDER_WAREHOUSE_NEW', order_uuid: U }), 'depo'), `/depo/jobs/order/${U}`);
+  });
+  it('tolerates empty data', () => {
+    assert.equal(notificationRoute(pushNotification(undefined), 'bayi'), null);
   });
 });

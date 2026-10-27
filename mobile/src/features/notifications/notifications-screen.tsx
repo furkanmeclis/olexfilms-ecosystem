@@ -7,7 +7,8 @@ import { Alert, Linking, Pressable, View } from 'react-native';
 import { isApiError } from '@/core/api/errors';
 import { intlLocale } from '@/core/digits';
 import { errorMessage } from '@/core/i18n';
-import { useResolvedSpace } from '@/core/spaces';
+import { useSession } from '@/core/auth/session';
+import { kindsOf, useResolvedSpace } from '@/core/spaces';
 import { PagedList, PAGE_SIZE, usePagedQuery } from '@/features/admin/kit';
 import { Segmented } from '@/features/warehouse/parts';
 import { cn } from '@/ui/cn';
@@ -16,7 +17,7 @@ import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 import { useInbox } from './inbox';
-import { type AppNotification, notificationExternalUrl, notificationIcon, notificationRoute } from './lib';
+import { type AppNotification, notificationExternalUrl, notificationIcon, notificationRoute, notificationSpace } from './lib';
 
 type Filter = 'all' | 'unread';
 
@@ -40,6 +41,7 @@ export function NotificationsScreen() {
   const { t, i18n } = useTranslation('notifications');
   const qc = useQueryClient();
   const space = useResolvedSpace();
+  const kinds = kindsOf(useSession((s) => s.me));
   const inbox = useInbox();
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -59,7 +61,7 @@ export function NotificationsScreen() {
 
   const open = (n: AppNotification) => {
     if (!n.read_at) read.mutate(n.uuid);
-    const href = notificationRoute(n, space);
+    const href = notificationRoute(n, notificationSpace(n.template_code, space, kinds));
     if (href) {
       router.push(href as never);
       return;
