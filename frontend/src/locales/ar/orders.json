@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "بعض الأسطر بلا سعر؛ تم حفظها بقيمة 0.",
   "form.errors.price_invalid": "يجب أن يكون سعر الوحدة 0 أو أكثر، بحد أقصى 4 منازل عشرية.",
   "items.price_missing": "بلا سعر",
-  "detail.created_by_seller": "أنشأه المركز"
+  "detail.created_by_seller": "أنشأه المركز",
+  "actions.deliver.button": "تم التسليم",
+  "actions.deliver.title": "هل تريد تعليم الطلب كمُسلَّم؟",
+  "actions.deliver.description": "يسجل التسليم باليد أو من المستودع. ينتقل المخزون إلى الوكيل عند استلامه. يمكنك إضافة ملاحظة.",
+  "actions.deliver.confirm": "تم التسليم",
+  "actions.deliver.success": "تم تعليم الطلب كمُسلَّم.",
+  "detail.delivered_at": "التسليم"
 }

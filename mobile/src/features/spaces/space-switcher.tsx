@@ -86,7 +86,8 @@ export function SpaceSwitcher() {
           ),
         }}
       />
-      <View className="gap-1 px-4 pb-8 pt-2">
+      {/* The sheet header is transparent: start below it, with a little air under the title. */}
+      <View className="gap-1 px-4 pb-8 pt-16">
         {spaces.length ? (
           <>
             <SectionHeader title={t('spaces_title')} />

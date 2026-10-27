@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Certaines lignes n'ont pas de prix ; elles ont été enregistrées à 0.",
   "form.errors.price_invalid": "Le prix unitaire doit être 0 ou plus, avec au plus 4 décimales.",
   "items.price_missing": "Pas de prix",
-  "detail.created_by_seller": "Créée par le centre"
+  "detail.created_by_seller": "Créée par le centre",
+  "actions.deliver.button": "Marquer livrée",
+  "actions.deliver.title": "Marquer la commande comme livrée ?",
+  "actions.deliver.description": "Enregistre une remise en main propre ou au dépôt. Le stock passe au revendeur à la réception. Vous pouvez ajouter une note.",
+  "actions.deliver.confirm": "Livrée",
+  "actions.deliver.success": "La commande a été marquée comme livrée.",
+  "detail.delivered_at": "Livrée"
 }

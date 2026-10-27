@@ -24963,9 +24963,15 @@ paths:
         cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate
         flow). A request for the current status is a no-op (a repeated
         ship, receipt or cancel writes no movement). Other moves answer 409
-        ORDER_INVALID_TRANSITION; delivered is not used (received follows
-        shipped) and answers 409 ORDER_TRANSITION_UNAVAILABLE. Every move
-        writes the status history and an orders.* outbox event.
+        ORDER_INVALID_TRANSITION. Every move writes the status history and
+        an orders.* outbox event.
+        TEC-1024: shipped -> delivered (seller, orders.ship; status and
+        delivered_at only, `reason` is kept as the delivery note in the
+        history; orders.delivered; typical for hand or depot delivery);
+        delivered -> received (buyer, orders.receive; the stock moves here,
+        as from shipped); delivered -> cancelling (either side,
+        orders.cancel). A cargo shipment may still go shipped -> received
+        directly.
       security:
         - bearerAuth: []
       parameters:
@@ -45642,6 +45648,10 @@ components:
         approved_at: { type: [string, "null"], format: date-time }
         ready_at: { type: [string, "null"], format: date-time }
         shipped_at: { type: [string, "null"], format: date-time }
+        delivered_at:
+          type: [string, "null"]
+          format: date-time
+          description: Set when the seller marks the order delivered (TEC-1024)
         cancelled_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }

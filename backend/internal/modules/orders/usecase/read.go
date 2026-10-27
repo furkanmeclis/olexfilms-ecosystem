@@ -95,6 +95,7 @@ type OrderView struct {
 	ApprovedAt      *time.Time `json:"approved_at"`
 	ReadyAt         *time.Time `json:"ready_at"`
 	ShippedAt       *time.Time `json:"shipped_at"`
+	DeliveredAt     *time.Time `json:"delivered_at"`
 	CancelledAt     *time.Time `json:"cancelled_at"`
 	ReceivedAt      *time.Time `json:"received_at"`
 	// Shipping info (TEC-768): the delivery method chosen at shipping, the
@@ -190,7 +191,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
 		CreatedBySeller: o.CreatedBySeller,
 		SubmittedAt:     tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
-		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), CancelledAt: tsPtr(o.CancelledAt),
+		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), DeliveredAt: tsPtr(o.DeliveredAt), CancelledAt: tsPtr(o.CancelledAt),
 		ReceivedAt: tsPtr(o.ReceivedAt), DeliveryMode: textPtr(o.DeliveryMode), TrackingNo: textPtr(o.TrackingNo),
 		HasShippingDocument: o.ShippingDocumentKey.Valid && o.ShippingDocumentKey.String != "",
 		HasReceiptDocument:  o.ReceiptDocumentKey.Valid && o.ReceiptDocumentKey.String != "",

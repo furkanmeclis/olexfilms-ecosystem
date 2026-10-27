@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Bəzi sətirlərdə qiymət yoxdur; 0 kimi saxlanıldı.",
   "form.errors.price_invalid": "Vahid qiyməti 0 və ya daha çox olmalı, ən çox 4 onluq.",
   "items.price_missing": "Qiymət yoxdur",
-  "detail.created_by_seller": "Mərkəz tərəfindən yaradılıb"
+  "detail.created_by_seller": "Mərkəz tərəfindən yaradılıb",
+  "actions.deliver.button": "Təhvil verildi",
+  "actions.deliver.title": "Sifariş təhvil verilmiş kimi işarələnsin?",
+  "actions.deliver.description": "Əldən və ya anbar təhvili qeyd olunur. Stok diler qəbul edəndə ona keçir. İstəsəniz qeyd əlavə edin.",
+  "actions.deliver.confirm": "Təhvil verildi",
+  "actions.deliver.success": "Sifariş təhvil verilmiş kimi işarələndi.",
+  "detail.delivered_at": "Təhvil"
 }

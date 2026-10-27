@@ -479,6 +479,11 @@ function Parties({ order }: { order: Order }) {
             {format.dateTime(order.shipped_at)}
           </Field>
         ) : null}
+        {order.delivered_at ? (
+          <Field label={t("orders.detail.delivered_at")}>
+            {format.dateTime(order.delivered_at)}
+          </Field>
+        ) : null}
         {order.note ? (
           <Field label={t("orders.form.note")}>{order.note}</Field>
         ) : null}

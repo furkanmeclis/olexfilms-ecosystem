@@ -219,12 +219,9 @@ func TestIntegrationOrdersCenterToDistributor(t *testing.T) {
 		t.Fatalf("frozen order moved: %+v", b)
 	}
 
-	// 6. delivered is not used (TEC-168 receives straight from shipped);
-	// ready, shipped, received and cancelling do not follow approved.
-	if code, ec := it.transition(staffTok, o.UUID, "delivered"); code != http.StatusConflict || ec != "ORDER_TRANSITION_UNAVAILABLE" {
-		t.Fatalf("delivered = %d %s", code, ec)
-	}
-	for _, st := range []string{"ready", "shipped", "received", "cancelling"} {
+	// 6. ready, shipped, delivered, received and cancelling do not follow
+	// approved (TEC-1024: delivered follows shipped only).
+	for _, st := range []string{"ready", "shipped", "delivered", "received", "cancelling"} {
 		if code, ec := it.transition(staffTok, o.UUID, st); code != http.StatusConflict || ec != "ORDER_INVALID_TRANSITION" {
 			t.Fatalf("approved -> %s = %d %s", st, code, ec)
 		}

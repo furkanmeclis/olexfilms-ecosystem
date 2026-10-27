@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "У некоторых строк нет цены; они сохранены как 0.",
   "form.errors.price_invalid": "Цена за единицу должна быть 0 или больше, не более 4 знаков после запятой.",
   "items.price_missing": "Нет цены",
-  "detail.created_by_seller": "Создан центром"
+  "detail.created_by_seller": "Создан центром",
+  "actions.deliver.button": "Доставлено",
+  "actions.deliver.title": "Отметить заказ как доставленный?",
+  "actions.deliver.description": "Фиксирует передачу из рук в руки или со склада. Запасы переходят к дилеру, когда он их примет. Можно добавить примечание.",
+  "actions.deliver.confirm": "Доставлено",
+  "actions.deliver.success": "Заказ отмечен как доставленный.",
+  "detail.delivered_at": "Доставлено"
 }

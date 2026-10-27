@@ -10,11 +10,20 @@ on:
   schedule:
     - cron: "0 3 * * 1"
 
-# One run per PR (or ref). PRs cancel superseded runs; main runs always
-# finish so every green main commit gets its v0.N tag.
+# One run per PR, and one per main push stream: a newer push to main cancels
+# the older main run (merges in quick succession test and release only the
+# newest commit). Not every main commit gets a v0.N tag any more; the
+# surviving run diffs from the last v0.N tag (the last green, released main),
+# so areas changed in cancelled runs are still tested and mobile/ changes
+# still shipped. mobile-release and release-tag survive a cancel once they
+# started (job and step conditions use !failure(), which a cancel does not
+# flip), so an EAS build/update or a tag push is never killed half-way; the
+# newer run waits for them. The event name keeps the weekly schedule and
+# workflow_dispatch (also refs/heads/main) out of the push group, so they
+# neither cancel nor get cancelled by a merge.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -26,9 +35,10 @@ env:
 
 jobs:
   # Decides which jobs a run needs (plain git diff, no third-party action).
-  # PRs diff against their base; a push to main diffs against the previous
-  # main (squash merges only, so that is one commit; a force/multi-commit
-  # push falls back to full). workflow_dispatch, the weekly schedule, a PR
+  # PRs diff against their base; a push to main diffs against the last
+  # release, i.e. the newest v0.N tag reachable from HEAD^ (normally HEAD^
+  # itself; after cancelled main runs it covers their commits too; no tag
+  # -> full). workflow_dispatch, the weekly schedule, a PR
   # labelled "ci-full" and a change to this file run everything (full=true).
   #   frontend/**                 -> frontend-check, frontend-unit, contracts
   #                                  + frontend-e2e unless only unit-test files
@@ -55,14 +65,15 @@ jobs:
       - uses: actions/checkout@v7
         with:
           # PR checkout is the merge commit; HEAD^1 is the current base.
-          # On main the previous commit is the previous main (squash merges).
-          fetch-depth: 2
+          # Elsewhere full history + tags (blob-less: diff --name-only only
+          # needs trees) so the last v0.N tag is found.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+          filter: blob:none
       - name: Changed areas
         id: filter
         env:
           EVENT: ${{ github.event_name }}
           CI_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
-          BEFORE: ${{ github.event.before }}
         run: |
           backend=false; frontend=false; e2e=false; contracts=false
           mobile=false; infra=false; full=false
@@ -71,11 +82,12 @@ jobs:
             pull_request)
               [ "$CI_FULL" = "true" ] && full=true || files=$(git diff --name-only HEAD^1 HEAD) ;;
             push)
-              # Compare with the pushed-from commit; unreachable (force push,
-              # first push) means full.
-              if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$' \
-                 && git fetch --no-tags --depth=1 origin "$BEFORE" 2>/dev/null; then
-                files=$(git diff --name-only "$BEFORE" HEAD)
+              # Compare with the last release (newest v0.N tag before HEAD):
+              # commits of main runs cancelled by this one are included. No
+              # tag / no parent means full.
+              if base=$(git describe --tags --abbrev=0 --match 'v0.[0-9]*' HEAD^ 2>/dev/null); then
+                echo "diff base: $base ($(git rev-parse --short "$base^{commit}"))"
+                files=$(git diff --name-only "$base" HEAD)
               else
                 full=true
               fi ;;
@@ -418,12 +430,16 @@ jobs:
   #     -> new TestFlight build (native dep, config plugin, SDK...)
   # Build numbers: EAS remote counter (eas.json autoIncrement). The bundle's
   # EXPO_PUBLIC_API_URL comes from the EAS "production" environment. Needs
-  # the EXPO_TOKEN secret (Expo robot "GitHub App"). Diffs the push itself,
-  # not changes.mobile, so a ci.yml edit or the weekly run never ships.
+  # the EXPO_TOKEN secret (Expo robot "GitHub App"). Diffs from the last
+  # v0.N tag before HEAD (same base as the changes job, so mobile/ changes of
+  # cancelled main runs ship here, in one OTA/build decision), not
+  # changes.mobile, so a ci.yml edit or the weekly run never ships.
+  # Once started it is not cancelled by a newer main push (!failure()
+  # instead of the implicit success() on the job and every step).
   # Full manual run from mobile/: npx eas-cli@latest workflow:run deploy-ios.yml
   mobile-release:
     needs: [ci]
-    if: ${{ !cancelled() && needs.ci.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ !failure() && needs.ci.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -432,14 +448,18 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - name: mobile/ in this push?
+        if: ${{ !failure() }}
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: mobile/ changed since the last release?
+        if: ${{ !failure() }}
         id: changed
-        env:
-          BEFORE: ${{ github.event.before }}
         run: |
-          if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$' \
-             && git fetch --no-tags --depth=1 origin "$BEFORE" 2>/dev/null; then
-            files=$(git diff --name-only "$BEFORE" HEAD -- . ../docs/openapi.yaml ../backend/docs/openapi.yaml \
+          # HEAD^ so a tag release-tag just put on HEAD is never the base.
+          if base=$(git describe --tags --abbrev=0 --match 'v0.[0-9]*' HEAD^ 2>/dev/null); then
+            echo "diff base: $base"
+            files=$(git diff --name-only "$base" HEAD -- . ../docs/openapi.yaml ../backend/docs/openapi.yaml \
                     | grep -vE '\.md$' || true)
           else
             files="(unknown range, shipping)"
@@ -451,20 +471,20 @@ jobs:
             echo "mobile/ unchanged, nothing shipped" >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/setup-node@v7
-        if: steps.changed.outputs.run == 'true'
+        if: ${{ !failure() && steps.changed.outputs.run == 'true' }}
         with:
           node-version-file: frontend/.nvmrc
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - name: Install
-        if: steps.changed.outputs.run == 'true'
+        if: ${{ !failure() && steps.changed.outputs.run == 'true' }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::error::EXPO_TOKEN secret is not set"; exit 1
           fi
           npm ci
       - name: Fingerprint vs latest store build
-        if: steps.changed.outputs.run == 'true'
+        if: ${{ !failure() && steps.changed.outputs.run == 'true' }}
         id: fp
         run: |
           # --json still prints progress lines to stdout; keep from the JSON start.
@@ -487,35 +507,39 @@ jobs:
           fi
           echo "last=$last" >> "$GITHUB_OUTPUT"
       - name: OTA update (fingerprint unchanged)
-        if: steps.fp.outputs.mode == 'update'
+        if: ${{ !failure() && steps.fp.outputs.mode == 'update' }}
         run: |
           npx eas-cli@latest update --channel production --platform ios \
             --environment production --non-interactive \
             --message "${GITHUB_SHA::8}: $(git log -1 --format=%s | cut -c1-100)"
           echo "EAS OTA update published to channel production (same fingerprint as build ${{ steps.fp.outputs.last }})" >> "$GITHUB_STEP_SUMMARY"
       - name: EAS build + TestFlight submit (fingerprint changed)
-        if: steps.fp.outputs.mode == 'build'
+        if: ${{ !failure() && steps.fp.outputs.mode == 'build' }}
         run: |
           npx eas-cli@latest build -p ios --profile production \
             --auto-submit --non-interactive --no-wait
           echo "EAS iOS production build queued (auto-submit to TestFlight)" >> "$GITHUB_STEP_SUMMARY"
 
-  # Every green push to main gets the next v0.N tag (first one: v0.1);
-  # Dokploy deploys on v0.* tag pushes. Tags pushed with GITHUB_TOKEN do not
+  # Every green main run not cancelled by a newer push tags its HEAD with the
+  # next v0.N (first one: v0.1); Dokploy deploys on v0.* tag pushes. Once
+  # started it finishes even if a newer push cancels the run (!failure() on
+  # the job and its steps), so a tag is never half-pushed. Tags pushed with GITHUB_TOKEN do not
   # start other workflows, but GitHub still sends the tag push webhook.
   # A job skipped by the path filter would skip this one through the needs
   # chain (ci runs with always()), so the gate reads ci's result itself.
   release-tag:
     needs: [ci]
-    if: ${{ !cancelled() && needs.ci.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ !failure() && needs.ci.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
+        if: ${{ !failure() }}
         with:
           fetch-depth: 0
       - name: Tag next version
+        if: ${{ !failure() }}
         run: |
           git fetch --tags --force
           if git tag --points-at HEAD | grep -qE '^v0\.[0-9]+$'; then

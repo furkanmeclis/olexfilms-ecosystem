@@ -140,11 +140,34 @@ func TestIntegrationOrdersCenterCreatesForDealer(t *testing.T) {
 	}
 	prep := it.orderCall("GET", "/v1/orders/"+o.UUID, staffTok, nil, http.StatusOK)
 	it.shipOrder(staffTok, prep, [][]map[string]any{{{"barcode": u1.Barcode}}, {{"barcode": u2.Barcode}}})
+	// The seller marks it delivered (status only, with a note); only the
+	// buyer can, and the dealer then receives it.
+	if code, ec := it.transition(dealerTok, o.UUID, "delivered"); code != http.StatusForbidden {
+		t.Fatalf("dealer delivered = %d %s", code, ec)
+	}
+	code, env = it.do("POST", "/v1/orders/"+o.UUID+"/transitions", hostOlex, staffTok,
+		map[string]string{"status": "delivered", "reason": "handed over at the depot"})
+	if code != http.StatusOK {
+		t.Fatalf("delivered = %d %s", code, errCode(env))
+	}
+	var del struct {
+		Status      string  `json:"status"`
+		DeliveredAt *string `json:"delivered_at"`
+	}
+	if err := json.Unmarshal(env.Data, &del); err != nil || del.Status != "delivered" || del.DeliveredAt == nil {
+		t.Fatalf("delivered view = %+v %v", del, err)
+	}
+	if n := it.countRows(`SELECT COUNT(*) FROM stock_movements WHERE unit_id = $1 AND type = 'received'`, u1.ID); n != 0 {
+		t.Fatalf("received movements before receipt = %d", n)
+	}
 	if code, ec := it.transition(dealerTok, o.UUID, "received"); code != http.StatusOK {
 		t.Fatalf("received = %d %s", code, ec)
 	}
 	if v := it.orderCall("GET", "/v1/orders/"+o.UUID, dealerTok, nil, http.StatusOK); v.Status != "received" {
 		t.Fatalf("final = %s", v.Status)
+	}
+	if n := it.countRows(`SELECT COUNT(*) FROM stock_movements WHERE unit_id = $1 AND type = 'received'`, u1.ID); n != 1 {
+		t.Fatalf("received movements after receipt = %d", n)
 	}
 
 	// 4. The dealer's own order still starts as a draft to its supplier.

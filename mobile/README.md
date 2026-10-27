@@ -53,7 +53,10 @@ Later native modules (BLE, plate recognition) also need the development build.
   - **changed** (native dependency, config plugin, `app.json` native field, SDK) or no
     previous build → `eas build -p ios --profile production --auto-submit --no-wait` → new
     TestFlight build on EAS.
-  The job diffs the push itself, so a `ci.yml` edit or the weekly scheduled run never ships.
+  The job diffs `mobile/` from the last `v0.N` release tag before HEAD (not `changes.mobile`), so
+  a `ci.yml` edit or the weekly scheduled run never ships, and when quick successive merges cancel
+  older main runs the surviving run ships all their mobile changes in one decision. Once started,
+  the job is not cancelled by a newer push.
 - `.eas/workflows/deploy-ios.yml` is the same decision as an EAS Workflow, kept for manual
   end-to-end runs (`npx eas-cli@latest workflow:run deploy-ios.yml`). It has no push trigger:
   on 2026-10-26 its Linux jobs waited about an hour each in the EAS queue.

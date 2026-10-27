@@ -59,6 +59,11 @@ func TestTransitionRules(t *testing.T) {
 		{StatusShipped, StatusCancelling, PartyBuyer, holds(rbac.PermOrdersCancel), true},
 		{StatusShipped, StatusCancelling, PartySeller, holds(rbac.PermOrdersCancel), true},
 		{StatusShipped, StatusCancelling, PartySeller, holds(rbac.PermOrdersShip), false},
+		{StatusShipped, StatusDelivered, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusShipped, StatusDelivered, PartyBuyer, all, false},
+		{StatusDelivered, StatusReceived, PartyBuyer, holds(rbac.PermOrdersReceive), true},
+		{StatusDelivered, StatusReceived, PartySeller, holds(rbac.PermOrdersReceive), false},
+		{StatusDelivered, StatusCancelling, PartySeller, holds(rbac.PermOrdersCancel), true},
 		{StatusCancelling, StatusCancelled, PartySeller, holds(rbac.PermOrdersShip), true},
 		{StatusCancelling, StatusCancelled, PartySeller, holds(rbac.PermOrdersCancel), true},
 		{StatusCancelling, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), false},
@@ -75,15 +80,12 @@ func TestTransitionRules(t *testing.T) {
 		{StatusDraft, StatusApproved}, {StatusProcessing, StatusReady}, {StatusProcessing, StatusShipped}, {StatusApproved, StatusShipped},
 		{StatusCancelled, StatusDraft}, {StatusApproved, StatusReady}, {StatusSubmitted, StatusDraft},
 		{StatusPreparing, StatusShipped}, {StatusShipped, StatusCancelled},
-		{StatusReceived, StatusCancelling}, {StatusReceived, StatusCancelled}, {StatusShipped, StatusDelivered},
-		{StatusDelivered, StatusReceived}, {StatusCancelling, StatusShipped},
+		{StatusReceived, StatusCancelling}, {StatusReceived, StatusCancelled}, {StatusReady, StatusDelivered},
+		{StatusDelivered, StatusShipped}, {StatusCancelling, StatusShipped},
 	} {
 		if _, ok := lookupTransition(m[0], m[1]); ok {
 			t.Errorf("%s -> %s must not be allowed", m[0], m[1])
 		}
-	}
-	if supportedTargets[StatusDelivered] {
-		t.Errorf("delivered is not used (TEC-168)")
 	}
 	// Every allowed target is supported and has an outbox event.
 	for from, m := range transitions {
