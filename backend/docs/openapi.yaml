@@ -14378,9 +14378,9 @@ paths:
       security: []
       responses:
         "200":
-          description: Default hero (PNG)
+          description: Default hero (WebP with alpha)
           content:
-            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
         "304":
           description: Not modified
 

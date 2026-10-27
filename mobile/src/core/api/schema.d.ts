@@ -44926,13 +44926,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Default hero (PNG) */
+            /** @description Default hero (WebP with alpha) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/png": string;
+                    "image/webp": string;
                 };
             };
             /** @description Not modified */

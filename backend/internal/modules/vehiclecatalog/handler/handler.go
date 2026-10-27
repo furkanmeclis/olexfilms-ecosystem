@@ -44,10 +44,11 @@ const (
 var placeholderLogo []byte
 
 // defaultHero is the legacy system's default hero car
-// (hero-cars/default/porsche_car.png, TEC-1018): the last fallback of every
+// (hero-cars/default/porsche_car.png, TEC-1018), resized to 1200 px and stored
+// as WebP with alpha (1.8 MB → ~110 KB): the last fallback of every
 // hero route.
 //
-//go:embed assets/default-hero.png
+//go:embed assets/default-hero.webp
 var defaultHero []byte
 
 type staticImage struct {
@@ -63,7 +64,7 @@ func newStatic(body []byte, contentType string) staticImage {
 
 var (
 	placeholderImage = newStatic(placeholderLogo, "image/svg+xml")
-	defaultHeroImage = newStatic(defaultHero, "image/png")
+	defaultHeroImage = newStatic(defaultHero, "image/webp")
 )
 
 // Handler serves vehicle catalog endpoints.
