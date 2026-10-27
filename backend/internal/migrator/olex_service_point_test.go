@@ -138,16 +138,21 @@ func TestOlexServicePointMerge(t *testing.T) {
 	exec(`SELECT set_config('olex.org_merge', 'off', true)`)
 	exec(`SET CONSTRAINTS ALL IMMEDIATE`)
 
+	// Services and warranties are counted on the fixture rows only (legacy
+	// service numbers "SYN-S-..."): the center is the shared brand center,
+	// other packages commit services into it while this test runs.
+	const fixtureServices = `SELECT id FROM services WHERE service_no LIKE 'SYN-%'`
 	type counts struct{ Services, Warranties, Customers, Units, Members, Orders int64 }
 	of := func(org int64) counts {
 		t.Helper()
 		return counts{
-			Services:   scalar(`SELECT count(*) FROM services WHERE organization_id = $1`, org),
-			Warranties: scalar(`SELECT count(*) FROM warranties WHERE organization_id = $1`, org),
-			Customers:  scalar(`SELECT count(*) FROM customer_organizations WHERE organization_id = $1`, org),
-			Units:      scalar(`SELECT count(*) FROM unit_current_state WHERE holder_org_id = $1`, org),
-			Members:    scalar(`SELECT count(*) FROM organization_members WHERE organization_id = $1`, org),
-			Orders:     scalar(`SELECT count(*) FROM orders WHERE buyer_org_id = $1`, org),
+			Services: scalar(`SELECT count(*) FROM services WHERE organization_id = $1 AND id IN (`+fixtureServices+`)`, org),
+			Warranties: scalar(`SELECT count(*) FROM warranties WHERE organization_id = $1 AND service_id IN (`+fixtureServices+`)`,
+				org),
+			Customers: scalar(`SELECT count(*) FROM customer_organizations WHERE organization_id = $1`, org),
+			Units:     scalar(`SELECT count(*) FROM unit_current_state WHERE holder_org_id = $1`, org),
+			Members:   scalar(`SELECT count(*) FROM organization_members WHERE organization_id = $1`, org),
+			Orders:    scalar(`SELECT count(*) FROM orders WHERE buyer_org_id = $1`, org),
 		}
 	}
 	dealerBefore, centerBefore := of(dealer1), of(centerID)
@@ -212,8 +217,8 @@ func TestOlexServicePointMerge(t *testing.T) {
 	}
 
 	// 3. A rerun resolves dealer 1 to the center and writes nothing new.
-	servicesTotal := scalar(`SELECT count(*) FROM services`)
-	warrantiesTotal := scalar(`SELECT count(*) FROM warranties`)
+	servicesTotal := scalar(`SELECT count(*) FROM services WHERE id IN (` + fixtureServices + `)`)
+	warrantiesTotal := scalar(`SELECT count(*) FROM warranties WHERE service_id IN (` + fixtureServices + `)`)
 	rep = e.run("olexfx-sp", Options{})
 	if n := stepCounts(t, rep, "unit_trace")["service_consumption_created"]; n != 0 {
 		t.Errorf("rerun created %d service consumptions", n)
@@ -222,10 +227,10 @@ func TestOlexServicePointMerge(t *testing.T) {
 	if oc["distributor_merged"] != 0 || oc["service_point_merged"] != 0 {
 		t.Errorf("rerun merged again: %v", oc)
 	}
-	if n := scalar(`SELECT count(*) FROM services`); n != servicesTotal {
+	if n := scalar(`SELECT count(*) FROM services WHERE id IN (` + fixtureServices + `)`); n != servicesTotal {
 		t.Errorf("rerun services %d -> %d", servicesTotal, n)
 	}
-	if n := scalar(`SELECT count(*) FROM warranties`); n != warrantiesTotal {
+	if n := scalar(`SELECT count(*) FROM warranties WHERE service_id IN (` + fixtureServices + `)`); n != warrantiesTotal {
 		t.Errorf("rerun warranties %d -> %d", warrantiesTotal, n)
 	}
 	if got := of(dealer1); got.Services != 0 || got.Members != 0 {
