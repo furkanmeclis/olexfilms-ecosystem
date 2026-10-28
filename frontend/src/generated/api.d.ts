@@ -25613,6 +25613,53 @@ export interface components {
             debit: components["schemas"]["AccountingAmount"];
             credit: components["schemas"]["AccountingAmount"];
             balance: components["schemas"]["AccountingAmount"];
+            /** @description TEC-1035: the order of a row booked from an order (source_type order): its lines and the unit barcodes assigned to each line; null for other rows. */
+            order: components["schemas"]["CariStatementOrder"] | null;
+        };
+        CariStatementOrder: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example ORD-00000042 */
+            order_no: string;
+            /** @example received */
+            status: string;
+            currency: string;
+            items: components["schemas"]["CariStatementOrderItem"][];
+        };
+        CariStatementOrderItem: {
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            /** @example piece */
+            unit_type: string;
+            /**
+             * Format: int32
+             * @description Pieces (null for a meter line)
+             */
+            quantity: number | null;
+            /**
+             * @description Meters (null for a piece line)
+             * @example 12.50
+             */
+            meters: string | null;
+            /**
+             * @description Frozen unit price (4 decimals) in the order currency
+             * @example 50.0000
+             */
+            unit_price: string;
+            line_total: components["schemas"]["AccountingAmount"];
+            /** @description Units (barcodes) assigned to the line, i.e. what went to the buyer */
+            units: components["schemas"]["CariStatementOrderUnit"][];
+        };
+        CariStatementOrderUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** Format: int32 */
+            quantity: number | null;
+            /** @example 12.50 */
+            meters: string | null;
         };
         CariStatement: {
             organization: components["schemas"]["AccountingRef"];

@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "فاتورة أساسية (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "فاتورة تجارية (TICARIFATURA)",
   "einvoice.source_type.order": "طلب",
-  "einvoice.source_type.service_subscription": "فترة كتالوج الخدمات"
+  "einvoice.source_type.service_subscription": "فترة كتالوج الخدمات",
+  "order_detail.open": "البنود والباركودات",
+  "order_detail.title": "تفاصيل الطلب",
+  "order_detail.done": "إغلاق",
+  "order_detail.empty": "لا توجد تفاصيل طلب لهذا القيد.",
+  "order_detail.pieces": "{{n}} قطعة",
+  "order_detail.meters": "{{n}} م",
+  "order_detail.barcodes": "الباركودات",
+  "order_detail.no_barcodes": "لا توجد باركودات معيّنة"
 }

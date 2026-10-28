@@ -592,3 +592,117 @@ func (q *Queries) ListStaffCostTotals(ctx context.Context, arg ListStaffCostTota
 	}
 	return items, nil
 }
+
+const listStatementOrderItemUnits = `-- name: ListStatementOrderItemUnits :many
+SELECT oiu.order_item_id, u.uuid AS unit_uuid, u.barcode, oiu.quantity, oiu.meters
+FROM order_item_units oiu
+JOIN units u ON u.id = oiu.unit_id
+WHERE oiu.order_item_id = ANY($1::bigint[])
+ORDER BY oiu.order_item_id, u.barcode, oiu.id
+`
+
+type ListStatementOrderItemUnitsRow struct {
+	OrderItemID int64          `json:"order_item_id"`
+	UnitUuid    uuid.UUID      `json:"unit_uuid"`
+	Barcode     string         `json:"barcode"`
+	Quantity    pgtype.Int4    `json:"quantity"`
+	Meters      pgtype.Numeric `json:"meters"`
+}
+
+// ListStatementOrderItemUnits returns the units assigned to order lines
+// (the barcodes that went out with the order), by line and barcode.
+func (q *Queries) ListStatementOrderItemUnits(ctx context.Context, itemIds []int64) ([]ListStatementOrderItemUnitsRow, error) {
+	rows, err := q.db.Query(ctx, listStatementOrderItemUnits, itemIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStatementOrderItemUnitsRow{}
+	for rows.Next() {
+		var i ListStatementOrderItemUnitsRow
+		if err := rows.Scan(
+			&i.OrderItemID,
+			&i.UnitUuid,
+			&i.Barcode,
+			&i.Quantity,
+			&i.Meters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStatementOrderItems = `-- name: ListStatementOrderItems :many
+SELECT o.uuid AS order_uuid, o.order_no, o.status AS order_status, o.currency,
+       oi.id AS item_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+JOIN products p ON p.id = oi.product_id
+WHERE o.uuid = ANY($1::uuid[])
+  AND (o.seller_org_id = $2 OR o.buyer_org_id = $2)
+ORDER BY o.id, oi.id
+`
+
+type ListStatementOrderItemsParams struct {
+	OrderUuids     []uuid.UUID `json:"order_uuids"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+type ListStatementOrderItemsRow struct {
+	OrderUuid   uuid.UUID      `json:"order_uuid"`
+	OrderNo     string         `json:"order_no"`
+	OrderStatus string         `json:"order_status"`
+	Currency    string         `json:"currency"`
+	ItemID      int64          `json:"item_id"`
+	ProductUuid uuid.UUID      `json:"product_uuid"`
+	ProductSku  string         `json:"product_sku"`
+	ProductName string         `json:"product_name"`
+	UnitType    string         `json:"unit_type"`
+	Quantity    pgtype.Int4    `json:"quantity"`
+	Meters      pgtype.Numeric `json:"meters"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	LineTotal   pgtype.Numeric `json:"line_total"`
+}
+
+// TEC-1035: order detail of statement rows. ListStatementOrderItems returns
+// the lines of the orders a statement shows (source "order"), restricted to
+// orders the book is a party of (seller or buyer), in order/line order.
+func (q *Queries) ListStatementOrderItems(ctx context.Context, arg ListStatementOrderItemsParams) ([]ListStatementOrderItemsRow, error) {
+	rows, err := q.db.Query(ctx, listStatementOrderItems, arg.OrderUuids, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStatementOrderItemsRow{}
+	for rows.Next() {
+		var i ListStatementOrderItemsRow
+		if err := rows.Scan(
+			&i.OrderUuid,
+			&i.OrderNo,
+			&i.OrderStatus,
+			&i.Currency,
+			&i.ItemID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.UnitType,
+			&i.Quantity,
+			&i.Meters,
+			&i.UnitPrice,
+			&i.LineTotal,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

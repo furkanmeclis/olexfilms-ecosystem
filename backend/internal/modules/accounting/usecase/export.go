@@ -165,6 +165,7 @@ func StatementDataset(st Statement, loc i18n.Locale) ioengine.Dataset {
 			"date": l.Date.Format(time.DateOnly), "description": l.Description, "source": l.SourceLabel,
 			"debit": l.Debit, "credit": l.Credit, "balance": l.Balance,
 		})
+		rows = append(rows, statementOrderRows(l.Order, loc)...)
 	}
 	closingDate := ""
 	if st.To != nil {
@@ -186,6 +187,46 @@ func StatementDataset(st Statement, loc i18n.Locale) ioengine.Dataset {
 		},
 		Doc: st,
 	}
+}
+
+// statementOrderRows are the detail rows under an order row (TEC-1035): the
+// order number, one row per line (SKU, product, quantity/meters x unit price
+// = line total) and the line's barcodes. Money columns stay empty, so the
+// totals and the running balance read as before.
+func statementOrderRows(o *StatementOrder, loc i18n.Locale) []map[string]any {
+	if o == nil {
+		return nil
+	}
+	t := func(key string) string { return i18n.Translate(loc, key) }
+	row := func(desc string) map[string]any {
+		return map[string]any{"date": "", "description": desc, "source": "", "debit": "", "credit": "", "balance": ""}
+	}
+	out := make([]map[string]any, 0, 1+2*len(o.Items))
+	out = append(out, row(t("accounting.statement.order_no")+": "+o.OrderNo))
+	for _, it := range o.Items {
+		out = append(out, row("  • "+StatementOrderItemText(it, o.Currency, loc)))
+		if len(it.Units) > 0 {
+			out = append(out, row("    "+t("accounting.statement.barcodes")+": "+strings.Join(it.Barcodes(), ", ")))
+		}
+	}
+	return out
+}
+
+// StatementOrderItemText is one order line as text: "SKU · Name — 2 pcs x
+// 10.0000 = 20.00 TRY".
+func StatementOrderItemText(it StatementOrderItem, currency string, loc i18n.Locale) string {
+	amount := ""
+	switch {
+	case it.Meters != nil:
+		amount = *it.Meters + " " + i18n.Translate(loc, "accounting.statement.unit_meter")
+	case it.Quantity != nil:
+		amount = fmt.Sprintf("%d %s", *it.Quantity, i18n.Translate(loc, "accounting.statement.unit_piece"))
+	}
+	name := it.ProductName
+	if it.ProductSKU != "" {
+		name = it.ProductSKU + " · " + name
+	}
+	return name + " — " + amount + " × " + it.UnitPrice + " = " + it.LineTotal + " " + currency
 }
 
 func periodLabel(from, to *string, loc i18n.Locale) string {

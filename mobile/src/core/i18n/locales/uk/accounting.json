@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Базовий рахунок (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Комерційний рахунок (TICARIFATURA)",
   "einvoice.source_type.order": "Замовлення",
-  "einvoice.source_type.service_subscription": "Період каталогу послуг"
+  "einvoice.source_type.service_subscription": "Період каталогу послуг",
+  "order_detail.open": "Позиції та штрихкоди",
+  "order_detail.title": "Деталі замовлення",
+  "order_detail.done": "Закрити",
+  "order_detail.empty": "Для цього запису немає деталей замовлення.",
+  "order_detail.pieces": "{{n}} шт.",
+  "order_detail.meters": "{{n}} м",
+  "order_detail.barcodes": "Штрихкоди",
+  "order_detail.no_barcodes": "Штрихкоди не призначено"
 }

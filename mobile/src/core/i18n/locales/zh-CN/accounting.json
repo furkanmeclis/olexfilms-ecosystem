@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "基本发票 (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "商业发票 (TICARIFATURA)",
   "einvoice.source_type.order": "订单",
-  "einvoice.source_type.service_subscription": "服务目录周期"
+  "einvoice.source_type.service_subscription": "服务目录周期",
+  "order_detail.open": "明细和条码",
+  "order_detail.title": "订单详情",
+  "order_detail.done": "关闭",
+  "order_detail.empty": "此记录没有订单详情。",
+  "order_detail.pieces": "{{n}} 件",
+  "order_detail.meters": "{{n}} 米",
+  "order_detail.barcodes": "条码",
+  "order_detail.no_barcodes": "未分配条码"
 }

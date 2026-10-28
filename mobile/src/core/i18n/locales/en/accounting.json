@@ -144,5 +144,13 @@
   "einvoice.lines": "Lines",
   "einvoice.line_meta": "{{quantity}} × {{price}} · VAT {{vat}}%",
   "einvoice.taxes": "VAT breakdown",
-  "einvoice.vat_rate": "VAT {{rate}}%"
+  "einvoice.vat_rate": "VAT {{rate}}%",
+  "order_detail.open": "Lines and barcodes",
+  "order_detail.title": "Order detail",
+  "order_detail.done": "Close",
+  "order_detail.empty": "No order detail for this row.",
+  "order_detail.pieces": "{{n}} pcs",
+  "order_detail.meters": "{{n}} m",
+  "order_detail.barcodes": "Barcodes",
+  "order_detail.no_barcodes": "No barcodes assigned"
 }

@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Fattura base (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Fattura commerciale (TICARIFATURA)",
   "einvoice.source_type.order": "Ordine",
-  "einvoice.source_type.service_subscription": "Periodo del catalogo servizi"
+  "einvoice.source_type.service_subscription": "Periodo del catalogo servizi",
+  "order_detail.open": "Righe e codici a barre",
+  "order_detail.title": "Dettaglio ordine",
+  "order_detail.done": "Chiudi",
+  "order_detail.empty": "Nessun dettaglio ordine per questo movimento.",
+  "order_detail.pieces": "{{n}} pz",
+  "order_detail.meters": "{{n}} metri",
+  "order_detail.barcodes": "Codici a barre",
+  "order_detail.no_barcodes": "Nessun codice a barre assegnato"
 }

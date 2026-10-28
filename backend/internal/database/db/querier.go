@@ -2661,6 +2661,13 @@ type Querier interface {
 	// Queued messages older than the cutoff whose send task may have been lost
 	// (enqueue failure, Redis flush); the sweep enqueues them again.
 	ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueuedMessagesParams) ([]ListStaleQueuedMessagesRow, error)
+	// ListStatementOrderItemUnits returns the units assigned to order lines
+	// (the barcodes that went out with the order), by line and barcode.
+	ListStatementOrderItemUnits(ctx context.Context, itemIds []int64) ([]ListStatementOrderItemUnitsRow, error)
+	// TEC-1035: order detail of statement rows. ListStatementOrderItems returns
+	// the lines of the orders a statement shows (source "order"), restricted to
+	// orders the book is a party of (seller or buyer), in order/line order.
+	ListStatementOrderItems(ctx context.Context, arg ListStatementOrderItemsParams) ([]ListStatementOrderItemsRow, error)
 	// TEC-1008: bulk barcode operations.
 	// Units issued by the organization that match the selection, with what the
 	// eligibility rules need. row_limit is the job limit + 1.

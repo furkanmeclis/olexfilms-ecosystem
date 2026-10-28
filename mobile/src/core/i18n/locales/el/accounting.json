@@ -126,5 +126,13 @@
   "einvoice.profile.TEMELFATURA": "Βασικό τιμολόγιο (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Εμπορικό τιμολόγιο (TICARIFATURA)",
   "einvoice.source_type.order": "Παραγγελία",
-  "einvoice.source_type.service_subscription": "Περίοδος καταλόγου υπηρεσιών"
+  "einvoice.source_type.service_subscription": "Περίοδος καταλόγου υπηρεσιών",
+  "order_detail.open": "Γραμμές και γραμμωτοί κώδικες",
+  "order_detail.title": "Λεπτομέρειες παραγγελίας",
+  "order_detail.done": "Κλείσιμο",
+  "order_detail.empty": "Δεν υπάρχουν λεπτομέρειες παραγγελίας για αυτή την εγγραφή.",
+  "order_detail.pieces": "{{n}} τεμ.",
+  "order_detail.meters": "{{n}} μ",
+  "order_detail.barcodes": "Γραμμωτοί κώδικες",
+  "order_detail.no_barcodes": "Δεν έχουν αντιστοιχιστεί γραμμωτοί κώδικες"
 }

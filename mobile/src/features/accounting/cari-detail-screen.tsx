@@ -13,6 +13,7 @@ import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { OrderDetailSheet } from './order-detail-sheet';
 import { accountingKey, useAccountingAccess, useCategoryLabels, useOpenDisputeEntries } from './hooks';
 import {
   balanceKind,
@@ -27,7 +28,8 @@ import {
 /**
  * One cari account: balance, entry count, last entry and its ledger rows
  * (newest first, paged). A child organization disputes a row its parent posted
- * (K24); collections, payments and the statement export stay on the web.
+ * (K24); an order row opens its lines and barcodes (TEC-1035). Collections,
+ * payments and the statement export stay on the web.
  */
 export function CariDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
@@ -39,6 +41,7 @@ export function CariDetailScreen() {
   const openDisputes = useOpenDisputeEntries(access.orgUuid, access.canDispute);
   const [disputing, setDisputing] = useState<FinanceEntry | null>(null);
   const [reason, setReason] = useState('');
+  const [orderEntry, setOrderEntry] = useState<string | null>(null);
 
   const cari = useQuery({
     queryKey: [...key, 'cari-detail', uuid],
@@ -140,6 +143,13 @@ export function CariDetailScreen() {
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
+              {e.source_type === 'order' ? (
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setOrderEntry(e.uuid)}>
+                  <Text variant="footnote" tone="primary" className="font-semibold">
+                    {t('order_detail.open')}
+                  </Text>
+                </Pressable>
+              ) : null}
               {e.reversal_of_uuid || e.voided || disputed || disputable ? (
                 <View className="mt-1 flex-row flex-wrap items-center gap-2">
                   {e.reversal_of_uuid ? <StatusPill label={t('entries.reversal')} tone="progress" /> : null}
@@ -178,6 +188,8 @@ export function CariDetailScreen() {
           />
         }
       />
+
+      {orderEntry ? <OrderDetailSheet cariUuid={uuid} entryUuid={orderEntry} queryKey={key} onClose={() => setOrderEntry(null)} /> : null}
 
       {disputing ? (
         <Sheet

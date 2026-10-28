@@ -44192,6 +44192,7 @@ components:
         - debit
         - credit
         - balance
+        - order
       properties:
         uuid: { type: string, format: uuid }
         date: { type: string, format: date-time }
@@ -44209,6 +44210,52 @@ components:
         debit: { $ref: "#/components/schemas/AccountingAmount" }
         credit: { $ref: "#/components/schemas/AccountingAmount" }
         balance: { $ref: "#/components/schemas/AccountingAmount" }
+        order:
+          description: >-
+            TEC-1035: the order of a row booked from an order (source_type
+            order): its lines and the unit barcodes assigned to each line;
+            null for other rows.
+          oneOf:
+            - $ref: "#/components/schemas/CariStatementOrder"
+            - type: "null"
+
+    CariStatementOrder:
+      type: object
+      required: [uuid, order_no, status, currency, items]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string, example: ORD-00000042 }
+        status: { type: string, example: received }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CariStatementOrderItem" }
+
+    CariStatementOrderItem:
+      type: object
+      required: [product_uuid, product_sku, product_name, unit_type, quantity, meters, unit_price, line_total, units]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        unit_type: { type: string, example: piece }
+        quantity: { type: [integer, "null"], format: int32, description: Pieces (null for a meter line) }
+        meters: { type: [string, "null"], example: "12.50", description: Meters (null for a piece line) }
+        unit_price: { type: string, example: "50.0000", description: Frozen unit price (4 decimals) in the order currency }
+        line_total: { $ref: "#/components/schemas/AccountingAmount" }
+        units:
+          type: array
+          description: Units (barcodes) assigned to the line, i.e. what went to the buyer
+          items: { $ref: "#/components/schemas/CariStatementOrderUnit" }
+
+    CariStatementOrderUnit:
+      type: object
+      required: [uuid, barcode, quantity, meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        quantity: { type: [integer, "null"], format: int32 }
+        meters: { type: [string, "null"], example: "12.50" }
 
     CariStatement:
       type: object

@@ -144,5 +144,13 @@
   "einvoice.lines": "Kalemler",
   "einvoice.line_meta": "{{quantity}} × {{price}} · KDV %{{vat}}",
   "einvoice.taxes": "KDV dökümü",
-  "einvoice.vat_rate": "KDV %{{rate}}"
+  "einvoice.vat_rate": "KDV %{{rate}}",
+  "order_detail.open": "Kalemler ve barkodlar",
+  "order_detail.title": "Sipariş detayı",
+  "order_detail.done": "Kapat",
+  "order_detail.empty": "Bu kayıt için sipariş detayı yok.",
+  "order_detail.pieces": "{{n}} adet",
+  "order_detail.meters": "{{n}} m",
+  "order_detail.barcodes": "Barkodlar",
+  "order_detail.no_barcodes": "Atanmış barkod yok"
 }

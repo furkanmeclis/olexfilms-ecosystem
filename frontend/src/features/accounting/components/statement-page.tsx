@@ -30,6 +30,7 @@ import { routes } from "@/config/routes";
 import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
 import { BalanceLabel, Money } from "@/features/accounting/components/shared";
 import { StatementExport } from "@/features/accounting/components/statement-export";
+import { StatementOrderDetail } from "@/features/accounting/components/statement-order-detail";
 import {
   accountingKeys,
   useAccountingAccess,
@@ -105,6 +106,9 @@ export function StatementView({
                 <div className="text-muted-foreground text-xs">
                   {row.original.category_label}
                 </div>
+              ) : null}
+              {row.original.order ? (
+                <StatementOrderDetail order={row.original.order} />
               ) : null}
             </div>
           ),

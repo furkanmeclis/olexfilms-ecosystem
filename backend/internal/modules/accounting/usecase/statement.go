@@ -45,6 +45,9 @@ type StatementLine struct {
 	Debit        string `json:"debit"`
 	Credit       string `json:"credit"`
 	Balance      string `json:"balance"`
+	// Order: the order of a row booked from an order (source "order",
+	// TEC-1035): lines and assigned barcodes; nil otherwise.
+	Order *StatementOrder `json:"order"`
 }
 
 // Statement is the cari statement of one period. From/To are calendar days
@@ -166,6 +169,9 @@ func (s *Service) statement(ctx context.Context, book db.Organization, id uuid.U
 	st.Lines = make([]StatementLine, 0, len(rows))
 	for i, r := range rows {
 		st.Lines = append(st.Lines, statementLineOf(r, sums.lines[i], loc))
+	}
+	if err := s.attachStatementOrders(ctx, book.ID, st.Lines); err != nil {
+		return Statement{}, err
 	}
 	return st, nil
 }

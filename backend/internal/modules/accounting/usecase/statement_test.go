@@ -167,3 +167,43 @@ func TestAccountingPDFIssuedAtTimezone(t *testing.T) {
 		})
 	}
 }
+
+// TEC-1035: an order row is followed by its order number, one row per line
+// and the line's barcodes, in the export rows and in the PDF; money columns
+// of the detail rows stay empty.
+func TestStatementDatasetOrderDetailRows(t *testing.T) {
+	st := sampleStatement()
+	qty := int32(2)
+	meters := "12.50"
+	src := "order"
+	st.Lines[0].SourceType = &src
+	st.Lines[0].Order = &StatementOrder{
+		OrderNo: "ORD-00000042", Currency: "TRY",
+		Items: []StatementOrderItem{
+			{ProductSKU: "PPF-1", ProductName: "Film", Quantity: &qty, UnitPrice: "50.0000", LineTotal: "100.00",
+				Units: []StatementOrderUnit{{Barcode: "B-1"}, {Barcode: "B-2"}}},
+			{ProductSKU: "ROLL", ProductName: "Rulo", Meters: &meters, UnitPrice: "8.0000", LineTotal: "100.00",
+				Units: []StatementOrderUnit{}},
+		},
+	}
+	ds := StatementDataset(st, i18n.LocaleTR)
+	if len(ds.Rows) != len(st.Lines)+2+4 {
+		t.Fatalf("rows = %d", len(ds.Rows))
+	}
+	want := []string{
+		"Sipariş no: ORD-00000042",
+		"  • PPF-1 · Film — 2 adet × 50.0000 = 100.00 TRY",
+		"    Barkodlar: B-1, B-2",
+		"  • ROLL · Rulo — 12.50 m × 8.0000 = 100.00 TRY",
+	}
+	for i, w := range want {
+		r := ds.Rows[2+i]
+		if r["description"] != w || r["debit"] != "" || r["balance"] != "" {
+			t.Fatalf("detail row %d = %+v, want %q", i, r, w)
+		}
+	}
+	html, err := NewStatementAdapter(nil).DocumentHTML(ds, "tr", nil, "Ekstre")
+	if err != nil || !strings.Contains(html, "Barkodlar: B-1, B-2") || !strings.Contains(html, "ORD-00000042") {
+		t.Fatalf("pdf lacks order detail: %v", err)
+	}
+}
