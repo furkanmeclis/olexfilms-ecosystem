@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Teléfono del distribuidor (opcional)",
   "accounts.errors.name_required": "El nombre es obligatorio.",
   "accounts.errors.phone_required": "El teléfono es obligatorio.",
-  "accounts.errors.dealer_name_required": "El nombre del distribuidor es obligatorio."
+  "accounts.errors.dealer_name_required": "El nombre del distribuidor es obligatorio.",
+  "actions.edit_member_roles": "Editar roles",
+  "actions.remove_member": "Quitar de la organización",
+  "member_edit_dialog.title": "Editar roles",
+  "member_edit_dialog.description": "Edite el tipo de membresía y los roles de organización de {{name}}. Los roles actuales aparecen marcados.",
+  "member_remove_dialog.title": "Quitar personal de la organización",
+  "member_remove_dialog.description": "{{name}} será quitado de {{organization}}. También se eliminan sus roles de organización, membresías de almacén y objetivos de personal; la cuenta de usuario se conserva.",
+  "toast.member_updated": "Roles actualizados",
+  "toast.member_update_failed": "No se pudieron actualizar los roles",
+  "toast.member_removed": "Personal quitado de la organización",
+  "toast.member_remove_failed": "No se pudo quitar al personal",
+  "toast.member_last_owner": "El último propietario de la organización no puede ser degradado ni quitado.",
+  "toast.member_self": "No puede quitar roles de su propia membresía ni quitarse a sí mismo."
 }

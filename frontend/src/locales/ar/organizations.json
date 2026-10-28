@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "هاتف الوكيل (اختياري)",
   "accounts.errors.name_required": "الاسم مطلوب.",
   "accounts.errors.phone_required": "الهاتف مطلوب.",
-  "accounts.errors.dealer_name_required": "اسم الوكيل مطلوب."
+  "accounts.errors.dealer_name_required": "اسم الوكيل مطلوب.",
+  "actions.edit_member_roles": "تعديل الأدوار",
+  "actions.remove_member": "إزالة من المؤسسة",
+  "member_edit_dialog.title": "تعديل الأدوار",
+  "member_edit_dialog.description": "عدّل نوع العضوية وأدوار المؤسسة لـ {{name}}. الأدوار الحالية محددة مسبقًا.",
+  "member_remove_dialog.title": "إزالة الموظف من المؤسسة",
+  "member_remove_dialog.description": "ستتم إزالة {{name}} من {{organization}}. تُحذف أيضًا أدوار المؤسسة وعضويات المستودعات وأهداف الموظف؛ ويبقى حساب المستخدم.",
+  "toast.member_updated": "تم تحديث الأدوار",
+  "toast.member_update_failed": "تعذّر تحديث الأدوار",
+  "toast.member_removed": "تمت إزالة الموظف من المؤسسة",
+  "toast.member_remove_failed": "تعذّرت إزالة الموظف",
+  "toast.member_last_owner": "لا يمكن تخفيض أو إزالة آخر مالك للمؤسسة.",
+  "toast.member_self": "لا يمكنك إزالة أدوار من عضويتك أو إزالة نفسك."
 }

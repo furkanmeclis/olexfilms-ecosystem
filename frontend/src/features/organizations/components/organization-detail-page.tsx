@@ -3,9 +3,10 @@
 import { Building2, MapPin, Pencil, Phone } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Loading } from "@/components/common/loading";
 import { PermissionGuard } from "@/components/common/permission-guard";
 import { StatusChip } from "@/components/common/status-chip";
@@ -26,9 +27,16 @@ import { OrganizationAddMemberDialog } from "@/features/organizations/components
 import {
   OrganizationChildrenTable,
   OrganizationMembersTable,
+  type OrganizationMemberActionHandlers,
 } from "@/features/organizations/components/organization-detail-tables";
+import { OrganizationEditMemberDialog } from "@/features/organizations/components/organization-edit-member-dialog";
+import { useRemoveOrganizationMember } from "@/features/organizations/hooks/use-organization-mutations";
 import { useOrganization } from "@/features/organizations/hooks/use-organizations-query";
-import type { OrganizationStatus } from "@/features/organizations/services/organizations.service";
+import type {
+  OrganizationMember,
+  OrganizationStatus,
+} from "@/features/organizations/services/organizations.service";
+import { userFullName } from "@/features/users/lib/user-display";
 import { useLocale } from "@/providers/locale-provider";
 
 type OrganizationDetailPageProps = {
@@ -56,6 +64,17 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
   const router = useRouter();
   const query = useOrganization(uuid);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+  // TEC-1036: row actions of the members table.
+  const [editingMember, setEditingMember] = useState<OrganizationMember | null>(
+    null,
+  );
+  const [removingMember, setRemovingMember] =
+    useState<OrganizationMember | null>(null);
+  const removeMember = useRemoveOrganizationMember();
+  const memberHandlers = useMemo<OrganizationMemberActionHandlers>(
+    () => ({ onEditRoles: setEditingMember, onRemove: setRemovingMember }),
+    [],
+  );
 
   const organization = query.data?.organization;
   const members = query.data?.members ?? [];
@@ -258,7 +277,10 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
           </EntitySectionCard>
 
           <EntitySectionCard title={t("organizations.detail.members")}>
-            <OrganizationMembersTable members={members} />
+            <OrganizationMembersTable
+              members={members}
+              handlers={memberHandlers}
+            />
           </EntitySectionCard>
 
           {organization.type !== "dealer" ? (
@@ -279,6 +301,35 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
         organizationType={organization?.type}
         open={memberDialogOpen}
         onOpenChange={setMemberDialogOpen}
+      />
+      <OrganizationEditMemberDialog
+        organizationUuid={uuid}
+        organizationType={organization?.type}
+        member={editingMember}
+        onClose={() => setEditingMember(null)}
+      />
+      <ConfirmDialog
+        open={removingMember !== null}
+        title={t("organizations.member_remove_dialog.title")}
+        description={
+          removingMember
+            ? t("organizations.member_remove_dialog.description", {
+                name: userFullName(removingMember),
+                organization: organization?.name ?? "",
+              })
+            : undefined
+        }
+        confirmLabel={t("organizations.actions.remove_member")}
+        variant="destructive"
+        isPending={removeMember.isPending}
+        onCancel={() => setRemovingMember(null)}
+        onConfirm={() => {
+          if (!removingMember) return;
+          removeMember.mutate(
+            { uuid, userUuid: removingMember.uuid },
+            { onSettled: () => setRemovingMember(null) },
+          );
+        }}
       />
     </EntityPage>
   );

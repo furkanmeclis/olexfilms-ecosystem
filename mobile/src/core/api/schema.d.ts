@@ -2520,6 +2520,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/organizations/{uuid}/members/{user_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                /** @description The member's user uuid. */
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit organization member roles
+         * @description TEC-1036: replaces the membership kind (`owner` / `staff`) and the
+         *     organization roles of a member. `role_slugs` must be system roles of
+         *     the organization type; empty means the default role of the kind.
+         *     Requires `platform.organizations.write`. The last owner cannot be
+         *     demoted (409 LAST_OWNER); the caller cannot take roles away from its
+         *     own membership (409 SELF_MEMBERSHIP). Audited as
+         *     `organizations.member_updated`; emits `tenant.member_updated`.
+         */
+        put: operations["putPlatformOrganizationMember"];
+        post?: never;
+        /**
+         * Remove organization member
+         * @description TEC-1036: removes the user from the organization; its organization
+         *     roles, warehouse memberships and staff targets go with it. Requires
+         *     `platform.organizations.write`. The last owner (409 LAST_OWNER) and
+         *     the caller's own membership (409 SELF_MEMBERSHIP) cannot be removed.
+         *     Audited as `organizations.member_removed`; emits `tenant.member_removed`.
+         */
+        delete: operations["deletePlatformOrganizationMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/users": {
         parameters: {
             query?: never;
@@ -2559,6 +2597,30 @@ export interface paths {
         head?: never;
         /** Update platform user */
         patch: operations["patchPlatformUser"];
+        trace?: never;
+    };
+    "/v1/platform/users/{uuid}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * User 360 overview
+         * @description TEC-1036: every organization membership of the user across brands
+         *     (membership kind, organization roles, warehouse memberships), global
+         *     roles, the customer side (profile, vehicle count, organizations it is
+         *     a customer of), last login and active sessions. Requires
+         *     `platform.users.read`.
+         */
+        get: operations["getPlatformUserOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/platform/users/{uuid}/password": {
@@ -19170,6 +19232,102 @@ export interface components {
         RoleDetail: components["schemas"]["RoleSummary"] & {
             permission_slugs: string[];
             grants: components["schemas"]["RoleGrant"][];
+        };
+        UpdateOrganizationMemberRequest: {
+            /** @enum {string} */
+            role: "owner" | "staff";
+            /** @description Organization roles of the org type (e.g. center_accounting, dealer_accounting). Empty means the default role of `role`. */
+            role_slugs?: string[];
+        };
+        OrganizationMemberRoles: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            role: "owner" | "staff";
+            role_slugs: string[];
+        };
+        EnvelopeOrganizationMemberRoles: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrganizationMemberRoles"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        UserOverview: {
+            /** Format: uuid */
+            user_uuid: string;
+            /** Format: date-time */
+            last_login_at: string | null;
+            global_roles: string[];
+            memberships: components["schemas"]["UserOverviewMembership"][];
+            customer: components["schemas"]["UserOverviewCustomer"];
+            customer_organizations: components["schemas"]["UserOverviewCustomerOrganization"][];
+            sessions: components["schemas"]["UserOverviewSession"][];
+        };
+        UserOverviewMembership: {
+            organization: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                slug: string;
+                /** @enum {string} */
+                type: "center" | "distributor" | "dealer" | "fleet";
+                status: string;
+                brand_slug: string;
+                parent_name: string | null;
+            };
+            /** @enum {string} */
+            role: "owner" | "staff";
+            role_slugs: string[];
+            warehouses: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                code: string;
+                is_default: boolean;
+            }[];
+            /** Format: date-time */
+            created_at: string | null;
+        };
+        UserOverviewCustomer: {
+            has_profile: boolean;
+            /** @enum {string|null} */
+            profile_type: "individual" | "corporate" | null;
+            company_name: string | null;
+            /** Format: int64 */
+            vehicle_count: number;
+        };
+        UserOverviewCustomerOrganization: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+            brand_slug: string;
+            /** Format: date-time */
+            first_service_at: string | null;
+            /** Format: date-time */
+            created_at: string | null;
+        };
+        UserOverviewSession: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            realm: "panel" | "portal" | "mobile";
+            client: string;
+            device_name: string | null;
+            user_agent: string | null;
+            ip_address: string | null;
+            organization_name: string | null;
+            impersonated: boolean;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            expires_at: string | null;
+        };
+        EnvelopeUserOverview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["UserOverview"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         PlatformUserDetail: components["schemas"]["PublicUser"] & {
             roles: components["schemas"]["RoleSummary"][];
@@ -36180,6 +36338,68 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    putPlatformOrganizationMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                /** @description The member's user uuid. */
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrganizationMemberRoles"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deletePlatformOrganizationMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                /** @description The member's user uuid. */
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Member removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     getPlatformUsers: {
         parameters: {
             query?: {
@@ -36304,6 +36524,33 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPlatformUserOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeUserOverview"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

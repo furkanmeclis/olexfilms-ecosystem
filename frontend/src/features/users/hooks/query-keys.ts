@@ -5,6 +5,7 @@ export const usersKeys = {
     [...usersKeys.lists(), params] as const,
   details: () => [...usersKeys.all, "detail"] as const,
   detail: (uuid: string) => [...usersKeys.details(), uuid] as const,
+  overview: (uuid: string) => [...usersKeys.detail(uuid), "overview"] as const,
   meta: () => [...usersKeys.all, "meta"] as const,
   navStats: () => [...usersKeys.all, "nav-stats"] as const,
 };

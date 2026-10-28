@@ -42,6 +42,9 @@ const (
 	CodeTerritoryConflict         = "TERRITORY_CONFLICT"
 	CodeInvalidPlate              = "INVALID_PLATE"
 	CodeRateNotFound              = "RATE_NOT_FOUND"
+	// TEC-1036 membership guards.
+	CodeLastOwner      = "LAST_OWNER"
+	CodeSelfMembership = "SELF_MEMBERSHIP"
 
 	// Session realms (TEC-90): panel vs customer portal.
 	CodeNoPortalAccess = "NO_PORTAL_ACCESS"

@@ -1,13 +1,16 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { ShieldCheck, UserMinus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
-import { EntityTable } from "@/components/entity";
+import { EntityRowActions, EntityTable } from "@/components/entity";
 import { createColumn, type DataTableManual } from "@/components/tables";
+import { Badge } from "@/components/ui/badge";
+import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
   ORGANIZATION_MEMBER_ROLES,
@@ -37,7 +40,7 @@ export const CLIENT_SIDE: DataTableManual = {
 };
 
 export const ORGANIZATION_MEMBERS_PERSIST_KEY =
-  "platform-organization-members-v1";
+  "platform-organization-members-v2";
 export const ORGANIZATION_CHILDREN_PERSIST_KEY =
   "platform-organization-children-v1";
 
@@ -55,14 +58,37 @@ function organizationStatusTone(status: string) {
   return "default" as const;
 }
 
+/** Display name of a system role slug (falls back to the slug). */
+function roleLabel(slug: string, t: (key: string) => string) {
+  const key = `roles.names.${slug}`;
+  const label = t(key);
+  return label === key ? slug : label;
+}
+
+export type OrganizationMemberActionHandlers = {
+  /** TEC-1036: fix the membership kind / organization roles. */
+  onEditRoles: (member: OrganizationMember) => void;
+  /** TEC-1036: remove the member from the organization (confirmed). */
+  onRemove: (member: OrganizationMember) => void;
+};
+
 /** Staff of an organization (embedded in `GET /organizations/{uuid}`). */
 export function OrganizationMembersTable({
   members,
+  handlers,
 }: {
   members: OrganizationMember[];
+  handlers?: OrganizationMemberActionHandlers;
 }) {
   const { t, format } = useLocale();
   const router = useRouter();
+  const roleSlugOptions = useMemo(
+    () =>
+      [...new Set(members.flatMap((member) => member.role_slugs ?? []))]
+        .sort()
+        .map((value) => ({ value, label: roleLabel(value, t) })),
+    [members, t],
+  );
 
   const columns = useMemo<ColumnDef<OrganizationMember, unknown>[]>(
     () => [
@@ -97,6 +123,33 @@ export function OrganizationMembersTable({
         cell: ({ row }) => t(`organizations.roles.${row.original.role}`),
       }),
       createColumn<OrganizationMember>({
+        id: "role_slugs",
+        accessorFn: (row) => row.role_slugs ?? [],
+        labelKey: "organizations.fields.member_roles",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: roleSlugOptions,
+        filterFn: (row, columnId, filterValue: unknown) => {
+          const selected = filterValue as string[] | undefined;
+          if (!selected?.length) return true;
+          const slugs = row.getValue<string[]>(columnId);
+          return selected.some((slug) => slugs.includes(slug));
+        },
+        cell: ({ row }) => {
+          const slugs = row.original.role_slugs ?? [];
+          if (!slugs.length) return "—";
+          return (
+            <div className="flex flex-wrap gap-1">
+              {slugs.map((slug) => (
+                <Badge key={slug} variant="secondary" title={slug}>
+                  {roleLabel(slug, t)}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+      }),
+      createColumn<OrganizationMember>({
         accessorKey: "status",
         labelKey: "organizations.columns.status",
         filterVariant: "faceted",
@@ -120,8 +173,41 @@ export function OrganizationMembersTable({
             ? format.dateTime(row.original.created_at)
             : "—",
       }),
+      ...(handlers
+        ? [
+            createColumn<OrganizationMember>({
+              id: "actions",
+              labelKey: "organizations.columns.actions",
+              enableSorting: false,
+              enableHiding: false,
+              enableResizing: false,
+              enableColumnFilter: false,
+              cell: ({ row }) => (
+                <EntityRowActions
+                  actions={[
+                    {
+                      id: "edit_roles",
+                      label: t("organizations.actions.edit_member_roles"),
+                      icon: ShieldCheck,
+                      permission: permissions.organizations.write,
+                      onSelect: () => handlers.onEditRoles(row.original),
+                    },
+                    {
+                      id: "remove",
+                      label: t("organizations.actions.remove_member"),
+                      icon: UserMinus,
+                      variant: "destructive",
+                      permission: permissions.organizations.write,
+                      onSelect: () => handlers.onRemove(row.original),
+                    },
+                  ]}
+                />
+              ),
+            }),
+          ]
+        : []),
     ],
-    [format, t],
+    [format, handlers, roleSlugOptions, t],
   );
 
   return (

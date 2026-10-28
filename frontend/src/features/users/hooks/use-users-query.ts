@@ -25,6 +25,15 @@ export function useUser(uuid: string | null, enabled = true) {
   });
 }
 
+/** TEC-1036: user 360 (memberships, roles, customer side, sessions). */
+export function useUserOverview(uuid: string | null, enabled = true) {
+  return useQuery({
+    queryKey: usersKeys.overview(uuid ?? ""),
+    queryFn: () => usersService.overview(uuid!),
+    enabled: Boolean(uuid) && enabled,
+  });
+}
+
 export function useUsersMeta(enabled = true) {
   return useQuery({
     queryKey: usersKeys.meta(),

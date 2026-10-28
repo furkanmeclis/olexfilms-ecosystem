@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Téléphone du revendeur (facultatif)",
   "accounts.errors.name_required": "Le prénom est obligatoire.",
   "accounts.errors.phone_required": "Le téléphone est obligatoire.",
-  "accounts.errors.dealer_name_required": "Le nom du revendeur est obligatoire."
+  "accounts.errors.dealer_name_required": "Le nom du revendeur est obligatoire.",
+  "actions.edit_member_roles": "Modifier les rôles",
+  "actions.remove_member": "Retirer de l'organisation",
+  "member_edit_dialog.title": "Modifier les rôles",
+  "member_edit_dialog.description": "Modifiez le type d'adhésion et les rôles d'organisation de {{name}}. Les rôles actuels sont présélectionnés.",
+  "member_remove_dialog.title": "Retirer le membre de l'organisation",
+  "member_remove_dialog.description": "{{name}} sera retiré de {{organization}}. Ses rôles d'organisation, affectations d'entrepôt et objectifs sont également supprimés ; le compte utilisateur est conservé.",
+  "toast.member_updated": "Rôles mis à jour",
+  "toast.member_update_failed": "Impossible de mettre à jour les rôles",
+  "toast.member_removed": "Membre retiré de l'organisation",
+  "toast.member_remove_failed": "Impossible de retirer le membre",
+  "toast.member_last_owner": "Le dernier propriétaire de l'organisation ne peut pas être rétrogradé ni retiré.",
+  "toast.member_self": "Vous ne pouvez pas retirer de rôles à votre propre adhésion ni vous retirer vous-même."
 }

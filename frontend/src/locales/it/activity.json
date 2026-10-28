@@ -213,5 +213,8 @@
   "actions.einvoice.buyer_profile_updated": "Profilo di fatturazione dell'acquirente aggiornato",
   "resources.einvoices": "Fatture elettroniche",
   "actions.services.created_on_behalf": "Servizio aperto per un rivenditore",
-  "actions.catalog.product.roll_updated": "Impostazioni rotolo aggiornate"
+  "actions.catalog.product.roll_updated": "Impostazioni rotolo aggiornate",
+  "actions.organizations.member_updated": "Ruoli del membro dell'organizzazione aggiornati",
+  "actions.organizations.member_removed": "Membro rimosso dall'organizzazione",
+  "resources.organizations": "Organizzazioni"
 }

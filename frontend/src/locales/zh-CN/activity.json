@@ -212,5 +212,8 @@
   "actions.einvoice.xslt_reset": "电子发票 XSLT 样式表已恢复默认",
   "actions.einvoice.buyer_profile_updated": "买方开票资料已更新",
   "resources.einvoices": "电子发票",
-  "actions.services.created_on_behalf": "代经销商创建服务"
+  "actions.services.created_on_behalf": "代经销商创建服务",
+  "actions.organizations.member_updated": "组织成员角色已更新",
+  "actions.organizations.member_removed": "成员已从组织中移除",
+  "resources.organizations": "组织"
 }

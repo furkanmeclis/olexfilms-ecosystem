@@ -213,5 +213,8 @@
   "actions.einvoice.buyer_profile_updated": "Профиль счетов покупателя обновлён",
   "resources.einvoices": "Электронные счета",
   "actions.services.created_on_behalf": "Услуга открыта от имени дилера",
-  "actions.catalog.product.roll_updated": "Настройки рулона обновлены"
+  "actions.catalog.product.roll_updated": "Настройки рулона обновлены",
+  "actions.organizations.member_updated": "Роли участника организации обновлены",
+  "actions.organizations.member_removed": "Участник удалён из организации",
+  "resources.organizations": "Организации"
 }

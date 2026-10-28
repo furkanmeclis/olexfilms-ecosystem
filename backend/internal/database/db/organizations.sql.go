@@ -94,6 +94,22 @@ func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) 
 	return i, err
 }
 
+const countOrganizationOwners = `-- name: CountOrganizationOwners :one
+SELECT COUNT(*)::bigint
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = $1 AND om.role = 'owner'
+`
+
+// Active owner memberships of an organization (TEC-1036: the last owner
+// cannot be demoted or removed).
+func (q *Queries) CountOrganizationOwners(ctx context.Context, organizationID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationOwners, organizationID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countOrganizations = `-- name: CountOrganizations :one
 SELECT COUNT(*)::bigint
 FROM organizations o
@@ -339,6 +355,15 @@ DELETE FROM organization_member_roles WHERE member_id = $1
 
 func (q *Queries) DeleteMemberRoles(ctx context.Context, memberID int64) error {
 	_, err := q.db.Exec(ctx, deleteMemberRoles, memberID)
+	return err
+}
+
+const deleteOrganizationMember = `-- name: DeleteOrganizationMember :exec
+DELETE FROM organization_members WHERE id = $1
+`
+
+func (q *Queries) DeleteOrganizationMember(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteOrganizationMember, id)
 	return err
 }
 
@@ -1088,7 +1113,13 @@ func (q *Queries) ListOrganizationMemberOptions(ctx context.Context, organizatio
 }
 
 const listOrganizationMembers = `-- name: ListOrganizationMembers :many
-SELECT u.uuid, u.email, u.name, u.surname, u.status, om.role, om.created_at
+SELECT u.uuid, u.email, u.name, u.surname, u.status, om.role, om.created_at,
+       ARRAY(
+           SELECT r.slug FROM organization_member_roles mr
+           JOIN roles r ON r.id = mr.role_id
+           WHERE mr.member_id = om.id
+           ORDER BY r.slug
+       )::text[] AS role_slugs
 FROM organization_members om
 JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
 WHERE om.organization_id = $1
@@ -1103,8 +1134,11 @@ type ListOrganizationMembersRow struct {
 	Status    string             `json:"status"`
 	Role      string             `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	RoleSlugs []string           `json:"role_slugs"`
 }
 
+// role_slugs are the organization roles of the membership (TEC-1036: the
+// platform members table edits them in place).
 func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationMembers, organizationID)
 	if err != nil {
@@ -1122,6 +1156,7 @@ func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID in
 			&i.Status,
 			&i.Role,
 			&i.CreatedAt,
+			&i.RoleSlugs,
 		); err != nil {
 			return nil, err
 		}
@@ -1893,6 +1928,20 @@ func (q *Queries) UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOr
 		&i.MergedIntoID,
 	)
 	return i, err
+}
+
+const updateOrganizationMemberKind = `-- name: UpdateOrganizationMemberKind :exec
+UPDATE organization_members SET role = $1 WHERE id = $2
+`
+
+type UpdateOrganizationMemberKindParams struct {
+	Role string `json:"role"`
+	ID   int64  `json:"id"`
+}
+
+func (q *Queries) UpdateOrganizationMemberKind(ctx context.Context, arg UpdateOrganizationMemberKindParams) error {
+	_, err := q.db.Exec(ctx, updateOrganizationMemberKind, arg.Role, arg.ID)
+	return err
 }
 
 const updateOrganizationParent = `-- name: UpdateOrganizationParent :one

@@ -82,3 +82,15 @@ export function addOrganizationMemberFormSchema(t: Translate) {
 export type AddOrganizationMemberFormValues = z.infer<
   ReturnType<typeof addOrganizationMemberFormSchema>
 >;
+
+/** TEC-1036: edit the kind and organization roles of a member. */
+export function editOrganizationMemberFormSchema() {
+  return z.object({
+    role: z.enum(ORGANIZATION_MEMBER_ROLES),
+    role_slugs: z.array(z.string()).optional(),
+  });
+}
+
+export type EditOrganizationMemberFormValues = z.infer<
+  ReturnType<typeof editOrganizationMemberFormSchema>
+>;

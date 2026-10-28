@@ -212,5 +212,8 @@
   "actions.einvoice.xslt_reset": "Το πρότυπο XSLT επανήλθε στο προεπιλεγμένο",
   "actions.einvoice.buyer_profile_updated": "Το προφίλ τιμολόγησης του αγοραστή ενημερώθηκε",
   "resources.einvoices": "Ηλεκτρονικά τιμολόγια",
-  "actions.services.created_on_behalf": "Υπηρεσία ανοίχτηκε για αντιπρόσωπο"
+  "actions.services.created_on_behalf": "Υπηρεσία ανοίχτηκε για αντιπρόσωπο",
+  "actions.organizations.member_updated": "Οι ρόλοι του μέλους του οργανισμού ενημερώθηκαν",
+  "actions.organizations.member_removed": "Το μέλος αφαιρέθηκε από τον οργανισμό",
+  "resources.organizations": "Οργανισμοί"
 }

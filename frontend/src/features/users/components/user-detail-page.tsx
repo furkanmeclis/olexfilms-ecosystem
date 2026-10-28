@@ -22,6 +22,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { UserSetPasswordDialog } from "@/features/users/components/user-set-password-dialog";
 import { UserAuthMethodsIcons } from "@/features/users/components/user-auth-methods";
+import { UserOverviewCards } from "@/features/users/components/user-overview-cards";
 import { StartConversationButton } from "@/features/conversations/components/start-conversation-button";
 import { StepUpGate } from "@/features/step-up-engine";
 import { USER_STATUS_TONE } from "@/features/users/constants";
@@ -211,6 +212,9 @@ export function UserDetailPage({ uuid }: UserDetailPageProps) {
               />
             </dl>
           </EntityHeader>
+
+          {/* TEC-1036: user 360 — organizations, roles, customer, sessions. */}
+          <UserOverviewCards uuid={user.uuid} />
 
           <EntitySectionCard title={t("users.detail.profile")}>
             <EntityDetail

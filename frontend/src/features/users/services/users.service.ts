@@ -100,6 +100,67 @@ export type ListUsersParams = ServerListParams & {
 
 export type UserStatus = "active" | "pending" | "disabled";
 
+/** TEC-1036: `GET /v1/platform/users/{uuid}/overview` (user 360). */
+export type UserOverviewWarehouse = {
+  uuid: string;
+  name: string;
+  code: string;
+  is_default: boolean;
+};
+
+export type UserOverviewMembership = {
+  organization: {
+    uuid: string;
+    name: string;
+    slug: string;
+    type: string;
+    status: string;
+    brand_slug: string;
+    parent_name: string | null;
+  };
+  role: string;
+  role_slugs: string[];
+  warehouses: UserOverviewWarehouse[];
+  created_at: string | null;
+};
+
+export type UserOverviewCustomerOrganization = {
+  uuid: string;
+  name: string;
+  type: string;
+  brand_slug: string;
+  first_service_at: string | null;
+  created_at: string | null;
+};
+
+export type UserOverviewSession = {
+  uuid: string;
+  realm: string;
+  client: string;
+  device_name: string | null;
+  user_agent: string | null;
+  ip_address: string | null;
+  organization_name: string | null;
+  impersonated: boolean;
+  created_at: string | null;
+  expires_at: string | null;
+};
+
+export type UserOverview = {
+  user_uuid: string;
+  last_login_at: string | null;
+  global_roles: string[];
+  memberships: UserOverviewMembership[];
+  customer: {
+    has_profile: boolean;
+    profile_type: string | null;
+    company_name: string | null;
+    vehicle_count: number;
+  };
+  customer_organizations: UserOverviewCustomerOrganization[];
+  sessions: UserOverviewSession[];
+};
+
 export const usersService = {
   async list(params: ListUsersParams) {
     return platformRequest<UserListResult>("GET", "/v1/platform/users", {
@@ -124,6 +185,14 @@ export const usersService = {
     return platformRequest<PlatformUserDetail>(
       "GET",
       `/v1/platform/users/${uuid}`,
+    );
+  },
+
+  /** TEC-1036: memberships, roles, customer side and sessions. */
+  async overview(uuid: string) {
+    return platformRequest<UserOverview>(
+      "GET",
+      `/v1/platform/users/${uuid}/overview`,
     );
   },
 

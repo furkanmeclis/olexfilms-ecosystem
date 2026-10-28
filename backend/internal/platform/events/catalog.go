@@ -408,6 +408,14 @@ const (
 	VehicleDeleted = "vehicle.deleted"
 )
 
+// Membership change events (TEC-1036): a membership's kind/roles changed or
+// it was removed from the platform members table; the WhatsApp identity
+// cache drops on both.
+const (
+	TenantMemberUpdated = "tenant.member_updated"
+	TenantMemberRemoved = "tenant.member_removed"
+)
+
 // Organization record events (TEC-210): written in the transaction that
 // registers an organization or edits its name, dealer code, address or
 // parent; the search sync refreshes the organizations index from them.
@@ -677,6 +685,8 @@ func catalogConstants() []string {
 		AuthPasswordReset,
 		AuthProfileUpdated,
 		TenantMemberAdded,
+		TenantMemberUpdated,
+		TenantMemberRemoved,
 		NotificationsTest,
 		NotificationsQueued,
 		NotificationsSent,

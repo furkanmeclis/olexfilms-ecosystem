@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Telefono del rivenditore (facoltativo)",
   "accounts.errors.name_required": "Il nome è obbligatorio.",
   "accounts.errors.phone_required": "Il telefono è obbligatorio.",
-  "accounts.errors.dealer_name_required": "Il nome del rivenditore è obbligatorio."
+  "accounts.errors.dealer_name_required": "Il nome del rivenditore è obbligatorio.",
+  "actions.edit_member_roles": "Modifica ruoli",
+  "actions.remove_member": "Rimuovi dall'organizzazione",
+  "member_edit_dialog.title": "Modifica ruoli",
+  "member_edit_dialog.description": "Modifica il tipo di appartenenza e i ruoli organizzativi di {{name}}. I ruoli attuali sono preselezionati.",
+  "member_remove_dialog.title": "Rimuovi il personale dall'organizzazione",
+  "member_remove_dialog.description": "{{name}} sarà rimosso da {{organization}}. Vengono eliminati anche ruoli organizzativi, appartenenze ai magazzini e obiettivi; l'account utente resta.",
+  "toast.member_updated": "Ruoli aggiornati",
+  "toast.member_update_failed": "Impossibile aggiornare i ruoli",
+  "toast.member_removed": "Personale rimosso dall'organizzazione",
+  "toast.member_remove_failed": "Impossibile rimuovere il personale",
+  "toast.member_last_owner": "L'ultimo titolare dell'organizzazione non può essere declassato né rimosso.",
+  "toast.member_self": "Non puoi togliere ruoli alla tua appartenenza né rimuovere te stesso."
 }

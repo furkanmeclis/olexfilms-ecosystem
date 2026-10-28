@@ -136,10 +136,13 @@ func (c *RedisIdentityCache) Invalidate(ctx context.Context) {
 }
 
 // IdentityInvalidationEvents are the user / membership / organization
-// changes that drop the identity cache: a new membership, a customer created
-// or merged, an organization created or edited (status, access window).
+// changes that drop the identity cache: a membership added, changed or
+// removed (TEC-1036), a customer created or merged, an organization created
+// or edited (status, access window).
 var IdentityInvalidationEvents = []string{
 	events.TenantMemberAdded,
+	events.TenantMemberUpdated,
+	events.TenantMemberRemoved,
 	events.CustomerCreated,
 	events.CustomerMerged,
 	"organization.*",

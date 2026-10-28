@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Bayi telefonu (isteğe bağlı)",
   "accounts.errors.name_required": "Ad gerekli.",
   "accounts.errors.phone_required": "Telefon gerekli.",
-  "accounts.errors.dealer_name_required": "Bayi adı gerekli."
+  "accounts.errors.dealer_name_required": "Bayi adı gerekli.",
+  "actions.edit_member_roles": "Rolü düzenle",
+  "actions.remove_member": "İşletmeden çıkar",
+  "member_edit_dialog.title": "Rolü düzenle",
+  "member_edit_dialog.description": "{{name}} için üyelik türünü ve yetki rollerini düzenleyin. Mevcut roller işaretli gelir.",
+  "member_remove_dialog.title": "Personeli işletmeden çıkar",
+  "member_remove_dialog.description": "{{name}}, {{organization}} işletmesinden çıkarılacak. Yetki rolleri, depo üyelikleri ve personel hedefleri de silinir; kullanıcı hesabı silinmez.",
+  "toast.member_updated": "Roller güncellendi",
+  "toast.member_update_failed": "Roller güncellenemedi",
+  "toast.member_removed": "Personel işletmeden çıkarıldı",
+  "toast.member_remove_failed": "Personel çıkarılamadı",
+  "toast.member_last_owner": "İşletmenin son sahibi personele düşürülemez veya çıkarılamaz.",
+  "toast.member_self": "Kendi üyeliğinizden rol kaldıramaz veya kendinizi işletmeden çıkaramazsınız."
 }

@@ -212,5 +212,8 @@
   "actions.einvoice.xslt_reset": "تمت إعادة قالب XSLT للفواتير الإلكترونية إلى الافتراضي",
   "actions.einvoice.buyer_profile_updated": "تم تحديث ملف الفوترة الخاص بالمشتري",
   "resources.einvoices": "الفواتير الإلكترونية",
-  "actions.services.created_on_behalf": "فُتحت خدمة نيابة عن وكيل"
+  "actions.services.created_on_behalf": "فُتحت خدمة نيابة عن وكيل",
+  "actions.organizations.member_updated": "تم تحديث أدوار عضو المؤسسة",
+  "actions.organizations.member_removed": "تمت إزالة العضو من المؤسسة",
+  "resources.organizations": "المؤسسات"
 }
