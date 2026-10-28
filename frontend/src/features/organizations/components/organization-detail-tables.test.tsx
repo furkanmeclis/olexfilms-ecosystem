@@ -105,16 +105,56 @@ describe("organization detail nested tables", () => {
       pagination: false,
     });
     expect(table.data).toBe(members);
-    expect(table.features?.persistKey).toBe("platform-organization-members-v1");
+    expect(table.features?.persistKey).toBe("platform-organization-members-v2");
     expect(columnIds(table)).toEqual([
       "name",
       "email",
       "role",
+      "role_slugs",
       "status",
       "created_at",
     ]);
     const role = (table.columns as ColumnDef<AnyRow, unknown>[])[2];
     expect(role?.meta?.filterVariant).toBe("faceted");
+  });
+
+  it("TEC-1036: role slugs filter by any match; handlers add a row actions column", async () => {
+    const members = [
+      {
+        uuid: "u1",
+        email: "a@x.test",
+        name: "A",
+        surname: "B",
+        status: "active",
+        role: "staff",
+        role_slugs: ["center_accounting", "center_warehouse"],
+      },
+    ];
+    const handlers = { onEditRoles: vi.fn(), onRemove: vi.fn() };
+    await render(
+      createElement(OrganizationMembersTable, { members, handlers }),
+    );
+    const table = last();
+    expect(columnIds(table)).toEqual([
+      "name",
+      "email",
+      "role",
+      "role_slugs",
+      "status",
+      "created_at",
+      "actions",
+    ]);
+    const slugs = (table.columns as ColumnDef<AnyRow, unknown>[])[3]!;
+    expect(slugs.meta?.filterVariant).toBe("faceted");
+    const row = { getValue: () => members[0]!.role_slugs };
+    const filterFn = slugs.filterFn as (
+      row: unknown,
+      id: string,
+      value: unknown,
+    ) => boolean;
+    expect(filterFn(row, "role_slugs", ["center_warehouse"])).toBe(true);
+    expect(filterFn(row, "role_slugs", ["center_social"])).toBe(false);
+    expect(filterFn(row, "role_slugs", [])).toBe(true);
   });
 
   it("sub-organizations load from /children into a client-side table", async () => {

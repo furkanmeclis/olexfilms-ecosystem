@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Diler telefonu (istəyə görə)",
   "accounts.errors.name_required": "Ad tələb olunur.",
   "accounts.errors.phone_required": "Telefon tələb olunur.",
-  "accounts.errors.dealer_name_required": "Diler adı tələb olunur."
+  "accounts.errors.dealer_name_required": "Diler adı tələb olunur.",
+  "actions.edit_member_roles": "Rolları redaktə et",
+  "actions.remove_member": "Təşkilatdan çıxar",
+  "member_edit_dialog.title": "Rolları redaktə et",
+  "member_edit_dialog.description": "{{name}} üçün üzvlük növünü və təşkilat rollarını redaktə edin. Mövcud rollar işarələnmiş gəlir.",
+  "member_remove_dialog.title": "İşçini təşkilatdan çıxar",
+  "member_remove_dialog.description": "{{name}} {{organization}} təşkilatından çıxarılacaq. Təşkilat rolları, anbar üzvlükləri və işçi hədəfləri də silinir; istifadəçi hesabı saxlanılır.",
+  "toast.member_updated": "Rollar yeniləndi",
+  "toast.member_update_failed": "Rollar yenilənmədi",
+  "toast.member_removed": "İşçi təşkilatdan çıxarıldı",
+  "toast.member_remove_failed": "İşçi çıxarılmadı",
+  "toast.member_last_owner": "Təşkilatın son sahibi işçiyə endirilə və ya çıxarıla bilməz.",
+  "toast.member_self": "Öz üzvlüyünüzdən rol götürə və ya özünüzü çıxara bilməzsiniz."
 }

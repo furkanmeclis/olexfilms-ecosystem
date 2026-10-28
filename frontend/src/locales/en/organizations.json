@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Dealer phone (optional)",
   "accounts.errors.name_required": "First name is required.",
   "accounts.errors.phone_required": "Phone is required.",
-  "accounts.errors.dealer_name_required": "Dealer name is required."
+  "accounts.errors.dealer_name_required": "Dealer name is required.",
+  "actions.edit_member_roles": "Edit roles",
+  "actions.remove_member": "Remove from organization",
+  "member_edit_dialog.title": "Edit roles",
+  "member_edit_dialog.description": "Edit the membership type and organization roles of {{name}}. Current roles come pre-checked.",
+  "member_remove_dialog.title": "Remove staff from organization",
+  "member_remove_dialog.description": "{{name}} will be removed from {{organization}}. Their organization roles, warehouse memberships and staff targets are deleted too; the user account is kept.",
+  "toast.member_updated": "Roles updated",
+  "toast.member_update_failed": "Roles could not be updated",
+  "toast.member_removed": "Staff removed from organization",
+  "toast.member_remove_failed": "Staff could not be removed",
+  "toast.member_last_owner": "The last owner of the organization cannot be demoted or removed.",
+  "toast.member_self": "You cannot take roles away from your own membership or remove yourself."
 }

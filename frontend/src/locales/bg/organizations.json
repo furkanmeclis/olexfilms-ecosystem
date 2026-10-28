@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Телефон на дилъра (по избор)",
   "accounts.errors.name_required": "Името е задължително.",
   "accounts.errors.phone_required": "Телефонът е задължителен.",
-  "accounts.errors.dealer_name_required": "Името на дилъра е задължително."
+  "accounts.errors.dealer_name_required": "Името на дилъра е задължително.",
+  "actions.edit_member_roles": "Редактиране на роли",
+  "actions.remove_member": "Премахване от организацията",
+  "member_edit_dialog.title": "Редактиране на роли",
+  "member_edit_dialog.description": "Редактирайте типа членство и ролите в организацията за {{name}}. Текущите роли са отметнати.",
+  "member_remove_dialog.title": "Премахване на служител от организацията",
+  "member_remove_dialog.description": "{{name}} ще бъде премахнат от {{organization}}. Ролите в организацията, членствата в складове и целите също се изтриват; потребителският акаунт се запазва.",
+  "toast.member_updated": "Ролите са обновени",
+  "toast.member_update_failed": "Ролите не можаха да бъдат обновени",
+  "toast.member_removed": "Служителят е премахнат от организацията",
+  "toast.member_remove_failed": "Служителят не можа да бъде премахнат",
+  "toast.member_last_owner": "Последният собственик на организацията не може да бъде понижен или премахнат.",
+  "toast.member_self": "Не можете да отнемате роли от собственото си членство или да премахнете себе си."
 }

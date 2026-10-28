@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Τηλέφωνο αντιπροσώπου (προαιρετικό)",
   "accounts.errors.name_required": "Το όνομα είναι υποχρεωτικό.",
   "accounts.errors.phone_required": "Το τηλέφωνο είναι υποχρεωτικό.",
-  "accounts.errors.dealer_name_required": "Το όνομα του αντιπροσώπου είναι υποχρεωτικό."
+  "accounts.errors.dealer_name_required": "Το όνομα του αντιπροσώπου είναι υποχρεωτικό.",
+  "actions.edit_member_roles": "Επεξεργασία ρόλων",
+  "actions.remove_member": "Αφαίρεση από τον οργανισμό",
+  "member_edit_dialog.title": "Επεξεργασία ρόλων",
+  "member_edit_dialog.description": "Επεξεργαστείτε τον τύπο μέλους και τους ρόλους οργανισμού του/της {{name}}. Οι τρέχοντες ρόλοι είναι ήδη επιλεγμένοι.",
+  "member_remove_dialog.title": "Αφαίρεση προσωπικού από τον οργανισμό",
+  "member_remove_dialog.description": "Ο/Η {{name}} θα αφαιρεθεί από {{organization}}. Διαγράφονται επίσης οι ρόλοι οργανισμού, οι συμμετοχές σε αποθήκες και οι στόχοι· ο λογαριασμός χρήστη διατηρείται.",
+  "toast.member_updated": "Οι ρόλοι ενημερώθηκαν",
+  "toast.member_update_failed": "Δεν ήταν δυνατή η ενημέρωση των ρόλων",
+  "toast.member_removed": "Το μέλος αφαιρέθηκε από τον οργανισμό",
+  "toast.member_remove_failed": "Δεν ήταν δυνατή η αφαίρεση του μέλους",
+  "toast.member_last_owner": "Ο τελευταίος ιδιοκτήτης του οργανισμού δεν μπορεί να υποβιβαστεί ή να αφαιρεθεί.",
+  "toast.member_self": "Δεν μπορείτε να αφαιρέσετε ρόλους από τη δική σας συμμετοχή ή να αφαιρέσετε τον εαυτό σας."
 }

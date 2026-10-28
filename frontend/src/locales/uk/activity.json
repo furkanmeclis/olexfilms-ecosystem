@@ -213,5 +213,8 @@
   "actions.einvoice.buyer_profile_updated": "Профіль рахунків покупця оновлено",
   "resources.einvoices": "Е-рахунки",
   "actions.services.created_on_behalf": "Послугу відкрито від імені дилера",
-  "actions.catalog.product.roll_updated": "Налаштування рулону оновлено"
+  "actions.catalog.product.roll_updated": "Налаштування рулону оновлено",
+  "actions.organizations.member_updated": "Ролі учасника організації оновлено",
+  "actions.organizations.member_removed": "Учасника видалено з організації",
+  "resources.organizations": "Організації"
 }

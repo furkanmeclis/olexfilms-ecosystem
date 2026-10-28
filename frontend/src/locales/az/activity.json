@@ -212,5 +212,8 @@
   "actions.einvoice.xslt_reset": "E-faktura XSLT şablonu standarta qaytarıldı",
   "actions.einvoice.buyer_profile_updated": "Alıcının faktura profili yeniləndi",
   "resources.einvoices": "E-fakturalar",
-  "actions.services.created_on_behalf": "Diler adına xidmət açıldı"
+  "actions.services.created_on_behalf": "Diler adına xidmət açıldı",
+  "actions.organizations.member_updated": "Təşkilat üzvünün rolları yeniləndi",
+  "actions.organizations.member_removed": "Üzv təşkilatdan çıxarıldı",
+  "resources.organizations": "Təşkilatlar"
 }

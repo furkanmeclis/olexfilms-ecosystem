@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Händlertelefon (optional)",
   "accounts.errors.name_required": "Vorname ist erforderlich.",
   "accounts.errors.phone_required": "Telefon ist erforderlich.",
-  "accounts.errors.dealer_name_required": "Händlername ist erforderlich."
+  "accounts.errors.dealer_name_required": "Händlername ist erforderlich.",
+  "actions.edit_member_roles": "Rollen bearbeiten",
+  "actions.remove_member": "Aus Organisation entfernen",
+  "member_edit_dialog.title": "Rollen bearbeiten",
+  "member_edit_dialog.description": "Mitgliedschaftsart und Organisationsrollen von {{name}} bearbeiten. Aktuelle Rollen sind vorausgewählt.",
+  "member_remove_dialog.title": "Mitarbeiter aus Organisation entfernen",
+  "member_remove_dialog.description": "{{name}} wird aus {{organization}} entfernt. Organisationsrollen, Lagermitgliedschaften und Mitarbeiterziele werden ebenfalls gelöscht; das Benutzerkonto bleibt erhalten.",
+  "toast.member_updated": "Rollen aktualisiert",
+  "toast.member_update_failed": "Rollen konnten nicht aktualisiert werden",
+  "toast.member_removed": "Mitarbeiter aus Organisation entfernt",
+  "toast.member_remove_failed": "Mitarbeiter konnte nicht entfernt werden",
+  "toast.member_last_owner": "Der letzte Inhaber der Organisation kann nicht herabgestuft oder entfernt werden.",
+  "toast.member_self": "Sie können Ihrer eigenen Mitgliedschaft keine Rollen entziehen oder sich selbst entfernen."
 }

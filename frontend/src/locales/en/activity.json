@@ -213,5 +213,8 @@
   "actions.einvoice.buyer_profile_updated": "Buyer invoice profile updated",
   "resources.einvoices": "e-Invoices",
   "actions.services.created_on_behalf": "Service opened for a dealer",
-  "actions.catalog.product.roll_updated": "Product roll settings updated"
+  "actions.catalog.product.roll_updated": "Product roll settings updated",
+  "actions.organizations.member_updated": "Organization member roles updated",
+  "actions.organizations.member_removed": "Member removed from organization",
+  "resources.organizations": "Organizations"
 }

@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "Телефон дилера (необов'язково)",
   "accounts.errors.name_required": "Ім'я обов'язкове.",
   "accounts.errors.phone_required": "Телефон обов'язковий.",
-  "accounts.errors.dealer_name_required": "Назва дилера обов'язкова."
+  "accounts.errors.dealer_name_required": "Назва дилера обов'язкова.",
+  "actions.edit_member_roles": "Змінити ролі",
+  "actions.remove_member": "Видалити з організації",
+  "member_edit_dialog.title": "Змінити ролі",
+  "member_edit_dialog.description": "Змініть тип членства та ролі організації для {{name}}. Поточні ролі вже позначені.",
+  "member_remove_dialog.title": "Видалити працівника з організації",
+  "member_remove_dialog.description": "{{name}} буде видалено з {{organization}}. Ролі організації, прив'язки до складів і цілі працівника також видаляються; обліковий запис користувача зберігається.",
+  "toast.member_updated": "Ролі оновлено",
+  "toast.member_update_failed": "Не вдалося оновити ролі",
+  "toast.member_removed": "Працівника видалено з організації",
+  "toast.member_remove_failed": "Не вдалося видалити працівника",
+  "toast.member_last_owner": "Останнього власника організації не можна понизити чи видалити.",
+  "toast.member_self": "Не можна зняти ролі зі свого членства або видалити себе."
 }

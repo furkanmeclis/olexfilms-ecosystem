@@ -10,7 +10,10 @@ import {
   type OrganizationDetail,
   type OrganizationListResult,
   type PatchPlatformOrganizationRequest,
+  type UpdateOrganizationMemberRequest,
 } from "@/features/organizations/services/organizations.service";
+import { usersKeys } from "@/features/users/hooks/query-keys";
+import { isApiError } from "@/lib/api";
 import { useAppMutation } from "@/lib/query/mutation";
 import { appToast } from "@/providers/toast-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -147,7 +150,7 @@ export function useAddOrganizationMember() {
       body,
     }: {
       uuid: string;
-      body: { user_uuid: string; role?: string };
+      body: { user_uuid: string; role?: string; role_slugs?: string[] };
     }) => organizationsService.addMember(uuid, body),
     onSuccess: (_result, variables) => {
       void queryClient.invalidateQueries({
@@ -156,5 +159,65 @@ export function useAddOrganizationMember() {
       appToast.success(t("organizations.toast.member_added"));
     },
     onError: () => appToast.error(t("organizations.toast.member_failed")),
+  });
+}
+
+/** TEC-1036: guard errors of member edit/remove → toast text. */
+function memberErrorKey(error: unknown, fallback: string) {
+  if (isApiError(error) && error.code === "LAST_OWNER") {
+    return "organizations.toast.member_last_owner";
+  }
+  if (isApiError(error) && error.code === "SELF_MEMBERSHIP") {
+    return "organizations.toast.member_self";
+  }
+  return fallback;
+}
+
+export function useUpdateOrganizationMember() {
+  const queryClient = useQueryClient();
+  const { t } = useLocale();
+
+  return useAppMutation({
+    mutationFn: ({
+      uuid,
+      userUuid,
+      body,
+    }: {
+      uuid: string;
+      userUuid: string;
+      body: UpdateOrganizationMemberRequest;
+    }) => organizationsService.updateMember(uuid, userUuid, body),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: organizationsKeys.detail(variables.uuid),
+      });
+      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
+      appToast.success(t("organizations.toast.member_updated"));
+    },
+    onError: (error) =>
+      appToast.error(
+        t(memberErrorKey(error, "organizations.toast.member_update_failed")),
+      ),
+  });
+}
+
+export function useRemoveOrganizationMember() {
+  const queryClient = useQueryClient();
+  const { t } = useLocale();
+
+  return useAppMutation({
+    mutationFn: ({ uuid, userUuid }: { uuid: string; userUuid: string }) =>
+      organizationsService.removeMember(uuid, userUuid),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: organizationsKeys.detail(variables.uuid),
+      });
+      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
+      appToast.success(t("organizations.toast.member_removed"));
+    },
+    onError: (error) =>
+      appToast.error(
+        t(memberErrorKey(error, "organizations.toast.member_remove_failed")),
+      ),
   });
 }

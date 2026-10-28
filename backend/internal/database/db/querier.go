@@ -275,6 +275,9 @@ type Querier interface {
 	CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
+	// Active owner memberships of an organization (TEC-1036: the last owner
+	// cannot be demoted or removed).
+	CountOrganizationOwners(ctx context.Context, organizationID int64) (int64, error)
 	CountOrganizationProductStockRows(ctx context.Context, arg CountOrganizationProductStockRowsParams) (int64, error)
 	CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error)
 	// Same filter block as ListOrganizationsFiltered.
@@ -707,6 +710,7 @@ type Querier interface {
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
+	DeleteOrganizationMember(ctx context.Context, id int64) error
 	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
 	DeletePerformanceMetricsForScope(ctx context.Context, arg DeletePerformanceMetricsForScopeParams) (int64, error)
 	DeletePerformanceTarget(ctx context.Context, arg DeletePerformanceTargetParams) (int64, error)
@@ -2297,6 +2301,8 @@ type Querier interface {
 	// warehouse and room; callers resolve the parents from the same set.
 	ListOrganizationLocationsForExport(ctx context.Context, organizationID int64) ([]ListOrganizationLocationsForExportRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
+	// role_slugs are the organization roles of the membership (TEC-1036: the
+	// platform members table edits them in place).
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
 	ListOrganizationOwnerUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
@@ -3912,6 +3918,7 @@ type Querier interface {
 	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)
 	UpdateOrganizationInvoiceProfile(ctx context.Context, arg UpdateOrganizationInvoiceProfileParams) (Organization, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
+	UpdateOrganizationMemberKind(ctx context.Context, arg UpdateOrganizationMemberKindParams) error
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	// TEC-1003: the center's service point (customer-facing name and switch).
@@ -4087,6 +4094,15 @@ type Querier interface {
 	// Marking the code used is the claim; an expired or used code returns no row.
 	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
+	// Unrevoked, unexpired refresh sessions (newest first).
+	UserOverviewActiveSessions(ctx context.Context, userID int64) ([]UserOverviewActiveSessionsRow, error)
+	UserOverviewCustomer(ctx context.Context, userID int64) (UserOverviewCustomerRow, error)
+	// Organizations the user is a customer of (K11: a customer is global).
+	UserOverviewCustomerOrganizations(ctx context.Context, userID int64) ([]UserOverviewCustomerOrganizationsRow, error)
+	// TEC-1036: the platform "user 360" view (GET /v1/platform/users/{uuid}/overview).
+	// Every organization membership of a user across brands, with its
+	// organization roles and warehouse memberships.
+	UserOverviewMemberships(ctx context.Context, userID int64) ([]UserOverviewMembershipsRow, error)
 	VehicleHasActiveAppointmentOnDay(ctx context.Context, arg VehicleHasActiveAppointmentOnDayParams) (bool, error)
 	VehicleHasServices(ctx context.Context, vehicleID int64) (bool, error)
 	VerifyCertificate(ctx context.Context, arg VerifyCertificateParams) (Certificate, error)

@@ -4614,6 +4614,88 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/platform/organizations/{uuid}/members/{user_uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: user_uuid
+        in: path
+        required: true
+        description: The member's user uuid.
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Platform]
+      operationId: putPlatformOrganizationMember
+      summary: Edit organization member roles
+      description: |
+        TEC-1036: replaces the membership kind (`owner` / `staff`) and the
+        organization roles of a member. `role_slugs` must be system roles of
+        the organization type; empty means the default role of the kind.
+        Requires `platform.organizations.write`. The last owner cannot be
+        demoted (409 LAST_OWNER); the caller cannot take roles away from its
+        own membership (409 SELF_MEMBERSHIP). Audited as
+        `organizations.member_updated`; emits `tenant.member_updated`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationMemberRequest"
+      responses:
+        "200":
+          description: Updated membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganizationMemberRoles"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Platform]
+      operationId: deletePlatformOrganizationMember
+      summary: Remove organization member
+      description: |
+        TEC-1036: removes the user from the organization; its organization
+        roles, warehouse memberships and staff targets go with it. Requires
+        `platform.organizations.write`. The last owner (409 LAST_OWNER) and
+        the caller's own membership (409 SELF_MEMBERSHIP) cannot be removed.
+        Audited as `organizations.member_removed`; emits `tenant.member_removed`.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Member removed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/platform/users:
     get:
       tags: [Platform]
@@ -4745,6 +4827,37 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/users/{uuid}/overview:
+    get:
+      tags: [Platform]
+      operationId: getPlatformUserOverview
+      summary: User 360 overview
+      description: |
+        TEC-1036: every organization membership of the user across brands
+        (membership kind, organization roles, warehouse memberships), global
+        roles, the customer side (profile, vehicle count, organizations it is
+        a customer of), last login and active sessions. Requires
+        `platform.users.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: User overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeUserOverview"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -35817,6 +35930,195 @@ components:
             grants:
               type: array
               items: { $ref: "#/components/schemas/RoleGrant" }
+
+    UpdateOrganizationMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [owner, staff]
+        role_slugs:
+          type: array
+          description: >-
+            Organization roles of the org type (e.g. center_accounting,
+            dealer_accounting). Empty means the default role of `role`.
+          items:
+            type: string
+
+    OrganizationMemberRoles:
+      type: object
+      required: [uuid, role, role_slugs]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, staff]
+        role_slugs:
+          type: array
+          items:
+            type: string
+
+    EnvelopeOrganizationMemberRoles:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OrganizationMemberRoles" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    UserOverview:
+      type: object
+      required: [user_uuid, last_login_at, global_roles, memberships, customer, customer_organizations, sessions]
+      properties:
+        user_uuid:
+          type: string
+          format: uuid
+        last_login_at:
+          type: [string, "null"]
+          format: date-time
+        global_roles:
+          type: array
+          items:
+            type: string
+        memberships:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserOverviewMembership"
+        customer:
+          $ref: "#/components/schemas/UserOverviewCustomer"
+        customer_organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserOverviewCustomerOrganization"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserOverviewSession"
+
+    UserOverviewMembership:
+      type: object
+      required: [organization, role, role_slugs, warehouses, created_at]
+      properties:
+        organization:
+          type: object
+          required: [uuid, name, slug, type, status, brand_slug, parent_name]
+          properties:
+            uuid:
+              type: string
+              format: uuid
+            name:
+              type: string
+            slug:
+              type: string
+            type:
+              type: string
+              enum: [center, distributor, dealer, fleet]
+            status:
+              type: string
+            brand_slug:
+              type: string
+            parent_name:
+              type: [string, "null"]
+        role:
+          type: string
+          enum: [owner, staff]
+        role_slugs:
+          type: array
+          items:
+            type: string
+        warehouses:
+          type: array
+          items:
+            type: object
+            required: [uuid, name, code, is_default]
+            properties:
+              uuid:
+                type: string
+                format: uuid
+              name:
+                type: string
+              code:
+                type: string
+              is_default:
+                type: boolean
+        created_at:
+          type: [string, "null"]
+          format: date-time
+
+    UserOverviewCustomer:
+      type: object
+      required: [has_profile, profile_type, company_name, vehicle_count]
+      properties:
+        has_profile:
+          type: boolean
+        profile_type:
+          type: [string, "null"]
+          enum: [individual, corporate, null]
+        company_name:
+          type: [string, "null"]
+        vehicle_count:
+          type: integer
+          format: int64
+
+    UserOverviewCustomerOrganization:
+      type: object
+      required: [uuid, name, type, brand_slug, first_service_at, created_at]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        brand_slug:
+          type: string
+        first_service_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          type: [string, "null"]
+          format: date-time
+
+    UserOverviewSession:
+      type: object
+      required: [uuid, realm, client, device_name, user_agent, ip_address, organization_name, impersonated, created_at, expires_at]
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        realm:
+          type: string
+          enum: [panel, portal, mobile]
+        client:
+          type: string
+        device_name:
+          type: [string, "null"]
+        user_agent:
+          type: [string, "null"]
+        ip_address:
+          type: [string, "null"]
+        organization_name:
+          type: [string, "null"]
+        impersonated:
+          type: boolean
+        created_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+
+    EnvelopeUserOverview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/UserOverview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     PlatformUserDetail:
       allOf:

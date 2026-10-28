@@ -682,6 +682,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, orgusecase.ErrNotFound):
 		response.NotFound(w, r, "Organization was not found")
+	case errors.Is(err, orgusecase.ErrLastOwner):
+		response.Conflict(w, r, response.CodeLastOwner, err.Error())
+	case errors.Is(err, orgusecase.ErrSelfMembership):
+		response.Conflict(w, r, response.CodeSelfMembership, err.Error())
 	case errors.Is(err, orgusecase.ErrConflict):
 		response.Conflict(w, r, response.CodeConflict, err.Error())
 	case errors.Is(err, i18n.ErrInvalidLocale):

@@ -163,5 +163,17 @@
   "accounts.fields.dealer_phone": "经销商电话（可选）",
   "accounts.errors.name_required": "名为必填项。",
   "accounts.errors.phone_required": "电话为必填项。",
-  "accounts.errors.dealer_name_required": "经销商名称为必填项。"
+  "accounts.errors.dealer_name_required": "经销商名称为必填项。",
+  "actions.edit_member_roles": "编辑角色",
+  "actions.remove_member": "从组织中移除",
+  "member_edit_dialog.title": "编辑角色",
+  "member_edit_dialog.description": "编辑 {{name}} 的成员类型和组织角色。当前角色已预先勾选。",
+  "member_remove_dialog.title": "从组织中移除员工",
+  "member_remove_dialog.description": "{{name}} 将从 {{organization}} 中移除。其组织角色、仓库成员资格和员工目标也会被删除；用户账户保留。",
+  "toast.member_updated": "角色已更新",
+  "toast.member_update_failed": "无法更新角色",
+  "toast.member_removed": "员工已从组织中移除",
+  "toast.member_remove_failed": "无法移除员工",
+  "toast.member_last_owner": "组织的最后一位所有者不能被降级或移除。",
+  "toast.member_self": "不能移除您自己成员资格中的角色，也不能移除您自己。"
 }

@@ -60,7 +60,21 @@ export type OrganizationMember = {
   surname: string;
   status: string;
   role: string;
+  /** TEC-1036: organization roles of the membership (center_accounting, ...). */
+  role_slugs?: string[];
   created_at?: string;
+};
+
+/** TEC-1036: `PUT /v1/platform/organizations/{uuid}/members/{user_uuid}`. */
+export type UpdateOrganizationMemberRequest = {
+  role: string;
+  role_slugs?: string[];
+};
+
+export type OrganizationMemberRoles = {
+  uuid: string;
+  role: string;
+  role_slugs: string[];
 };
 
 export type OrganizationDetail = {
@@ -291,6 +305,27 @@ export const organizationsService = {
       "POST",
       `/v1/platform/organizations/${uuid}/members`,
       { body },
+    );
+  },
+
+  /** TEC-1036: replace a member's kind and organization roles. */
+  async updateMember(
+    uuid: string,
+    userUuid: string,
+    body: UpdateOrganizationMemberRequest,
+  ) {
+    return platformRequest<OrganizationMemberRoles>(
+      "PUT",
+      `/v1/platform/organizations/${uuid}/members/${userUuid}`,
+      { body },
+    );
+  },
+
+  /** TEC-1036: remove a member from the organization. */
+  async removeMember(uuid: string, userUuid: string) {
+    return platformRequest<null>(
+      "DELETE",
+      `/v1/platform/organizations/${uuid}/members/${userUuid}`,
     );
   },
 };

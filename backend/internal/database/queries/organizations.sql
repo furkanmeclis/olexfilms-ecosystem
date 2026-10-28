@@ -214,7 +214,15 @@ WHERE om.user_id = sqlc.arg(user_id)
 ORDER BY o.name ASC;
 
 -- name: ListOrganizationMembers :many
-SELECT u.uuid, u.email, u.name, u.surname, u.status, om.role, om.created_at
+-- role_slugs are the organization roles of the membership (TEC-1036: the
+-- platform members table edits them in place).
+SELECT u.uuid, u.email, u.name, u.surname, u.status, om.role, om.created_at,
+       ARRAY(
+           SELECT r.slug FROM organization_member_roles mr
+           JOIN roles r ON r.id = mr.role_id
+           WHERE mr.member_id = om.id
+           ORDER BY r.slug
+       )::text[] AS role_slugs
 FROM organization_members om
 JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
 WHERE om.organization_id = $1
@@ -300,6 +308,20 @@ ON CONFLICT DO NOTHING;
 
 -- name: DeleteMemberRoles :exec
 DELETE FROM organization_member_roles WHERE member_id = $1;
+
+-- name: UpdateOrganizationMemberKind :exec
+UPDATE organization_members SET role = sqlc.arg(role) WHERE id = sqlc.arg(id);
+
+-- name: DeleteOrganizationMember :exec
+DELETE FROM organization_members WHERE id = $1;
+
+-- name: CountOrganizationOwners :one
+-- Active owner memberships of an organization (TEC-1036: the last owner
+-- cannot be demoted or removed).
+SELECT COUNT(*)::bigint
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = $1 AND om.role = 'owner';
 
 -- name: ListMemberRolesByOrganization :many
 SELECT om.id AS member_id, r.slug

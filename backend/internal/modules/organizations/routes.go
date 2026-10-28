@@ -73,6 +73,17 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/platform/organizations/{uuid}/members", middleware.Chain(
 		http.HandlerFunc(h.PlatformAddMember), authn, require(rbac.PermPlatformOrganizationsWrite),
 	))
+	// TEC-1036: edit the kind/roles of a member and remove a member.
+	mux.Handle("PUT /v1/platform/organizations/{uuid}/members/{user_uuid}", middleware.Chain(
+		http.HandlerFunc(h.PlatformUpdateMember), authn, require(rbac.PermPlatformOrganizationsWrite),
+	))
+	mux.Handle("DELETE /v1/platform/organizations/{uuid}/members/{user_uuid}", middleware.Chain(
+		http.HandlerFunc(h.PlatformRemoveMember), authn, require(rbac.PermPlatformOrganizationsWrite),
+	))
+	// TEC-1036: user 360 (memberships, roles, customer side, sessions).
+	mux.Handle("GET /v1/platform/users/{uuid}/overview", middleware.Chain(
+		http.HandlerFunc(h.PlatformUserOverview), authn, require(rbac.PermPlatformUsersRead),
+	))
 
 	// Tenant routes belong to the core organizations module (TEC-86):
 	// RequireFeature never closes them, it marks where the module boundary is.
