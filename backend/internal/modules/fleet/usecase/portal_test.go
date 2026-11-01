@@ -232,6 +232,7 @@ func TestPortalFleetUserSeesOnlyOwnFleet(t *testing.T) {
 // decision stays open.
 func TestPortalModuleOffDealerHidden(t *testing.T) {
 	f := newAPIFixture(t)
+	f.svc.now = time.Now // completed_at comes from the database clock
 	ctx := f.ctx
 	mods := &fakeModules{off: map[int64]bool{}}
 	f.svc.SetModules(mods)
@@ -309,6 +310,7 @@ func TestPortalModuleOffDealerHidden(t *testing.T) {
 // dealer's other cari movements and other caris never appear.
 func TestPortalAccountingOnlyFleetCariMovements(t *testing.T) {
 	f := newAPIFixture(t)
+	f.svc.now = time.Now // completed_at comes from the database clock
 	ctx := f.ctx
 	pf := f.openPortalFleet(t, f.d1, "c")
 	v := f.fleetVehicle(t, f.d1, pf, 1, true)
@@ -380,6 +382,7 @@ func TestPortalAccountingOnlyFleetCariMovements(t *testing.T) {
 // boolean and date filters.
 func TestPortalListContracts(t *testing.T) {
 	f := newAPIFixture(t)
+	f.svc.now = time.Now // completed_at comes from the database clock
 	ctx := f.ctx
 	pf := f.openPortalFleet(t, f.d1, "l")
 	c := f.caller(pf.user)
