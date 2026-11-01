@@ -26412,6 +26412,8 @@ export interface components {
             /** @description TEC-1004. The caller may change the number (false once completed or cancelled) */
             service_no_editable?: boolean;
             available_transitions: components["schemas"]["ServiceStatus"][];
+            /** @description Category names of the products applied on the service, each once (case-insensitive), in category order (sort, name). Set on the list and the detail; empty array when there are no counted items. Items of a cancelled service and corrected items returned to stock without a replacement are not counted. Names are returned as stored (categories have no translations). */
+            item_categories: string[];
             /** @description True when the service was opened from an approved warranty claim. */
             is_warranty_reapply: boolean;
             items?: components["schemas"]["ServiceItem"][];
