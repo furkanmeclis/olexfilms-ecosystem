@@ -2585,6 +2585,15 @@ type Querier interface {
 	ListServiceCertificateWarnings(ctx context.Context, arg ListServiceCertificateWarningsParams) ([]ListServiceCertificateWarningsRow, error)
 	ListServiceCertificateWarningsByService(ctx context.Context, arg ListServiceCertificateWarningsByServiceParams) ([]ListServiceCertificateWarningsByServiceRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
+	// ---------------------------------------------------------------------------
+	// Dealer board tags: category names of the products applied on a page of
+	// services, one row per (service, category), in a stable order (category
+	// sort, name, id). Same reading rules as warranties: a cancelled service
+	// applied nothing, and a corrected item whose unit went back to stock
+	// without a replacement no longer counts (a replacement is the same product,
+	// so its category stays). Brand-scoped on every join; the caller passes ids
+	// it already read inside the caller's scope.
+	ListServiceItemCategories(ctx context.Context, arg ListServiceItemCategoriesParams) ([]ListServiceItemCategoriesRow, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	// TEC-297 (F3-02e): part based before/after micron difference table.

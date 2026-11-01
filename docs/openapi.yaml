@@ -45227,6 +45227,7 @@ components:
         - editable
         - items_editable
         - available_transitions
+        - item_categories
         - is_warranty_reapply
       properties:
         uuid: { type: string, format: uuid }
@@ -45272,6 +45273,16 @@ components:
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatus" }
+        item_categories:
+          type: array
+          items: { type: string }
+          description: >-
+            Category names of the products applied on the service, each once
+            (case-insensitive), in category order (sort, name). Set on the list
+            and the detail; empty array when there are no counted items. Items
+            of a cancelled service and corrected items returned to stock
+            without a replacement are not counted. Names are returned as stored
+            (categories have no translations).
         is_warranty_reapply:
           type: boolean
           description: True when the service was opened from an approved warranty claim.

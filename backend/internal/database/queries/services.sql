@@ -555,3 +555,26 @@ LEFT JOIN LATERAL (
 ) bought ON TRUE
 WHERE s.id = sqlc.arg(service_id)
   AND s.brand_id = sqlc.arg(brand_id);
+
+-- ---------------------------------------------------------------------------
+-- Dealer board tags: category names of the products applied on a page of
+-- services, one row per (service, category), in a stable order (category
+-- sort, name, id). Same reading rules as warranties: a cancelled service
+-- applied nothing, and a corrected item whose unit went back to stock
+-- without a replacement no longer counts (a replacement is the same product,
+-- so its category stays). Brand-scoped on every join; the caller passes ids
+-- it already read inside the caller's scope.
+-- name: ListServiceItemCategories :many
+SELECT DISTINCT si.service_id, pc.id AS category_id, pc.name AS category_name, pc.sort AS category_sort
+FROM service_items si
+JOIN services s ON s.id = si.service_id AND s.brand_id = si.brand_id
+JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+JOIN product_categories pc ON pc.id = p.category_id AND pc.brand_id = p.brand_id
+WHERE si.brand_id = sqlc.arg(brand_id)
+  AND si.service_id = ANY (sqlc.arg(service_ids)::bigint[])
+  AND s.status <> 'cancelled'
+  AND NOT EXISTS (
+    SELECT 1 FROM service_item_corrections c
+    WHERE c.service_item_id = si.id AND c.replacement_unit_id IS NULL
+  )
+ORDER BY si.service_id, pc.sort, pc.name, pc.id;
