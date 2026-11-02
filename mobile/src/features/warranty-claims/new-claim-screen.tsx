@@ -8,14 +8,12 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { formatDate, PAGE_SIZE, useDebounced, usePagedList, type Warranty } from '@/features/services/lib';
 import { ListBody, ListFooter, SearchField, Section, errorText } from '@/features/services/ui';
+import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
-import { cn } from '@/ui/cn';
-import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 
 import { useClaimLinks } from './hooks';
-import { togglePart } from './lib';
 
 const DESCRIPTION_MAX = 20000;
 
@@ -195,22 +193,8 @@ export function NewClaimScreen() {
               {t('parts_none')}
             </Text>
           ) : (
-            available.map((key, i) => {
-              const on = parts.includes(key);
-              return (
-                <Pressable
-                  key={key}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  onPress={() => setParts((p) => togglePart(p, key))}
-                  className={cn('min-h-11 flex-row items-center gap-3 px-4 py-2.5 active:bg-muted', i < available.length - 1 && 'border-b border-border')}>
-                  <Text variant="body" className="flex-1">
-                    {t(`dealer:part.${key}`, { defaultValue: key })}
-                  </Text>
-                  {on ? <Icon name="check" tone="primary" size={20} /> : null}
-                </Pressable>
-              );
-            })
+            // Only the parts the warranted item was applied to can be claimed.
+            <VehiclePartPicker value={parts} onChange={setParts} allowedKeys={available} framed={false} className="p-3" />
           )}
         </Section>
 

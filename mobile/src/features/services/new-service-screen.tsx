@@ -12,6 +12,7 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
+import { EMPTY_VEHICLE, isComplete, VehiclePicker, type VehicleValue } from '@/features/vehicle-picker';
 import { Segmented } from '@/features/warehouse/parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -630,11 +631,8 @@ export function VehicleStep({
 export const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
 const vehicleSchema = z.object({
   plate: z.string().trim().min(2).max(20),
-  model: z.object({ uuid: z.string(), name: z.string(), brand: z.string() }).nullable().refine((m) => m !== null),
-  year: z
-    .string()
-    .trim()
-    .refine((y) => y === '' || (/^\d{4}$/.test(y) && +y >= 1900 && +y <= new Date().getFullYear() + 1)),
+  // Brand → model → optional year from the shared vehicle picker.
+  vehicle: z.custom<VehicleValue>((v) => isComplete(v as VehicleValue)),
   vin: z
     .string()
     .trim()
@@ -656,7 +654,7 @@ function NewVehicleForm({
   const qc = useQueryClient();
   const form = useForm<VehicleFormInput, unknown, VehicleForm>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: { plate: '', model: null, year: '', vin: '' },
+    defaultValues: { plate: '', vehicle: EMPTY_VEHICLE, vin: '' },
   });
   const create = useMutation({
     mutationFn: (v: VehicleForm) =>
@@ -665,8 +663,8 @@ function NewVehicleForm({
           body: {
             customer_uuid: customerUuid,
             plate: v.plate.toUpperCase(),
-            car_model_uuid: v.model?.uuid,
-            model_year: v.year ? Number(v.year) : undefined,
+            car_model_uuid: v.vehicle.model?.uuid,
+            model_year: v.vehicle.year ?? undefined,
             vin: v.vin ? v.vin.toUpperCase() : undefined,
           },
         }),
@@ -680,7 +678,7 @@ function NewVehicleForm({
       const f = e.fieldErrors();
       if (f.plate || e.code === 'INVALID_PLATE') form.setError('plate', { message: f.plate ?? e.code });
       if (f.vin) form.setError('vin', { message: f.vin });
-      if (f.model_year) form.setError('year', { message: f.model_year });
+      if (f.model_year || f.car_model_uuid) form.setError('vehicle', { message: f.model_year ?? f.car_model_uuid });
     },
   });
   const err = (f: keyof VehicleFormInput) => (form.formState.errors[f] ? t(`invalid.${f}`) : undefined);
@@ -706,23 +704,8 @@ function NewVehicleForm({
       />
       <Controller
         control={form.control}
-        name="model"
-        render={({ field }) => <ModelPicker value={field.value} onChange={field.onChange} error={err('model')} />}
-      />
-      <Controller
-        control={form.control}
-        name="year"
-        render={({ field }) => (
-          <Input
-            label={t('model_year')}
-            placeholder={t('placeholder_year', { ns: 'common' })}
-            value={field.value}
-            onChangeText={field.onChange}
-            error={err('year')}
-            keyboardType="number-pad"
-            maxLength={4}
-          />
-        )}
+        name="vehicle"
+        render={({ field }) => <VehiclePicker value={field.value} onChange={field.onChange} error={err('vehicle')} />}
       />
       <Controller
         control={form.control}
@@ -747,79 +730,6 @@ function NewVehicleForm({
       ) : null}
       <Button title={t('vehicle_save')} loading={create.isPending} onPress={() => void form.handleSubmit((v) => create.mutate(v))()} />
       <Button title={t('common:back')} variant="ghost" onPress={onCancel} disabled={create.isPending} />
-    </View>
-  );
-}
-
-export type ModelValue = { uuid: string; name: string; brand: string } | null;
-
-/** Car model from the vehicle catalog; "brand model" search (a model implies its brand). */
-export function ModelPicker({ value, onChange, error }: { value: ModelValue; onChange: (v: ModelValue) => void; error?: string }) {
-  const { t } = useTranslation('dealer');
-  const [q, setQ] = useState('');
-  const query = useDebounced(q.trim());
-  const open = !value;
-  const models = useQuery({
-    queryKey: ['vehicle-catalog', 'models', query],
-    queryFn: () =>
-      unwrap(api.GET('/v1/vehicle-catalog/models', { params: { query: { q: query || undefined, limit: 12, offset: 0 } } })),
-    enabled: open && query.length >= 2,
-  });
-
-  if (value) {
-    return (
-      <View className="gap-1.5">
-        <Text variant="footnote" tone="muted" className="font-medium">
-          {t('brand_model')}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onChange(null)}
-          className="min-h-[52px] flex-row items-center justify-between rounded-lg border border-border bg-card px-4">
-          <Text variant="body">
-            {value.brand} {value.name}
-          </Text>
-          <Text variant="footnote" tone="primary">
-            {t('change')}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const items = models.data?.items ?? [];
-  return (
-    <View className="gap-1.5">
-      <Text variant="footnote" tone="muted" className="font-medium">
-        {t('brand_model')}
-      </Text>
-      <SearchField value={q} onChange={setQ} placeholder={t('model_search')} />
-      {error ? (
-        <Text variant="footnote" tone="danger">
-          {error}
-        </Text>
-      ) : null}
-      {query.length >= 2 ? (
-        models.isPending ? (
-          <ListSkeleton rows={2} />
-        ) : items.length ? (
-          <Section>
-            {items.map((m, i) => (
-              <PickRow
-                key={m.uuid}
-                title={`${m.brand.name} ${m.name}`}
-                subtitle={[m.year_start && `${m.year_start}–${m.year_stop ?? ''}`, m.body_type].filter(Boolean).join(' · ')}
-                onPress={() => onChange({ uuid: m.uuid, name: m.name, brand: m.brand.name })}
-                last={i === items.length - 1}
-              />
-            ))}
-          </Section>
-        ) : (
-          <Text variant="footnote" tone="muted">
-            {models.error ? errorText(models.error) : t('model_none')}
-          </Text>
-        )
-      ) : null}
     </View>
   );
 }

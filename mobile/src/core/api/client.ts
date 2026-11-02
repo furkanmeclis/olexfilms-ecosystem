@@ -7,6 +7,7 @@ import { fromApi, getTokens, setTokens } from '@/core/auth/tokens';
 import { API_URL, APP_VERSION, MOBILE_API_VERSION } from '@/core/config';
 import { i18n } from '@/core/i18n';
 
+import { apiErrorPath, logApiError } from './error-log';
 import { ApiError, toApiError } from './errors';
 import type { paths } from './schema';
 
@@ -129,6 +130,13 @@ api.use({
     const req = await toMirror(request);
     for (const [k, v] of Object.entries(contractHeaders())) req.headers.set(k, v);
     return req;
+  },
+  // Shake-to-report feedback reads the last failures: method, path and status only.
+  onResponse({ request, response }) {
+    if (!response.ok) logApiError({ method: request.method, path: apiErrorPath(request.url, API_URL), status: response.status });
+  },
+  onError({ request }) {
+    logApiError({ method: request.method, path: apiErrorPath(request.url, API_URL), status: 0 });
   },
 });
 

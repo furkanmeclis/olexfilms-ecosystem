@@ -21,9 +21,9 @@ export default function MusteriTabs() {
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="warranties">
-        <NativeTabs.Trigger.Icon sf="checkmark.shield.fill" md="verified_user" />
-        <NativeTabs.Trigger.Label>{t('warranties')}</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="services">
+        <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" md="build" />
+        <NativeTabs.Trigger.Label>{t('services')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="appointments" hidden={!appointments}>
         <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />

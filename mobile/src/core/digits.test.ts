@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatDigits, intlLocale, setDigitStyle, toLatinDigits } from './digits.ts';
+import { ensureDigitSupport, formatDigits, intlLocale, setDigitStyle, toLatinDigits } from './digits.ts';
 
 describe('digits', () => {
   it('formats Arabic with Arabic-Indic digits by default and Latin by choice', () => {
@@ -22,6 +22,30 @@ describe('digits', () => {
     setDigitStyle('latn');
     assert.equal(formatDigits(30, 'ar'), '30');
     setDigitStyle('arab');
+  });
+
+  it('converts formatter output when the engine ignores the -u-nu- extension', () => {
+    class LatinOnly {
+      format(n: number) {
+        return n.toLocaleString('en-US');
+      }
+      formatToParts(n: number) {
+        return [{ type: 'integer', value: String(n) }];
+      }
+    }
+    const intl = { NumberFormat: LatinOnly, DateTimeFormat: LatinOnly } as unknown as typeof Intl;
+    ensureDigitSupport(intl);
+    assert.equal(new intl.NumberFormat('ar-u-nu-arab').format(1422), '١٬٤٢٢');
+    assert.equal(new intl.NumberFormat('ar-u-nu-latn').format(1422), '1,422');
+    assert.equal(new intl.NumberFormat('tr').format(1422), '1,422');
+    assert.equal(new intl.DateTimeFormat('ar-u-nu-arab').format(2026 as never), '٢,٠٢٦');
+    assert.deepEqual(new intl.NumberFormat('ar-u-nu-arab').formatToParts(12), [{ type: 'integer', value: '١٢' }]);
+  });
+
+  it('leaves engines that honor the extension alone', () => {
+    const before = Intl.NumberFormat;
+    ensureDigitSupport();
+    assert.equal(Intl.NumberFormat, before);
   });
 
   it('normalizes typed digits to Latin', () => {

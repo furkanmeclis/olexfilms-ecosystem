@@ -26,12 +26,11 @@ import {
   BrandMark,
   DateStub,
   NextStepCard,
-  QuickAction,
   Rise,
   VehiclePage,
   WarrantyProgressCard,
 } from './home-parts';
-import { isHidden, nameOf, openDealerFinder, portalServiceTone, retryPortal, useCustomerLinks, useFleetRoles } from './lib';
+import { isHidden, nameOf, portalServiceTone, retryPortal, useCustomerLinks, useFleetRoles } from './lib';
 import { StatTile, useServiceStatusLabel } from './parts';
 
 const HOME_VEHICLES = 20;
@@ -217,8 +216,6 @@ export function CustomerHomeScreen() {
               eyebrow={t('home_no_car_eyebrow')}
               title={t('home_no_car_title')}
               body={t('home_no_car_body')}
-              cta={t('action.find_dealer')}
-              onPress={() => void openDealerFinder()}
             />
           </View>
         )}
@@ -249,20 +246,10 @@ export function CustomerHomeScreen() {
             </Rise>
           )}
 
-          {/* Shortcuts */}
-          <Rise index={1} className="flex-row gap-3">
-            {booking ? (
-              <QuickAction icon="appointment" label={t('home_book')} onPress={() => router.push('/musteri/appointments/new' as Href)} />
-            ) : null}
-            <QuickAction icon="warranty" label={t('action.warranties')} onPress={() => router.push('/musteri/warranties')} />
-            <QuickAction icon="service" label={t('action.services')} onPress={() => router.push('/musteri/services' as Href)} />
-            <QuickAction icon="location" label={t('action.find_dealer')} onPress={() => void openDealerFinder()} />
-          </Rise>
-
           {/* Warranties of the car on screen */}
           {current && !isHidden(detail.error) ? (
             <View className="gap-3">
-              <SectionTitle title={t('home_protection')} onSeeAll={() => router.push('/musteri/warranties')} />
+              <SectionTitle title={t('home_protection')} onSeeAll={() => router.push('/musteri/services' as Href)} />
               {detail.isPending ? (
                 <Skeleton className="h-28 rounded-2xl" />
               ) : detail.error ? (
@@ -270,7 +257,7 @@ export function CustomerHomeScreen() {
               ) : warranties.length ? (
                 warranties.slice(0, 3).map((w, i) => (
                   <Rise key={w.uuid} index={i + 2}>
-                    <WarrantyProgressCard w={w} onPress={() => router.push(links.warranty(w.uuid))} />
+                    <WarrantyProgressCard w={w} onPress={() => router.push(links.service(w.service.uuid))} />
                   </Rise>
                 ))
               ) : (

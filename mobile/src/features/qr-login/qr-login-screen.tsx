@@ -63,7 +63,7 @@ export function QrLoginScreen() {
             <ListRow title={t('organization')} subtitle={org?.name ?? '—'} />
             <ListRow
               title={t('expires')}
-              subtitle={new Date(scan.data.expires_at).toLocaleTimeString(intlLocale(i18n.language))}
+              subtitle={new Intl.DateTimeFormat(intlLocale(i18n.language), { timeStyle: 'medium' }).format(new Date(scan.data.expires_at))}
               last
             />
           </List>
