@@ -18,5 +18,13 @@
   "approvals": "Approvazioni",
   "network": "Rete rivenditori",
   "warehouse": "Magazzino",
-  "warehouse_hint": "Stock, lavori e inventari"
+  "warehouse_hint": "Stock, lavori e inventari",
+  "group.operations": "Operatività",
+  "group.customers": "Clienti",
+  "group.stock": "Magazzino e ordini",
+  "group.finance": "Finanza",
+  "group.business": "Azienda",
+  "group.assistant": "IA",
+  "group.other": "Altro",
+  "group.account": "Account e impostazioni"
 }

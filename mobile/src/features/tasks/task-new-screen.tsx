@@ -8,12 +8,16 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
 import { Chips, useDebounced } from '@/features/admin/kit';
+import { PickerField, PickerSheet } from '@/features/picker-sheet';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
-import { List, ListRow, SectionHeader } from '@/ui/list';
+import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 
 import { dueDateToIso, TASK_PRIORITIES, type TaskPriority } from './lib';
+
+/** Search results shown in the subject sheet (the organizations endpoint is not paged). */
+const ORG_LIMIT = 50;
 
 /** Opens a manual task about a distributor or dealer of the brand. */
 export function TaskNewScreen() {
@@ -26,12 +30,14 @@ export function TaskNewScreen() {
   const [assignee, setAssignee] = useState('');
   const [orgQ, setOrgQ] = useState('');
   const [org, setOrg] = useState<{ uuid: string; name: string } | null>(null);
+  const [picking, setPicking] = useState(false);
   const search = useDebounced(orgQ.trim());
 
+  // Server search (the endpoint is not paged), loaded only while the sheet is open.
   const orgs = useQuery({
     queryKey: ['tasks', 'orgs', search],
-    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { q: search || undefined, limit: 8, offset: 0 } } })),
-    enabled: !org,
+    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { q: search || undefined, limit: ORG_LIMIT, offset: 0 } } })),
+    enabled: picking,
   });
   const assignees = useQuery({
     queryKey: ['tasks', 'assignees'],
@@ -78,22 +84,27 @@ export function TaskNewScreen() {
         />
 
         <SectionHeader title={t('subject')} />
-        {org ? (
-          <List>
-            <ListRow title={org.name} icon="building" trailing={undefined} onPress={() => setOrg(null)} last />
-          </List>
-        ) : (
-          <>
-            <Input label={t('field.subject_search')} placeholder={t('field.subject_placeholder')} value={orgQ} onChangeText={setOrgQ} autoCorrect={false} />
-            {orgs.data?.items.length ? (
-              <List>
-                {orgs.data.items.map((o, i, arr) => (
-                  <ListRow key={o.uuid} title={o.name} icon="building" onPress={() => setOrg({ uuid: o.uuid, name: o.name })} last={i === arr.length - 1} />
-                ))}
-              </List>
-            ) : null}
-          </>
-        )}
+        <PickerField icon="building" value={org?.name} placeholder={t('field.subject_search')} onPress={() => setPicking(true)} />
+        <PickerSheet
+          visible={picking}
+          title={t('field.subject_search')}
+          options={(orgs.data?.items ?? []).map((o) => ({
+            key: o.uuid,
+            title: o.name,
+            subtitle: [o.district, o.city].filter(Boolean).join(', ') || undefined,
+            icon: 'building' as const,
+          }))}
+          selectedKey={org?.uuid}
+          selectedLabel={org?.name}
+          search={{ value: orgQ, onChange: setOrgQ }}
+          searchPlaceholder={t('field.subject_placeholder')}
+          autoFocusSearch
+          loading={orgs.isPending}
+          error={orgs.error}
+          onRetry={() => void orgs.refetch()}
+          onPick={(o) => setOrg({ uuid: o.key, name: o.title })}
+          onClose={() => setPicking(false)}
+        />
 
         <SectionHeader title={t('priority_label')} />
         <Chips

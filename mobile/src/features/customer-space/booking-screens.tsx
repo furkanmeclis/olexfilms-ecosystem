@@ -8,12 +8,14 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { errorMessage, i18n } from '@/core/i18n';
+import { fitsInline, PickerSheet } from '@/features/picker-sheet';
 import { vehicleLabel } from '@/features/services/lib';
 import { ErrorState, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
+import type { IconName } from '@/ui/icons';
 import { Input } from '@/ui/input';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
@@ -76,8 +78,9 @@ export function CustomerBookingScreen() {
   const [slot, setSlot] = useState<Slot | null>(null);
   const [zone, setZone] = useState<string | undefined>();
   const [note, setNote] = useState('');
+  const [pickingDealer, setPickingDealer] = useState(false);
 
-  const chooseDealer = (d: Dealer | null) => {
+  const chooseDealer =(d: Dealer | null) => {
     setDealer(d);
     setDay(null);
     setSlot(null);
@@ -131,24 +134,26 @@ export function CustomerBookingScreen() {
             title={t('booking_step_dealer')}
             right={
               dealer ? (
-                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => chooseDealer(null)}>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setPickingDealer(true)}>
                   <Text variant="footnote" tone="primary" className="font-semibold">
                     {t('booking_change')}
                   </Text>
                 </Pressable>
               ) : undefined
             }>
-            {dealer ? (
-              <View className="min-h-14 flex-row items-center gap-3 px-4 py-3">
-                <Icon name="location" tone="primary" size={20} />
-                <Text variant="headline" className="flex-1" numberOfLines={2}>
-                  {dealer.name || t('booking_dealer_selected')}
-                </Text>
-              </View>
-            ) : (
-              <DealerPicker onPick={chooseDealer} />
-            )}
+            <SheetRow
+              icon="location"
+              title={dealer ? dealer.name || t('booking_dealer_selected') : null}
+              placeholder={t('booking_dealer_pick')}
+              onPress={() => setPickingDealer(true)}
+            />
           </Section>
+          <DealerSheet
+            visible={pickingDealer}
+            selected={dealer}
+            onPick={chooseDealer}
+            onClose={() => setPickingDealer(false)}
+          />
 
           <Section title={t('booking_step_time')}>
             {dealer ? (
@@ -163,7 +168,10 @@ export function CustomerBookingScreen() {
                   setSlot(null);
                 }}
                 onSlot={setSlot}
-                onChangeDealer={() => chooseDealer(null)}
+                onChangeDealer={() => {
+                  chooseDealer(null);
+                  setPickingDealer(true);
+                }}
               />
             ) : (
               <Text variant="callout" tone="muted" className="px-4 py-4">
@@ -225,6 +233,42 @@ function RadioRow({
   );
 }
 
+/** Row inside a booking section that opens a picker sheet; shows the choice or a muted prompt. */
+function SheetRow({
+  icon,
+  title,
+  subtitle,
+  placeholder,
+  onPress,
+}: {
+  icon: IconName;
+  title: string | null;
+  subtitle?: string | null;
+  placeholder: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title ?? placeholder}
+      onPress={onPress}
+      className="min-h-14 flex-row items-center gap-3 px-4 py-3 active:bg-muted">
+      <Icon name={icon} tone="primary" size={20} />
+      <View className="min-w-0 flex-1">
+        <Text variant={title ? 'headline' : 'body'} tone={title ? 'default' : 'muted'} numberOfLines={2}>
+          {title ?? placeholder}
+        </Text>
+        {title && subtitle ? (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      <Icon name="chevronDown" tone="muted-foreground" size={16} />
+    </Pressable>
+  );
+}
+
 function RowsSkeleton() {
   return (
     <View className="gap-2 p-3">
@@ -243,6 +287,7 @@ function VehiclePicker({ value, onChange }: { value: string | null; onChange: (u
       unwrap(api.GET('/v1/portal/vehicles', { params: { query: { limit: VEHICLE_PICKER_LIMIT, offset: 0 } } })),
   });
   const vehicles: PortalVehicle[] = useMemo(() => q.data?.items ?? [], [q.data]);
+  const [open, setOpen] = useState(false);
 
   // One vehicle: nothing to choose.
   useEffect(() => {
@@ -256,6 +301,36 @@ function VehiclePicker({ value, onChange }: { value: string | null; onChange: (u
       <Text variant="callout" tone="muted" className="px-4 py-4">
         {t('booking_no_vehicles')}
       </Text>
+    );
+  }
+  const title = (v: PortalVehicle) => v.plate || vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year) || t('vehicle');
+  const subtitle = (v: PortalVehicle) => (v.plate ? vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year) : '');
+  // A fleet has many vehicles: past a handful they go into a searchable sheet.
+  if (!fitsInline(vehicles.length)) {
+    const current = vehicles.find((v) => v.uuid === value);
+    return (
+      <>
+        <SheetRow
+          icon="vehicle"
+          title={current ? title(current) : null}
+          subtitle={current ? subtitle(current) : null}
+          placeholder={t('booking_vehicle_pick')}
+          onPress={() => setOpen(true)}
+        />
+        <PickerSheet
+          visible={open}
+          title={t('booking_step_vehicle')}
+          options={vehicles.map((v) => ({
+            key: v.uuid,
+            title: title(v),
+            subtitle: subtitle(v) || undefined,
+            icon: 'vehicle' as const,
+          }))}
+          selectedKey={value}
+          onPick={(o) => onChange(o.key)}
+          onClose={() => setOpen(false)}
+        />
+      </>
     );
   }
   return (
@@ -288,11 +363,22 @@ function VehiclePicker({ value, onChange }: { value: string | null; onChange: (u
  * by name, city or district). A dealer without portal bookings answers 404 in
  * the time step.
  */
-function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
+function DealerSheet({
+  visible,
+  selected,
+  onPick,
+  onClose,
+}: {
+  visible: boolean;
+  selected: Dealer | null;
+  onPick: (d: Dealer) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('customer');
   const [text, setText] = useState('');
   const q = useQuery({
     queryKey: ['portal', 'appointments', 'dealers'],
+    enabled: visible,
     retry: retryPortal,
     queryFn: async () => {
       const items: PortalServiceItem[] = [];
@@ -309,6 +395,7 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
   const pub = useQuery({
     queryKey: ['public', 'dealers', 'nearby', i18n.language],
     queryFn: ({ signal }) => fetchPublicDealers(signal),
+    enabled: visible,
     staleTime: 5 * 60_000,
     retry: 1,
   });
@@ -331,64 +418,52 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
     [past, pub.data, text],
   );
 
-  const row = (d: BookingDealer, last: boolean) => (
-    <Pressable
-      key={d.uuid}
-      accessibilityRole="button"
-      onPress={() => onPick({ uuid: d.uuid, name: d.name })}
-      className={cn('min-h-14 flex-row items-center gap-3 px-4 py-3 active:opacity-80', !last && 'border-b border-border')}>
-      <Icon name="location" tone="muted-foreground" size={20} />
-      <View className="flex-1">
-        <Text variant="headline" numberOfLines={1}>
-          {d.name}
-        </Text>
-        {d.place ? (
-          <Text variant="footnote" tone="muted" numberOfLines={1}>
-            {d.place}
-          </Text>
-        ) : null}
-      </View>
-      <Icon name="forward" tone="muted-foreground" size={16} />
-    </Pressable>
-  );
+  // Past dealers first, then the rest; the headers only when both groups can show.
+  const sectioned = pastShown.length > 0;
+  const toOption = (d: BookingDealer, section: string) => ({
+    key: d.uuid,
+    title: d.name,
+    subtitle: d.place || undefined,
+    icon: 'location' as const,
+    section: sectioned ? section : undefined,
+  });
+  const options = [
+    ...pastShown.map((d) => toOption(d, t('booking_dealers_past'))),
+    ...allShown.map((d) => toOption(d, t('booking_dealers_all'))),
+  ];
+  const names = new Map([...pastShown, ...allShown].map((d) => [d.uuid, d.name]));
+  const failed = pub.error ?? q.error;
 
   return (
-    <>
-      <View className="px-4 pb-2 pt-3">
-        <Input label={t('booking_dealer_search_label')} value={text} onChangeText={setText} placeholder={t('booking_dealer_search_placeholder')} autoCapitalize="none" />
-      </View>
-      {q.isPending ? (
-        <RowsSkeleton />
-      ) : q.error ? (
-        <ErrorState error={q.error} onRetry={() => void q.refetch()} />
-      ) : pastShown.length > 0 ? (
-        <>
-          <Text variant="footnote" tone="muted" className="px-4 pb-1 pt-2">
-            {t('booking_dealers_past')}
+    <PickerSheet
+      visible={visible}
+      title={t('booking_step_dealer')}
+      options={options}
+      selectedKey={selected?.uuid}
+      selectedLabel={selected ? selected.name || t('booking_dealer_selected') : null}
+      // Filtering stays in booking-lib (name, city or district).
+      search={{ value: text, onChange: setText }}
+      searchPlaceholder={t('booking_dealer_search_placeholder')}
+      loading={q.isPending || pub.isPending}
+      error={failed}
+      onRetry={() => {
+        if (q.error) void q.refetch();
+        if (pub.error) void pub.refetch();
+      }}
+      emptyText={text ? t('booking_no_dealers_match') : t('booking_no_dealers')}
+      footer={
+        capped ? (
+          <Text variant="footnote" tone="muted">
+            {t('booking_dealers_capped', { count: NEARBY_MAX_RESULTS })}
           </Text>
-          {pastShown.map((d, i) => row(d, i === pastShown.length - 1))}
-        </>
-      ) : null}
-      <Text variant="footnote" tone="muted" className="px-4 pb-1 pt-3">
-        {t('booking_dealers_all')}
-      </Text>
-      {pub.isPending ? (
-        <RowsSkeleton />
-      ) : pub.error ? (
-        <ErrorState error={pub.error} onRetry={() => void pub.refetch()} />
-      ) : allShown.length > 0 ? (
-        allShown.map((d, i) => row(d, i === allShown.length - 1))
-      ) : (
-        <Text variant="callout" tone="muted" className="px-4 py-4">
-          {text ? t('booking_no_dealers_match') : t('booking_no_dealers')}
-        </Text>
-      )}
-      {capped ? (
-        <Text variant="footnote" tone="muted" className="px-4 pb-3 pt-2">
-          {t('booking_dealers_capped', { count: NEARBY_MAX_RESULTS })}
-        </Text>
-      ) : null}
-    </>
+        ) : null
+      }
+      onPick={(o) => onPick({ uuid: o.key, name: names.get(o.key) ?? o.title })}
+      onClose={() => {
+        setText('');
+        onClose();
+      }}
+    />
   );
 }
 

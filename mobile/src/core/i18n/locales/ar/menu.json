@@ -18,5 +18,13 @@
   "approvals": "الموافقات",
   "network": "شبكة الوكلاء",
   "warehouse": "المستودع",
-  "warehouse_hint": "المخزون والمهام والجرد"
+  "warehouse_hint": "المخزون والمهام والجرد",
+  "group.operations": "العمليات",
+  "group.customers": "العملاء",
+  "group.stock": "المخزون والطلبات",
+  "group.finance": "المالية",
+  "group.business": "الأعمال",
+  "group.assistant": "الذكاء الاصطناعي",
+  "group.other": "أخرى",
+  "group.account": "الحساب والإعدادات"
 }

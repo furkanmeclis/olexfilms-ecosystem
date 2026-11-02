@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,9 @@ import { Alert, Pressable, TextInput, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
-import { Chips, useDebounced, useFormat } from '@/features/admin/kit';
+import { Chips, PAGE_SIZE, useDebounced, useFormat, usePagedQuery } from '@/features/admin/kit';
+import { PickerSheet } from '@/features/picker-sheet';
 import { fullName } from '@/features/services/lib';
-import { Sheet } from '@/features/services/sheet';
-import { SearchField } from '@/features/services/ui';
 import { ContinuousScanner, type ScanOutcome } from '@/features/warehouse/continuous-scanner';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -45,41 +44,47 @@ function lookupMessage(e: unknown) {
   return null;
 }
 
-function CustomerPicker({ onPick, onClose }: { onPick: (c: Picked) => void; onClose: () => void }) {
+function CustomerPicker({
+  selected,
+  onPick,
+  onClose,
+}: {
+  selected: Picked | null;
+  onPick: (c: Picked) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('sales');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
-  const res = useQuery({
-    queryKey: ['customers', 'sale-picker', query],
-    queryFn: () =>
-      unwrap(api.GET('/v1/customers', { params: { query: { q: query || undefined, status: 'active', limit: 20, offset: 0 } } })),
-  });
+  const res = usePagedQuery(['customers', 'sale-picker', 'paged', query], (offset) =>
+    unwrap(api.GET('/v1/customers', { params: { query: { q: query || undefined, status: 'active', limit: PAGE_SIZE, offset } } })),
+  );
   return (
-    <Sheet title={t('fields.customer')} saveTitle={t('common:close')} onSave={onClose} onClose={onClose}>
-      <SearchField value={q} onChange={setQ} placeholder={t('quick_sale.customer_placeholder')} autoFocus />
-      <View className="overflow-hidden rounded-lg border border-border bg-card">
-        {(res.data?.items ?? []).map((c, i, all) => (
-          <Pressable
-            key={c.uuid}
-            accessibilityRole="button"
-            disabled={c.anonymized}
-            onPress={() => onPick({ uuid: c.uuid, label: c.type === 'corporate' && c.company_name ? c.company_name : fullName(c) })}
-            className={`min-h-11 gap-0.5 px-4 py-2.5 active:bg-muted ${i < all.length - 1 ? 'border-b border-border' : ''}`}>
-            <Text variant="body" numberOfLines={1}>
-              {c.type === 'corporate' && c.company_name ? c.company_name : fullName(c)}
-            </Text>
-            <Text variant="footnote" tone="muted" numberOfLines={1}>
-              {[c.phone, c.email].filter(Boolean).join(' · ')}
-            </Text>
-          </Pressable>
-        ))}
-        {res.data && res.data.items.length === 0 ? (
-          <Text variant="callout" tone="muted" className="px-4 py-3">
-            {t('quick_sale.customers_empty')}
-          </Text>
-        ) : null}
-      </View>
-    </Sheet>
+    <PickerSheet
+      visible
+      title={t('fields.customer')}
+      options={res.items.map((c) => ({
+        key: c.uuid,
+        title: c.type === 'corporate' && c.company_name ? c.company_name : fullName(c),
+        subtitle: [c.phone, c.email].filter(Boolean).join(' · ') || undefined,
+        disabled: c.anonymized,
+      }))}
+      selectedKey={selected?.uuid}
+      selectedLabel={selected?.label}
+      search={{ value: q, onChange: setQ }}
+      searchPlaceholder={t('quick_sale.customer_placeholder')}
+      autoFocusSearch
+      loading={res.isPending}
+      error={res.error}
+      onRetry={() => void res.refetch()}
+      fetchingMore={res.isFetchingNextPage}
+      onEndReached={() => {
+        if (res.hasNextPage && !res.isFetchingNextPage) void res.fetchNextPage();
+      }}
+      emptyText={t('quick_sale.customers_empty')}
+      onPick={(o) => onPick({ uuid: o.key, label: o.title })}
+      onClose={onClose}
+    />
   );
 }
 
@@ -90,30 +95,20 @@ function ProductPicker({ onPick, onClose }: { onPick: (productUuid: string) => v
   const query = useDebounced(q.trim());
   const res = useProductSearch(query, true);
   return (
-    <Sheet title={t('quick_sale.search_label')} saveTitle={t('common:close')} onSave={onClose} onClose={onClose}>
-      <SearchField value={q} onChange={setQ} placeholder={t('quick_sale.search_placeholder')} autoFocus />
-      <View className="overflow-hidden rounded-lg border border-border bg-card">
-        {(res.data?.items ?? []).map((p, i, all) => (
-          <Pressable
-            key={p.product_uuid}
-            accessibilityRole="button"
-            onPress={() => onPick(p.product_uuid)}
-            className={`min-h-11 gap-0.5 px-4 py-2.5 active:bg-muted ${i < all.length - 1 ? 'border-b border-border' : ''}`}>
-            <Text variant="body" numberOfLines={1}>
-              {p.name}
-            </Text>
-            <Text variant="footnote" tone="muted" className="font-mono" numberOfLines={1}>
-              {p.sku}
-            </Text>
-          </Pressable>
-        ))}
-        {res.data && res.data.items.length === 0 ? (
-          <Text variant="callout" tone="muted" className="px-4 py-3">
-            {t('quick_sale.products_empty')}
-          </Text>
-        ) : null}
-      </View>
-    </Sheet>
+    <PickerSheet
+      visible
+      title={t('quick_sale.search_label')}
+      options={(res.data?.items ?? []).map((p) => ({ key: p.product_uuid, title: p.name, subtitle: p.sku }))}
+      search={{ value: q, onChange: setQ }}
+      searchPlaceholder={t('quick_sale.search_placeholder')}
+      autoFocusSearch
+      loading={res.isPending}
+      error={res.error}
+      onRetry={() => void res.refetch()}
+      emptyText={t('quick_sale.products_empty')}
+      onPick={(o) => onPick(o.key)}
+      onClose={onClose}
+    />
   );
 }
 
@@ -426,6 +421,7 @@ export function NewSaleScreen() {
       ) : null}
       {picking === 'customer' ? (
         <CustomerPicker
+          selected={customer}
           onClose={() => setPicking(null)}
           onPick={(c) => {
             setCustomer(c);

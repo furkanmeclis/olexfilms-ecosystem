@@ -57,5 +57,8 @@
   "vehicle_parts.preset.windows_front": "Лобовое стекло",
   "vehicle_parts.preset.windows_front_two": "Стёкла передних дверей",
   "vehicle_parts.preset.windows_except_front": "Все, кроме лобового",
-  "vehicle_parts.preset.windows_all": "Все стёкла"
+  "vehicle_parts.preset.windows_all": "Все стёкла",
+  "picker.search": "Поиск",
+  "picker.selected": "Выбрано",
+  "picker.empty": "Ничего не найдено"
 }

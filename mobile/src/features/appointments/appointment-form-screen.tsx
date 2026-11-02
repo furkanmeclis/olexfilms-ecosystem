@@ -10,7 +10,7 @@ import { EmptyState } from '@/ui/empty-state';
 
 import { api, unwrap } from '@/core/api/client';
 import { customerSubtitle, customerTitle } from '@/features/services/customer-name';
-import { CustomerStep, type PickedCustomer, VehicleStep } from '@/features/services/new-service-screen';
+import { CustomerStep, type PickedCustomer, VehicleStep } from '@/features/services/pickers';
 import { type Vehicle, vehicleLabel } from '@/features/services/lib';
 import { cn } from '@/ui/cn';
 import { Button } from '@/ui/button';

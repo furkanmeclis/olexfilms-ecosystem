@@ -1,187 +1,620 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
-import { z } from 'zod';
+import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
+import { useModule } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
-import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
-import { EMPTY_VEHICLE, isComplete, VehiclePicker, type VehicleValue } from '@/features/vehicle-picker';
-import { Segmented } from '@/features/warehouse/parts';
+import { readJSON, storage, writeJSON } from '@/core/storage';
+import { PlateBadge } from '@/features/customer-space/home-parts';
+import { type PickerOption, PickerSheet } from '@/features/picker-sheet';
+import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
+import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
-
-import { customerSubtitle, customerTitle } from './customer-name';
-import { type CustomerSummary, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
-import { isValidServiceNo } from './service-no';
-import { ServiceNoField } from './service-no-field';
-import { errorText, ListSkeleton, SearchField, Section } from './ui';
 import type { IconName } from '@/ui/icons';
 
-type Step = 'customer' | 'vehicle' | 'details';
-const STEPS: Step[] = ['customer', 'vehicle', 'details'];
+import { customerSubtitle, customerTitle } from './customer-name';
+import { IntakePhotos, intakeKey } from './intake-photos';
+import { formatNumber, type Service, type ServiceStatus, serviceTone, useLinks, type Vehicle, vehicleLabel } from './lib';
+import { CustomerStep, type PickedCustomer, VehicleStep } from './pickers';
+import { useService, useServiceWrite } from './service-detail-screen';
+import { ServiceHero } from './service-hero';
+import { ServiceNoField } from './service-no-field';
+import { DetailSkeleton, ErrorState, errorText, Section } from './ui';
+import {
+  customerStepError,
+  finishBlocker,
+  finishChoices,
+  type GateCtx,
+  initialParts,
+  isBlocking,
+  isWizardStep,
+  leaveBlocker,
+  nextStep,
+  parseKm,
+  previousStep,
+  resolveStep,
+  servicePatch,
+  stepBlocker,
+  type StepBlocker,
+  summaryError,
+  type SummaryForm,
+  summaryFromService,
+  wizardSteps,
+  type WizardStep,
+} from './wizard';
 
-export type PickedCustomer = {
-  uuid: string;
-  name: string;
-  surname?: string | null;
-  phone?: string | null;
-  type?: string | null;
-  company_name?: string | null;
+/** Why a step is closed, told under the step buttons. */
+const BLOCKED_KEY: Record<StepBlocker, string> = {
+  service: 'wizard.draft_hint',
+  photos: 'wizard.photos_missing',
+  parts: 'wizard.needs_parts',
+  items: 'wizard.needs_items',
 };
 
+const partsKey = (uuid: string) => `service-wizard.parts.v1.${uuid}`;
+
+/** Stored part selection of a draft; storage may be missing or blocked. */
+function storedParts(uuid: string): string[] | null {
+  try {
+    const v = readJSON<unknown>(partsKey(uuid));
+    return Array.isArray(v) && v.every((p) => typeof p === 'string') ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * New draft service in three short steps: customer, vehicle, details. Items
- * are added on the service screen right after (stock picker or barcode).
+ * Service intake wizard in the legacy app's order: customer and vehicle
+ * (opens the draft), intake photos (photo standard only), applied parts,
+ * products, summary (number, notes, measurement and the status to leave the
+ * service in). `/services/new` starts a new draft; `/services/<uuid>/wizard`
+ * continues one. Every role uses this one screen: the backend's
+ * `available_transitions`, `items_editable` and `service_no_editable` and the
+ * session permissions decide what each step offers.
  */
 export function NewServiceScreen() {
+  const params = useLocalSearchParams<{ uuid?: string; step?: string }>();
   const { t } = useTranslation('dealer');
   const links = useLinks();
   const qc = useQueryClient();
-  const [step, setStep] = useState<Step>('customer');
+  const canWrite = useCan('services.write');
+
+  const [createdUuid, setCreatedUuid] = useState<string | null>(null);
+  const uuid = params.uuid ?? createdUuid ?? '';
+  const svc = useService(uuid, !!uuid);
+  const s = uuid ? (svc.data ?? null) : null;
+  const onWrite = useServiceWrite(uuid);
+
+  // Photo standard gate (TEC-499): the step shows when the module is on and
+  // at least one angle applies; a missing required angle locks the later steps.
+  const photoModule = useModule('photo_standard');
+  const intake = useQuery({
+    queryKey: intakeKey(uuid),
+    queryFn: () => unwrap(api.GET('/v1/services/{uuid}/intake-photos', { params: { path: { uuid } } })),
+    enabled: !!uuid && photoModule,
+    retry: false,
+  });
+  const photosOn = photoModule && !!intake.data?.angles.some((a) => !a.angle.hidden);
+  const photosMissing = photosOn && (intake.data?.missing.length ?? 0) > 0;
+  const gateLoading = !!uuid && photoModule && intake.isPending;
+  const steps = wizardSteps(photosOn);
+
+  // Parts of the parts step: kept per draft on the device, else the items' parts.
+  const [partsState, setPartsState] = useState<{ uuid: string; parts: string[] } | null>(null);
+  if (s && partsState?.uuid !== s.uuid) {
+    setPartsState({ uuid: s.uuid, parts: initialParts(storedParts(s.uuid), s.items) });
+  }
+  const parts = partsState?.uuid === uuid ? partsState.parts : [];
+  const setParts = (next: string[]) => {
+    setPartsState({ uuid, parts: next });
+    try {
+      writeJSON(partsKey(uuid), next);
+    } catch {
+      // The selection then lives only in memory.
+    }
+  };
+
+  // Legacy rule (mobile only, every role): a body part before products, a product before the summary.
+  const gate = { hasService: !!s, photosMissing, partsCount: parts.length, itemCount: s?.items?.length ?? 0, steps };
+  const [wanted, setWanted] = useState<WizardStep>(() =>
+    params.uuid ? (isWizardStep(params.step) ? params.step : 'photos') : 'customer',
+  );
+  const step = resolveStep(wanted, gate);
+  const [formError, setStepError] = useState<string | null>(null);
+  // Why the user could not move on; shown until the gate is met.
+  const [blocked, setBlocked] = useState<StepBlocker | null>(null);
+  const stepError = formError ?? (blocked && isBlocking(blocked, gate) ? t(BLOCKED_KEY[blocked]) : null);
+  const go = (to: WizardStep | null) => {
+    setStepError(null);
+    setBlocked(null);
+    if (to) setWanted(to);
+  };
+  /** Next step, or the reason it is closed shown under the buttons. */
+  const leave = (from: WizardStep) => {
+    const b = leaveBlocker(from, gate);
+    if (b) setBlocked(b);
+    else go(nextStep(from, steps));
+  };
+
+  // First step (before the draft exists).
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [km, setKm] = useState('');
-  const [notes, setNotes] = useState('');
-  const [measure, setMeasure] = useState(false);
-  const [serviceNo, setServiceNo] = useState('');
   const performers = usePerformers();
   const [performer, setPerformer] = useState<string>(OWN);
+  const [kmInvalid, setKmInvalid] = useState(false);
+
+  // Fields saved on the summary step; filled once from the service.
+  const [form, setForm] = useState<SummaryForm>({ km: '', notes: '', serviceNo: '', measure: false });
+  const [formOf, setFormOf] = useState<string | null>(null);
+  if (s && formOf !== s.uuid) {
+    setFormOf(s.uuid);
+    setForm(summaryFromService(s));
+  }
+  const patchForm = (p: Partial<SummaryForm>) => setForm((f) => ({ ...f, ...p }));
+
+  const [choice, setChoice] = useState<ServiceStatus | null>(null);
 
   const create = useMutation({
-    mutationFn: () =>
-      unwrap(
+    mutationFn: () => {
+      const km = parseKm(form.km);
+      return unwrap(
         api.POST('/v1/services', {
           body: {
             customer_uuid: customer!.uuid,
             vehicle_uuid: vehicle!.uuid,
-            km: km.trim() ? Number.parseInt(km.replace(/\D/g, ''), 10) : undefined,
-            notes: notes.trim() || undefined,
-            has_measurement: measure && !!vehicle?.vin,
-            service_no: serviceNo.trim() || undefined,
+            km: typeof km === 'number' ? km : undefined,
+            // Asked on the summary step (it needs the VIN snapshot of the service).
+            has_measurement: false,
             // TEC-1003: the center may open the service for a dealer of its network.
             organization_uuid: performers.enabled && performer !== OWN ? performer : undefined,
           },
         }),
-      ),
-    onSuccess: (s) => {
-      qc.setQueryData(['services', 'detail', s.uuid], s);
+      );
+    },
+    onSuccess: (created) => {
+      qc.setQueryData(['services', 'detail', created.uuid], created);
       void qc.invalidateQueries({ queryKey: ['services', 'list'] });
       void qc.invalidateQueries({ queryKey: ['dealer-home'] });
-      router.replace(links.service(s.uuid));
+      setCreatedUuid(created.uuid);
+      setWanted('photos');
     },
   });
 
-  const at = STEPS.indexOf(step);
+  const removeItem = useMutation({
+    mutationFn: (item: string) => unwrap(api.DELETE('/v1/services/{uuid}/items/{item}', { params: { path: { uuid, item } } })),
+    onSuccess: onWrite,
+    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+  });
+
+  const finish = useMutation({
+    mutationFn: async ({ to }: { to: ServiceStatus }) => {
+      let cur = s!;
+      const body = servicePatch(cur, form);
+      if (body) {
+        cur = await unwrap(api.PATCH('/v1/services/{uuid}', { params: { path: { uuid } }, body }));
+        onWrite(cur);
+      }
+      if (to !== cur.status) {
+        cur = await unwrap(api.POST('/v1/services/{uuid}/transitions', { params: { path: { uuid } }, body: { status: to } }));
+      }
+      return cur;
+    },
+    onSuccess: (done) => {
+      onWrite(done);
+      try {
+        storage.remove(partsKey(uuid));
+      } catch {
+        // Nothing to clean up.
+      }
+      if (params.uuid && router.canGoBack()) router.back();
+      else router.replace(links.service(uuid));
+    },
+    onError: (e) => {
+      if (isApiError(e, 'PHOTO_STANDARD_INCOMPLETE')) {
+        void qc.invalidateQueries({ queryKey: intakeKey(uuid) });
+        setWanted('photos');
+        Alert.alert(t('photos_missing_title'), t('photos_missing_body'));
+        return;
+      }
+      if (isApiError(e, 'VALIDATION_ERROR') && e.details?.some((d) => d.field === 'items')) {
+        Alert.alert(t('action_failed'), t('complete_needs_items'));
+        return;
+      }
+      Alert.alert(t('action_failed'), errorText(e));
+    },
+  });
+
+  const continueFromCustomer = () => {
+    setStepError(null);
+    setKmInvalid(false);
+    const err = s
+      ? parseKm(form.km) === 'invalid'
+        ? 'km'
+        : null
+      : customerStepError({ customer, vehicle, km: form.km });
+    if (err === 'km') return setKmInvalid(true);
+    if (err) return setStepError(t(`wizard.error.${err}`));
+    if (s) leave('customer');
+    else create.mutate();
+  };
+
+  const submit = () => {
+    if (!s) return;
+    setStepError(null);
+    const closed = stepBlocker('summary', gate);
+    if (closed) return setBlocked(closed);
+    const err = summaryError(form);
+    if (err) return setStepError(t(`wizard.error.${err}`));
+    const to = choice ?? s.status;
+    if (finishBlocker(to, s.items?.length ?? 0)) return setStepError(t('complete_needs_items'));
+    if (to === 'completed') {
+      Alert.alert(t('transition_confirm.completed'), t('wizard.complete_body'), [
+        { text: t('common:cancel'), style: 'cancel' },
+        { text: t('transition.completed'), onPress: () => finish.mutate({ to }) },
+      ]);
+      return;
+    }
+    finish.mutate({ to });
+  };
+
+  const confirmRemove = (item: string, name: string) => {
+    Alert.alert(t('item_remove_confirm'), name, [
+      { text: t('common:cancel'), style: 'cancel' },
+      { text: t('item_remove'), style: 'destructive', onPress: () => removeItem.mutate(item) },
+    ]);
+  };
+
+  const loading = !!uuid && !s;
+  const busy = create.isPending || finish.isPending;
+  const editable = !!s && canWrite && s.items_editable;
 
   return (
     <>
-      <Stack.Screen options={{ title: t('new_service'), headerLargeTitle: false }} />
+      <Stack.Screen options={{ title: s ? s.service_no : t('new_service'), headerLargeTitle: false }} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2">
-        <View className="flex-row gap-1.5">
-          {STEPS.map((s, i) => (
-            <Pressable
-              key={s}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: s === step }}
-              disabled={i > at}
-              onPress={() => setStep(s)}
-              className="flex-1 gap-1.5">
-              <View className={cn('h-1 rounded-full', i <= at ? 'bg-primary' : 'bg-muted')} />
-              <Text variant="footnote" tone={s === step ? 'default' : 'muted'} className="font-semibold">
-                {i + 1}. {t(`step.${s}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Progress
+          steps={steps}
+          current={step}
+          gate={gate}
+          disabled={busy}
+          onSelect={(to) => go(to)}
+          onBlocked={(b) => {
+            setStepError(null);
+            setBlocked(b);
+          }}
+        />
 
-        {step === 'customer' ? (
-          <CustomerStep
-            selected={customer}
-            onPick={(c) => {
-              if (c.uuid !== customer?.uuid) setVehicle(null);
-              setCustomer(c);
-              setStep('vehicle');
-            }}
-          />
-        ) : null}
-
-        {step === 'vehicle' && customer ? (
-          <VehicleStep
-            customer={customer}
-            selected={vehicle}
-            onPick={(v) => {
-              setVehicle(v);
-              setStep('details');
-            }}
-          />
-        ) : null}
-
-        {step === 'details' && customer && vehicle ? (
+        {loading ? (
+          svc.error ? (
+            <ErrorState error={svc.error} onRetry={() => void svc.refetch()} />
+          ) : (
+            <DetailSkeleton />
+          )
+        ) : gateLoading && step !== 'customer' ? (
+          <DetailSkeleton />
+        ) : step === 'customer' ? (
           <View className="gap-4">
-            <Section>
-              <Summary
-                icon="customer"
-                title={customerTitle(customer)}
-                subtitle={customerSubtitle(customer)}
-                onPress={() => setStep('customer')}
-              />
-              <Summary
-                icon="vehicle"
-                title={vehicle.plate ?? ''}
-                subtitle={vehicleLabel(vehicle.car_brand?.name, vehicle.car_model?.name, vehicle.model_year)}
-                onPress={() => setStep('vehicle')}
-                last
-              />
-            </Section>
-            {performers.enabled ? <PerformerPicker performers={performers} value={performer} onChange={setPerformer} /> : null}
-            <ServiceNoField value={serviceNo} onChange={setServiceNo} />
-            <Input label={t('km')} placeholder={t('placeholder_km', { ns: 'common' })} keyboardType="number-pad" value={km} onChangeText={setKm} />
-            <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
-            <View className="flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
-              <View className="flex-1 gap-0.5">
-                <Text variant="body">{t('has_measurement')}</Text>
-                {!vehicle.vin ? (
-                  <Text variant="footnote" tone="muted">
-                    {t('measurement_needs_vin')}
-                  </Text>
+            {s ? (
+              <LockedIntake s={s} />
+            ) : (
+              <>
+                <StepBlock icon="customer" title={t('customer')} done={!!customer}>
+                  {customer ? (
+                    <Chosen
+                      title={customerTitle(customer)}
+                      subtitle={customerSubtitle(customer)}
+                      onChange={() => {
+                        setCustomer(null);
+                        setVehicle(null);
+                      }}
+                    />
+                  ) : (
+                    <CustomerStep selected={customer} onPick={(c) => setCustomer(c)} />
+                  )}
+                </StepBlock>
+                {customer ? (
+                  <StepBlock icon="vehicle" title={t('vehicle')} done={!!vehicle}>
+                    {vehicle ? (
+                      <Chosen
+                        title={vehicleLabel(vehicle.car_brand?.name, vehicle.car_model?.name, vehicle.model_year) || (vehicle.plate ?? '')}
+                        plate={vehicle.plate}
+                        plateCountry={vehicle.plate_country}
+                        onChange={() => setVehicle(null)}
+                      />
+                    ) : (
+                      <VehicleStep customer={customer} selected={vehicle} onPick={(v) => setVehicle(v)} />
+                    )}
+                  </StepBlock>
                 ) : null}
-              </View>
-              <Switch value={measure && !!vehicle.vin} onValueChange={setMeasure} disabled={!vehicle.vin} />
-            </View>
-            {create.error ? (
-              <Text variant="footnote" tone="danger">
-                {errorText(create.error)}
+                {vehicle && performers.enabled ? (
+                  <PerformerPicker performers={performers} value={performer} onChange={setPerformer} />
+                ) : null}
+              </>
+            )}
+            {s || vehicle ? (
+              <Input
+                label={t('km')}
+                placeholder={t('placeholder_km', { ns: 'common' })}
+                keyboardType="number-pad"
+                value={form.km}
+                onChangeText={(km) => {
+                  setKmInvalid(false);
+                  patchForm({ km });
+                }}
+                editable={!s || s.editable}
+                error={kmInvalid ? t('wizard.error.km') : undefined}
+              />
+            ) : null}
+            {create.error ? <ErrorLine text={errorText(create.error)} /> : null}
+            {!s && !vehicle && stepError ? <ErrorLine text={stepError} /> : null}
+            {s || vehicle ? (
+              <StepActions
+                error={stepError}
+                nextTitle={s ? t('wizard.continue') : t('wizard.open_draft')}
+                loading={create.isPending}
+                onNext={continueFromCustomer}
+              />
+            ) : null}
+            {!s && vehicle ? (
+              <Text variant="footnote" tone="muted" className="text-center">
+                {t('wizard.draft_hint')}
               </Text>
             ) : null}
-            <Button
-              title={t('create_service')}
-              size="lg"
-              loading={create.isPending}
-              disabled={!!serviceNo.trim() && !isValidServiceNo(serviceNo)}
-              onPress={() => create.mutate()}
-            />
-            <Text variant="footnote" tone="muted" className="text-center">
-              {t('items_after_create')}
-            </Text>
           </View>
+        ) : step === 'photos' && s ? (
+          <View className="gap-4">
+            <Text variant="callout" tone="muted">
+              {t('wizard.photos_hint')}
+            </Text>
+            <IntakePhotos uuid={s.uuid} canCapture={canWrite && s.editable && s.status !== 'completed' && s.status !== 'cancelled'} />
+            <StepActions
+              error={photosMissing ? t('wizard.photos_missing') : stepError}
+              onBack={() => go(previousStep('photos', steps))}
+              onNext={() => leave('photos')}
+              nextDisabled={photosMissing}
+            />
+          </View>
+        ) : step === 'parts' && s ? (
+          <View className="gap-4">
+            <Text variant="callout" tone="muted">
+              {t('wizard.parts_hint')}
+            </Text>
+            <VehiclePartPicker
+              value={parts}
+              onChange={
+                editable
+                  ? (next) => {
+                      setStepError(null);
+                      setParts(next);
+                    }
+                  : undefined
+              }
+              readOnly={!editable}
+            />
+            <StepActions error={stepError} onBack={() => go(previousStep('parts', steps))} onNext={() => leave('parts')} />
+          </View>
+        ) : step === 'products' && s ? (
+          <View className="gap-4">
+            <ItemsCard
+              s={s}
+              editable={editable}
+              removing={removeItem.isPending}
+              onAdd={() => router.push(links.addItem(s.uuid, parts))}
+              onRemove={confirmRemove}
+            />
+            {parts.length ? (
+              <Text variant="footnote" tone="muted">
+                {t('wizard.parts_applied', { count: parts.length })}
+              </Text>
+            ) : null}
+            <StepActions
+              error={stepError}
+              onBack={() => go(previousStep('products', steps))}
+              onNext={() => leave('products')}
+            />
+          </View>
+        ) : step === 'summary' && s ? (
+          <SummaryStep
+            s={s}
+            form={form}
+            onForm={patchForm}
+            parts={parts}
+            choice={choice ?? s.status}
+            onChoice={setChoice}
+            error={stepError}
+            busy={finish.isPending}
+            onBack={() => go(previousStep('summary', steps))}
+            onSubmit={submit}
+            onJump={(to) => go(to)}
+          />
         ) : null}
       </ScrollView>
     </>
+  );
+}
+
+// ---------------------------------------------------------------- progress
+
+function Progress({
+  steps,
+  current,
+  gate,
+  disabled,
+  onSelect,
+  onBlocked,
+}: {
+  steps: readonly WizardStep[];
+  current: WizardStep;
+  gate: GateCtx;
+  disabled: boolean;
+  onSelect: (s: WizardStep) => void;
+  /** A closed step was tapped: tell why instead of ignoring the tap. */
+  onBlocked: (b: StepBlocker) => void;
+}) {
+  const { t, i18n } = useTranslation('dealer');
+  const at = steps.indexOf(current);
+  return (
+    <View className="gap-2.5 rounded-2xl border border-border bg-card p-3.5" style={{ borderCurve: 'continuous' }}>
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Text variant="headline" numberOfLines={1} className="min-w-0 flex-1">
+          {t(`wizard.step.${current}`)}
+        </Text>
+        <Text variant="footnote" tone="muted" className="tabular-nums">
+          {t('wizard.step_of', { at: formatNumber(at + 1, i18n.language), total: formatNumber(steps.length, i18n.language) })}
+        </Text>
+      </View>
+      <View className="flex-row gap-1.5">
+        {steps.map((st, i) => {
+          const blocker = stepBlocker(st, gate);
+          return (
+            <Pressable
+              key={st}
+              accessibilityRole="tab"
+              accessibilityLabel={t(`wizard.step.${st}`)}
+              accessibilityState={{ selected: st === current, disabled: !!blocker || disabled }}
+              disabled={disabled}
+              hitSlop={{ top: 10, bottom: 10 }}
+              onPress={() => (blocker ? onBlocked(blocker) : onSelect(st))}
+              className="flex-1">
+              <View className={cn('h-1.5 rounded-full', i < at ? 'bg-primary' : i === at ? 'bg-primary/70' : 'bg-muted')} />
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function StepActions({
+  onBack,
+  onNext,
+  nextTitle,
+  nextDisabled,
+  loading,
+  error,
+}: {
+  onBack?: () => void;
+  onNext: () => void;
+  nextTitle?: string;
+  nextDisabled?: boolean;
+  loading?: boolean;
+  error?: string | null;
+}) {
+  const { t } = useTranslation('dealer');
+  return (
+    <View className="gap-2 pt-1">
+      {error ? <ErrorLine text={error} /> : null}
+      <View className="flex-row gap-2.5">
+        {onBack ? (
+          <Button title={t('common:back')} variant="outline" size="lg" icon="back" onPress={onBack} disabled={loading} className="flex-1" />
+        ) : null}
+        <Button
+          title={nextTitle ?? t('wizard.continue')}
+          size="lg"
+          loading={loading}
+          disabled={nextDisabled}
+          onPress={onNext}
+          className="flex-[1.4]"
+        />
+      </View>
+    </View>
+  );
+}
+
+function ErrorLine({ text }: { text: string }) {
+  return (
+    <View className="flex-row items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2.5">
+      <Icon name="alert" tone="destructive" size={16} />
+      <Text variant="footnote" tone="danger" className="flex-1">
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- step 1
+
+function StepBlock({ icon, title, done, children }: { icon: IconName; title: string; done: boolean; children: React.ReactNode }) {
+  return (
+    <View className="gap-2">
+      <View className="flex-row items-center gap-2 px-1">
+        <View className={cn('size-6 items-center justify-center rounded-full', done ? 'bg-primary' : 'bg-primary/10')}>
+          <Icon name={done ? 'check' : icon} tone={done ? 'primary-foreground' : 'primary'} size={13} weight="semibold" />
+        </View>
+        <Text variant="callout" className="font-semibold">
+          {title}
+        </Text>
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function Chosen({
+  title,
+  subtitle,
+  plate,
+  plateCountry,
+  onChange,
+}: {
+  title: string;
+  subtitle?: string;
+  plate?: string | null;
+  plateCountry?: string | null;
+  onChange: () => void;
+}) {
+  const { t } = useTranslation('dealer');
+  return (
+    <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3" style={{ borderCurve: 'continuous' }}>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text variant="body" className="font-semibold" numberOfLines={1}>
+          {title}
+        </Text>
+        {plate ? (
+          <View className="flex-row">
+            <PlateBadge plate={plate} country={plateCountry} />
+          </View>
+        ) : null}
+        {subtitle ? (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      <Pressable accessibilityRole="button" hitSlop={8} onPress={onChange}>
+        <Text variant="footnote" tone="primary" className="font-semibold">
+          {t('change')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Customer and vehicle of an open draft: copied into the service, not changeable. */
+function LockedIntake({ s }: { s: Service }) {
+  const { t } = useTranslation('dealer');
+  return (
+    <View className="gap-2">
+      <ServiceHero s={s} />
+      <Text variant="footnote" tone="muted" className="px-1">
+        {t('wizard.intake_locked')}
+      </Text>
+    </View>
   );
 }
 
@@ -207,6 +640,8 @@ function usePerformers() {
     ownName: activeMembership(me)?.name ?? '',
     dealers: (dealers.data?.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name })),
     isPending: enabled && dealers.isPending,
+    error: dealers.error,
+    refetch: () => void dealers.refetch(),
   };
 }
 
@@ -223,513 +658,271 @@ function PerformerPicker({
   const [open, setOpen] = useState(false);
   const own = t('performer_own', { name: performers.ownName });
   const current = value === OWN ? own : (performers.dealers.find((d) => d.uuid === value)?.name ?? own);
-  const pick = (v: string) => {
-    onChange(v);
-    setOpen(false);
-  };
+  // Own service point first, then the dealers of the network (search above seven).
+  const options: PickerOption[] = [
+    { key: OWN, title: own, icon: 'building' },
+    ...performers.dealers.map((d) => ({ key: d.uuid, title: d.name, icon: 'building' as const })),
+  ];
   return (
-    <View className="gap-1.5">
-      <Text variant="footnote" tone="muted" className="font-medium">
-        {t('performer_label')}
-      </Text>
+    <StepBlock icon="building" title={t('performer_label')} done={false}>
       <Section>
-        <Summary icon="building" title={current} subtitle={t('performer_hint')} onPress={() => setOpen((o) => !o)} last={!open} />
-        {open ? (
-          <>
-            <PickRow title={own} selected={value === OWN} onPress={() => pick(OWN)} last={!performers.dealers.length} />
-            {performers.dealers.map((d, i) => (
-              <PickRow key={d.uuid} title={d.name} selected={value === d.uuid} onPress={() => pick(d.uuid)} last={i === performers.dealers.length - 1} />
-            ))}
-          </>
-        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('performer_label')}, ${current}`}
+          accessibilityHint={t('performer_hint')}
+          onPress={() => setOpen(true)}
+          className="flex-row items-center gap-3 px-4 py-3 active:bg-muted">
+          <View className="min-w-0 flex-1 gap-0.5">
+            <Text variant="body" numberOfLines={1}>
+              {current}
+            </Text>
+            <Text variant="footnote" tone="muted" numberOfLines={1}>
+              {t('performer_hint')}
+            </Text>
+          </View>
+          <Icon name="chevronDown" tone="muted-foreground" size={16} />
+        </Pressable>
       </Section>
-    </View>
+      <PickerSheet
+        visible={open}
+        title={t('performer_label')}
+        options={performers.isPending || performers.error ? [] : options}
+        selectedKey={value}
+        selectedLabel={current}
+        loading={performers.isPending}
+        error={performers.error}
+        onRetry={performers.refetch}
+        onPick={(o) => onChange(o.key)}
+        onClose={() => setOpen(false)}
+      />
+    </StepBlock>
   );
 }
 
-function Summary({
-  icon,
-  title,
-  subtitle,
-  onPress,
-  last,
+// ---------------------------------------------------------------- products
+
+function ItemsCard({
+  s,
+  editable,
+  removing,
+  onAdd,
+  onRemove,
 }: {
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-  last?: boolean;
+  s: Service;
+  editable: boolean;
+  removing: boolean;
+  onAdd: () => void;
+  onRemove: (item: string, name: string) => void;
 }) {
-  const { t } = useTranslation('dealer');
+  const { t, i18n } = useTranslation('dealer');
+  const items = s.items ?? [];
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={cn('flex-row items-center gap-3 px-4 py-3 active:bg-muted', !last && 'border-b border-border')}>
-      <Icon name={icon} tone="primary" size={20} />
-      <View className="flex-1 gap-0.5">
-        <Text variant="body" numberOfLines={1}>
-          {title}
+    <View className="gap-2">
+      <View className="flex-row items-center gap-2 px-1">
+        <Text variant="caption" tone="muted" className="flex-1">
+          {t('items')}
         </Text>
-        {subtitle ? (
-          <Text variant="footnote" tone="muted" numberOfLines={1}>
-            {subtitle}
-          </Text>
+        {items.length ? (
+          <View className="rounded-full bg-primary/10 px-2 py-0.5">
+            <Text variant="footnote" tone="primary" className="font-semibold tabular-nums">
+              {formatNumber(items.length, i18n.language)}
+            </Text>
+          </View>
         ) : null}
       </View>
-      <Text variant="footnote" tone="primary">
-        {t('change')}
-      </Text>
-    </Pressable>
-  );
-}
-
-function PickRow({
-  title,
-  subtitle,
-  selected,
-  disabled,
-  onPress,
-  last,
-}: {
-  title: string;
-  subtitle?: string;
-  selected?: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-  last?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected, disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      className={cn('min-h-12 flex-row items-center gap-3 px-4 py-3 active:bg-muted', !last && 'border-b border-border', disabled && 'opacity-50')}>
-      <View className="flex-1 gap-0.5">
-        <Text variant="body" numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text variant="footnote" tone="muted" numberOfLines={2}>
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-      {selected ? <Icon name="check" tone="primary" size={18} /> : null}
-    </Pressable>
-  );
-}
-
-// ---------------------------------------------------------------- customer
-
-export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | null; onPick: (c: PickedCustomer) => void }) {
-  const { t } = useTranslation('dealer');
-  const canCreate = useCan('customers.write');
-  const [q, setQ] = useState('');
-  const [creating, setCreating] = useState(false);
-  const query = useDebounced(q.trim());
-
-  const list = useQuery({
-    queryKey: ['customers', 'pick', query],
-    queryFn: () =>
-      unwrap(api.GET('/v1/customers', { params: { query: { q: query || undefined, status: 'active', limit: 10, offset: 0 } } })),
-    enabled: !creating,
-  });
-
-  if (creating) return <NewCustomerForm initial={q} onCreated={onPick} onCancel={() => setCreating(false)} />;
-
-  const items: CustomerSummary[] = list.data?.items ?? [];
-  return (
-    <View className="gap-3">
-      <SearchField value={q} onChange={setQ} placeholder={t('customer_search')} />
-      {list.isPending ? (
-        <ListSkeleton rows={3} />
-      ) : list.error ? (
-        <Text variant="footnote" tone="danger">
-          {errorText(list.error)}
-        </Text>
-      ) : items.length ? (
+      {items.length ? (
         <Section>
-          {items.map((c, i) => (
-            <PickRow
-              key={c.uuid}
-              title={customerTitle(c)}
-              subtitle={customerSubtitle(c)}
-              selected={c.uuid === selected?.uuid}
-              onPress={() => onPick(c)}
-              last={i === items.length - 1}
-            />
+          {items.map((it, i) => (
+            <View key={it.uuid} className={cn('flex-row items-center gap-3 px-4 py-3', i < items.length - 1 && 'border-b border-border')}>
+              <View className="size-9 items-center justify-center rounded-full bg-secondary">
+                <Icon name="barcode" tone="primary" size={16} />
+              </View>
+              <View className="min-w-0 flex-1 gap-0.5">
+                <Text variant="body" numberOfLines={2}>
+                  {it.product.name}
+                </Text>
+                <Text variant="footnote" tone="muted" numberOfLines={2}>
+                  {[
+                    it.barcode,
+                    it.kind === 'partial' && it.meters ? t('meters_value', { value: it.meters }) : null,
+                    it.quantity ? t('quantity_value', { value: formatNumber(it.quantity, i18n.language) }) : null,
+                    it.applied_parts.length ? t('parts_count', { count: it.applied_parts.length }) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              {editable ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('item_remove')}
+                  hitSlop={8}
+                  disabled={removing}
+                  onPress={() => onRemove(it.uuid, it.product.name)}>
+                  <Icon name="delete" tone="destructive" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
           ))}
         </Section>
       ) : (
-        <Text variant="callout" tone="muted" className="py-2 text-center">
-          {t('customers_empty_filtered')}
-        </Text>
+        <View className="items-center gap-2 rounded-2xl border border-dashed border-border bg-card px-4 py-6" style={{ borderCurve: 'continuous' }}>
+          <Icon name="packageIn" tone="muted-foreground" />
+          <Text variant="callout" tone="muted" className="text-center">
+            {t('items_empty')}
+          </Text>
+          <Text variant="footnote" tone="muted" className="text-center">
+            {t('wizard.needs_items')}
+          </Text>
+        </View>
       )}
-      {canCreate ? (
-        <Button
-          title={t('customer_new')}
-          variant="outline"
-          icon={<Icon name="add" tone="primary" size={18} />}
-          onPress={() => setCreating(true)}
+      {editable ? <Button title={t('item_add')} variant="secondary" icon="add" onPress={onAdd} /> : null}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- summary
+
+function SummaryStep({
+  s,
+  form,
+  onForm,
+  parts,
+  choice,
+  onChoice,
+  error,
+  busy,
+  onBack,
+  onSubmit,
+  onJump,
+}: {
+  s: Service;
+  form: SummaryForm;
+  onForm: (p: Partial<SummaryForm>) => void;
+  parts: string[];
+  choice: ServiceStatus;
+  onChoice: (c: ServiceStatus) => void;
+  error: string | null;
+  busy: boolean;
+  onBack: () => void;
+  onSubmit: () => void;
+  onJump: (to: WizardStep) => void;
+}) {
+  const { t, i18n } = useTranslation('dealer');
+  const items = s.items?.length ?? 0;
+  const choices = finishChoices(s.status, s.available_transitions);
+  const km = parseKm(form.km);
+
+  return (
+    <View className="gap-4">
+      <ServiceHero s={s}>
+        <View className="flex-row gap-2">
+          <Fact
+            label={t('wizard.fact_parts')}
+            value={formatNumber(parts.length, i18n.language)}
+            onPress={() => onJump('parts')}
+          />
+          <Fact label={t('wizard.fact_items')} value={formatNumber(items, i18n.language)} onPress={() => onJump('products')} />
+          <Fact
+            label={t('km')}
+            value={typeof km === 'number' ? formatNumber(km, i18n.language) : '—'}
+            onPress={() => onJump('customer')}
+          />
+        </View>
+      </ServiceHero>
+
+      {s.service_no_editable !== false ? (
+        <ServiceNoField value={form.serviceNo} onChange={(serviceNo) => onForm({ serviceNo })} current={s.service_no} />
+      ) : null}
+
+      <Input
+        label={t('notes')}
+        placeholder={t('placeholder_notes')}
+        value={form.notes}
+        onChangeText={(notes) => onForm({ notes })}
+        multiline
+        maxLength={5000}
+        editable={s.editable}
+        className="min-h-24 py-3"
+      />
+
+      <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3" style={{ borderCurve: 'continuous' }}>
+        <View className="min-w-0 flex-1 gap-0.5">
+          <Text variant="body">{t('has_measurement')}</Text>
+          <Text variant="footnote" tone="muted">
+            {s.vin ? t('wizard.measurement_hint') : t('measurement_needs_vin')}
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel={t('has_measurement')}
+          value={form.measure && !!s.vin}
+          onValueChange={(measure) => onForm({ measure })}
+          disabled={!s.vin || !s.editable}
         />
-      ) : null}
-    </View>
-  );
-}
+      </View>
 
-const CUSTOMER_TYPES = ['individual', 'corporate'] as const;
-const customerSchema = z
-  .object({
-    type: z.enum(CUSTOMER_TYPES),
-    name: z.string().trim().min(1),
-    surname: z.string().trim().optional(),
-    phone: z.string().trim().min(7),
-    company_name: z.string().trim().max(200).optional(),
-    tax_office: z.string().trim().max(150).optional(),
-    tax_no: z
-      .string()
-      .optional()
-      .refine((v) => !v || /^[0-9A-Z]{5,20}$/.test(normalizeIdentity(v))),
-  })
-  .superRefine((v, ctx) => {
-    if (v.type === 'corporate' && !v.company_name) {
-      ctx.addIssue({ code: 'custom', path: ['company_name'], message: 'required' });
-    }
-  });
-type CustomerForm = z.infer<typeof customerSchema>;
-const INLINE_FIELDS = ['name', 'surname', 'phone', 'company_name', 'tax_office', 'tax_no'] as const;
-type InlineField = (typeof INLINE_FIELDS)[number];
-
-/** Tax number like normalizeIdentityNumber on the server. */
-function normalizeIdentity(raw: string): string {
-  return raw.toLocaleUpperCase('en-US').replace(/[\s\-./]/g, '');
-}
-
-function NewCustomerForm({
-  initial,
-  onCreated,
-  onCancel,
-}: {
-  initial: string;
-  onCreated: (c: PickedCustomer) => void;
-  onCancel: () => void;
-}) {
-  const { t } = useTranslation('dealer');
-  const qc = useQueryClient();
-  const looksLikePhone = /^[+\d\s()-]{7,}$/.test(initial);
-  const form = useForm<CustomerForm>({
-    resolver: zodResolver(customerSchema),
-    defaultValues: {
-      type: 'individual',
-      name: looksLikePhone ? '' : initial,
-      surname: '',
-      phone: looksLikePhone ? initial : '',
-      company_name: '',
-      tax_office: '',
-      tax_no: '',
-    },
-  });
-  const type = useWatch({ control: form.control, name: 'type' });
-  const create = useMutation({
-    mutationFn: (v: CustomerForm) => {
-      const corporate = v.type === 'corporate';
-      const taxNo = v.tax_no ? normalizeIdentity(v.tax_no) : '';
-      return unwrap(
-        api.POST('/v1/customers', {
-          body: {
-            type: v.type,
-            name: v.name,
-            surname: v.surname || undefined,
-            phone: v.phone,
-            ...(corporate && v.company_name ? { company_name: v.company_name } : {}),
-            ...(corporate && v.tax_office ? { tax_office: v.tax_office } : {}),
-            ...(corporate && taxNo ? { tax_no: taxNo } : {}),
-          },
-        }),
-      );
-    },
-    onSuccess: (c) => {
-      void qc.invalidateQueries({ queryKey: ['customers'] });
-      onCreated(c);
-    },
-    onError: (e) => {
-      if (!isApiError(e)) return;
-      for (const [field, message] of Object.entries(e.fieldErrors())) {
-        if (INLINE_FIELDS.includes(field as InlineField)) form.setError(field as InlineField, { message });
-      }
-    },
-  });
-  const err = (f: keyof CustomerForm) => (form.formState.errors[f] ? t(`invalid.${f}`) : undefined);
-
-  return (
-    <View className="gap-3">
-      <Text variant="headline">{t('customer_new')}</Text>
-      <Segmented
-        value={type}
-        options={CUSTOMER_TYPES.map((v) => ({ value: v, label: t(`customer_type.${v}`) }))}
-        onChange={(v) => form.setValue('type', v)}
-      />
-      {type === 'corporate' ? (
-        <>
-          <Controller
-            control={form.control}
-            name="company_name"
-            render={({ field }) => (
-              <Input
-                label={t('company_name')}
-                placeholder={t('placeholder_company_name')}
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                error={err('company_name')}
-              />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="tax_office"
-            render={({ field }) => (
-              <Input
-                label={t('tax_office')}
-                placeholder={t('placeholder_tax_office')}
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                error={err('tax_office')}
-              />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="tax_no"
-            render={({ field }) => (
-              <Input
-                label={t('tax_no')}
-                placeholder="1234567890"
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                error={err('tax_no')}
-                autoCapitalize="characters"
-              />
-            )}
-          />
-        </>
-      ) : null}
-      <Controller
-        control={form.control}
-        name="name"
-        render={({ field }) => (
-          <Input
-            label={t(type === 'corporate' ? 'contact_first_name' : 'first_name')}
-            placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="surname"
-        render={({ field }) => (
-          <Input
-            label={t(type === 'corporate' ? 'contact_surname' : 'surname')}
-            placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="phone"
-        render={({ field }) => (
-          <Input
-            label={t('phone')}
-            placeholder={t('placeholder_phone', { ns: 'common' })}
-            value={field.value}
-            onChangeText={field.onChange}
-            error={err('phone')}
-            keyboardType="phone-pad"
-            hint={t('phone_hint')}
-          />
-        )}
-      />
-      {create.error ? (
-        <Text variant="footnote" tone="danger">
-          {errorText(create.error)}
+      <View className="gap-2">
+        <Text variant="caption" tone="muted" className="px-1">
+          {t('wizard.finish_as')}
         </Text>
-      ) : null}
-      <Button title={t('customer_save')} loading={create.isPending} onPress={() => void form.handleSubmit((v) => create.mutate(v))()} />
-      <Button title={t('common:back')} variant="ghost" onPress={onCancel} disabled={create.isPending} />
-    </View>
-  );
-}
-
-// ----------------------------------------------------------------- vehicle
-
-export function VehicleStep({
-  customer,
-  selected,
-  onPick,
-}: {
-  customer: PickedCustomer;
-  selected: Vehicle | null;
-  onPick: (v: Vehicle) => void;
-}) {
-  const { t } = useTranslation('dealer');
-  const canCreate = useCan('vehicles.write');
-  const [creating, setCreating] = useState(false);
-  const list = useQuery({
-    queryKey: ['vehicles', 'of-customer', customer.uuid],
-    queryFn: () =>
-      unwrap(api.GET('/v1/vehicles', { params: { query: { customer_uuid: customer.uuid, limit: 50, offset: 0 } } })),
-  });
-
-  if (creating) return <NewVehicleForm customerUuid={customer.uuid} onCreated={onPick} onCancel={() => setCreating(false)} />;
-
-  const items = list.data?.items ?? [];
-  return (
-    <View className="gap-3">
-      <Text variant="footnote" tone="muted">
-        {t('vehicles_of', { name: customerTitle(customer) })}
-      </Text>
-      {list.isPending ? (
-        <ListSkeleton rows={2} />
-      ) : list.error ? (
-        <Text variant="footnote" tone="danger">
-          {errorText(list.error)}
-        </Text>
-      ) : items.length ? (
         <Section>
-          {items.map((v, i) => (
-            <PickRow
-              key={v.uuid}
-              title={v.plate || v.vin || '—'}
-              subtitle={
-                v.car_model
-                  ? vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year)
-                  : t('vehicle_needs_model')
-              }
-              disabled={!v.car_model}
-              selected={v.uuid === selected?.uuid}
-              onPress={() => onPick(v)}
-              last={i === items.length - 1}
-            />
-          ))}
+          {choices.map((c, i) => {
+            const blocked = finishBlocker(c, items) !== null;
+            return (
+              <Pressable
+                key={c}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: c === choice, disabled: blocked }}
+                disabled={blocked || busy}
+                onPress={() => onChoice(c)}
+                className={cn(
+                  'min-h-14 flex-row items-center gap-3 px-4 py-3 active:bg-muted',
+                  i < choices.length - 1 && 'border-b border-border',
+                  blocked && 'opacity-50',
+                )}>
+                <View className={cn('size-5 items-center justify-center rounded-full border-2', c === choice ? 'border-primary' : 'border-border')}>
+                  {c === choice ? <View className="size-2.5 rounded-full bg-primary" /> : null}
+                </View>
+                <View className="min-w-0 flex-1 gap-0.5">
+                  <Text variant="body" className={cn(c === choice && 'font-semibold')}>
+                    {c === s.status ? t('wizard.keep', { status: t(`service_status.${c}`) }) : t(`service_status.${c}`)}
+                  </Text>
+                  <Text variant="footnote" tone="muted">
+                    {blocked ? t('complete_needs_items') : t(`wizard.finish_hint.${c}`)}
+                  </Text>
+                </View>
+                <StatusPill label={t(`service_status.${c}`)} tone={serviceTone(c)} />
+              </Pressable>
+            );
+          })}
         </Section>
-      ) : (
-        <Text variant="callout" tone="muted" className="py-2 text-center">
-          {t('vehicles_empty')}
-        </Text>
-      )}
-      {canCreate ? (
-        <Button
-          title={t('vehicle_new')}
-          variant={items.length ? 'outline' : 'primary'}
-          icon={<Icon name="add" tone={items.length ? 'primary' : 'primary-foreground'} size={18} />}
-          onPress={() => setCreating(true)}
-        />
-      ) : null}
+      </View>
+
+      <StepActions
+        error={error}
+        onBack={onBack}
+        onNext={onSubmit}
+        loading={busy}
+        nextTitle={choice === s.status ? t('wizard.save') : t(`transition.${choice}`)}
+      />
     </View>
   );
 }
 
-export const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
-const vehicleSchema = z.object({
-  plate: z.string().trim().min(2).max(20),
-  // Brand → model → optional year from the shared vehicle picker.
-  vehicle: z.custom<VehicleValue>((v) => isComplete(v as VehicleValue)),
-  vin: z
-    .string()
-    .trim()
-    .refine((v) => v === '' || VIN_RE.test(v.toUpperCase())),
-});
-type VehicleForm = z.output<typeof vehicleSchema>;
-type VehicleFormInput = z.input<typeof vehicleSchema>;
-
-function NewVehicleForm({
-  customerUuid,
-  onCreated,
-  onCancel,
-}: {
-  customerUuid: string;
-  onCreated: (v: Vehicle) => void;
-  onCancel: () => void;
-}) {
-  const { t } = useTranslation('dealer');
-  const qc = useQueryClient();
-  const form = useForm<VehicleFormInput, unknown, VehicleForm>({
-    resolver: zodResolver(vehicleSchema),
-    defaultValues: { plate: '', vehicle: EMPTY_VEHICLE, vin: '' },
-  });
-  const create = useMutation({
-    mutationFn: (v: VehicleForm) =>
-      unwrap(
-        api.POST('/v1/vehicles', {
-          body: {
-            customer_uuid: customerUuid,
-            plate: v.plate.toUpperCase(),
-            car_model_uuid: v.vehicle.model?.uuid,
-            model_year: v.vehicle.year ?? undefined,
-            vin: v.vin ? v.vin.toUpperCase() : undefined,
-          },
-        }),
-      ),
-    onSuccess: (v) => {
-      void qc.invalidateQueries({ queryKey: ['vehicles'] });
-      onCreated(v);
-    },
-    onError: (e) => {
-      if (!isApiError(e)) return;
-      const f = e.fieldErrors();
-      if (f.plate || e.code === 'INVALID_PLATE') form.setError('plate', { message: f.plate ?? e.code });
-      if (f.vin) form.setError('vin', { message: f.vin });
-      if (f.model_year || f.car_model_uuid) form.setError('vehicle', { message: f.model_year ?? f.car_model_uuid });
-    },
-  });
-  const err = (f: keyof VehicleFormInput) => (form.formState.errors[f] ? t(`invalid.${f}`) : undefined);
-
+function Fact({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
-    <View className="gap-3">
-      <Text variant="headline">{t('vehicle_new')}</Text>
-      <Controller
-        control={form.control}
-        name="plate"
-        render={({ field }) => (
-          <Input
-            label={t('plate')}
-            placeholder={t('placeholder_plate', { ns: 'common' })}
-            value={field.value}
-            onChangeText={field.onChange}
-            error={err('plate')}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            trailing={<PlateScanButton onResult={field.onChange} />}
-          />
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="vehicle"
-        render={({ field }) => <VehiclePicker value={field.value} onChange={field.onChange} error={err('vehicle')} />}
-      />
-      <Controller
-        control={form.control}
-        name="vin"
-        render={({ field }) => (
-          <Input
-            label={t('vin_optional')}
-            placeholder={t('placeholder_vin', { ns: 'common' })}
-            value={field.value}
-            onChangeText={field.onChange}
-            error={err('vin')}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={17}
-          />
-        )}
-      />
-      {create.error ? (
-        <Text variant="footnote" tone="danger">
-          {errorText(create.error)}
-        </Text>
-      ) : null}
-      <Button title={t('vehicle_save')} loading={create.isPending} onPress={() => void form.handleSubmit((v) => create.mutate(v))()} />
-      <Button title={t('common:back')} variant="ghost" onPress={onCancel} disabled={create.isPending} />
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+      onPress={onPress}
+      className="min-w-0 flex-1 gap-0.5 rounded-xl bg-secondary px-3 py-2 active:opacity-80"
+      style={{ borderCurve: 'continuous' }}>
+      <Text variant="footnote" tone="muted" numberOfLines={1}>
+        {label}
+      </Text>
+      <Text variant="headline" className="tabular-nums" numberOfLines={1}>
+        {value}
+      </Text>
+    </Pressable>
   );
 }

@@ -5,6 +5,8 @@ import Svg, { Rect } from 'react-native-svg';
 import { useCSSVariable } from 'uniwind';
 
 import { useFormat } from '@/features/admin/kit';
+import { kpiIcon } from '@/features/dealer-home/board';
+import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { Text } from '@/ui/text';
 
 import type { Report, ReportSeries } from './api';
@@ -15,22 +17,15 @@ function isTimeSeries(s: ReportSeries) {
   return s.points.length > 1 && s.points.every((p) => DATE_KEY.test(p.key));
 }
 
-/** Stat tiles: the `cards` series of summary reports and the overview. */
+/** Stat tiles: the `cards` series of summary reports and the overview, as shared KPI cards. */
 export function StatTiles({ series }: { series: ReportSeries }) {
   const f = useFormat();
   return (
-    <View className="flex-row flex-wrap gap-2.5">
+    <KpiGrid>
       {series.points.map((p) => (
-        <View key={p.key} className="min-h-20 grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3.5">
-          <Text variant="footnote" tone="muted" numberOfLines={2}>
-            {p.label}
-          </Text>
-          <Text variant="title" className="tabular-nums">
-            {f.number(p.value, 1)}
-          </Text>
-        </View>
+        <KpiCard key={p.key} icon={kpiIcon(p.key)} label={p.label} value={f.number(p.value, 1)} />
       ))}
-    </View>
+    </KpiGrid>
   );
 }
 

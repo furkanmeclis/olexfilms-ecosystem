@@ -266,5 +266,7 @@
   "home_no_warranty": "No active warranty on this car.",
   "home_no_car_eyebrow": "No car yet",
   "home_no_car_title": "Crown your car with Olex",
-  "home_no_car_body": "Film installed at an authorized dealer and its warranty show up here."
+  "home_no_car_body": "Film installed at an authorized dealer and its warranty show up here.",
+  "booking_dealer_pick": "Choose a dealer",
+  "booking_vehicle_pick": "Choose a vehicle"
 }

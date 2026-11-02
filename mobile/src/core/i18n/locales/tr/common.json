@@ -63,5 +63,8 @@
   "vehicle_parts.preset.windows_front": "Ön cam",
   "vehicle_parts.preset.windows_front_two": "Ön kapı camları",
   "vehicle_parts.preset.windows_except_front": "Ön cam hariç camlar",
-  "vehicle_parts.preset.windows_all": "Tüm camlar"
+  "vehicle_parts.preset.windows_all": "Tüm camlar",
+  "picker.search": "Ara",
+  "picker.selected": "Seçili",
+  "picker.empty": "Sonuç yok"
 }

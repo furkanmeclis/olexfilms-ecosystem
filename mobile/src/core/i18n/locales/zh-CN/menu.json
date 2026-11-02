@@ -18,5 +18,13 @@
   "approvals": "审批",
   "network": "经销商网络",
   "warehouse": "仓库",
-  "warehouse_hint": "库存、作业和盘点"
+  "warehouse_hint": "库存、作业和盘点",
+  "group.operations": "运营",
+  "group.customers": "客户",
+  "group.stock": "库存与订单",
+  "group.finance": "财务",
+  "group.business": "经营",
+  "group.assistant": "AI",
+  "group.other": "其他",
+  "group.account": "账户与设置"
 }

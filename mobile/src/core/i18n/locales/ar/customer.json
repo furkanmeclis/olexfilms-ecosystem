@@ -125,5 +125,7 @@
   "home_no_warranty": "لا يوجد ضمان نشط لهذه السيارة.",
   "home_no_car_eyebrow": "لا توجد سيارة بعد",
   "home_no_car_title": "توّج سيارتك مع Olex",
-  "home_no_car_body": "يظهر هنا الغشاء المركّب لدى وكيل معتمد وضمانه."
+  "home_no_car_body": "يظهر هنا الغشاء المركّب لدى وكيل معتمد وضمانه.",
+  "booking_dealer_pick": "اختر وكيلًا",
+  "booking_vehicle_pick": "اختر مركبة"
 }

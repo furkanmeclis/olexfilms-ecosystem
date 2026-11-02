@@ -1,24 +1,24 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
+import { PickerField, PickerSheet } from '@/features/picker-sheet';
 import { Button } from '@/ui/button';
-import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 
 import { whError } from './format';
-import { ListSkeleton } from './parts';
 
 export type Product = components['schemas']['CatalogProduct'];
 
 /** Active catalog products by name or SKU (GET /v1/catalog/products). */
-function useProductSearch(q: string) {
+function useProductSearch(q: string, enabled: boolean) {
   return useQuery({
     queryKey: ['warehouse', 'catalog', q],
+    enabled,
     placeholderData: keepPreviousData,
     queryFn: () =>
       unwrap(api.GET('/v1/catalog/products', { params: { query: { q: q || undefined, active: true, limit: 30 } } })),
@@ -26,61 +26,44 @@ function useProductSearch(q: string) {
   });
 }
 
-/** Search-and-pick list of catalog products. */
+/** Product field that opens a searchable sheet of catalog products (keeps the form short). */
 export function ProductPicker({ value, onPick }: { value?: string; onPick: (p: Product) => void }) {
   const { t } = useTranslation('warehouse');
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [q, setQ] = useState('');
   useEffect(() => {
     const id = setTimeout(() => setQ(input.trim()), 300);
     return () => clearTimeout(id);
   }, [input]);
-  const res = useProductSearch(q);
+  const res = useProductSearch(q, open);
+  const products = res.data ?? [];
   return (
-    <View className="gap-2">
-      <View className="min-h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card px-3">
-        <Icon name="search" tone="muted-foreground" size={18} />
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder={t('stock.filters.product_search')}
-          placeholderTextColorClassName="accent-muted-foreground"
-          autoCorrect={false}
-          className="min-h-11 flex-1 text-[17px] text-foreground"
-        />
-      </View>
-      {res.isLoading ? (
-        <ListSkeleton rows={3} />
-      ) : (
-        <FlatList
-          data={res.data ?? []}
-          keyExtractor={(p) => p.uuid}
-          scrollEnabled={false}
-          contentContainerClassName="gap-1.5"
-          ListEmptyComponent={
-            <Text variant="callout" tone="muted">
-              {res.error ? whError(res.error) : t('orders.form.product_none')}
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => onPick(item)}
-              className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 active:opacity-70">
-              <View className="flex-1 gap-0.5">
-                <Text variant="callout" numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text variant="footnote" tone="muted" className="font-mono">
-                  {item.sku} · {t(`unit_type.${item.unit_type}`)}
-                </Text>
-              </View>
-              {item.uuid === value ? <Icon name="check" tone="primary" size={18} /> : null}
-            </Pressable>
-          )}
-        />
-      )}
-    </View>
+    <>
+      <PickerField icon="package" placeholder={t('fields.product')} onPress={() => setOpen(true)} />
+      <PickerSheet
+        visible={open}
+        title={t('fields.product')}
+        options={products.map((p) => ({ key: p.uuid, title: p.name, subtitle: `${p.sku} · ${t(`unit_type.${p.unit_type}`)}` }))}
+        selectedKey={value}
+        search={{ value: input, onChange: setInput }}
+        searchPlaceholder={t('stock.filters.product_search')}
+        autoFocusSearch
+        loading={res.isLoading}
+        error={res.error}
+        errorMessage={res.error ? whError(res.error) : undefined}
+        onRetry={() => void res.refetch()}
+        emptyText={t('orders.form.product_none')}
+        onPick={(o) => {
+          const p = products.find((x) => x.uuid === o.key);
+          if (p) onPick(p);
+        }}
+        onClose={() => {
+          setOpen(false);
+          setInput('');
+        }}
+      />
+    </>
   );
 }
 

@@ -18,5 +18,13 @@
   "approvals": "Aprobaciones",
   "network": "Red de distribuidores",
   "warehouse": "Almacén",
-  "warehouse_hint": "Stock, tareas y recuentos"
+  "warehouse_hint": "Stock, tareas y recuentos",
+  "group.operations": "Operaciones",
+  "group.customers": "Clientes",
+  "group.stock": "Stock y pedidos",
+  "group.finance": "Finanzas",
+  "group.business": "Empresa",
+  "group.assistant": "IA",
+  "group.other": "Otros",
+  "group.account": "Cuenta y ajustes"
 }

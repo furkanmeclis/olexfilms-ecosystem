@@ -31,5 +31,13 @@
   "approvals": "Onaylar",
   "network": "Bayi ağı",
   "warehouse": "Depo",
-  "warehouse_hint": "Stok, iş emirleri ve sayım"
+  "warehouse_hint": "Stok, iş emirleri ve sayım",
+  "group.operations": "Operasyon",
+  "group.customers": "Müşteriler",
+  "group.stock": "Stok ve sipariş",
+  "group.finance": "Finans",
+  "group.business": "İşletme",
+  "group.assistant": "Yapay zekâ",
+  "group.other": "Diğer",
+  "group.account": "Hesap ve ayarlar"
 }

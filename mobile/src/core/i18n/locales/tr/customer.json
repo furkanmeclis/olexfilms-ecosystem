@@ -266,5 +266,7 @@
   "home_no_warranty": "Bu araçta aktif garanti yok.",
   "home_no_car_eyebrow": "Henüz aracın yok",
   "home_no_car_title": "Aracını Olex ile taçlandır",
-  "home_no_car_body": "Yetkili bayide uygulanan film ve garantin burada görünür."
+  "home_no_car_body": "Yetkili bayide uygulanan film ve garantin burada görünür.",
+  "booking_dealer_pick": "Bayi seç",
+  "booking_vehicle_pick": "Araç seç"
 }

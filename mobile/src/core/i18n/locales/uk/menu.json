@@ -18,5 +18,13 @@
   "approvals": "Погодження",
   "network": "Дилерська мережа",
   "warehouse": "Склад",
-  "warehouse_hint": "Залишки, завдання та інвентаризація"
+  "warehouse_hint": "Залишки, завдання та інвентаризація",
+  "group.operations": "Операції",
+  "group.customers": "Клієнти",
+  "group.stock": "Склад і замовлення",
+  "group.finance": "Фінанси",
+  "group.business": "Компанія",
+  "group.assistant": "ШІ",
+  "group.other": "Інше",
+  "group.account": "Обліковий запис і налаштування"
 }

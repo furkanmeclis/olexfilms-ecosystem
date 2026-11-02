@@ -17,15 +17,19 @@ import { Text } from '@/ui/text';
 import { type ServiceStockUnit, useDebounced } from './lib';
 import { useServiceWrite } from './service-detail-screen';
 import { Chips, errorText, ListBody, SearchField } from './ui';
+import { parseParts, partsForProduct } from './wizard';
 
 type Kind = 'full' | 'partial';
 
 /**
  * Adds a stock unit to the service: search the organization's stock (name,
  * SKU, barcode) or scan the barcode, then pick quantity / meters and parts.
+ * `?parts=` (the wizard's parts step) preselects the chosen parts the
+ * product's category allows.
  */
 export function AddItemScreen() {
-  const { uuid } = useLocalSearchParams<{ uuid: string }>();
+  const { uuid, parts: partsParam } = useLocalSearchParams<{ uuid: string; parts?: string }>();
+  const preset = parseParts(partsParam);
   const { t } = useTranslation('dealer');
   const onWrite = useServiceWrite(uuid);
   const [q, setQ] = useState('');
@@ -66,7 +70,7 @@ export function AddItemScreen() {
     <>
       <Stack.Screen options={{ title: t('item_add'), headerLargeTitle: false }} />
       {picked ? (
-        <UnitForm unit={picked} busy={add.isPending} onCancel={() => setPicked(null)} onSubmit={(b) => add.mutate(b)} />
+        <UnitForm unit={picked} preset={preset} busy={add.isPending} onCancel={() => setPicked(null)} onSubmit={(b) => add.mutate(b)} />
       ) : (
         <FlatList
           data={items}
@@ -169,11 +173,13 @@ function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
 
 function UnitForm({
   unit,
+  preset,
   busy,
   onCancel,
   onSubmit,
 }: {
   unit: ServiceStockUnit;
+  preset: readonly string[];
   busy: boolean;
   onCancel: () => void;
   onSubmit: (b: { barcode: string; kind: Kind; quantity?: number; meters?: number; applied_parts?: string[]; notes?: string }) => void;
@@ -185,7 +191,7 @@ function UnitForm({
   const [quantity, setQuantity] = useState('1');
   const [meters, setMeters] = useState('');
   const [notes, setNotes] = useState('');
-  const [parts, setParts] = useState<string[]>([]);
+  const [parts, setParts] = useState<string[]>(() => partsForProduct(preset, unit.product.available_parts));
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {

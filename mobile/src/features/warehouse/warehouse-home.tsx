@@ -8,6 +8,7 @@ import { useCan } from '@/core/spaces';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
+import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
@@ -116,27 +117,18 @@ export function WarehouseHome() {
           </Pressable>
         )}
 
-        <View className="flex-row gap-2.5">
+        <KpiGrid>
           {counters.map((c) => (
-            <Pressable
+            <KpiCard
               key={c.key}
-              accessibilityRole="button"
+              icon={c.icon}
+              label={c.label}
+              value={c.value == null ? '–' : String(c.value)}
+              loading={summary.isLoading}
               onPress={() => go(`/depo/jobs?tab=${c.tab}`)}
-              className="flex-1 gap-1 rounded-lg border border-border bg-card p-3 active:opacity-80">
-              <Icon name={c.icon} tone="primary" size={18} />
-              {summary.isLoading ? (
-                <Skeleton className="h-7 w-10" />
-              ) : (
-                <Text variant="title" className="tabular-nums">
-                  {c.value ?? '–'}
-                </Text>
-              )}
-              <Text variant="footnote" tone="muted" numberOfLines={2}>
-                {c.label}
-              </Text>
-            </Pressable>
+            />
           ))}
-        </View>
+        </KpiGrid>
         {summary.error && !summary.data ? <ErrorState error={summary.error} onRetry={() => void summary.refetch()} /> : null}
 
         <SectionHeader title={t('home:quick_actions')} />

@@ -10,6 +10,7 @@ import { CardRow, Chips, ErrorState, ListSkeleton, PagedList, useChildHref, useF
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
+import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
@@ -140,26 +141,19 @@ export function EodListScreen() {
 function TotalsCard({ totals }: { totals: EodTotals }) {
   const { t } = useTranslation('warehouse');
   const f = useFormat();
-  const cells = [
-    { key: 'moves', label: t('eod.totals.movements'), value: f.number(totals.movement_count) },
-    { key: 'units', label: t('eod.totals.units'), value: f.number(totals.unit_count) },
-    { key: 'in', label: t('eod.totals.in'), value: f.number(totals.quantity_in) },
-    { key: 'out', label: t('eod.totals.out'), value: f.number(totals.quantity_out) },
+  const cells: { key: string; icon: IconName; label: string; value: string }[] = [
+    { key: 'moves', icon: 'transfer', label: t('eod.totals.movements'), value: f.number(totals.movement_count) },
+    { key: 'units', icon: 'barcode', label: t('eod.totals.units'), value: f.number(totals.unit_count) },
+    { key: 'in', icon: 'packageIn', label: t('eod.totals.in'), value: f.number(totals.quantity_in) },
+    { key: 'out', icon: 'package', label: t('eod.totals.out'), value: f.number(totals.quantity_out) },
   ];
   return (
     <View className="gap-2.5">
-      <View className="flex-row flex-wrap gap-2.5">
+      <KpiGrid>
         {cells.map((c) => (
-          <View key={c.key} className="grow basis-[46%] gap-1 rounded-lg border border-border bg-card p-3">
-            <Text variant="title" className="tabular-nums">
-              {c.value}
-            </Text>
-            <Text variant="footnote" tone="muted">
-              {c.label}
-            </Text>
-          </View>
+          <KpiCard key={c.key} icon={c.icon} label={c.label} value={c.value} />
         ))}
-      </View>
+      </KpiGrid>
       <Card>
         <Field label={t('eod.totals.meters_in')} value={`${f.number(totals.meters_in, 2)} m`} />
         <Field label={t('eod.totals.meters_out')} value={`${f.number(totals.meters_out, 2)} m`} />

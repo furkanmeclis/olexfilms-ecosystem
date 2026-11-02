@@ -125,5 +125,7 @@
   "home_no_warranty": "Este coche no tiene garantías activas.",
   "home_no_car_eyebrow": "Aún no tienes coche",
   "home_no_car_title": "Corona tu coche con Olex",
-  "home_no_car_body": "El film instalado en un distribuidor autorizado y su garantía aparecen aquí."
+  "home_no_car_body": "El film instalado en un distribuidor autorizado y su garantía aparecen aquí.",
+  "booking_dealer_pick": "Elige un distribuidor",
+  "booking_vehicle_pick": "Elige un vehículo"
 }

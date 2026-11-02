@@ -40,27 +40,45 @@ function CardScanner({ onCode }: { onCode: (code: string) => void }) {
 /**
  * Service number of a new service (TEC-1004): typed, pasted (the warranty
  * card URL is reduced to its number) or scanned from the card's QR; checked
- * as it changes. Empty means a generated number.
+ * as it changes. Empty means a generated number, or with `current` (an open
+ * draft) that the current number stays.
  */
-export function ServiceNoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function ServiceNoField({
+  value,
+  onChange,
+  current,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  current?: string;
+}) {
   const { t } = useTranslation('dealer');
   const [scanning, setScanning] = useState(false);
   const no = useDebounced(value.trim());
+  const same = !!current && no === current;
   const valid = isValidServiceNo(no);
   const check = useQuery({
     queryKey: ['services', 'service-no', no],
     queryFn: () => unwrap(api.GET('/v1/services/service-no-availability', { params: { query: { service_no: no } } })),
-    enabled: valid,
+    enabled: valid && !same,
     staleTime: 10_000,
   });
-  const error = !no
+  const error = !no || same
     ? undefined
     : !valid
       ? t('service_no_invalid')
       : check.data && !check.data.available
         ? t('service_no_taken')
         : undefined;
-  const hint = !no ? t('service_no_auto') : check.data?.available ? t('service_no_available') : undefined;
+  const hint = !no
+    ? current
+      ? t('service_no_keep', { no: current })
+      : t('service_no_auto')
+    : same
+      ? undefined
+      : check.data?.available
+        ? t('service_no_available')
+        : undefined;
 
   return (
     <View className="gap-2">

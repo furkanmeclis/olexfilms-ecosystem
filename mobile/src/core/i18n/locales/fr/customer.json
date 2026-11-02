@@ -125,5 +125,7 @@
   "home_no_warranty": "Aucune garantie active sur cette voiture.",
   "home_no_car_eyebrow": "Pas encore de voiture",
   "home_no_car_title": "Couronnez votre voiture avec Olex",
-  "home_no_car_body": "Le film posé chez un revendeur agréé et sa garantie apparaissent ici."
+  "home_no_car_body": "Le film posé chez un revendeur agréé et sa garantie apparaissent ici.",
+  "booking_dealer_pick": "Choisir un revendeur",
+  "booking_vehicle_pick": "Choisir un véhicule"
 }

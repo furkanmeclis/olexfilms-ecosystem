@@ -9,6 +9,8 @@ import type { paths } from '@/core/api/schema';
 import { useCan } from '@/core/spaces';
 import { Chips, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
 import { EmptyState } from '@/ui/empty-state';
+import type { IconName } from '@/ui/icons';
+import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { Text } from '@/ui/text';
 
 import { unwrapPerformance } from './api';
@@ -35,20 +37,20 @@ function Summary({ period }: { period: string }) {
   const shown = ROW_METRICS.filter((m) => metrics[m]?.value !== undefined && metrics[m]?.value !== '');
   if (!shown.length) return null;
   return (
-    <View className="flex-row flex-wrap gap-2.5 px-4 pb-2">
+    <KpiGrid className="px-4 pb-2">
       {shown.map((m) => (
-        <View key={m} className="min-w-[46%] flex-1 gap-0.5 rounded-lg border border-border bg-card px-4 py-3">
-          <Text variant="footnote" tone="muted" numberOfLines={1}>
-            {t(`performance.metric.${m}`)}
-          </Text>
-          <Text variant="headline" className="tabular-nums">
-            {formatMetric(m, metrics[m], f)}
-          </Text>
-        </View>
+        <KpiCard key={m} icon={METRIC_ICON[m] ?? 'chart'}label={t(`performance.metric.${m}`)} value={formatMetric(m, metrics[m], f)} />
       ))}
-    </View>
+    </KpiGrid>
   );
 }
+
+const METRIC_ICON: Partial<Record<Metric, IconName>> = {
+  services_count: 'service',
+  order_volume: 'order',
+  warranty_start_rate: 'warranty',
+  measurement_rate: 'gauge',
+};
 
 function RankingRow({ row }: { row: Row }) {
   const { t } = useTranslation('governance');
