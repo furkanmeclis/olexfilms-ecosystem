@@ -6,7 +6,7 @@ import { Share } from 'react-native';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { useSession } from '@/core/auth/session';
-import { PAGE_SIZE, publicWarrantyUrl, WEB_ORIGIN } from '@/features/services/lib';
+import { PAGE_SIZE, publicWarrantyUrl } from '@/features/services/lib';
 import type { StatusTone } from '@/ui/status-pill';
 
 type S = components['schemas'];
@@ -61,13 +61,6 @@ export function useFleetRoles() {
   return { fleet, readOnly: fleet && !roles?.includes('customer') };
 }
 
-/** Public dealer finder of the web (no portal session needed). */
-export const DEALER_FINDER_URL = `${WEB_ORIGIN}/portal/dealers`;
-
-export async function openDealerFinder() {
-  await WebBrowser.openBrowserAsync(DEALER_FINDER_URL);
-}
-
 export async function openPublicWarranty(code: string) {
   await WebBrowser.openBrowserAsync(publicWarrantyUrl(code));
 }
@@ -113,31 +106,29 @@ export function usePortalPages<T>(key: readonly unknown[], fetchPage: (offset: n
   return { ...q, items, total };
 }
 
-type Kind = 'vehicle' | 'service' | 'warranty';
+type Kind = 'vehicle' | 'service';
 
 /**
- * Detail links that stay inside the current tab's stack. The home tab owns
- * `vehicle/`, `service/`, `warranty/`; the warranties tab owns `[uuid]`
- * (warranty) plus `service/` and `vehicle/`.
+ * Detail links that stay inside the current tab's stack. The home and the
+ * services tab both own `vehicle/` and `service/` (the services tab under its
+ * own `/musteri/services/` root). The customer has no warranty screen: a
+ * warranty opens its service detail.
  */
 export function useCustomerLinks() {
   const seg = useSegments() as string[];
   const tab = seg[2];
   const to = (kind: Kind, id: string): Href => {
     const uid = encodeURIComponent(id);
-    if (tab === 'warranties') {
-      return (kind === 'warranty' ? `/musteri/warranties/${uid}` : `/musteri/warranties/${kind}/${uid}`) as Href;
-    }
+    if (tab === 'services') return `/musteri/services/${kind}/${uid}` as Href;
     return `/musteri/${kind}/${uid}` as Href;
   };
   return {
     vehicle: (id: string) => to('vehicle', id),
     service: (id: string) => to('service', id),
-    warranty: (id: string) => to('warranty', id),
-    /** Review form of a service (`service/review/[uuid]` in the home and warranties stacks). */
+    /** Review form of a service (`service/review/[uuid]` in the home and services stacks). */
     review: (id: string) => {
       const uid = encodeURIComponent(id);
-      return (tab === 'warranties' ? `/musteri/warranties/service/review/${uid}` : `/musteri/service/review/${uid}`) as Href;
+      return (tab === 'services' ? `/musteri/services/service/review/${uid}` : `/musteri/service/review/${uid}`) as Href;
     },
   };
 }

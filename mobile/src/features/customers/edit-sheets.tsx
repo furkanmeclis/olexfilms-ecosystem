@@ -6,7 +6,8 @@ import { Alert } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { CustomerDetail, Vehicle } from '@/features/services/lib';
-import { ModelPicker, type ModelValue, VIN_RE } from '@/features/services/new-service-screen';
+import { VIN_RE } from '@/features/services/new-service-screen';
+import { isComplete, VehiclePicker, type VehicleValue } from '@/features/vehicle-picker';
 import { Sheet } from '@/features/services/sheet';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { errorText } from '@/features/services/ui';
@@ -101,10 +102,12 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
   const { t } = useTranslation('dealer');
   const qc = useQueryClient();
   const [plate, setPlate] = useState(vehicle.plate ?? '');
-  const [model, setModel] = useState<ModelValue>(
-    vehicle.car_model ? { uuid: vehicle.car_model.uuid, name: vehicle.car_model.name, brand: vehicle.car_brand?.name ?? '' } : null,
-  );
-  const [year, setYear] = useState(vehicle.model_year ? String(vehicle.model_year) : '');
+  const [car, setCar] = useState<VehicleValue>({
+    brand: vehicle.car_brand ? { uuid: vehicle.car_brand.uuid, name: vehicle.car_brand.name } : null,
+    model: vehicle.car_model ? { uuid: vehicle.car_model.uuid, name: vehicle.car_model.name } : null,
+    year: vehicle.model_year ?? null,
+  });
+  const model = car.model;
   const [vin, setVin] = useState(vehicle.vin ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -116,7 +119,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
           body: {
             plate: plate.trim().toUpperCase(),
             ...(model && model.uuid !== vehicle.car_model?.uuid ? { car_model_uuid: model.uuid } : {}),
-            model_year: year ? Number(year) : null,
+            model_year: car.year,
             vin: vin.trim() ? vin.trim().toUpperCase() : null,
           },
         }),
@@ -130,7 +133,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
       const f = e.fieldErrors();
       if (e.code === 'INVALID_PLATE' || f.plate) setErrors({ plate: t('invalid.plate') });
       else if (f.vin) setErrors({ vin: t('invalid.vin') });
-      else if (f.model_year) setErrors({ year: t('invalid.year') });
+      else if (f.model_year || f.car_model_uuid) setErrors({ model: t(f.model_year ? 'invalid.year' : 'invalid.model') });
       else Alert.alert(t('action_failed'), errorText(e));
     },
   });
@@ -138,9 +141,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
   const submit = () => {
     const next: Record<string, string> = {};
     if (plate.trim().length < 2) next.plate = t('invalid.plate');
-    if (!model) next.model = t('invalid.model');
-    const y = Number(year);
-    if (year && (!/^\d{4}$/.test(year) || y < 1900 || y > new Date().getFullYear() + 1)) next.year = t('invalid.year');
+    if (!isComplete(car)) next.model = t('invalid.model');
     if (vin.trim() && !VIN_RE.test(vin.trim().toUpperCase())) next.vin = t('invalid.vin');
     setErrors(next);
     if (Object.keys(next).length === 0) save.mutate();
@@ -158,8 +159,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
         autoCorrect={false}
         trailing={<PlateScanButton onResult={setPlate} />}
       />
-      <ModelPicker value={model} onChange={setModel} error={errors.model} />
-      <Input label={t('model_year')} placeholder={t('placeholder_year', { ns: 'common' })} value={year} onChangeText={setYear} error={errors.year} keyboardType="number-pad" maxLength={4} />
+      <VehiclePicker value={car} onChange={setCar} error={errors.model} />
       <Input
         label={t('vin_optional')}
         placeholder={t('placeholder_vin', { ns: 'common' })}

@@ -6,6 +6,8 @@ import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
 import ListTreeIcon from 'lucide-react-native/icons/list-tree';
 import MonitorSmartphoneIcon from 'lucide-react-native/icons/monitor-smartphone';
 import PencilIcon from 'lucide-react-native/icons/pencil';
+import Undo2Icon from 'lucide-react-native/icons/undo-2';
+import VibrateIcon from 'lucide-react-native/icons/vibrate';
 import BellIcon from 'lucide-react-native/icons/bell';
 import BanIcon from 'lucide-react-native/icons/ban';
 import BanknoteIcon from 'lucide-react-native/icons/banknote';
@@ -173,7 +175,9 @@ export type IconName =
   | 'remove'
   | 'message'
   | 'show'
-  | 'hide';
+  | 'hide'
+  | 'undo'
+  | 'shake';
 
 /**
  * iOS renders the SF Symbol, Android renders the Lucide glyph. The app runs
@@ -265,6 +269,8 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   message: { sf: 'ellipsis.message.fill', lucide: MessageCircleMoreIcon },
   show: { sf: 'eye', lucide: EyeIcon },
   hide: { sf: 'eye.slash', lucide: EyeOffIcon },
+  undo: { sf: 'arrow.uturn.backward', lucide: Undo2Icon },
+  shake: { sf: 'iphone.radiowaves.left.and.right', lucide: VibrateIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

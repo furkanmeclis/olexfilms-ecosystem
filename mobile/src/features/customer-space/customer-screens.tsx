@@ -11,4 +11,3 @@ export { CustomerHomeScreen } from './home-screen';
 export { CustomerProfileScreen } from './profile-screen';
 export { CustomerServiceDetailScreen, CustomerServicesScreen } from './service-screens';
 export { CustomerVehicleDetailScreen, CustomerVehiclesScreen } from './vehicle-screens';
-export { CustomerWarrantiesScreen, CustomerWarrantyDetailScreen } from './warranty-screens';

@@ -95,7 +95,8 @@
           "neverForLocation": true,
           "bluetoothAlwaysPermission": "Olexfilms boya kalınlığı ölçüm cihazına (SmartPTG) bağlanmak için Bluetooth kullanır."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

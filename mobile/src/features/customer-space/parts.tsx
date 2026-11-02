@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { formatDate, formatDateTime, vehicleLabel, warrantyTone, type Warranty } from '@/features/services/lib';
+import { formatDate, formatDateTime, vehicleLabel } from '@/features/services/lib';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
@@ -10,7 +10,6 @@ import { Text } from '@/ui/text';
 import {
   appointmentTone,
   canCancelAppointment,
-  daysLeft,
   nameOf,
   type PortalActiveWarranty,
   type PortalAppointment,
@@ -18,6 +17,7 @@ import {
   portalServiceTone,
   type PortalVehicle,
 } from './lib';
+import { useTimeLeft } from './home-parts';
 import type { IconName } from '@/ui/icons';
 
 /** Localized service status; the backend label (or the raw code) when unknown. */
@@ -96,44 +96,16 @@ export function PortalServiceRow({ s, onPress }: { s: PortalServiceItem; onPress
   );
 }
 
-export function WarrantyRow({ w, onPress }: { w: Warranty; onPress: () => void }) {
-  const { t, i18n } = useTranslation('customer');
-  const left = w.status === 'active' ? daysLeft(w.end_at) : null;
-  return (
-    <Card onPress={onPress}>
-      <View className="flex-row items-center justify-between gap-3">
-        <Text variant="headline" numberOfLines={1} className="flex-1">
-          {w.product?.name || w.public_code}
-        </Text>
-        <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
-      </View>
-      <Text variant="callout" numberOfLines={1}>
-        {[w.vehicle?.plate, vehicleLabel(w.vehicle?.brand_name, w.vehicle?.model_name, w.vehicle?.model_year)]
-          .filter(Boolean)
-          .join(' · ')}
-      </Text>
-      <Text variant="footnote" tone="muted" numberOfLines={1}>
-        {[
-          w.public_code,
-          t('until', { date: formatDate(w.end_at, i18n.language) }),
-          left !== null && left >= 0 ? t('days_left', { count: left }) : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
-      </Text>
-    </Card>
-  );
-}
-
 export function ActiveWarrantyRow({ w, onPress }: { w: PortalActiveWarranty; onPress: () => void }) {
   const { t, i18n } = useTranslation('customer');
+  const timeLeft = useTimeLeft();
   return (
     <Card onPress={onPress}>
       <View className="flex-row items-center justify-between gap-3">
         <Text variant="headline" numberOfLines={1} className="flex-1">
           {w.product?.name || w.public_code}
         </Text>
-        <StatusPill label={t('days_left', { count: Math.max(0, w.days_left ?? 0) })} tone="done" />
+        <StatusPill label={timeLeft(w.days_left ?? 0)} tone="done" />
       </View>
       <Text variant="footnote" tone="muted" numberOfLines={1}>
         {[w.public_code, nameOf(w.organization), t('until', { date: formatDate(w.end_at, i18n.language) })]

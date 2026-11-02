@@ -36,7 +36,11 @@ describe('customer portal links', () => {
     assert.equal(notificationRoute({ action_url: `/portal/services/${U}` }, 'musteri'), `/musteri/service/${U}`);
     assert.equal(notificationRoute({ action_url: '/portal/appointments', payload: { appointment_uuid: U } }, 'musteri'), '/musteri/appointments');
     assert.equal(notificationRoute({ action_url: '/portal/warranties', payload: { claim_uuid: 'c', warranty_uuid: U } }, 'musteri'), '/musteri/profile/claims');
-    assert.equal(notificationRoute({ action_url: '/portal/warranties' }, 'musteri'), '/musteri/warranties');
+    // No customer warranty screen: the service when the payload names it, else the services tab.
+    assert.equal(notificationRoute({ action_url: '/portal/warranties' }, 'musteri'), '/musteri/services');
+    assert.equal(notificationRoute({ action_url: '/portal/warranties', payload: { service_uuid: U } }, 'musteri'), `/musteri/service/${U}`);
+    assert.equal(notificationRoute({ payload: { warranty_uuid: U } }, 'musteri'), '/musteri/services');
+    assert.equal(notificationRoute({ action_url: `/t/acme/warranties/${U}`, payload: { service_uuid: U } }, 'musteri'), `/musteri/service/${U}`);
     assert.equal(notificationRoute({ action_url: '/portal' }, 'musteri'), '/musteri');
     assert.equal(notificationRoute({ action_url: 'https://olexfilms.app/portal' }, 'musteri'), '/musteri');
   });

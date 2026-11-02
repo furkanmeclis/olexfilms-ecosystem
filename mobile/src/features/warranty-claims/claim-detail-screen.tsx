@@ -10,6 +10,7 @@ import { apiImage } from '@/features/services/intake-photos';
 import { formatDateTime } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
 import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from '@/features/services/ui';
+import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -26,6 +27,7 @@ type Sheets = 'reject' | 'reopen' | null;
 export function ClaimDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const { t, i18n } = useTranslation('claims');
+  const partLabel = usePartLabel();
   const qc = useQueryClient();
   const { grants, orgType } = useClaimGrants();
   const [sheet, setSheet] = useState<Sheets>(null);
@@ -201,16 +203,22 @@ export function ClaimDetailScreen() {
 
             <Section title={t('parts')}>
               {c.parts && c.parts.length > 0 ? (
-                c.parts.map((p, i) => (
-                  <View key={p.uuid} className={`gap-0.5 px-4 py-2.5 ${i < (c.parts?.length ?? 0) - 1 ? 'border-b border-border' : ''}`}>
-                    <Text variant="callout">{t(`dealer:part.${p.part_key}`, { defaultValue: p.part_key })}</Text>
-                    {p.note ? (
-                      <Text variant="footnote" tone="muted">
-                        {p.note}
-                      </Text>
-                    ) : null}
-                  </View>
-                ))
+                <>
+                  <VehiclePartPicker value={c.parts.map((p) => p.part_key)} readOnly framed={false} className="p-3" />
+                  {/* Per-part notes stay as text under the diagram. */}
+                  {c.parts
+                    .filter((p) => p.note)
+                    .map((p) => (
+                      <View key={p.uuid} className="gap-0.5 border-t border-border px-4 py-2.5">
+                        <Text variant="footnote" className="font-semibold">
+                          {partLabel(p.part_key)}
+                        </Text>
+                        <Text variant="footnote" tone="muted">
+                          {p.note}
+                        </Text>
+                      </View>
+                    ))}
+                </>
               ) : (
                 <Text variant="callout" tone="muted" className="px-4 py-3">
                   {t('parts_empty')}

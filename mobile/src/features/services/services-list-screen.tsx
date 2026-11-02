@@ -1,5 +1,5 @@
-import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
@@ -83,6 +83,11 @@ export function ServicesListScreen() {
   const canWrite = useCan('services.write');
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  // `?status=` from a home "see all" link (`all` clears it); a changed param re-applies.
+  const { status } = useLocalSearchParams<{ status?: string }>();
+  useEffect(() => {
+    if (status === 'all' || (SERVICE_STATUSES as string[]).includes(status ?? '')) setFilter(status as Filter);
+  }, [status]);
   const query = useDebounced(q.trim());
   const network = useNetworkScope();
 

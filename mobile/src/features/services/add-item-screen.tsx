@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
+import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
@@ -255,26 +256,8 @@ function UnitForm({
           <Text variant="footnote" tone="muted" className="font-medium">
             {t('applied_parts')}
           </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {unit.product.available_parts.map((p) => {
-              const on = parts.includes(p);
-              return (
-                <Pressable
-                  key={p}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  onPress={() => setParts((cur) => (on ? cur.filter((x) => x !== p) : [...cur, p]))}
-                  className={cn(
-                    'min-h-9 justify-center rounded-full border px-3',
-                    on ? 'border-primary bg-primary' : 'border-border bg-card',
-                  )}>
-                  <Text variant="footnote" className={cn(on && 'text-primary-foreground')}>
-                    {t(`part.${p}`, { defaultValue: p.replace(/_/g, ' ') })}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {/* Only the product category's parts are selectable (backend rule). */}
+          <VehiclePartPicker value={parts} onChange={setParts} allowedKeys={unit.product.available_parts} />
         </View>
       ) : null}
 

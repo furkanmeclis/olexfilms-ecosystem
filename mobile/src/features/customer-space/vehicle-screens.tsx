@@ -132,7 +132,7 @@ export function CustomerVehicleDetailScreen() {
               </Text>
               {warranties.length > 0 ? (
                 warranties.map((w) => (
-                  <ActiveWarrantyRow key={w.uuid} w={w} onPress={() => router.push(links.warranty(w.uuid))} />
+                  <ActiveWarrantyRow key={w.uuid} w={w} onPress={() => router.push(links.service(w.service.uuid))} />
                 ))
               ) : (
                 <View className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-4">

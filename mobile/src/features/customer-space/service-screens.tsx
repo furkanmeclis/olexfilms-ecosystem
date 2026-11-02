@@ -20,9 +20,22 @@ import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 
 import { portalFiles, useExportDownload } from './files';
-import { PAGE_SIZE, portalServiceTone, retryPortal, useCustomerLinks, usePortalPages, whatsappUrl } from './lib';
+import { useTimeLeft } from './home-parts';
+import {
+  daysLeft,
+  openPublicWarranty,
+  PAGE_SIZE,
+  type PortalService,
+  portalServiceTone,
+  retryPortal,
+  sharePublicWarranty,
+  useCustomerLinks,
+  usePortalPages,
+  whatsappUrl,
+} from './lib';
 import { PortalServiceRow, useServiceStatusLabel } from './parts';
 
 /** Every service of the customer across dealers (GET /v1/portal/services). */
@@ -99,10 +112,16 @@ export function CustomerServiceDetailScreen() {
   const dealer = s?.dealer;
   const products = s?.products ?? [];
   const warranties = s?.warranties ?? [];
+  const partLabel = usePartLabel();
+  const [openProduct, setOpenProduct] = useState<string | null>(null);
+  // The merged list comes from the backend; when empty, the parts of the product rows.
+  const appliedParts = s?.applied_parts?.length
+    ? s.applied_parts
+    : products.flatMap((p) => p.applied_parts ?? []);
 
   return (
     <>
-      <Stack.Screen options={{ title: s?.service_no ?? t('service'), headerLargeTitle: false }} />
+      <Stack.Screen options={{ title: s?.service_no ?? t('service'), headerLargeTitle: false, headerBlurEffect: 'systemChromeMaterial' }} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
@@ -197,48 +216,49 @@ export function CustomerServiceDetailScreen() {
 
             {products.length > 0 ? (
               <Section title={t('products')}>
-                {products.map((p, i) => (
-                  <View
-                    key={p.service_item_uuid ?? i}
-                    className={`gap-0.5 px-4 py-3 ${i < products.length - 1 ? 'border-b border-border' : ''}`}>
-                    <Text variant="callout" className="font-semibold">
-                      {p.name}
-                    </Text>
-                    <Text variant="footnote" tone="muted">
-                      {[p.category, (p.applied_parts ?? []).join(', ')].filter(Boolean).join(' · ')}
-                    </Text>
-                  </View>
-                ))}
+                {products.map((p, i) => {
+                  const key = p.service_item_uuid ?? String(i);
+                  const parts = p.applied_parts ?? [];
+                  const open = openProduct === key;
+                  return (
+                    <View key={key} className={i < products.length - 1 ? 'border-b border-border' : ''}>
+                      {/* A product row opens the diagram of its own parts. */}
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: open }}
+                        accessibilityHint={parts.map(partLabel).join(', ') || undefined}
+                        disabled={!parts.length}
+                        onPress={() => setOpenProduct(open ? null : key)}
+                        className="flex-row items-center gap-3 px-4 py-3 active:bg-muted">
+                        <View className="flex-1 gap-0.5">
+                          <Text variant="callout" className="font-semibold">
+                            {p.name}
+                          </Text>
+                          <Text variant="footnote" tone="muted">
+                            {[p.category, parts.length ? t('dealer:parts_count', { count: parts.length }) : null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </Text>
+                        </View>
+                        {parts.length ? <Icon name={open ? 'chevronUp' : 'chevronDown'} tone="muted-foreground" size={16} /> : null}
+                      </Pressable>
+                      {open ? <VehiclePartPicker value={parts} readOnly framed={false} className="px-3 pb-3" /> : null}
+                    </View>
+                  );
+                })}
               </Section>
-            ) : (s.applied_parts?.length ?? 0) > 0 ? (
+            ) : null}
+
+            {appliedParts.length > 0 ? (
               <Section title={t('applied_parts')}>
-                <View className="px-4 py-3">
-                  <Text variant="callout">{s.applied_parts.join(', ')}</Text>
-                </View>
+                <VehiclePartPicker value={appliedParts} readOnly framed={false} className="p-3" />
               </Section>
             ) : null}
 
             {warranties.length > 0 ? (
               <Section title={t('warranties')}>
                 {warranties.map((w, i) => (
-                  <Pressable
-                    key={w.uuid}
-                    accessibilityRole="button"
-                    onPress={() => router.push(links.warranty(w.uuid))}
-                    className={`flex-row items-center gap-3 px-4 py-3 active:bg-muted ${
-                      i < warranties.length - 1 ? 'border-b border-border' : ''
-                    }`}>
-                    <View className="flex-1 gap-0.5">
-                      <Text variant="callout" className="font-semibold" numberOfLines={1}>
-                        {w.product_name || w.public_code}
-                      </Text>
-                      <Text variant="footnote" tone="muted" numberOfLines={1}>
-                        {[w.public_code, t('until', { date: formatDate(w.end_at, i18n.language) })].join(' · ')}
-                      </Text>
-                    </View>
-                    <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
-                    <Icon name="forward" tone="muted-foreground" size={18} />
-                  </Pressable>
+                  <ServiceWarrantyRow key={w.uuid} w={w} last={i === warranties.length - 1} />
                 ))}
               </Section>
             ) : null}
@@ -246,5 +266,58 @@ export function CustomerServiceDetailScreen() {
         )}
       </ScrollView>
     </>
+  );
+}
+
+/**
+ * One warranty of the service. The customer has no warranty screen, so the row carries what
+ * that screen had: code, period, days left, kind, void date, and the public certificate page
+ * (open / share). It does not navigate; the service detail is already the warranty's home.
+ */
+function ServiceWarrantyRow({ w, last }: { w: PortalService['warranties'][number]; last: boolean }) {
+  const { t, i18n } = useTranslation('customer');
+  const timeLeft = useTimeLeft();
+  const left = w.status === 'active' ? daysLeft(w.end_at) : null;
+  const period = [formatDate(w.start_at, i18n.language), formatDate(w.end_at, i18n.language)].filter(Boolean).join(' – ');
+  const kind = w.item_kind === 'full' || w.item_kind === 'partial' ? t(`kind_${w.item_kind}`) : null;
+  return (
+    <View className={`gap-2 px-4 py-3 ${last ? '' : 'border-b border-border'}`}>
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1 gap-0.5">
+          <Text variant="callout" className="font-semibold" numberOfLines={1}>
+            {w.product_name || w.public_code}
+          </Text>
+          <Text variant="footnote" tone="muted" selectable numberOfLines={1}>
+            {[w.public_code, kind].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
+        <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
+      </View>
+      <Text variant="footnote" tone="muted">
+        {[
+          period,
+          left !== null && left >= 0 ? timeLeft(left) : null,
+          w.voided_at ? `${t('voided_at')}: ${formatDate(w.voided_at, i18n.language)}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </Text>
+      <View className="flex-row gap-2">
+        <Button
+          title={t('warranty_open')}
+          variant="secondary"
+          icon={<Icon name="externalLink" tone="primary" size={16} />}
+          onPress={() => void openPublicWarranty(w.public_code)}
+          className="grow"
+        />
+        <Button
+          title={t('share')}
+          variant="secondary"
+          icon={<Icon name="share" tone="primary" size={16} />}
+          onPress={() => sharePublicWarranty(w.public_code, t('warranty_share_message', { code: w.public_code }))}
+          className="grow"
+        />
+      </View>
+    </View>
   );
 }

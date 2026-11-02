@@ -17,6 +17,7 @@ import { i18n } from '@/core/i18n';
 import { applyThemePreference } from '@/core/preferences';
 import { persistOptions, queryClient } from '@/core/query';
 import { startUpdateChecks } from '@/core/updates';
+import { FeedbackRoot } from '@/features/feedback/feedback-root';
 import { UpdateBanner } from '@/features/shell/update-banner';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';
 import { fontAssets } from '@/ui/fonts';
@@ -69,6 +70,7 @@ export default function RootLayout() {
                 </Stack.Protected>
               </Stack>
               {!updateRequired && <UpdateBanner />}
+              {!updateRequired && status === 'signedIn' && <FeedbackRoot />}
             </ThemeProvider>
           </LayoutDirection>
         </PersistQueryClientProvider>

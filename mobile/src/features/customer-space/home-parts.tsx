@@ -15,6 +15,8 @@ import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
 import { Text } from '@/ui/text';
 
+import { splitTimeLeft } from './time-left';
+
 type PortalVehicle = components['schemas']['PortalVehicle'];
 type ActiveWarranty = components['schemas']['PortalActiveWarranty'];
 
@@ -38,12 +40,28 @@ export function Rise({ index, children, className }: { index: number; children: 
   );
 }
 
-/** Brand logo in a rounded tile; the brand's initial when there is no logo. */
-export function BrandMark({ uuid, name, size = 40 }: { uuid?: string | null; name?: string | null; size?: number }) {
+/**
+ * Brand logo in a rounded tile; the brand's initial when there is no logo.
+ * `light` keeps a white tile behind a logo in dark mode too (dark logos would vanish on a dark card).
+ */
+export function BrandMark({
+  uuid,
+  name,
+  size = 40,
+  light,
+}: {
+  uuid?: string | null;
+  name?: string | null;
+  size?: number;
+  light?: boolean;
+}) {
   const [failed, setFailed] = useState(false);
   return (
     <View
-      className="items-center justify-center overflow-hidden rounded-xl border border-border bg-card"
+      className={cn(
+        'items-center justify-center overflow-hidden rounded-xl border border-border',
+        light && uuid && !failed ? 'bg-white' : 'bg-card',
+      )}
       style={{ width: size, height: size, borderCurve: 'continuous' }}>
       {uuid && !failed ? (
         <Image
@@ -65,7 +83,7 @@ export function BrandMark({ uuid, name, size = 40 }: { uuid?: string | null; nam
 /** EU-style plate: blue country strip, black characters on white, in both themes. */
 export function PlateBadge({ plate, country }: { plate: string; country?: string | null }) {
   return (
-    <View className="flex-row overflow-hidden rounded-md border border-black/70 bg-white" style={{ direction: 'ltr' }}>
+    <View className="flex-row overflow-hidden rounded-md bg-white" style={{ direction: 'ltr' }}>
       <View className="items-center justify-center px-1.5" style={{ backgroundColor: '#1f4fb4' }}>
         <Text className="text-[10px] font-bold text-white">{(country || 'TR').toUpperCase()}</Text>
       </View>
@@ -81,8 +99,11 @@ function Glow({ width, height }: { width: number; height: number }) {
   return (
     <Svg width={width} height={height} style={{ position: 'absolute', left: 0, top: 0 }} pointerEvents="none">
       <Defs>
-        <RadialGradient id="glow" cx="0.6" cy="0.62" r="0.55">
+        {/* Ends inside the box on every side, so the page clip never cuts the light. */}
+        <RadialGradient id="glow" cx="0.55" cy="0.55" r="0.45">
           <Stop offset="0" stopColor={color} stopOpacity="0.22" />
+          <Stop offset="0.5" stopColor={color} stopOpacity="0.09" />
+          <Stop offset="0.8" stopColor={color} stopOpacity="0.02" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </RadialGradient>
       </Defs>
@@ -118,8 +139,9 @@ export function VehiclePage({ v, width, onPress }: { v: PortalVehicle; width: nu
       <Image
         source={heroUrl(v)}
         contentFit="contain"
+        contentPosition="right"
         transition={250}
-        style={{ position: 'absolute', width: carWidth, height: carHeight, right: -width * 0.07, bottom: 20 }}
+        style={{ position: 'absolute', width: carWidth, height: carHeight, right: 0, bottom: 20 }}
         accessibilityIgnoresInvertColors
       />
       <View className="absolute bottom-0 start-5 flex-row gap-2">
@@ -146,8 +168,7 @@ export function useTimeLeft() {
   const { t } = useTranslation('customer');
   return (days: number) => {
     if (days <= 0) return t('left_ended');
-    const years = Math.floor(days / 365);
-    const months = Math.floor((days % 365) / 30);
+    const { years, months } = splitTimeLeft(days);
     if (years > 0 && months > 0) return t('left_years_months', { years, months });
     if (years > 0) return t('left_years', { count: years });
     if (months > 0) return t('left_months', { count: months });
@@ -194,7 +215,7 @@ export function WarrantyProgressCard({ w, onPress }: { w: ActiveWarranty; onPres
   );
 }
 
-/** The one next step, on the brand-green card. */
+/** The one next step, on the brand-green card; without `cta`/`onPress` it is a plain note. */
 export function NextStepCard({
   icon,
   eyebrow,
@@ -207,15 +228,12 @@ export function NextStepCard({
   eyebrow: string;
   title: string;
   body?: string;
-  cta: string;
-  onPress: () => void;
+  cta?: string;
+  onPress?: () => void;
 }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className="gap-3 rounded-[22px] p-5 active:opacity-90"
-      style={{ backgroundColor: '#003d25', borderCurve: 'continuous' }}>
+  const style = { backgroundColor: '#003d25', borderCurve: 'continuous' } as const;
+  const content = (
+    <>
       <View className="flex-row items-center gap-2">
         <Icon name={icon} tone="brand" size={15} weight="semibold" />
         <Text variant="caption" className="font-semibold text-brand">
@@ -232,25 +250,25 @@ export function NextStepCard({
           </Text>
         ) : null}
       </View>
-      <View className="flex-row items-center gap-1.5 self-start rounded-full bg-on-media px-4 py-2">
-        <Text variant="footnote" className="font-semibold" style={{ color: '#003d25' }}>
-          {cta}
-        </Text>
-      </View>
-    </Pressable>
+      {cta ? (
+        <View className="flex-row items-center gap-1.5 self-start rounded-full bg-on-media px-4 py-2">
+          <Text variant="footnote" className="font-semibold" style={{ color: '#003d25' }}>
+            {cta}
+          </Text>
+        </View>
+      ) : null}
+    </>
   );
-}
-
-/** Round shortcut with its label underneath. */
-export function QuickAction({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} className="flex-1 items-center gap-2 active:opacity-70">
-      <View className="size-14 items-center justify-center rounded-2xl border border-border bg-card" style={{ borderCurve: 'continuous' }}>
-        <Icon name={icon} tone="primary" size={22} />
+  if (!onPress) {
+    return (
+      <View className="gap-3 rounded-[22px] p-5" style={style}>
+        {content}
       </View>
-      <Text variant="footnote" className="text-center font-medium" numberOfLines={2}>
-        {label}
-      </Text>
+    );
+  }
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} className="gap-3 rounded-[22px] p-5 active:opacity-90" style={style}>
+      {content}
     </Pressable>
   );
 }

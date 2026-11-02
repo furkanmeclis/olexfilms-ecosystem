@@ -8,6 +8,7 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { ServiceMeasurementMaps } from '@/features/measure/point-map-view';
+import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -97,6 +98,9 @@ export function ServiceDetailScreen() {
   const s = svc.data;
   // The backend refuses to complete a service without items (VALIDATION_ERROR on `items`).
   const noItems = !s?.items?.length;
+  // Parts of every item on one diagram; an item row opens its own parts.
+  const appliedParts = (s?.items ?? []).flatMap((it) => it.applied_parts ?? []);
+  const [openItem, setOpenItem] = useState<string | null>(null);
 
   const confirmTransition = (to: ServiceStatus) => {
     if (to === 'cancelled') {
@@ -227,10 +231,14 @@ export function ServiceDetailScreen() {
               }>
               {s.items && s.items.length > 0 ? (
                 s.items.map((it, i) => (
-                  <View
-                    key={it.uuid}
-                    className={`flex-row items-center gap-3 px-4 py-3 ${i < (s.items?.length ?? 0) - 1 ? 'border-b border-border' : ''}`}>
-                    <View className="flex-1 gap-0.5">
+                  <View key={it.uuid} className={i < (s.items?.length ?? 0) - 1 ? 'border-b border-border' : ''}>
+                  <View className="flex-row items-center gap-3 px-4 py-3">
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: openItem === it.uuid }}
+                      disabled={!it.applied_parts.length}
+                      onPress={() => setOpenItem((cur) => (cur === it.uuid ? null : it.uuid))}
+                      className="flex-1 gap-0.5 active:opacity-70">
                       <Text variant="body" numberOfLines={2}>
                         {it.product.name}
                       </Text>
@@ -244,7 +252,10 @@ export function ServiceDetailScreen() {
                           .filter(Boolean)
                           .join(' · ')}
                       </Text>
-                    </View>
+                    </Pressable>
+                    {it.applied_parts.length ? (
+                      <Icon name={openItem === it.uuid ? 'chevronUp' : 'chevronDown'} tone="muted-foreground" size={16} />
+                    ) : null}
                     {canWrite && s.items_editable ? (
                       <Pressable
                         accessibilityRole="button"
@@ -255,6 +266,10 @@ export function ServiceDetailScreen() {
                         <Icon name="delete" tone="destructive" size={18} />
                       </Pressable>
                     ) : null}
+                  </View>
+                  {openItem === it.uuid ? (
+                    <VehiclePartPicker value={it.applied_parts} readOnly framed={false} className="px-3 pb-3" />
+                  ) : null}
                   </View>
                 ))
               ) : (
@@ -269,6 +284,12 @@ export function ServiceDetailScreen() {
                 </View>
               )}
             </Section>
+
+            {appliedParts.length > 0 ? (
+              <Section title={t('applied_parts')}>
+                <VehiclePartPicker value={appliedParts} readOnly framed={false} className="p-3" />
+              </Section>
+            ) : null}
 
             {s.warranties && s.warranties.length > 0 ? (
               <Section title={t('warranties')}>

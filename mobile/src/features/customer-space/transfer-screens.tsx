@@ -31,13 +31,13 @@ type Transfer = components['schemas']['VehicleTransfer'];
 
 const transfersKey = (uuid: string) => ['portal', 'vehicles', 'transfers', uuid] as const;
 
-/** Transfer screen link that stays inside the current tab's stack (home or warranties). */
+/** Transfer screen link that stays inside the current tab's stack (home or services). */
 export function useTransferLink() {
   const seg = useSegments() as string[];
   const tab = seg[2];
   return (uuid: string) => {
     const uid = encodeURIComponent(uuid);
-    return (tab === 'warranties' ? `/musteri/warranties/vehicle/transfer/${uid}` : `/musteri/vehicle/transfer/${uid}`) as Href;
+    return (tab === 'services' ? `/musteri/services/vehicle/transfer/${uid}` : `/musteri/vehicle/transfer/${uid}`) as Href;
   };
 }
 

@@ -45,9 +45,11 @@ const ROUTES: Record<SpaceKind, Partial<Record<Kind, (uuid: string) => string>>>
     warranties: (u) => `/admin/menu/customers/warranties/${u}`,
   },
   // TEC-1019: the customer space opens its own detail screens from the home stack.
+  // It has no warranty screen; a warranty row opens the services tab (or its
+  // service when the payload names it, see notificationRoute).
   musteri: {
     services: (u) => `/musteri/service/${u}`,
-    warranties: (u) => `/musteri/warranty/${u}`,
+    warranties: () => '/musteri/services',
     appointments: () => '/musteri/appointments',
   },
 };
@@ -79,9 +81,15 @@ const PORTAL_ROUTES: [RegExp, (m: RegExpExecArray, n: Pick<AppNotification, 'pay
   [new RegExp(`^/portal/services/(${UUID})#review$`, 'i'), (m) => `/musteri/service/review/${m[1]}`],
   [new RegExp(`^/portal/services/(${UUID})(?:[/?#]|$)`, 'i'), (m) => `/musteri/service/${m[1]}`],
   [/^\/portal\/appointments(?:[/?#]|$)/i, () => '/musteri/appointments'],
-  [/^\/portal\/warranties(?:[/?#]|$)/i, (_m, n) => (typeof n.payload?.claim_uuid === 'string' ? '/musteri/profile/claims' : '/musteri/warranties')],
+  [/^\/portal\/warranties(?:[/?#]|$)/i, (_m, n) => (typeof n.payload?.claim_uuid === 'string' ? '/musteri/profile/claims' : (serviceOf(n) ?? '/musteri/services'))],
   [/^\/portal\/?(?:[?#]|$)/i, () => '/musteri'],
 ];
+
+/** Customer service detail of a warranty row whose payload also names the service. */
+function serviceOf(n: Pick<AppNotification, 'payload'>): string | null {
+  const v = n.payload?.service_uuid;
+  return typeof v === 'string' && new RegExp(`^${UUID}$`, 'i').test(v) ? `/musteri/service/${v}` : null;
+}
 
 function portalRoute(n: Pick<AppNotification, 'action_url' | 'payload'>): string | null {
   const path = n.action_url?.replace(/^https?:\/\/[^/]+/i, '');
@@ -101,6 +109,10 @@ export function notificationRoute(n: Pick<AppNotification, 'action_url' | 'paylo
   }
   const target = notificationTarget(n);
   if (!target || !space) return null;
+  if (space === 'musteri' && target.kind === 'warranties') {
+    const service = serviceOf(n);
+    if (service) return service;
+  }
   return ROUTES[space][target.kind]?.(target.uuid) ?? null;
 }
 
