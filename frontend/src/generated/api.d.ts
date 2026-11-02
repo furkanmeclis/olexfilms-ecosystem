@@ -12525,6 +12525,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/frequent-vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Car brands / models the active organization services most (vehicle picker)
+         * @description For the "Frequently used" section of the mobile vehicle picker (legacy lookup popularity order, organization counts only). Without car_brand_uuid it returns the most serviced car brands (brands, at most 8, models empty); with it the most serviced models of that car brand (models, at most 8, brands empty). Every service except cancelled ones counts. Same reach as /v1/stats/overview: only the active organization's own services inside the domain brand (K20); own / assigned grants count the services they created. Inactive catalog rows are left out. Ties sort by name.
+         */
+        get: operations["getFrequentVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stats/top-vehicle-models": {
         parameters: {
             query?: never;
@@ -26412,6 +26432,8 @@ export interface components {
             /** @description TEC-1004. The caller may change the number (false once completed or cancelled) */
             service_no_editable?: boolean;
             available_transitions: components["schemas"]["ServiceStatus"][];
+            /** @description Category names of the products applied on the service, each once (case-insensitive), in category order (sort, name). Set on the list and the detail; empty array when there are no counted items. Items of a cancelled service and corrected items returned to stock without a replacement are not counted. Names are returned as stored (categories have no translations). */
+            item_categories: string[];
             /** @description True when the service was opened from an approved warranty claim. */
             is_warranty_reapply: boolean;
             items?: components["schemas"]["ServiceItem"][];
@@ -27006,6 +27028,33 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["TopVehicles"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FrequentCarBrand: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            has_logo: boolean;
+            /** @description /brand-logos/{uuid} with a ?v= cache-buster when a logo exists. */
+            logo_url: string;
+            /** Format: int64 */
+            service_count: number;
+        };
+        FrequentCarModel: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** Format: int64 */
+            service_count: number;
+        };
+        FrequentVehicles: {
+            brands: components["schemas"]["FrequentCarBrand"][];
+            models: components["schemas"]["FrequentCarModel"][];
+        };
+        EnvelopeFrequentVehicles: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FrequentVehicles"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -54171,6 +54220,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeHomeOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getFrequentVehicles: {
+        parameters: {
+            query?: {
+                car_brand_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Frequent vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFrequentVehicles"];
                 };
             };
             400: components["responses"]["BadRequest"];

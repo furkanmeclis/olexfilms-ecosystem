@@ -887,6 +887,14 @@ type Querier interface {
 	// not void, not past end_at), expired (ended by period_to, not void) and
 	// started within the period.
 	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
+	// Frequent vehicles of one organization: the car brands / models the
+	// organization services most, for the "frequent first" section of the
+	// mobile vehicle picker (legacy LookupPopularityService parity, dealer
+	// counts only). Only services of org_id inside the domain brand (K20);
+	// created_by_user_id narrows own / assigned grants. Every service except
+	// cancelled ones counts, whatever the period. Reads idx_services_org_status.
+	FrequentServicedCarBrands(ctx context.Context, arg FrequentServicedCarBrandsParams) ([]FrequentServicedCarBrandsRow, error)
+	FrequentServicedCarModels(ctx context.Context, arg FrequentServicedCarModelsParams) ([]FrequentServicedCarModelsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -2585,6 +2593,15 @@ type Querier interface {
 	ListServiceCertificateWarnings(ctx context.Context, arg ListServiceCertificateWarningsParams) ([]ListServiceCertificateWarningsRow, error)
 	ListServiceCertificateWarningsByService(ctx context.Context, arg ListServiceCertificateWarningsByServiceParams) ([]ListServiceCertificateWarningsByServiceRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
+	// ---------------------------------------------------------------------------
+	// Dealer board tags: category names of the products applied on a page of
+	// services, one row per (service, category), in a stable order (category
+	// sort, name, id). Same reading rules as warranties: a cancelled service
+	// applied nothing, and a corrected item whose unit went back to stock
+	// without a replacement no longer counts (a replacement is the same product,
+	// so its category stays). Brand-scoped on every join; the caller passes ids
+	// it already read inside the caller's scope.
+	ListServiceItemCategories(ctx context.Context, arg ListServiceItemCategoriesParams) ([]ListServiceItemCategoriesRow, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	// TEC-297 (F3-02e): part based before/after micron difference table.

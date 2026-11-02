@@ -91,6 +91,9 @@ func RegisterRoutes(
 	// TEC-868: home overview of the active organization (dealer home
 	// "Analiz"); same gates as the reads, own services only.
 	mux.Handle("GET /v1/stats/overview", route(h.HomeOverview))
+	// Frequent car brands / models of the active organization (mobile
+	// vehicle picker "frequently used"); same gates and reach as overview.
+	mux.Handle("GET /v1/stats/frequent-vehicles", route(h.FrequentVehicles))
 }
 
 // RegisterPDFRoutes mounts the service PDF (TEC-196): POST

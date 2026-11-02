@@ -12,6 +12,130 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const frequentServicedCarBrands = `-- name: FrequentServicedCarBrands :many
+
+SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cb.logo_object_key AS car_brand_logo_key,
+       COUNT(*)::bigint AS service_count
+FROM services s
+JOIN car_brands cb ON cb.id = s.car_brand_id
+WHERE s.brand_id = $1
+  AND s.organization_id = $2
+  AND s.status <> 'cancelled'
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND cb.active
+GROUP BY cb.id, cb.uuid, cb.name, cb.logo_object_key
+ORDER BY service_count DESC, lower(cb.name), cb.id
+LIMIT $4
+`
+
+type FrequentServicedCarBrandsParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrgID           int64       `json:"org_id"`
+	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
+	RowLimit        int32       `json:"row_limit"`
+}
+
+type FrequentServicedCarBrandsRow struct {
+	CarBrandUuid    uuid.UUID   `json:"car_brand_uuid"`
+	CarBrandName    string      `json:"car_brand_name"`
+	CarBrandLogoKey pgtype.Text `json:"car_brand_logo_key"`
+	ServiceCount    int64       `json:"service_count"`
+}
+
+// Frequent vehicles of one organization: the car brands / models the
+// organization services most, for the "frequent first" section of the
+// mobile vehicle picker (legacy LookupPopularityService parity, dealer
+// counts only). Only services of org_id inside the domain brand (K20);
+// created_by_user_id narrows own / assigned grants. Every service except
+// cancelled ones counts, whatever the period. Reads idx_services_org_status.
+func (q *Queries) FrequentServicedCarBrands(ctx context.Context, arg FrequentServicedCarBrandsParams) ([]FrequentServicedCarBrandsRow, error) {
+	rows, err := q.db.Query(ctx, frequentServicedCarBrands,
+		arg.BrandID,
+		arg.OrgID,
+		arg.CreatedByUserID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FrequentServicedCarBrandsRow{}
+	for rows.Next() {
+		var i FrequentServicedCarBrandsRow
+		if err := rows.Scan(
+			&i.CarBrandUuid,
+			&i.CarBrandName,
+			&i.CarBrandLogoKey,
+			&i.ServiceCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const frequentServicedCarModels = `-- name: FrequentServicedCarModels :many
+SELECT cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       COUNT(*)::bigint AS service_count
+FROM services s
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.brand_id = $1
+  AND s.organization_id = $2
+  AND s.status <> 'cancelled'
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND cb.uuid = $4
+  AND cm.active
+GROUP BY cm.id, cm.uuid, cm.name
+ORDER BY service_count DESC, lower(cm.name), cm.id
+LIMIT $5
+`
+
+type FrequentServicedCarModelsParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrgID           int64       `json:"org_id"`
+	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
+	CarBrandUuid    uuid.UUID   `json:"car_brand_uuid"`
+	RowLimit        int32       `json:"row_limit"`
+}
+
+type FrequentServicedCarModelsRow struct {
+	CarModelUuid uuid.UUID `json:"car_model_uuid"`
+	CarModelName string    `json:"car_model_name"`
+	ServiceCount int64     `json:"service_count"`
+}
+
+func (q *Queries) FrequentServicedCarModels(ctx context.Context, arg FrequentServicedCarModelsParams) ([]FrequentServicedCarModelsRow, error) {
+	rows, err := q.db.Query(ctx, frequentServicedCarModels,
+		arg.BrandID,
+		arg.OrgID,
+		arg.CreatedByUserID,
+		arg.CarBrandUuid,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FrequentServicedCarModelsRow{}
+	for rows.Next() {
+		var i FrequentServicedCarModelsRow
+		if err := rows.Scan(&i.CarModelUuid, &i.CarModelName, &i.ServiceCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const overviewRecentCompletedServices = `-- name: OverviewRecentCompletedServices :many
 SELECT s.uuid, s.service_no, s.plate, s.plate_country, s.model_year, s.package,
        s.completed_at::timestamptz AS completed_at,

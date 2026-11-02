@@ -181,13 +181,16 @@ type ServiceView struct {
 	// locked once the service is completed or cancelled.
 	ServiceNoEditable bool `json:"service_no_editable"`
 	// AvailableTransitions are the statuses the caller may move the service to.
-	AvailableTransitions []string                 `json:"available_transitions"`
-	Items                []ItemView               `json:"items,omitempty"`
-	Images               []ImageView              `json:"images,omitempty"`
-	StatusLogs           []StatusLogView          `json:"status_logs,omitempty"`
-	Warranties           []WarrantyView           `json:"warranties,omitempty"`
-	CertificateWarnings  []CertificateWarningView `json:"certificate_warnings,omitempty"`
-	IsWarrantyReapply    bool                     `json:"is_warranty_reapply"`
+	AvailableTransitions []string `json:"available_transitions"`
+	// ItemCategories are the category names of the applied products, each
+	// once, in category order; never null (list and detail, dealer board).
+	ItemCategories      []string                 `json:"item_categories"`
+	Items               []ItemView               `json:"items,omitempty"`
+	Images              []ImageView              `json:"images,omitempty"`
+	StatusLogs          []StatusLogView          `json:"status_logs,omitempty"`
+	Warranties          []WarrantyView           `json:"warranties,omitempty"`
+	CertificateWarnings []CertificateWarningView `json:"certificate_warnings,omitempty"`
+	IsWarrantyReapply   bool                     `json:"is_warranty_reapply"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {
@@ -251,6 +254,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		Editable: canWrite, ItemsEditable: canWrite && itemsEditable(svc.Status),
 		ServiceNoEditable:    canWrite && !serviceNoLocked(svc.Status),
 		AvailableTransitions: availableTransitions(c, svc),
+		ItemCategories:       []string{}, // filled by the caller (one query per page)
 		IsWarrantyReapply:    svc.WarrantyClaimID.Valid,
 	}
 	if svc.ModelYear.Valid {
@@ -295,6 +299,11 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 	if err != nil {
 		return ServiceView{}, err
 	}
+	cats, err := itemCategories(ctx, q, svc.BrandID, []int64{svc.ID})
+	if err != nil {
+		return ServiceView{}, err
+	}
+	v.ItemCategories = categoriesOf(cats, svc.ID)
 	items, err := q.ListServiceItems(ctx, svc.ID)
 	if err != nil {
 		return ServiceView{}, fmt.Errorf("services: items: %w", err)
@@ -516,6 +525,15 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 			return nil, 0, fmt.Errorf("services: count: %w", err)
 		}
 	}
+	ids := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	// One query for the whole page (no per-row lookups); rows are in scope.
+	cats, err := itemCategories(ctx, s.q, c.Org.BrandID, ids)
+	if err != nil {
+		return nil, 0, err
+	}
 	out := make([]ServiceView, 0, len(rows))
 	gate := s.newContractGate() // one setting read and one feature lookup per org for the page
 	for _, r := range rows {
@@ -523,6 +541,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 		if err != nil {
 			return nil, 0, err
 		}
+		v.ItemCategories = categoriesOf(cats, r.ID)
 		out = append(out, v)
 	}
 	return out, total, nil

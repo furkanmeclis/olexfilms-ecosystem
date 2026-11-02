@@ -122,10 +122,13 @@ test("center drafts a recommended price and publish asks for step-up", async ({
   const dialog = page.getByTestId("publish-dialog");
   await expect(dialog).toBeVisible();
   await dialog.locator("#recommended-effective-from").click();
-  // Days before today are disabled in the calendar.
-  await expect(
-    page.locator('[data-disabled="true"][data-day]').first(),
-  ).toBeVisible();
+  // Days before today are disabled in the calendar; on the 1st the open month
+  // shows none.
+  if (new Date().getDate() > 1) {
+    await expect(
+      page.locator('[data-disabled="true"][data-day]').first(),
+    ).toBeVisible();
+  }
   await page.keyboard.press("Escape");
 
   await dialog.getByTestId("publish-submit").click();

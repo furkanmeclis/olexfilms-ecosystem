@@ -24009,6 +24009,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/stats/frequent-vehicles:
+    get:
+      tags: [Services]
+      operationId: getFrequentVehicles
+      summary: Car brands / models the active organization services most (vehicle picker)
+      description: >-
+        For the "Frequently used" section of the mobile vehicle picker
+        (legacy lookup popularity order, organization counts only). Without
+        car_brand_uuid it returns the most serviced car brands (brands, at
+        most 8, models empty); with it the most serviced models of that car
+        brand (models, at most 8, brands empty). Every service except
+        cancelled ones counts. Same reach as /v1/stats/overview: only the
+        active organization's own services inside the domain brand (K20);
+        own / assigned grants count the services they created. Inactive
+        catalog rows are left out. Ties sort by name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: car_brand_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Frequent vehicles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFrequentVehicles"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /v1/stats/top-vehicle-models:
     get:
       tags: [Services]
@@ -45227,6 +45264,7 @@ components:
         - editable
         - items_editable
         - available_transitions
+        - item_categories
         - is_warranty_reapply
       properties:
         uuid: { type: string, format: uuid }
@@ -45272,6 +45310,16 @@ components:
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatus" }
+        item_categories:
+          type: array
+          items: { type: string }
+          description: >-
+            Category names of the products applied on the service, each once
+            (case-insensitive), in category order (sort, name). Set on the list
+            and the detail; empty array when there are no counted items. Items
+            of a cancelled service and corrected items returned to stock
+            without a replacement are not counted. Names are returned as stored
+            (categories have no translations).
         is_warranty_reapply:
           type: boolean
           description: True when the service was opened from an approved warranty claim.
@@ -46066,6 +46114,47 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/TopVehicles" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FrequentCarBrand:
+      type: object
+      required: [uuid, name, has_logo, logo_url, service_count]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        has_logo: { type: boolean }
+        logo_url:
+          type: string
+          description: /brand-logos/{uuid} with a ?v= cache-buster when a logo exists.
+        service_count: { type: integer, format: int64 }
+
+    FrequentCarModel:
+      type: object
+      required: [uuid, name, service_count]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        service_count: { type: integer, format: int64 }
+
+    FrequentVehicles:
+      type: object
+      required: [brands, models]
+      properties:
+        brands:
+          type: array
+          maxItems: 8
+          items: { $ref: "#/components/schemas/FrequentCarBrand" }
+        models:
+          type: array
+          maxItems: 8
+          items: { $ref: "#/components/schemas/FrequentCarModel" }
+
+    EnvelopeFrequentVehicles:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FrequentVehicles" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     OrderStatus:

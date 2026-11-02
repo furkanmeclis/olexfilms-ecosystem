@@ -184,6 +184,7 @@ const vehicle = (over: Partial<Vehicle> = {}): Vehicle => ({
 
 const service = (over: Partial<Service> = {}): Service => ({
   uuid: "s1",
+  item_categories: [],
   service_no: "DSAB12CD34",
   status: "draft",
   status_label: "Draft",
