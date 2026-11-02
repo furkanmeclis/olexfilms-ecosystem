@@ -31,5 +31,13 @@
   "approvals": "Approvals",
   "network": "Dealer network",
   "warehouse": "Warehouse",
-  "warehouse_hint": "Stock, jobs and counts"
+  "warehouse_hint": "Stock, jobs and counts",
+  "group.operations": "Operations",
+  "group.customers": "Customers",
+  "group.stock": "Stock and orders",
+  "group.finance": "Finance",
+  "group.business": "Business",
+  "group.assistant": "AI",
+  "group.other": "Other",
+  "group.account": "Account and settings"
 }

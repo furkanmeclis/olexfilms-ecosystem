@@ -18,5 +18,13 @@
   "approvals": "Согласования",
   "network": "Дилерская сеть",
   "warehouse": "Склад",
-  "warehouse_hint": "Остатки, задания и инвентаризация"
+  "warehouse_hint": "Остатки, задания и инвентаризация",
+  "group.operations": "Операции",
+  "group.customers": "Клиенты",
+  "group.stock": "Склад и заказы",
+  "group.finance": "Финансы",
+  "group.business": "Компания",
+  "group.assistant": "ИИ",
+  "group.other": "Другое",
+  "group.account": "Аккаунт и настройки"
 }

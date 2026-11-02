@@ -13,9 +13,9 @@ import { StatTiles, TimeChart } from '@/features/reports/report-view';
 import { usePendingOrderCount } from '@/features/warehouse/orders-api';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Icon } from '@/ui/icon';
+import { KpiGridSkeleton } from '@/ui/kpi';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
-import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
 import { Chips, ErrorState } from './kit';
@@ -107,11 +107,7 @@ export function AdminHomeScreen() {
         </View>
 
         {overview.isPending ? (
-          <View className="flex-row flex-wrap gap-2.5">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 grow basis-[46%] rounded-lg" />
-            ))}
-          </View>
+          <KpiGridSkeleton />
         ) : overview.isError && !overview.data ? (
           <ErrorState error={overview.error} onRetry={() => void overview.refetch()} />
         ) : cards && cards.points.length ? (

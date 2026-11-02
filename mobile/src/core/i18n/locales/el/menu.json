@@ -18,5 +18,13 @@
   "approvals": "Εγκρίσεις",
   "network": "Δίκτυο αντιπροσώπων",
   "warehouse": "Αποθήκη",
-  "warehouse_hint": "Απόθεμα, εργασίες και απογραφές"
+  "warehouse_hint": "Απόθεμα, εργασίες και απογραφές",
+  "group.operations": "Λειτουργίες",
+  "group.customers": "Πελάτες",
+  "group.stock": "Απόθεμα και παραγγελίες",
+  "group.finance": "Οικονομικά",
+  "group.business": "Επιχείρηση",
+  "group.assistant": "ΤΝ",
+  "group.other": "Άλλα",
+  "group.account": "Λογαριασμός και ρυθμίσεις"
 }

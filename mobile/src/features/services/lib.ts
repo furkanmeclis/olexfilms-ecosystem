@@ -123,7 +123,10 @@ export function useLinks() {
   const to = (kind: EntityKind, id: string) => (kind === self ? `${base}/${id}` : `${base}/${kind}/${id}`) as Href;
   return {
     service: (id: string) => to('services', id),
-    addItem: (id: string) => `${to('services', id) as string}/add-item` as Href,
+    addItem: (id: string, parts?: readonly string[]) =>
+      `${to('services', id) as string}/add-item${parts?.length ? `?parts=${encodeURIComponent(parts.join(','))}` : ''}` as Href,
+    /** Intake wizard of an open draft (same screen as `newService`). */
+    wizard: (id: string) => `${to('services', id) as string}/wizard` as Href,
     customer: (id: string) => to('customers', id),
     warranty: (id: string) => to('warranties', id),
     newService: `/${space}/services/new` as Href,

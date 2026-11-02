@@ -125,5 +125,7 @@
   "home_no_warranty": "这辆车没有有效质保。",
   "home_no_car_eyebrow": "还没有车辆",
   "home_no_car_title": "用 Olex 为爱车加冕",
-  "home_no_car_body": "在授权经销商施工的膜及其质保会显示在这里。"
+  "home_no_car_body": "在授权经销商施工的膜及其质保会显示在这里。",
+  "booking_dealer_pick": "选择经销商",
+  "booking_vehicle_pick": "选择车辆"
 }

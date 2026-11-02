@@ -57,5 +57,8 @@
   "vehicle_parts.preset.windows_front": "Παρμπρίζ",
   "vehicle_parts.preset.windows_front_two": "Τζάμια εμπρός θυρών",
   "vehicle_parts.preset.windows_except_front": "Όλα εκτός παρμπρίζ",
-  "vehicle_parts.preset.windows_all": "Όλα τα τζάμια"
+  "vehicle_parts.preset.windows_all": "Όλα τα τζάμια",
+  "picker.search": "Αναζήτηση",
+  "picker.selected": "Επιλεγμένο",
+  "picker.empty": "Κανένα αποτέλεσμα"
 }

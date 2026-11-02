@@ -18,7 +18,6 @@ import {
   type PortalVehicle,
 } from './lib';
 import { useTimeLeft } from './home-parts';
-import type { IconName } from '@/ui/icons';
 
 /** Localized service status; the backend label (or the raw code) when unknown. */
 export function useServiceStatusLabel() {
@@ -168,26 +167,5 @@ export function AppointmentRow({
   );
 }
 
-/** Small stat tile used on the home screen. */
-export function StatTile({ icon, label, value, onPress }: { icon: IconName; label: string; value: string; onPress?: () => void }) {
-  const body = (
-    <>
-      <View className="flex-row items-center gap-2">
-        <Icon name={icon} tone="primary" size={16} />
-        <Text variant="footnote" tone="muted" numberOfLines={1} className="flex-1">
-          {label}
-        </Text>
-      </View>
-      <Text variant="title" className="tabular-nums">
-        {value}
-      </Text>
-    </>
-  );
-  const cls = 'min-h-20 grow basis-[46%] justify-between gap-1 rounded-lg border border-border bg-card p-3';
-  if (!onPress) return <View className={cls}>{body}</View>;
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} className={`${cls} active:opacity-80`}>
-      {body}
-    </Pressable>
-  );
-}
+/** Stat tile of the customer and fleet homes: the shared KPI card. */
+export { KpiCard as StatTile } from '@/ui/kpi';

@@ -18,5 +18,13 @@
   "approvals": "Approbations",
   "network": "Réseau de revendeurs",
   "warehouse": "Entrepôt",
-  "warehouse_hint": "Stock, tâches et inventaires"
+  "warehouse_hint": "Stock, tâches et inventaires",
+  "group.operations": "Opérations",
+  "group.customers": "Clients",
+  "group.stock": "Stock et commandes",
+  "group.finance": "Finances",
+  "group.business": "Entreprise",
+  "group.assistant": "IA",
+  "group.other": "Autres",
+  "group.account": "Compte et paramètres"
 }

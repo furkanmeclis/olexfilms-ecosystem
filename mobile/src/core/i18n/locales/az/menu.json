@@ -18,5 +18,13 @@
   "approvals": "Təsdiqlər",
   "network": "Diler şəbəkəsi",
   "warehouse": "Anbar",
-  "warehouse_hint": "Stok, tapşırıqlar və sayım"
+  "warehouse_hint": "Stok, tapşırıqlar və sayım",
+  "group.operations": "Əməliyyatlar",
+  "group.customers": "Müştərilər",
+  "group.stock": "Anbar və sifarişlər",
+  "group.finance": "Maliyyə",
+  "group.business": "Biznes",
+  "group.assistant": "Süni intellekt",
+  "group.other": "Digər",
+  "group.account": "Hesab və ayarlar"
 }

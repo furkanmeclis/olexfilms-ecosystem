@@ -63,5 +63,8 @@
   "vehicle_parts.preset.windows_front": "Windshield",
   "vehicle_parts.preset.windows_front_two": "Front door windows",
   "vehicle_parts.preset.windows_except_front": "All but windshield",
-  "vehicle_parts.preset.windows_all": "All windows"
+  "vehicle_parts.preset.windows_all": "All windows",
+  "picker.search": "Search",
+  "picker.selected": "Selected",
+  "picker.empty": "No results"
 }

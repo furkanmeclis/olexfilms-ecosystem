@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { CustomerDetail, Vehicle } from '@/features/services/lib';
-import { VIN_RE } from '@/features/services/new-service-screen';
+import { VIN_RE } from '@/features/services/pickers';
 import { isComplete, VehiclePicker, type VehicleValue } from '@/features/vehicle-picker';
 import { Sheet } from '@/features/services/sheet';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';

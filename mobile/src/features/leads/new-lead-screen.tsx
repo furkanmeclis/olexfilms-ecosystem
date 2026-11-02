@@ -6,9 +6,9 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { DEFAULT_COUNTRY, parsePhone } from '@/features/auth/phone-country';
-import { fullName, useDebounced } from '@/features/services/lib';
-import { Sheet } from '@/features/services/sheet';
-import { Chips, errorText, SearchField, Section } from '@/features/services/ui';
+import { PickerSheet } from '@/features/picker-sheet';
+import { fullName, PAGE_SIZE, useDebounced, usePagedList } from '@/features/services/lib';
+import { Chips, errorText, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -29,45 +29,49 @@ import {
 type PickedCustomer = { uuid: string; label: string };
 type FollowUpChoice = 'none' | '1' | '3' | '7';
 
-function CustomerPicker({ onPick, onClose }: { onPick: (c: PickedCustomer) => void; onClose: () => void }) {
+function CustomerPicker({
+  selected,
+  onPick,
+  onClose,
+}: {
+  selected: PickedCustomer | null;
+  onPick: (c: PickedCustomer) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('leads');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
-  const res = useQuery({
-    queryKey: ['customers', 'lead-picker', query],
-    queryFn: () => unwrap(api.GET('/v1/customers', { params: { query: { q: query || undefined, limit: 20, offset: 0 } } })),
-  });
+  const res = usePagedList(['customers', 'lead-picker', 'paged', query], (offset) =>
+    unwrap(api.GET('/v1/customers', { params: { query: { q: query || undefined, limit: PAGE_SIZE, offset } } })),
+  );
+  const names = new Map(res.items.map((c) => [c.uuid, fullName(c)]));
   return (
-    <Sheet title={t('customer')} saveTitle={t('common:close')} onSave={onClose} onClose={onClose}>
-      <SearchField value={q} onChange={setQ} placeholder={t('customer_search')} autoFocus />
-      <View className="overflow-hidden rounded-lg border border-border bg-card">
-        {(res.data?.items ?? []).map((c, i, all) => (
-          <Pressable
-            key={c.uuid}
-            accessibilityRole="button"
-            disabled={c.anonymized}
-            onPress={() => onPick({ uuid: c.uuid, label: fullName(c) })}
-            className={`min-h-11 gap-0.5 px-4 py-2.5 active:bg-muted ${i < all.length - 1 ? 'border-b border-border' : ''}`}>
-            <Text variant="body" numberOfLines={1}>
-              {c.type === 'corporate' && c.company_name ? c.company_name : fullName(c)}
-            </Text>
-            <Text variant="footnote" tone="muted" numberOfLines={1}>
-              {[c.phone, c.email].filter(Boolean).join(' · ')}
-            </Text>
-          </Pressable>
-        ))}
-        {res.data && res.data.items.length === 0 ? (
-          <Text variant="callout" tone="muted" className="px-4 py-3">
-            {t('customers_empty')}
-          </Text>
-        ) : null}
-        {res.isError ? (
-          <Text variant="callout" tone="danger" className="px-4 py-3">
-            {errorText(res.error)}
-          </Text>
-        ) : null}
-      </View>
-    </Sheet>
+    <PickerSheet
+      visible
+      title={t('customer')}
+      options={res.items.map((c) => ({
+        key: c.uuid,
+        title: c.type === 'corporate' && c.company_name ? c.company_name : fullName(c),
+        subtitle: [c.phone, c.email].filter(Boolean).join(' · ') || undefined,
+        disabled: c.anonymized,
+      }))}
+      selectedKey={selected?.uuid}
+      selectedLabel={selected?.label}
+      search={{ value: q, onChange: setQ }}
+      searchPlaceholder={t('customer_search')}
+      autoFocusSearch
+      loading={res.isPending}
+      error={res.error}
+      onRetry={() => void res.refetch()}
+      fetchingMore={res.isFetchingNextPage}
+      onEndReached={() => {
+        if (res.hasNextPage && !res.isFetchingNextPage) void res.fetchNextPage();
+      }}
+      emptyText={t('customers_empty')}
+      // The lead keeps the person's name, as before (not the company name).
+      onPick={(o) => onPick({ uuid: o.key, label: names.get(o.key) ?? o.title })}
+      onClose={onClose}
+    />
   );
 }
 
@@ -255,6 +259,7 @@ export function NewLeadScreen() {
       </ScrollView>
       {pickCustomer ? (
         <CustomerPicker
+          selected={customer}
           onClose={() => setPickCustomer(false)}
           onPick={(c) => {
             setCustomer(c);

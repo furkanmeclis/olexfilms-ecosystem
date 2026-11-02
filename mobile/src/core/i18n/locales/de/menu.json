@@ -18,5 +18,13 @@
   "approvals": "Freigaben",
   "network": "Händlernetz",
   "warehouse": "Lager",
-  "warehouse_hint": "Bestand, Aufträge und Inventur"
+  "warehouse_hint": "Bestand, Aufträge und Inventur",
+  "group.operations": "Betrieb",
+  "group.customers": "Kunden",
+  "group.stock": "Lager und Bestellungen",
+  "group.finance": "Finanzen",
+  "group.business": "Unternehmen",
+  "group.assistant": "KI",
+  "group.other": "Weiteres",
+  "group.account": "Konto und Einstellungen"
 }

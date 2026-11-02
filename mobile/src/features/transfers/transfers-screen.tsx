@@ -19,6 +19,7 @@ import {
   useDebounced,
   useFormat,
 } from '@/features/admin/kit';
+import { PickerField, PickerSheet } from '@/features/picker-sheet';
 import { ContinuousScanner, type ScanOutcome } from '@/features/warehouse/continuous-scanner';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -317,6 +318,7 @@ export function TransferNewScreen() {
   const kind: TransferKind = params.kind === 'return' ? 'return' : 'sibling';
   const targets = useTransferTargets(kind);
   const [target, setTarget] = useState<string | null>(null);
+  const [pickingTarget, setPickingTarget] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [manual, setManual] = useState('');
   const [note, setNote] = useState('');
@@ -385,21 +387,39 @@ export function TransferNewScreen() {
           <Text variant="callout" tone="muted">
             {t('no_targets')}
           </Text>
-        ) : (
+        ) : kind === 'return' ? (
+          // A return goes to the direct parent: shown, nothing to pick.
           <List>
             {targets.data.map((o, i, arr) => (
               <ListRow
                 key={o.uuid}
                 icon="building"
                 title={o.name}
-                onPress={kind === 'return' ? undefined : () => setTarget(o.uuid)}
                 trailing={chosen === o.uuid ? <Icon name="check" tone="primary" size={18} /> : undefined}
                 last={i === arr.length - 1}
               />
             ))}
           </List>
+        ) : (
+          <>
+            <PickerField
+              icon="building"
+              value={targets.data.find((o) => o.uuid === chosen)?.name}
+              placeholder={t('validation.target')}
+              error={touched && !chosen ? t('validation.target') : undefined}
+              onPress={() => setPickingTarget(true)}
+            />
+            <PickerSheet
+              visible={pickingTarget}
+              title={t('target')}
+              options={targets.data.map((o) => ({ key: o.uuid, title: o.name, icon: 'building' as const }))}
+              selectedKey={chosen}
+              onPick={(o) => setTarget(o.key)}
+              onClose={() => setPickingTarget(false)}
+            />
+          </>
         )}
-        {touched && !chosen ? (
+        {touched && !chosen && kind === 'return' ? (
           <Text variant="footnote" tone="danger">
             {t('validation.target')}
           </Text>

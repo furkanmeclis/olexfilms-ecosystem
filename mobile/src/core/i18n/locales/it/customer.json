@@ -125,5 +125,7 @@
   "home_no_warranty": "Nessuna garanzia attiva su questa auto.",
   "home_no_car_eyebrow": "Ancora nessuna auto",
   "home_no_car_title": "Incorona la tua auto con Olex",
-  "home_no_car_body": "Qui compaiono la pellicola applicata da un rivenditore autorizzato e la sua garanzia."
+  "home_no_car_body": "Qui compaiono la pellicola applicata da un rivenditore autorizzato e la sua garanzia.",
+  "booking_dealer_pick": "Scegli un rivenditore",
+  "booking_vehicle_pick": "Scegli un veicolo"
 }

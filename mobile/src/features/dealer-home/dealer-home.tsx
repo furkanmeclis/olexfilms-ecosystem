@@ -15,6 +15,7 @@ import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
+import { KpiCard, KpiGrid, KpiGridSkeleton } from '@/ui/kpi';
 import { Skeleton } from '@/ui/skeleton';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -124,51 +125,24 @@ export function DealerHome() {
         {overview.isPending ? (
           <View className="gap-2">
             <Skeleton className="mx-1 h-3 w-20" />
-            <View className="flex-row flex-wrap gap-2.5">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-[104px] grow basis-[46%] rounded-2xl" />
-              ))}
-            </View>
+            <KpiGridSkeleton />
           </View>
         ) : cards.length > 0 ? (
           <View className="gap-2">
             <Text variant="caption" tone="muted" className="px-1">
               {t('last_30_days')}
             </Text>
-            <View className="flex-row flex-wrap gap-2.5">
+            <KpiGrid>
               {cards.slice(0, 8).map((c) => (
                 <KpiCard key={c.key} icon={kpiIcon(c.key)} label={c.label} value={formatNumber(c.value, i18n.language)} />
               ))}
-            </View>
+            </KpiGrid>
           </View>
         ) : null}
 
         {canServices ? <Board queries={board} canWrite={canWrite} /> : null}
       </ScrollView>
     </>
-  );
-}
-
-/** One overview number: a small icon and calm label above, the number as the hero. */
-function KpiCard({ icon, label, value }: { icon: IconName; label: string; value: string }) {
-  return (
-    <View
-      accessible
-      accessibilityLabel={`${label}: ${value}`}
-      className="min-h-[104px] grow basis-[46%] justify-between gap-3 rounded-2xl border border-border bg-card p-3.5"
-      style={{ borderCurve: 'continuous' }}>
-      <View className="flex-row items-center gap-2">
-        <View className="size-7 items-center justify-center rounded-full bg-primary/10">
-          <Icon name={icon} tone="primary" size={14} weight="medium" />
-        </View>
-        <Text variant="footnote" tone="muted" numberOfLines={2} className="flex-1">
-          {label}
-        </Text>
-      </View>
-      <Text variant="title" className="text-[30px] font-bold leading-[36px] tracking-tight tabular-nums" numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-    </View>
   );
 }
 
