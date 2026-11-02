@@ -4,8 +4,26 @@ import (
 	"net/http"
 	"time"
 
+	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
+
+// FrequentVehicles (GET /v1/stats/frequent-vehicles[?car_brand_uuid=]): the
+// car brands the active organization services most, or the models of one
+// car brand, for the "frequently used" section of the mobile vehicle picker.
+func (h *Handler) FrequentVehicles(w http.ResponseWriter, r *http.Request) {
+	carBrand, err := svcuc.ParseCarBrandUUID(r.URL.Query().Get("car_brand_uuid"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	out, err := h.svc.FrequentVehicles(r.Context(), caller(r), carBrand)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
 
 // TopVehicleModels (GET /v1/stats/top-vehicle-models?period=30d|90d|12m|all
 // &group=brand|model, TEC-151): the top-10 car brands or models by

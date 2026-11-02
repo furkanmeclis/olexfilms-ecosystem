@@ -887,6 +887,14 @@ type Querier interface {
 	// not void, not past end_at), expired (ended by period_to, not void) and
 	// started within the period.
 	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
+	// Frequent vehicles of one organization: the car brands / models the
+	// organization services most, for the "frequent first" section of the
+	// mobile vehicle picker (legacy LookupPopularityService parity, dealer
+	// counts only). Only services of org_id inside the domain brand (K20);
+	// created_by_user_id narrows own / assigned grants. Every service except
+	// cancelled ones counts, whatever the period. Reads idx_services_org_status.
+	FrequentServicedCarBrands(ctx context.Context, arg FrequentServicedCarBrandsParams) ([]FrequentServicedCarBrandsRow, error)
+	FrequentServicedCarModels(ctx context.Context, arg FrequentServicedCarModelsParams) ([]FrequentServicedCarModelsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
