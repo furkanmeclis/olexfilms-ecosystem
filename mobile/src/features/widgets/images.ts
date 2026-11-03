@@ -1,0 +1,170 @@
+// Widget görsellerini App Group alanına yazar. Dosya işlemleri native; sınama cihazda (Task 24).
+import { Directory, File, Paths } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { widgetsDirectory } from 'expo-widgets';
+import { Image } from 'react-native';
+
+import type { components } from '@/core/api/schema';
+import { brandLogoUrl, heroUrl } from '@/features/customer-space/hero-url';
+
+import { HERO_MAX_WIDTH_PX, MARK_FILE, MARK_MONO_FILE } from './config';
+import { heroFileName, isFresh, logoFileName, qrFileName, staleFiles } from './image-names';
+import { qrPngFromText } from './qr-png';
+
+type PortalVehicle = components['schemas']['PortalVehicle'];
+
+const LOGO_MAX_WIDTH_PX = 160;
+
+/** Paylaşılan alan; entitlement yoksa veya Android'de `null`, tüm işlem atlanır. */
+function sharedDir(): Directory | null {
+  // Native sabit tipte `string`, ama App Group yoksa `null` döner.
+  const uri = widgetsDirectory as string | null | undefined;
+  return uri ? new Directory(uri) : null;
+}
+
+function downloadDir(): Directory {
+  const dir = new Directory(Paths.cache, 'widget-downloads');
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  return dir;
+}
+
+/** SVG saklanmaz (ImageView çizemez); `.src` uzantısı MIME vermez, bu yüzden ilk baytlara bakılır. */
+function isSvg(file: File): boolean {
+  if (file.type === 'image/svg+xml') return true;
+  const handle = file.open();
+  try {
+    const head = new TextDecoder().decode(handle.readBytesSync(256));
+    return /<svg|<\?xml/i.test(head);
+  } finally {
+    handle.close();
+  }
+}
+
+function remove(file: File) {
+  try {
+    if (file.exists) file.delete();
+  } catch {
+    // Silinemeyen geçici dosya bir sonraki eşitlemede ezilir.
+  }
+}
+
+/**
+ * Uzak görseli indirir, `width` px'e küçültür, PNG olarak (alfa korunur) paylaşılan alana yazar.
+ * Taze dosya varsa ağa çıkmaz. Her hatada `null`: widget görselsiz çizilir.
+ */
+async function storeRemote(url: string, fileName: string, width: number): Promise<string | null> {
+  let source: File | null = null;
+  let saved: File | null = null;
+  try {
+    const shared = sharedDir();
+    if (!shared) return null;
+    const target = new File(shared, fileName);
+    if (target.exists && isFresh(target.lastModified, Date.now())) return target.uri;
+
+    source = new File(downloadDir(), `${fileName}.src`);
+    await File.downloadFileAsync(url, source, { idempotent: true });
+    if (isSvg(source)) return null;
+    const ref = await ImageManipulator.manipulate(source.uri, { maxWidth: width })
+      .resize({ width, height: null })
+      .renderAsync();
+    const result = await ref.saveAsync({ format: SaveFormat.PNG });
+    saved = new File(result.uri);
+    await saved.copy(target, { overwrite: true });
+    return target.uri;
+  } catch {
+    return null;
+  } finally {
+    if (source) remove(source);
+    if (saved) remove(saved);
+  }
+}
+
+export async function storeHero(v: Pick<PortalVehicle, 'car_brand' | 'car_model'>): Promise<string | null> {
+  try {
+    const name = heroFileName(v);
+    return name ? await storeRemote(heroUrl(v), name, HERO_MAX_WIDTH_PX) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function storeBrandLogo(brandUuid: string): Promise<string | null> {
+  try {
+    const name = logoFileName(brandUuid);
+    return name ? await storeRemote(brandLogoUrl(brandUuid), name, LOGO_MAX_WIDTH_PX) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** `text` `publicWarrantyUrl(code)` sonucudur; QR cihazda üretilir, ağ yok. */
+export function storeQr(code: string, text: string): string | null {
+  try {
+    const shared = sharedDir();
+    const name = qrFileName(code);
+    if (!shared || !name) return null;
+    const target = new File(shared, name);
+    // Yazma dosyayı yoksa oluşturur (Data.write); eşzamanlı olması uri'nin hazır dosyaya işaret etmesini sağlar.
+    target.writeSync(qrPngFromText(text));
+    return target.uri;
+  } catch {
+    return null;
+  }
+}
+
+const MARK_ASSETS = [
+  { file: MARK_FILE, module: require('../../../assets/images/widget-mark.png') as number },
+  { file: MARK_MONO_FILE, module: require('../../../assets/images/widget-mark-mono.png') as number },
+];
+
+/** Altın işaret ve beyaz tek renkli sürüm; her eşitlemede üzerine yazılır (uygulama güncellemesi gelebilir). */
+export async function storeMarks(): Promise<{ markUri: string | null; markMonoUri: string | null }> {
+  let shared: Directory | null = null;
+  try {
+    shared = sharedDir();
+  } catch {
+    shared = null;
+  }
+  if (!shared) return { markUri: null, markMonoUri: null };
+  const uris: (string | null)[] = [];
+  for (const { file, module } of MARK_ASSETS) {
+    try {
+      // `Asset.fromModule` RN 0.88'de `AssetRegistry` bulamıyor; adres geliştirmede Metro, derlemede dosyadır.
+      const uri = Image.resolveAssetSource(module)?.uri;
+      if (!uri) throw new Error('no asset uri');
+      const target = new File(shared, file);
+      if (uri.startsWith('http')) await File.downloadFileAsync(uri, target, { idempotent: true });
+      else await new File(uri).copy(target, { overwrite: true });
+      uris.push(target.uri);
+    } catch {
+      uris.push(null);
+    }
+  }
+  return { markUri: uris[0], markMonoUri: uris[1] };
+}
+
+function listFiles(shared: Directory): File[] {
+  return shared.list().filter((entry): entry is File => entry instanceof File);
+}
+
+function removeAll(files: File[], doomed: string[]) {
+  const names = new Set(doomed);
+  for (const file of files) if (names.has(file.name)) remove(file);
+}
+
+/** `keep` (dosya adları) dışındakileri siler; Olex işaretleri kalır. */
+export function reconcile(keep: Set<string>) {
+  try {
+    const shared = sharedDir();
+    if (!shared) return;
+    const files = listFiles(shared);
+    removeAll(files, staleFiles(files.map((f) => f.name), keep));
+  } catch {
+    // Dizin okunamadı: bir sonraki eşitlemede yeniden denenir.
+  }
+}
+
+/** Çıkışta: işaretler dışında her şeyi siler. */
+export function purgeAll() {
+  reconcile(new Set());
+}

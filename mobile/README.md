@@ -108,6 +108,35 @@ update applies on the next cold start). Settings > About shows channel, runtime 
 - The backend's 426 "update required" gate is separate: it forces a store update for old
   *binaries*; OTA never replaces it.
 
+## iOS widgets (TEC-1044)
+
+Eight home and lock screen widgets, declared in the `expo-widgets` block of
+`app.json` (the only place for the bundle and app group IDs). Code lives in
+`src/features/widgets`: `sync.ts` fetches and writes, the `*-summary.ts` files
+build `props`, `layouts/*.widget.tsx` draw them. No widget on Android.
+
+The `'widget'` rule: Babel turns a layout's body into a string that runs in the
+extension's JS context. It cannot reach the outer scope, so:
+
+- value imports only from `@expo/ui/swift-ui`, `@expo/ui/swift-ui/modifiers` and
+  `expo-widgets`; everything else is `import type`
+- no hooks, no async, no module-level constants; helpers go inside the body, even
+  if that duplicates them across layouts, and must not shadow a modifier name
+- every text, colour and URL comes from `props`; images are `file://` only
+- optional props are read by truthiness or `?.`, never `=== null`: `stripNulls`
+  removes nulls before they reach native, where `NSNull` crashes `UserDefaults`
+- no name, plate, amount or QR on the lock screen, no customer name in dealer
+  widgets, no token in the shared area
+
+`layouts.test.ts` compiles each layout and runs the generated string against fake
+globals, so most mistakes fail in `npm test`. Layout changes ship over OTA; changes
+to `app.json` families or parameters need a new native build.
+
+To try them on a device or simulator: make a development build, sign in, open the
+app once so the first sync runs, then add the widgets from the home screen gallery.
+Check light and dark, Arabic (RTL), a tinted home screen, and sign-out, which must
+empty all eight.
+
 ## Structure
 
 ```

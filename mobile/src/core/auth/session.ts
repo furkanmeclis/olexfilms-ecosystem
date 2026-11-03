@@ -5,6 +5,7 @@ import { hasLanguagePreference, isLanguage, setLanguage } from '@/core/i18n';
 import { useOnboarding } from '@/core/onboarding';
 import { queryClient } from '@/core/query';
 import { readJSON, storage, writeJSON } from '@/core/storage';
+import { clearWidgets } from '@/features/widgets/clear';
 
 import { fetchMe, logout, type MobileLoginResult, type MobileMe, switchOrganization } from './api';
 import { clearTokens, fromApi, loadTokens, setTokens } from './tokens';
@@ -49,6 +50,8 @@ export const useSession = create<Session>((set, get) => ({
     const signedIn = Boolean(tokens && me);
     // Already signed in when the onboarding shipped: never show it after sign-out.
     if (signedIn) useOnboarding.getState().markSeen();
+    // Widgets of a previous session must not outlive it (killed before sign-out finished, token gone).
+    else void clearWidgets();
     set({ status: signedIn ? 'signedIn' : 'signedOut', me });
   },
 
@@ -97,9 +100,14 @@ export const useSession = create<Session>((set, get) => ({
   signOut: async ({ remote = true } = {}) => {
     if (remote) await logout().catch(() => undefined);
     await clearTokens();
+    // Widgets live outside the app sandbox. The generation bump inside clearWidgets is
+    // synchronous, so it runs now (tokens are already gone); the slow part (asset
+    // writes) is awaited only after the UI is signed out and can never block it.
+    const widgetsCleared = clearWidgets().catch(() => undefined);
     storage.remove(ME_KEY);
     queryClient.clear();
     set({ status: 'signedOut', me: null });
+    await widgetsCleared;
   },
 }));
 

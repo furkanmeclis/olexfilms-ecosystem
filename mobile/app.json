@@ -96,7 +96,181 @@
           "bluetoothAlwaysPermission": "Olexfilms boya kalınlığı ölçüm cihazına (SmartPTG) bağlanmak için Bluetooth kullanır."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.olexfilms.app.widgets",
+          "groupIdentifier": "group.com.olexfilms.app",
+          "widgets": [
+            {
+              "name": "OlexKoruma",
+              "displayName": "Koruma",
+              "description": "Aracınızın koruma durumu",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge",
+                  "accessoryCircular",
+                  "accessoryRectangular",
+                  "accessoryInline"
+                ],
+                "contentMarginsDisabled": true,
+                "configuration": {
+                  "title": "Araç seçimi",
+                  "parameters": {
+                    "vehicle": {
+                      "title": "Araç",
+                      "type": "enum",
+                      "dynamic": true,
+                      "default": "auto",
+                      "values": [
+                        {
+                          "name": "Otomatik",
+                          "value": "auto"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "OlexGarantiKarti",
+              "displayName": "Garanti kartı",
+              "description": "Garanti kartı ve geçerlilik",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "contentMarginsDisabled": true,
+                "configuration": {
+                  "title": "Araç seçimi",
+                  "parameters": {
+                    "vehicle": {
+                      "title": "Araç",
+                      "type": "enum",
+                      "dynamic": true,
+                      "default": "auto",
+                      "values": [
+                        {
+                          "name": "Otomatik",
+                          "value": "auto"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "OlexHizmetDurumu",
+              "displayName": "Hizmet durumu",
+              "description": "Aracınızdaki işin adımları",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "contentMarginsDisabled": true,
+                "configuration": {
+                  "title": "Araç seçimi",
+                  "parameters": {
+                    "vehicle": {
+                      "title": "Araç",
+                      "type": "enum",
+                      "dynamic": true,
+                      "default": "auto",
+                      "values": [
+                        {
+                          "name": "Otomatik",
+                          "value": "auto"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "OlexPanom",
+              "displayName": "Panom",
+              "description": "Günün özeti",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge",
+                  "accessoryCircular",
+                  "accessoryRectangular",
+                  "accessoryInline"
+                ],
+                "contentMarginsDisabled": true
+              }
+            },
+            {
+              "name": "OlexHizliIslem",
+              "displayName": "Hızlı işlem",
+              "description": "Tara ve hızlı işlemler",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryCircular"
+                ],
+                "contentMarginsDisabled": true
+              }
+            },
+            {
+              "name": "OlexSon30Gun",
+              "displayName": "Son 30 gün",
+              "description": "Son 30 günün özeti",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge"
+                ],
+                "contentMarginsDisabled": true
+              }
+            },
+            {
+              "name": "OlexBekleyenler",
+              "displayName": "Bekleyenler",
+              "description": "Bekleyen işler ve görevler",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "contentMarginsDisabled": true
+              }
+            },
+            {
+              "name": "OlexCiro",
+              "displayName": "Ciro",
+              "description": "Günlük ciro",
+              "android": null,
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "contentMarginsDisabled": true
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
