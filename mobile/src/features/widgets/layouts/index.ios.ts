@@ -22,6 +22,7 @@ type Layout = { create: (initialProps: BaseProps) => Widget<any, any> };
 /* eslint-disable @typescript-eslint/no-require-imports */
 const LAYOUTS: Partial<Record<WidgetName, () => Layout>> = {
   OlexKoruma: () => require('./koruma.widget'),
+  OlexPanom: () => require('./panom.widget'),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 

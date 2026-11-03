@@ -140,6 +140,31 @@ describe('buildKoruma araç içeriği', () => {
   });
 });
 
+describe('buildKoruma kilit metinleri', () => {
+  it('en kısa süreli garantiden; plaka, marka, model, ürün ve görsel taşımaz', () => {
+    const [out] = buildKoruma([vehicle(1, [warranty(1, 900, 60, 'Uzun Film'), warranty(2, 30, 10, 'Kısa Film')])], ctx).vehicles;
+    assert.deepEqual(Object.keys(out.locked).sort(), ['inline', 'long', 'short', 'title']);
+    assert.match(out.locked.short, /^koruma\.left_compact_/);
+    assert.match(out.locked.long, /^koruma\.left_long\|time=c:left_days/);
+    assert.match(out.locked.inline, /^koruma\.lock_inline\|time=c:left_days/);
+    assert.equal(out.locked.title, 'koruma.eyebrow');
+    const text = JSON.stringify(out.locked);
+    for (const secret of ['34 ABC 123', 'Marka', 'Model 1', 'Uzun Film', 'Kısa Film', 'TR', 'file://', id(1)]) {
+      assert.ok(!text.includes(secret), secret);
+    }
+  });
+
+  it('garanti yoksa kısa metin boş, araç adı değil genel metin', () => {
+    const [out] = buildKoruma([vehicle(1, [])], ctx).vehicles;
+    assert.deepEqual(out.locked, {
+      title: 'koruma.eyebrow',
+      short: '',
+      long: 'state.no_warranty_title',
+      inline: 'state.no_warranty_title',
+    });
+  });
+});
+
 describe('buildKoruma boş haller', () => {
   it('araç yok', () => {
     const out = buildKoruma([], ctx);

@@ -122,11 +122,14 @@ export function buildPanom(
   }));
 
   const oldest = queue[0];
+  const next = count(totals.next, locale);
+  const active = count(totals.active, locale);
+  const done = count(totals.done, locale);
   const base = {
     title,
-    next: count(totals.next, locale),
-    active: count(totals.active, locale),
-    done: count(totals.done, locale),
+    next,
+    active,
+    done,
     rows,
     longest: oldest
       ? {
@@ -137,6 +140,15 @@ export function buildPanom(
           waitLabel: t('panom.longest_wait', { wait: wait(oldest) }),
         }
       : null,
+    // Yalnız sayılar: kilit ekranında araç, plaka, müşteri yok.
+    locked: {
+      title,
+      count: next,
+      countLabel: t('panom.lock_queue_label'),
+      main: t('panom.count_next_short', { count: next }),
+      sub: t('panom.lock_rect_second', { active, done }),
+      inline: t('panom.lock_inline', { next, active }),
+    },
   };
   if (totals.next + totals.active + totals.done === 0) {
     return {

@@ -76,6 +76,17 @@ export type KorumaWarranty = {
   warn: boolean;
 };
 
+/** Kilit ekranı metinleri: yalnız bunlar; ad, plaka, marka, ürün, tutar yok. */
+export type KorumaLocked = {
+  title: string;
+  /** Daire ("2y 4a"); garanti yoksa boş, yalnız işaret çizilir. */
+  short: string;
+  /** Dikdörtgen ("2 yıl 4 ay kaldı"). */
+  long: string;
+  /** Satır içi ("Garanti 2 yıl 4 ay"). */
+  inline: string;
+};
+
 export type KorumaVehicle = {
   id: string;
   /** Araç sayfası bağlantısı. */
@@ -93,6 +104,7 @@ export type KorumaVehicle = {
   warranties: KorumaWarranty[];
   /** Aktif garanti yoksa gösterilen kart. */
   emptyCard: WidgetCard | null;
+  locked: KorumaLocked;
 };
 
 export type KorumaData = {
@@ -169,6 +181,19 @@ export type PanomRow = {
 
 export type PanomLongest = { uuid: string; url: string; carTitle: string; plate: string; waitLabel: string };
 
+/** Kilit ekranı metinleri: yalnız sayılar; ad, plaka, marka, tutar yok. */
+export type PanomLocked = {
+  title: string;
+  /** Daire: "4" ve "sırada". */
+  count: string;
+  countLabel: string;
+  /** Dikdörtgen: "4 sırada" ve "5 işlemde · 2 bitti". */
+  main: string;
+  sub: string;
+  /** Satır içi: "Panom · 4 sırada, 5 işlemde". */
+  inline: string;
+};
+
 export type PanomData = {
   title: string;
   /** Sayılar dilin rakamlarıyla biçimlenmiş. */
@@ -177,6 +202,7 @@ export type PanomData = {
   done: string;
   rows: PanomRow[];
   longest: PanomLongest | null;
+  locked: PanomLocked;
 };
 export type PanomSummary = SummaryBase & PanomData;
 export type PanomProps = BaseProps & PanomData;

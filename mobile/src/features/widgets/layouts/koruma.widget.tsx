@@ -2,7 +2,7 @@
 // dış kapsama erişemez, yardımcılar gövdededir, her metin ve renk `props`'tan gelir.
 // `state !== 'ok'` iken `props` yalnız BaseProps'tur: bu dallar `card` dışında veri okumaz.
 import type { CommonViewModifierProps } from '@expo/ui/swift-ui';
-import { HStack, Image, ProgressView, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { AccessoryWidgetBackground, HStack, Image, ProgressView, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
   aspectRatio,
   background,
@@ -39,7 +39,8 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
   'widget';
   const C = props.theme[environment.colorScheme ?? 'light'];
   const family = environment.widgetFamily ?? 'systemSmall';
-  const mono = (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
+  const lockScreen = family === 'accessoryCircular' || family === 'accessoryRectangular' || family === 'accessoryInline';
+  const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
@@ -288,10 +289,73 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
     );
   }
 
-  if (props.state !== 'ok') return stateCard(props.card);
+  // Kilit ekranı: renk verilmez, sistem tonlar. Yalnız `locked` ve durum kartının başlığı okunur.
+  const lockRoot: Mods = [containerBackground('transparent', 'widget'), widgetURL(props.url)];
 
-  const selected = environment.configuration?.vehicle;
-  const vehicle = props.vehicles.find((v) => v.id === selected) ?? props.vehicles[0];
+  function lockLabel(text: string, size: number, weight: Weight, lines = 1) {
+    return (
+      <Text
+        modifiers={[font({ size, weight }), lineLimit(lines), minimumScaleFactor(0.7), multilineTextAlignment(edge)]}>
+        {text}
+      </Text>
+    );
+  }
+
+  function lockCircular(short: string | undefined) {
+    return (
+      <ZStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })].concat(lockRoot)}>
+        <AccessoryWidgetBackground />
+        {short ? (
+          <VStack alignment="center" spacing={0}>
+            {mark(9, 15)}
+            {lockLabel(short, 15, 'bold')}
+          </VStack>
+        ) : (
+          mark(27, 44)
+        )}
+      </ZStack>
+    );
+  }
+
+  function lockRectangular(title: string, text: string) {
+    return (
+      <VStack
+        alignment={edge}
+        spacing={3}
+        modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge })].concat(lockRoot)}>
+        {row({ spacing: 4 }, mark(9, 15), title ? lockLabel(title, 12, 'semibold') : null)}
+        {lockLabel(text, title ? 18 : 14, 'semibold', title ? 1 : 2)}
+      </VStack>
+    );
+  }
+
+  function lockInline(text: string) {
+    // WidgetKit satır içinde yalnız bir `Image` ve `Text` çizer; boyut ve renk yok sayılır.
+    return (
+      <HStack spacing={4} modifiers={lockRoot}>
+        {mark(10, 17)}
+        <Text>{text}</Text>
+      </HStack>
+    );
+  }
+
+  function lockFamily(title: string, short: string | undefined, long: string, inline: string) {
+    if (family === 'accessoryCircular') return lockCircular(short);
+    if (family === 'accessoryRectangular') return lockRectangular(title, long);
+    return lockInline(inline);
+  }
+
+  const selected = props.state === 'ok' ? environment.configuration?.vehicle : undefined;
+  const vehicle = props.state === 'ok' ? (props.vehicles.find((v) => v.id === selected) ?? props.vehicles[0]) : undefined;
+
+  if (lockScreen) {
+    const copy = vehicle?.locked;
+    return copy
+      ? lockFamily(copy.title, copy.short, copy.long, copy.inline)
+      : lockFamily('', undefined, props.card?.title ?? '', props.card?.title ?? '');
+  }
+
+  if (props.state !== 'ok') return stateCard(props.card);
   if (!vehicle) return stateCard(props.card);
 
   const shortest = vehicle.warranties[0];

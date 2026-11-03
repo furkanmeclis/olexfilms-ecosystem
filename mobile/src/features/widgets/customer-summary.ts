@@ -13,6 +13,7 @@ import type {
   HizmetSummary,
   HizmetVehicle,
   KartSummary,
+  KorumaLocked,
   KorumaSummary,
   KorumaVehicle,
   WidgetCard,
@@ -125,6 +126,24 @@ function noVehicleCard(eyebrow: string, t: TFn): WidgetCard {
   return { eyebrow, title: t('state.no_vehicle_title'), body: t('state.no_vehicle_body') };
 }
 
+/** En kısa süreli garantiye göre kilit ekranı metinleri. */
+function lockedOf(p: Prepared, ctx: CustomerCtx): KorumaLocked {
+  const { t, tc } = ctx;
+  const title = t('koruma.eyebrow');
+  const shortest = p.warranties[0];
+  if (!shortest) {
+    const none = t('state.no_warranty_title');
+    return { title, short: '', long: none, inline: none };
+  }
+  const time = timeLeft(shortest.days_left, tc);
+  return {
+    title,
+    short: timeLeftShort(shortest.days_left, t),
+    long: t('koruma.left_long', { time }),
+    inline: t('koruma.lock_inline', { time }),
+  };
+}
+
 export function buildKoruma(vehicles: PortalVehicleDetail[], ctx: CustomerCtx): KorumaSummary {
   const { t, tc, locale } = ctx;
   const eyebrow = t('koruma.eyebrow');
@@ -152,6 +171,7 @@ export function buildKoruma(vehicles: PortalVehicleDetail[], ctx: CustomerCtx): 
         p.warranties.length === 0
           ? { eyebrow: p.title, title: t('state.no_warranty_title'), body: t('state.no_warranty_body') }
           : null,
+      locked: lockedOf(p, ctx),
     };
   });
   return { state: 'ok', eyebrow, leftCaption, vehicles: out };

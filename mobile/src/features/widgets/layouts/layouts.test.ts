@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 import { WIDGET_NAMES } from '../config.ts';
 import { stripNulls } from '../native-props.ts';
 import { WIDGET_THEME } from '../theme.ts';
-import type { BaseProps, KorumaProps, WidgetState } from '../types.ts';
+import type { BaseProps, KorumaProps, PanomProps, WidgetState } from '../types.ts';
 
 const require = createRequire(import.meta.url);
 const babel = require('@babel/core');
@@ -23,6 +23,7 @@ const ALLOWED_IMPORTS = ['@expo/ui/swift-ui', '@expo/ui/swift-ui/modifiers', 'ex
 /** `jsx-runtime-stub.ts` ve gövdenin kullanabileceği dil küreselleri. */
 const RUNTIME_GLOBALS = ['_jsx', '_jsxs', '_jsxDEV', '_Fragment', '_jsxFileName', 'Infinity', 'undefined', 'Math', 'Number', 'String'];
 const HOME = ['systemSmall', 'systemMedium', 'systemLarge'];
+const LOCK = ['accessoryCircular', 'accessoryRectangular', 'accessoryInline'];
 const NON_OK: WidgetState[] = ['signed_out', 'empty', 'no_permission', 'module_off', 'wrong_role'];
 
 /** Extension'da küresel olan adlar: `ui-globals.ts`, `@expo/ui/swift-ui` ve `modifiers` dışa aktarımları. */
@@ -155,6 +156,9 @@ const korumaVehicle = (id: string, warranties: KorumaProps['vehicles'][number]['
   lastServiceLabel: 'Son hizmet 12 Eki 2026',
   warranties,
   emptyCard: warranties.length ? null : { eyebrow: 'Porsche 911', title: 'Aktif garanti yok', body: 'Bu araçta aktif garanti yok.' },
+  locked: warranties.length
+    ? { title: 'Koruman', short: '2y 4a', long: '2 yıl 4 ay kaldı', inline: 'Garanti 2 yıl 4 ay' }
+    : { title: 'Koruman', short: '', long: 'Aktif garanti yok', inline: 'Aktif garanti yok' },
 });
 
 const korumaProps = (rtl: boolean): KorumaProps => ({
@@ -168,10 +172,42 @@ const korumaProps = (rtl: boolean): KorumaProps => ({
   ],
 });
 
+const panomProps = (rtl: boolean): PanomProps => ({
+  ...base('ok', rtl),
+  title: 'Panom',
+  next: '4',
+  active: '5',
+  done: '2',
+  rows: [
+    {
+      uuid: 'u1',
+      url: 'olexfilms://bayi/services/u1',
+      carTitle: 'Audi A4',
+      plate: '06 DEF 456',
+      plateCountry: 'TR',
+      meta: 'Cam filmi · 2 saat',
+      statusIcon: 'clock',
+      statusTone: 'progress',
+      logoUri: null,
+      initial: 'A',
+    },
+  ],
+  longest: { uuid: 'u1', url: 'olexfilms://bayi/services/u1', carTitle: 'Audi A4', plate: '06 DEF 456', waitLabel: 'En uzun bekleyen · 2 saat' },
+  locked: { title: 'Panom', count: '4', countLabel: 'sırada', main: '4 sırada', sub: '5 işlemde · 2 bitti', inline: 'Panom · 4 sırada, 5 işlemde' },
+});
+
 /** Veri dalları sınanan layout'lar; yeni layout buraya eklenir. */
 const FIXTURES: Record<string, (rtl: boolean) => object> = {
   OlexKoruma: korumaProps,
+  OlexPanom: panomProps,
 };
+
+/** Kilit ekranında hiçbir dalda görünmemesi gereken veriler. */
+const PRIVATE_VALUES = ['34 ABC 123', 'Porsche', '06 DEF 456', 'Audi', 'Olex PPF Parlak', 'Tek Film', 'file:///hero.png', 'Cam filmi'];
+
+/** Ağaçtaki tüm düğümler. */
+const flatten = (node: unknown): Node[] =>
+  Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node as Node, ...flatten((node as Node).props.children)] : [];
 
 const env = (widgetFamily: string, colorScheme = 'light', configuration?: object) => ({
   widgetFamily,
@@ -273,6 +309,51 @@ describe('layout dosyaları', () => {
         }
       });
 
+      it('kilit ekranı: `ok` dışı durumlarda yalnız işaret ve kısa metin; renk yok', () => {
+        const { layout } = widgetOf(file, false);
+        const render = evaluate(layout);
+        const card = { eyebrow: 'Başlık', title: 'Kısa metin', body: 'Açıklama', cta: 'Giriş yap' };
+        for (const state of NON_OK) {
+          for (const rtl of [false, true]) {
+            for (const family of LOCK) {
+              const root = render(stripNulls({ ...base(state, rtl), card }), env(family));
+              const texts = collect(root);
+              assert.ok(texts.every((t) => t === 'file:///mark-mono.png' || t === 'Kısa metin'), `${state} ${family}: ${texts}`);
+              assert.ok(texts.includes('file:///mark-mono.png'));
+              assert.ok(modifierTypes(root).includes('containerBackground'));
+              assert.ok(modifierTypes(root).includes('widgetURL'));
+              assert.ok(flatten(root).every((n) => !modifierTypes(n).includes('foregroundStyle')));
+              render(stripNulls(base(state, rtl)), env(family));
+            }
+          }
+        }
+      });
+
+      it('kilit ekranı: veride ad, plaka, ürün, kapak, renk yok; satır içi tek `Image` + `Text`', () => {
+        const { name, layout } = widgetOf(file, false);
+        const fixture = FIXTURES[name];
+        if (!fixture) return;
+        const render = evaluate(layout);
+        for (const rtl of [false, true]) {
+          for (const family of LOCK) {
+            const root = render(stripNulls(fixture(rtl)), env(family, 'dark'));
+            const dump = JSON.stringify(root);
+            for (const value of PRIVATE_VALUES) assert.ok(!dump.includes(value), `${name} ${family}: ${value}`);
+            assert.ok(collect(root).includes('file:///mark-mono.png'));
+            assert.ok(!dump.includes('file:///mark.png'));
+            assert.ok(flatten(root).every((n) => !modifierTypes(n).includes('foregroundStyle')));
+            assert.ok(modifierTypes(root).includes('containerBackground'));
+            assert.ok(!modifierTypes(root).includes('background'));
+            if (family === 'accessoryCircular') {
+              assert.ok(flatten(root).some((n) => n.type === 'AccessoryWidgetBackground'));
+            }
+            if (family === 'accessoryInline') {
+              assert.deepEqual(flatten(root).map((n) => n.type).slice(1).sort(), ['Image', 'Text']);
+            }
+          }
+        }
+      });
+
       it('veriyle her boy, tema ve yönde çizilir (`null` alanlar atılmış)', () => {
         const { name, layout } = widgetOf(file, false);
         const fixture = FIXTURES[name];
@@ -332,10 +413,8 @@ describe('Koruma düzeni', () => {
     const props = stripNulls(korumaProps(false));
     props.vehicles[0].heroUri = null;
     assert.ok(!collect(render(props, env('systemMedium'))).includes('file:///hero.png'));
-    const flat = (node: unknown): Node[] =>
-      Array.isArray(node) ? node.flatMap(flat) : node && typeof node === 'object' ? [node as Node, ...flat((node as Node).props.children)] : [];
     const heroOf = (rtl: boolean) =>
-      flat(render(stripNulls(korumaProps(rtl)), env('systemMedium'))).find((n) => n.type === 'Image' && n.props.uiImage === 'file:///hero.png');
+      flatten(render(stripNulls(korumaProps(rtl)), env('systemMedium'))).find((n) => n.type === 'Image' && n.props.uiImage === 'file:///hero.png');
     const shift = (rtl: boolean) => (heroOf(rtl)?.props.modifiers as Modifier[]).find((m) => m.$type === 'offset')?.args[0];
     assert.deepEqual(shift(false), { x: 14, y: -4 });
     assert.deepEqual(shift(true), { x: -22, y: -6 });
@@ -369,6 +448,34 @@ describe('Koruma düzeni', () => {
     assert.ok(collect(render(props, env('systemSmall'))).includes('file:///mark.png'));
     const tinted = { ...env('systemSmall'), widgetRenderingMode: 'accented' };
     assert.ok(collect(render(props, tinted)).includes('file:///mark-mono.png'));
+  });
+});
+
+describe('kilit ekranı metinleri', () => {
+  const lockTexts = (file: string, props: object, family: string) =>
+    collect(evaluate(widgetOf(file, false).layout)(stripNulls(props), env(family))).filter((t) => !t.startsWith('file://'));
+
+  it('Koruma', () => {
+    const props = korumaProps(false);
+    assert.deepEqual(lockTexts('koruma.widget.tsx', props, 'accessoryCircular'), ['2y 4a']);
+    assert.deepEqual(lockTexts('koruma.widget.tsx', props, 'accessoryRectangular'), ['Koruman', '2 yıl 4 ay kaldı']);
+    assert.deepEqual(lockTexts('koruma.widget.tsx', props, 'accessoryInline'), ['Garanti 2 yıl 4 ay']);
+  });
+
+  it('Koruma, seçilen araç ve garantisiz araç', () => {
+    const render = evaluate(widgetOf('koruma.widget.tsx', false).layout);
+    const props = stripNulls(korumaProps(false));
+    const circular = render(props, env('accessoryCircular', 'light', { vehicle: 'c' }));
+    assert.deepEqual(collect(circular), ['file:///mark-mono.png']);
+    const rectangular = render(props, env('accessoryRectangular', 'light', { vehicle: 'c' }));
+    assert.ok(collect(rectangular).includes('Aktif garanti yok'));
+  });
+
+  it('Panom', () => {
+    const props = panomProps(false);
+    assert.deepEqual(lockTexts('panom.widget.tsx', props, 'accessoryCircular'), ['4', 'sırada']);
+    assert.deepEqual(lockTexts('panom.widget.tsx', props, 'accessoryRectangular'), ['Panom', '4 sırada', '5 işlemde · 2 bitti']);
+    assert.deepEqual(lockTexts('panom.widget.tsx', props, 'accessoryInline'), ['Panom · 4 sırada, 5 işlemde']);
   });
 });
 

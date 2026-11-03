@@ -94,6 +94,20 @@ describe('buildPanom', () => {
     assert.deepEqual(out.rows.map((r) => r.uuid), [id(1), id(2), id(3), id(4)]);
   });
 
+  it('kilit metinleri yalnız sayı taşır: plaka, marka, model, müşteri, tutar yok', () => {
+    const { locked } = buildPanom({ next, active, done, canCreate: true }, ctx);
+    assert.deepEqual(locked, {
+      title: 'panom.title',
+      count: '12',
+      countLabel: 'panom.lock_queue_label',
+      main: 'panom.count_next_short|count=12',
+      sub: 'panom.lock_rect_second|active=5,done=2',
+      inline: 'panom.lock_inline|next=12,active=5',
+    });
+    const text = JSON.stringify(locked);
+    for (const secret of [...SECRETS, '34 TST 001', 'Marka', 'Model']) assert.ok(!text.includes(secret), secret);
+  });
+
   it('satır alanları ve meta: ilk kategori + bekleme', () => {
     const [row] = buildPanom({ next, active, done, canCreate: true }, ctx).rows;
     assert.equal(row.url, `olexfilms://bayi/services/${id(1)}`);
