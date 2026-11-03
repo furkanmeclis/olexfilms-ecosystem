@@ -39,12 +39,13 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
   const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
-  const homeRoot: Mods = [
+  const rootTo = (url: string): Mods => [
     frame({ maxWidth: Infinity, maxHeight: Infinity }),
     background(C.card),
     containerBackground(C.card, 'widget'),
-    widgetURL(props.url),
+    widgetURL(url),
   ];
+  const homeRoot = rootTo(props.url);
 
   function row(options: { spacing?: number; modifiers?: Mods }, ...children: ReactNode[]) {
     return (
@@ -80,19 +81,23 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
   }
 
   function stateCard(card: WidgetCard | null | undefined) {
+    const button = card?.cta
+      ? label(card.cta, 12, 'semibold', C.prifg, 1, [
+          padding({ vertical: 5, horizontal: 12 }),
+          background(C.pri),
+          clipShape('capsule'),
+        ])
+      : null;
+    // Küçük boyda `Link` çalışmaz: tüm widget düğmenin adresini açar.
+    const small = family === 'systemSmall';
+    const url = small && card?.ctaUrl ? card.ctaUrl : props.url;
     return (
-      <VStack alignment={edge} spacing={6} modifiers={[padding({ all: 14 })].concat(homeRoot)}>
+      <VStack alignment={edge} spacing={6} modifiers={[padding({ all: 14 })].concat(rootTo(url))}>
         {header(card?.eyebrow ?? '')}
         {card?.title ? label(card.title, 14, 'semibold', C.fg, 2) : null}
         {card?.body ? label(card.body, 12, 'regular', C.mfg, family === 'systemSmall' ? 3 : 4) : null}
         <Spacer />
-        {card?.cta
-          ? label(card.cta, 12, 'semibold', C.prifg, 1, [
-              padding({ vertical: 5, horizontal: 12 }),
-              background(C.pri),
-              clipShape('capsule'),
-            ])
-          : null}
+        {button && card?.ctaUrl && !small ? <Link destination={card.ctaUrl}>{button}</Link> : button}
       </VStack>
     );
   }
@@ -185,7 +190,7 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
             spacing: 10,
             modifiers: [
               padding({ horizontal: 10 }),
-              frame({ height: 52 }),
+              frame({ height: 56 }),
               frame({ maxWidth: Infinity }),
               strokeBorder({ content: C.bd, style: { lineWidth: 1 }, shape: 'roundedRectangle', cornerRadius: 14 }),
             ],
@@ -204,12 +209,39 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
     );
   }
 
-  function chip(symbol: string, value: string, fill: string) {
-    return row(
-      { spacing: 6, modifiers: [padding({ vertical: 6, horizontal: 9 }), frame({ maxWidth: Infinity, alignment: edge }), background(fill), clipShape('roundedRectangle', 12)] },
-      <ZStack modifiers={[frame({ width: 22, height: 22 }), background(C.card), clipShape('circle')]}>{icon(symbol, 12, C.pri)}</ZStack>,
-      label(value, 24, 'bold', C.fg, 1, [monospacedDigit()]),
+  function chip(symbol: string, value: string, caption: string, fill: string, primary: boolean) {
+    return (
+      <VStack
+        alignment={edge}
+        spacing={0}
+        modifiers={[
+          padding({ vertical: 6, horizontal: 9 }),
+          frame({ maxWidth: Infinity, alignment: edge }),
+          background(fill),
+          clipShape('roundedRectangle', 12),
+        ]}>
+        {row(
+          { spacing: 6 },
+          <ZStack modifiers={[frame({ width: 22, height: 22 }), background(C.card), clipShape('circle')]}>{icon(symbol, 12, C.pri)}</ZStack>,
+          label(value, 24, 'bold', primary ? C.pri : C.fg, 1, [monospacedDigit()]),
+        )}
+        {label(caption, 11, 'semibold', primary ? C.fg : C.mfg)}
+      </VStack>
     );
+  }
+
+  /** Simge + "İşlemde 5"; küçük ve büyük boy üst bilgi. */
+  function stat(symbol: string, caption: string, value: string, size: number) {
+    return row(
+      { spacing: 3 },
+      icon(symbol, size, C.mfg),
+      label(`${caption} ${value}`, size, 'regular', C.mfg, 1, [monospacedDigit()]),
+    );
+  }
+
+  /** Bayat veri: `ok` içeriğinin üstünde bir satır. */
+  function staleLine(lines = 1) {
+    return props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, lines) : null;
   }
 
   function small() {
@@ -224,9 +256,15 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
           </ZStack>,
           label(props.next, 44, 'bold', C.pri, 1, [monospacedDigit()]),
         )}
-        {label(props.locked.countLabel, 13, 'semibold', C.fg)}
+        {label(props.labels.nextAction, 13, 'semibold', C.fg)}
         <Spacer />
-        {label(props.locked.sub, 11, 'regular', C.mfg, 1, [monospacedDigit()])}
+        {row(
+          { spacing: 4 },
+          stat('wrench.and.screwdriver', props.labels.active, props.active, 11),
+          <Spacer />,
+          stat('checkmark.circle', props.labels.today, props.done, 11),
+        )}
+        {staleLine(2)}
       </VStack>
     );
   }
@@ -235,22 +273,28 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
     const longest = props.longest;
     return (
       <VStack alignment={edge} spacing={4} modifiers={[padding({ all: 12 })].concat(homeRoot)}>
-        {header(props.title)}
+        {row({ spacing: 6 }, header(props.title), <Spacer />, staleLine())}
         <Spacer />
         {row(
           { spacing: 8 },
-          chip('clock', props.next, C.sec),
-          chip('wrench.and.screwdriver', props.active, C.muted),
-          chip('checkmark.circle', props.done, C.muted),
+          chip('clock', props.next, props.labels.next, C.sec, true),
+          chip('wrench.and.screwdriver', props.active, props.labels.active, C.muted, false),
+          chip('checkmark.circle', props.done, props.labels.doneToday, C.muted, false),
         )}
         <Spacer />
         {longest ? (
           <Link destination={longest.url}>
             {row(
               { spacing: 8, modifiers: [padding({ horizontal: 4 }), frame({ maxWidth: Infinity })] },
+              longest.heroUri ? (
+                <Image
+                  uiImage={longest.heroUri}
+                  modifiers={[resizable(), aspectRatio({ contentMode: 'fit' }), frame({ width: 50, height: 32 })]}
+                />
+              ) : null,
               <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
                 {label(longest.waitLabel, 11, 'regular', C.mfg, 1, [frame({ maxWidth: Infinity, alignment: edge })])}
-                {latin([longest.carTitle, longest.plate].filter(Boolean).join(' · '), 14, 'semibold', C.fg)}
+                {latin(longest.plate ? `${longest.carTitle} · ${longest.plate}` : longest.carTitle, 14, 'semibold', C.fg)}
               </VStack>,
             )}
           </Link>
@@ -267,12 +311,14 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
           mark(),
           label(props.title, 18, 'semibold', C.fg),
           <Spacer />,
-          label(props.locked.sub, 12, 'regular', C.mfg, 1, [monospacedDigit()]),
+          stat('wrench.and.screwdriver', props.labels.active, props.active, 12),
+          stat('checkmark.circle', props.labels.doneToday, props.done, 12),
         )}
+        {staleLine()}
         {row(
           { spacing: 8 },
           icon('clock', 15, C.pri),
-          label(props.locked.countLabel, 13, 'semibold', C.fg),
+          label(props.labels.queue, 13, 'semibold', C.fg),
           label(props.next, 12, 'semibold', C.pri, 1, [
             monospacedDigit(),
             padding({ horizontal: 7, vertical: 1 }),

@@ -20,9 +20,15 @@ type Layout = { create: (initialProps: BaseProps) => Widget<any, any> };
 
 // `require` tembeldir: import olsa native modül kontrolünden önce çalışırdı.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const LAYOUTS: Partial<Record<WidgetName, () => Layout>> = {
+const LAYOUTS: Record<WidgetName, () => Layout> = {
   OlexKoruma: () => require('./koruma.widget'),
+  OlexGarantiKarti: () => require('./kart.widget'),
+  OlexHizmetDurumu: () => require('./hizmet.widget'),
   OlexPanom: () => require('./panom.widget'),
+  OlexHizliIslem: () => require('./hizli.widget'),
+  OlexSon30Gun: () => require('./son30.widget'),
+  OlexBekleyenler: () => require('./bekleyen.widget'),
+  OlexCiro: () => require('./ciro.widget'),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -59,8 +65,9 @@ function load(): WidgetRegistry {
   for (const [name, layout] of Object.entries(LAYOUTS) as [WidgetName, () => Layout][]) {
     try {
       out[name] = handleFor(layout().create(initialProps(name)));
-    } catch {
+    } catch (e) {
       // Bir widget kaydedilemedi: uygulama ve diğer widget'lar devam eder.
+      if (__DEV__) console.warn(`[widgets] ${name} kaydedilemedi`, e);
     }
   }
   return out;

@@ -64,7 +64,7 @@ const KartLayout = (props: KartProps, environment: WidgetEnvironment<KartConfig>
     );
   }
 
-  /** Kod, araç adı, plaka: Latin ve LTR, Arapçada da sola yaslı. */
+  /** Araç adı, plaka: Latin ve LTR, Arapçada da sola yaslı. */
   function latin(text: string, size: number, color: string, weight: Weight = 'regular') {
     return (
       <Text
@@ -145,7 +145,13 @@ const KartLayout = (props: KartProps, environment: WidgetEnvironment<KartConfig>
   function small(v: KartVehicle) {
     return (
       <VStack alignment="center" spacing={0} modifiers={[padding({ all: 12 })].concat(root, [widgetURL(v.url)])}>
-        {row({ spacing: 6 }, mark(), code(v.publicCode, 11, C.onGreen, 'semibold'), <Spacer />)}
+        {row(
+          { spacing: 6 },
+          mark(),
+          // Küçük boyda ek satıra yer yok: bayat metin kodun yerine geçer, QR kalır.
+          props.staleLabel ? label(props.staleLabel, 10, 'regular', C.onGreenMuted, 2) : code(v.publicCode, 11, C.onGreen, 'semibold'),
+          <Spacer />,
+        )}
         <Spacer />
         {qrTile(v, 106, 7, 12, 92, 0)}
       </VStack>
@@ -172,7 +178,8 @@ const KartLayout = (props: KartProps, environment: WidgetEnvironment<KartConfig>
       <VStack alignment={edge} spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         {row({ spacing: 8 }, mark(16, 26), label(props.title, 12, 'semibold', C.amber))}
         <Spacer />
-        {latin(v.productName, 18, C.onGreen, 'semibold')}
+        {/* Ürün adı sunucu metnidir, kenara yaslanır. */}
+        {label(v.productName, 18, 'semibold', C.onGreen, 1, [frame({ maxWidth: Infinity, alignment: edge })])}
         <Spacer />
         {row(
           { spacing: 8 },
@@ -184,6 +191,7 @@ const KartLayout = (props: KartProps, environment: WidgetEnvironment<KartConfig>
         )}
         <Spacer />
         {label(v.untilLabel, 11, 'regular', C.onGreenMuted)}
+        {props.staleLabel ? label(props.staleLabel, 10, 'regular', C.onGreenMuted) : null}
       </VStack>,
       qrTile(v, 124, 8, 14, 94, 10),
     );

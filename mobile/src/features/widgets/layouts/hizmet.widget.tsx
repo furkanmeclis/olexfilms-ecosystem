@@ -135,8 +135,8 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
   function stepColumns(s: HizmetService) {
     return row(
       { spacing: 6 },
-      ...s.steps.map((step) => (
-        <VStack alignment={edge} spacing={6} modifiers={[frame({ maxWidth: Infinity })]}>
+      ...s.steps.map((step, i) => (
+        <VStack key={i} alignment={edge} spacing={6} modifiers={[frame({ maxWidth: Infinity })]}>
           {segment(step)}
           {label(step.label, 11, step.phase === 'current' ? 'bold' : 'regular', step.phase === 'current' ? C.fg : C.mfg)}
         </VStack>
@@ -173,6 +173,7 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
           <VStack alignment={edge} spacing={1}>
             {latin(v.title, 20, 'semibold', C.fg)}
             {label(s.dealerName, 12, 'regular', C.mfg)}
+            {props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, 2) : null}
           </VStack>
           <Spacer />
           {stepBars(s)}
@@ -205,7 +206,7 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
               {s.serviceNo}
             </Text>,
             <Spacer />,
-            label(props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]),
+            label(props.staleLabel ?? props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]),
           )}
         </VStack>
       </ZStack>
@@ -220,9 +221,6 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
 
   const service = vehicle.service;
   if (!service || service.steps.length === 0) return stateCard(vehicle.emptyCard, vehicle.url);
-  if (props.staleLabel) {
-    return stateCard({ eyebrow: props.eyebrow, title: service.statusLabel, body: props.staleLabel }, service.url);
-  }
 
   if (family === 'systemMedium' || family === 'systemLarge') return medium(vehicle, service);
   return small(vehicle, service);

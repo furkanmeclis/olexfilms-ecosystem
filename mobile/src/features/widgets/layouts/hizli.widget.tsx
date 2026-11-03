@@ -1,4 +1,5 @@
-// Hızlı işlem widget'ı: küçük (Tara), orta (2x2 düğme) ve kilit ekranı dairesi. Veriye bağlı değildir.
+// Hızlı işlem widget'ı: küçük (Tara), orta (2x2 düğme) ve kilit ekranı dairesi.
+// Düğmeler veriye bağlı değildir: bayat veri satırı çizilmez, `staleLabel` bilinçli olarak okunmaz.
 // `'widget'` gövdesi metne çevrilip extension'da çalışır; yardımcılar bilinçli olarak `koruma.widget.tsx`'in kopyasıdır.
 // `state !== 'ok'` iken `props` yalnız BaseProps'tur: bu dallar `card` dışında veri okumaz.
 import type { CommonViewModifierProps } from '@expo/ui/swift-ui';
@@ -32,7 +33,7 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
   'widget';
   const C = props.theme[environment.colorScheme ?? 'light'];
   const family = environment.widgetFamily ?? 'systemSmall';
-  const lockScreen = family === 'accessoryCircular' || family === 'accessoryRectangular' || family === 'accessoryInline';
+  const lockScreen = family === 'accessoryCircular';
   const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
@@ -170,8 +171,6 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
   }
 
   // Kilit ekranı: renk verilmez, sistem tonlar.
-  const lockRoot: Mods = [containerBackground('transparent', 'widget'), widgetURL(props.url)];
-
   function lockCircular(url: string | undefined) {
     return (
       <ZStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), containerBackground('transparent', 'widget'), widgetURL(url ?? props.url)]}>
@@ -179,7 +178,7 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
         {url ? (
           <VStack alignment="center" spacing={2}>
             {mark(8, 13)}
-            {icon('viewfinder', 22, C.fg)}
+            <Image systemName="viewfinder" size={22} />
           </VStack>
         ) : (
           mark(27, 44)
@@ -188,23 +187,10 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
     );
   }
 
-  function lockText(text: string) {
-    // WidgetKit satır içinde yalnız bir `Image` ve `Text` çizer; boyut ve renk yok sayılır.
-    return (
-      <HStack spacing={4} modifiers={lockRoot}>
-        {mark(10, 17)}
-        <Text>{text}</Text>
-      </HStack>
-    );
-  }
-
   const actions = props.state === 'ok' ? (props.actions ?? []) : [];
   const scan = actions.find((a) => a.id === 'scan') ?? actions[0];
 
-  if (lockScreen) {
-    if (family === 'accessoryCircular') return lockCircular(scan?.url);
-    return lockText(props.state === 'ok' ? (props.title ?? '') : (props.card?.title ?? ''));
-  }
+  if (lockScreen) return lockCircular(scan?.url);
 
   if (props.state !== 'ok') return stateCard(props.card);
   if (actions.length === 0) return stateCard(props.card);

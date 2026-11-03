@@ -2,7 +2,7 @@
 // dış kapsama erişemez, yardımcılar gövdededir (`koruma.widget.tsx`'in bilinçli kopyası), her metin ve renk `props`'tan gelir.
 // `state !== 'ok'` iken `props` yalnız BaseProps'tur: bu dallar `card` dışında veri okumaz.
 import type { CommonViewModifierProps } from '@expo/ui/swift-ui';
-import { AccessoryWidgetBackground, HStack, Image, RoundedRectangle, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { HStack, Image, RoundedRectangle, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
   background,
   clipShape,
@@ -32,8 +32,7 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
   'widget';
   const C = props.theme[environment.colorScheme ?? 'light'];
   const family = environment.widgetFamily ?? 'systemSmall';
-  const lockScreen = family === 'accessoryCircular' || family === 'accessoryRectangular' || family === 'accessoryInline';
-  const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
+  const mono = (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
@@ -151,6 +150,11 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
     );
   }
 
+  /** Bayat veri: `ok` içeriğinin üstünde bir satır. */
+  function staleLine(lines = 1) {
+    return props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, lines) : null;
+  }
+
   function small(primary: KpiCard) {
     return (
       <VStack alignment={edge} spacing={0} modifiers={[padding({ all: 14 })].concat(homeRoot)}>
@@ -161,7 +165,11 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
           {label(primary.label, 13, 'semibold', C.fg, 2)}
         </VStack>
         <Spacer />
-        {props.summary ? label(props.summary, 12, 'regular', C.mfg, 1, [monospacedDigit()]) : null}
+        {props.staleLabel
+          ? staleLine(2)
+          : props.summary
+            ? label(props.summary, 12, 'regular', C.mfg, 1, [monospacedDigit()])
+            : null}
       </VStack>
     );
   }
@@ -169,7 +177,7 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
   function medium(cards: KpiCard[]) {
     return (
       <VStack alignment={edge} spacing={6} modifiers={[padding({ all: 12 })].concat(homeRoot)}>
-        {header(props.title)}
+        {row({ spacing: 6 }, header(props.title), <Spacer />, staleLine())}
         {grid(cards, 8)}
       </VStack>
     );
@@ -180,18 +188,21 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
     return (
       <VStack alignment={edge} spacing={6} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         {label(props.weeklyTitle, 12, 'semibold', C.fg)}
-        {row(
-          { spacing: 10, modifiers: [frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'bottom' })] },
-          ...bars.map((bar, i) => (
-            <VStack key={i} spacing={3} modifiers={[frame({ maxWidth: Infinity })]}>
+        <HStack
+          spacing={10}
+          alignment="bottom"
+          modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'bottom' })]}>
+          {(props.rtl ? bars.slice().reverse() : bars).map((bar, i) => (
+            <VStack key={i} alignment="center" spacing={3} modifiers={[frame({ maxWidth: Infinity })]}>
+              {label(bar.value, 11, 'semibold', C.fg, 1, [monospacedDigit()])}
               <RoundedRectangle
                 cornerRadius={6}
                 modifiers={[foregroundStyle(bar.current ? C.pri : C.sec), frame({ height: Math.max(2, bar.height) })]}
               />
               {label(bar.label, 10, 'regular', C.mfg)}
             </VStack>
-          )),
-        )}
+          ))}
+        </HStack>
       </VStack>
     );
   }
@@ -199,62 +210,22 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
   function large(cards: KpiCard[]) {
     return (
       <VStack alignment={edge} spacing={10} modifiers={[padding({ all: 14 })].concat(homeRoot)}>
-        {row({}, header(props.title), <Spacer />, label(props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]))}
+        {row({}, header(props.title), <Spacer />, label(props.staleLabel ?? props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]))}
         {grid(cards, 8)}
         {weekly()}
       </VStack>
     );
   }
 
-  // Kilit ekranı: renk verilmez, sistem tonlar. Bu widget kilit ekranında sayı göstermez; yalnız işaret ve başlık.
-  const lockRoot: Mods = [containerBackground('transparent', 'widget'), widgetURL(props.url)];
-
-  function lockLabel(text: string, size: number, weight: Weight, lines = 1) {
-    return (
-      <Text
-        modifiers={[font({ size, weight }), lineLimit(lines), minimumScaleFactor(0.7), multilineTextAlignment(edge)]}>
-        {text}
-      </Text>
-    );
-  }
-
-  function lockFamily(text: string) {
-    if (family === 'accessoryCircular') {
-      return (
-        <ZStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })].concat(lockRoot)}>
-          <AccessoryWidgetBackground />
-          {mark(27, 44)}
-        </ZStack>
-      );
-    }
-    if (family === 'accessoryRectangular') {
-      return (
-        <VStack
-          alignment={edge}
-          spacing={3}
-          modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge })].concat(lockRoot)}>
-          {row({ spacing: 4 }, mark(9, 15), text ? lockLabel(text, 14, 'semibold') : null)}
-        </VStack>
-      );
-    }
-    // WidgetKit satır içinde yalnız bir `Image` ve `Text` çizer; boyut ve renk yok sayılır.
-    return (
-      <HStack spacing={4} modifiers={lockRoot}>
-        {mark(10, 17)}
-        <Text>{text}</Text>
-      </HStack>
-    );
-  }
-
-  if (lockScreen) return lockFamily(props.state === 'ok' ? props.title : (props.card?.title ?? ''));
   if (props.state !== 'ok') return stateCard(props.card);
-  if (props.staleLabel) return stateCard({ eyebrow: props.title, title: props.staleLabel });
 
-  const cards = props.cards ?? [];
-  if (cards.length === 0) return stateCard({ eyebrow: props.title, title: props.title });
+  const all = props.cards ?? [];
+  if (all.length === 0) return stateCard({ eyebrow: props.title, title: props.title });
+  // Izgara ikişerli iki satırdır (tasarımda dört kart); beşi birden sığmaz, "Devam" küçük boy özetinde kalır.
+  const cards = all.length > 4 ? all.filter((c) => c.key !== 'services_open').slice(0, 4) : all;
   if (family === 'systemMedium') return medium(cards);
   if (family === 'systemLarge') return large(cards);
-  return small(props.primary ?? cards[0]);
+  return small(props.primary ?? all[0]);
 };
 
 /** Her açılışta layout'u saklar; `initialProps` ilk eşitlemeye kadar çizilen giriş kartıdır. */

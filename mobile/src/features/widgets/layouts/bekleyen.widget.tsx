@@ -3,7 +3,7 @@
 // `state !== 'ok'` iken `props` yalnız BaseProps'tur: bu dallar `card` dışında veri okumaz.
 // Bu bir onay kuyruğu değildir: üç sayı mevcut uçlardan türer, her satır ilgili liste ekranını açar.
 import type { CommonViewModifierProps } from '@expo/ui/swift-ui';
-import { AccessoryWidgetBackground, HStack, Image, Link, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { HStack, Image, Link, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
   background,
   clipShape,
@@ -33,8 +33,7 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
   'widget';
   const C = props.theme[environment.colorScheme ?? 'light'];
   const family = environment.widgetFamily ?? 'systemSmall';
-  const lockScreen = family === 'accessoryCircular' || family === 'accessoryRectangular' || family === 'accessoryInline';
-  const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
+  const mono = (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
@@ -110,6 +109,11 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
     return 'clock.badge.exclamationmark';
   }
 
+  /** Bayat veri: `ok` içeriğinin üstünde bir satır. */
+  function staleLine(lines = 1) {
+    return props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, lines) : null;
+  }
+
   function smallRow(r: PendingRow) {
     return row(
       { spacing: 6, modifiers: [frame({ height: 40 })] },
@@ -123,6 +127,7 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
     return (
       <VStack alignment={edge} spacing={0} modifiers={[padding({ all: 14 })].concat(homeRoot)}>
         {header(props.title)}
+        {staleLine(2)}
         <Spacer />
         <VStack spacing={0}>{rows.slice(0, 2).map((r) => smallRow(r))}</VStack>
       </VStack>
@@ -148,56 +153,14 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
   function medium(rows: PendingRow[]) {
     return (
       <VStack alignment={edge} spacing={0} modifiers={[padding({ vertical: 10, horizontal: 14 })].concat(homeRoot)}>
-        {header(props.title)}
+        {row({ spacing: 6 }, header(props.title), <Spacer />, staleLine())}
         <Spacer />
         {rows.slice(0, 3).map((r) => mediumRow(r))}
       </VStack>
     );
   }
 
-  // Kilit ekranı: renk verilmez, sistem tonlar. Bu widget kilit ekranında sayı göstermez; yalnız işaret ve başlık.
-  const lockRoot: Mods = [containerBackground('transparent', 'widget'), widgetURL(props.url)];
-
-  function lockLabel(text: string, size: number, weight: Weight, lines = 1) {
-    return (
-      <Text
-        modifiers={[font({ size, weight }), lineLimit(lines), minimumScaleFactor(0.7), multilineTextAlignment(edge)]}>
-        {text}
-      </Text>
-    );
-  }
-
-  function lockFamily(text: string) {
-    if (family === 'accessoryCircular') {
-      return (
-        <ZStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })].concat(lockRoot)}>
-          <AccessoryWidgetBackground />
-          {mark(27, 44)}
-        </ZStack>
-      );
-    }
-    if (family === 'accessoryRectangular') {
-      return (
-        <VStack
-          alignment={edge}
-          spacing={3}
-          modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge })].concat(lockRoot)}>
-          {row({ spacing: 4 }, mark(9, 15), text ? lockLabel(text, 14, 'semibold') : null)}
-        </VStack>
-      );
-    }
-    // WidgetKit satır içinde yalnız bir `Image` ve `Text` çizer; boyut ve renk yok sayılır.
-    return (
-      <HStack spacing={4} modifiers={lockRoot}>
-        {mark(10, 17)}
-        <Text>{text}</Text>
-      </HStack>
-    );
-  }
-
-  if (lockScreen) return lockFamily(props.state === 'ok' ? props.title : (props.card?.title ?? ''));
   if (props.state !== 'ok') return stateCard(props.card);
-  if (props.staleLabel) return stateCard({ eyebrow: props.title, title: props.staleLabel });
 
   const rows = props.rows ?? [];
   if (rows.length === 0) return stateCard({ eyebrow: props.title, title: props.title });

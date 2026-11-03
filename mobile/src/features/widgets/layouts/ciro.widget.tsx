@@ -2,9 +2,9 @@
 // dış kapsama erişemez, yardımcılar gövdededir (`koruma.widget.tsx`'in bilinçli kopyası), her metin ve renk `props`'tan gelir.
 // `state !== 'ok'` iken `props` yalnız BaseProps'tur: bu dallar `card` dışında veri okumaz.
 // Tutar varsayılan gizlidir (`revealed: false`); `Button` değeri `props` üzerinden çevirir, uygulama süreci gerekmez.
-// Dürüst sınır: tutar ortak alanda düz metin durur; gizlilik omuz üstü bakışa karşıdır. Kilit ailesinde tutar yok.
+// Dürüst sınır: tutar ortak alanda düz metin durur; gizlilik omuz üstü bakışa karşıdır. Kilit ekranı ailesi yok.
 import type { CommonViewModifierProps } from '@expo/ui/swift-ui';
-import { AccessoryWidgetBackground, Button, HStack, Image, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { Button, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
   buttonStyle,
@@ -35,8 +35,7 @@ const CiroLayout = (props: RevenueProps, environment: WidgetEnvironment) => {
   'widget';
   const C = props.theme[environment.colorScheme ?? 'light'];
   const family = environment.widgetFamily ?? 'systemSmall';
-  const lockScreen = family === 'accessoryCircular' || family === 'accessoryRectangular' || family === 'accessoryInline';
-  const mono = lockScreen || (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
+  const mono = (environment.widgetRenderingMode ?? 'fullColor') !== 'fullColor';
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
@@ -125,7 +124,9 @@ const CiroLayout = (props: RevenueProps, environment: WidgetEnvironment) => {
               monospacedDigit(),
             ])}
             <Spacer />
-            {shown
+            {props.staleLabel
+              ? label(props.staleLabel, 11, 'regular', C.mfg, 2)
+              : shown
               ? label(props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()])
               : row(
                   { spacing: 6 },
@@ -162,7 +163,7 @@ const CiroLayout = (props: RevenueProps, environment: WidgetEnvironment) => {
       <VStack alignment={edge} spacing={0} modifiers={[padding({ vertical: 14, horizontal: 16 })].concat(homeRoot)}>
         {toggle(
           <VStack alignment={edge} spacing={0}>
-            {row({}, header(props.monthTitle), <Spacer />, label(props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]))}
+            {row({}, header(props.monthTitle), <Spacer />, label(props.staleLabel ?? props.updatedLabel, 11, 'regular', C.mfg, 1, [monospacedDigit()]))}
             {shown
               ? label(props.incomeLabel, props.rtl ? 26 : 30, 'bold', C.fg, 1, [monospacedDigit()])
               : label(props.maskedLabel, 30, 'bold', C.fg, 1, [kerning(2)])}
@@ -179,49 +180,7 @@ const CiroLayout = (props: RevenueProps, environment: WidgetEnvironment) => {
     );
   }
 
-  // Kilit ekranı: renk verilmez, sistem tonlar. Bu widget kilit ekranında sayı göstermez; yalnız işaret ve başlık.
-  const lockRoot: Mods = [containerBackground('transparent', 'widget'), widgetURL(props.url)];
-
-  function lockLabel(text: string, size: number, weight: Weight, lines = 1) {
-    return (
-      <Text
-        modifiers={[font({ size, weight }), lineLimit(lines), minimumScaleFactor(0.7), multilineTextAlignment(edge)]}>
-        {text}
-      </Text>
-    );
-  }
-
-  function lockFamily(text: string) {
-    if (family === 'accessoryCircular') {
-      return (
-        <ZStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })].concat(lockRoot)}>
-          <AccessoryWidgetBackground />
-          {mark(27, 44)}
-        </ZStack>
-      );
-    }
-    if (family === 'accessoryRectangular') {
-      return (
-        <VStack
-          alignment={edge}
-          spacing={3}
-          modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge })].concat(lockRoot)}>
-          {row({ spacing: 4 }, mark(9, 15), text ? lockLabel(text, 14, 'semibold') : null)}
-        </VStack>
-      );
-    }
-    // WidgetKit satır içinde yalnız bir `Image` ve `Text` çizer; boyut ve renk yok sayılır.
-    return (
-      <HStack spacing={4} modifiers={lockRoot}>
-        {mark(10, 17)}
-        <Text>{text}</Text>
-      </HStack>
-    );
-  }
-
-  if (lockScreen) return lockFamily(props.state === 'ok' ? props.title : (props.card?.title ?? ''));
   if (props.state !== 'ok') return stateCard(props.card);
-  if (props.staleLabel) return stateCard({ eyebrow: props.title, title: props.staleLabel });
 
   // Büyük boy galeride yok; gelirse orta düzen çizilir.
   return family === 'systemSmall' ? small() : medium();

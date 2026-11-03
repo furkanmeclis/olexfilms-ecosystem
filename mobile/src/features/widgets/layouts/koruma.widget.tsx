@@ -73,7 +73,7 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
     );
   }
 
-  /** Plaka, ürün, araç adı: Latin ve LTR, Arapçada da sola yaslı. */
+  /** Plaka, araç adı: Latin ve LTR, Arapçada da sola yaslı. */
   function latin(text: string, size: number, weight: Weight, color: string) {
     return (
       <Text
@@ -87,6 +87,16 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
         {text}
       </Text>
     );
+  }
+
+  /** Ürün adı sunucu metnidir: Latin olmayabilir, kenara yaslanır. */
+  function product(text: string, size: number, color: string) {
+    return label(text, size, 'regular', color, 1, [frame({ maxWidth: Infinity, alignment: edge })]);
+  }
+
+  /** Bayat veri: `ok` içeriğinin üstünde bir satır. */
+  function staleLine(lines = 1) {
+    return props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, lines) : null;
   }
 
   function mark(width = 12, height = 20) {
@@ -207,12 +217,12 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
         <Spacer />
         <VStack alignment={edge} spacing={1}>
           {label(w.leftLabel, props.rtl ? 21 : 26, 'bold', C.fg, props.rtl ? 2 : 1, [monospacedDigit()])}
-          {label([props.leftCaption, w.name].join(' · '), 12, 'regular', C.mfg)}
+          {label([props.leftCaption, w.name].join(' · '), 12, 'regular', C.mfg, 2)}
         </VStack>
         <Spacer />
         <VStack alignment={edge} spacing={6}>
           {bar(w)}
-          {v.plate ? latin(v.plate, 11, 'semibold', C.mfg) : null}
+          {props.staleLabel ? staleLine(2) : v.plate ? latin(v.plate, 11, 'semibold', C.mfg) : null}
         </VStack>
       </VStack>
     );
@@ -226,16 +236,18 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
           { spacing: 12, modifiers: [padding({ all: 14 })] },
           <VStack alignment={edge} spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
             {header(props.eyebrow)}
+            {staleLine(2)}
             <Spacer />
             <VStack alignment={edge} spacing={5}>
-              {latin(first.name, 12, 'regular', C.mfg)}
+              {product(first.name, 12, C.mfg)}
               {label(first.leftLongLabel, props.rtl ? 17 : 18, 'semibold', C.fg, 1, [monospacedDigit()])}
               {bar(first)}
             </VStack>
-            {second ? <Spacer /> : null}
-            {second ? (
+            {/* Bayat satırla ikinci garanti sığmaz; en kısa süreli olan kalır. */}
+            {second && !props.staleLabel ? <Spacer /> : null}
+            {second && !props.staleLabel ? (
               <VStack alignment={edge} spacing={5}>
-                {latin(second.name, 12, 'regular', C.mfg)}
+                {product(second.name, 12, C.mfg)}
                 {label(second.leftLongLabel, 14, 'semibold', C.fg, 1, [monospacedDigit()])}
                 {bar(second)}
               </VStack>
@@ -284,6 +296,7 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
           ))}
         </VStack>
         <Spacer />
+        {staleLine(2)}
         {updatedRow(v.lastServiceLabel)}
       </VStack>
     );
@@ -360,9 +373,6 @@ const KorumaLayout = (props: KorumaProps, environment: WidgetEnvironment<KorumaC
 
   const shortest = vehicle.warranties[0];
   if (!shortest) return stateCard(vehicle.emptyCard);
-  if (props.staleLabel) {
-    return stateCard({ eyebrow: props.eyebrow, title: shortest.leftLongLabel, body: props.staleLabel });
-  }
 
   if (family === 'systemMedium') return medium(vehicle);
   if (family === 'systemLarge') return large(vehicle);
