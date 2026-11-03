@@ -12,28 +12,35 @@ export function createSyncGate(minIntervalMs = SYNC_MIN_INTERVAL_MS) {
   let running = false;
   let owner: string | null = null;
   let generatedAt: number | null = null;
+  /** Son deneme (başarısız olsa da): kısıt buna göre işler, kalıcı hata her öne gelişte yeniden çekmesin. */
+  let attemptedAt: number | null = null;
 
   return {
     generation: () => generation,
+
+    /** En son başlayan biletin kimliği; çıkış bunu değiştirmez. */
+    latest: () => latest,
 
     /** Diskteki son kayıt; uygulama açılışında bir kez. */
     restore(saved: SyncRecord | null) {
       owner = saved?.owner ?? null;
       generatedAt = saved?.generatedAt ?? null;
+      attemptedAt = generatedAt;
     },
 
     /** Zorlanmayan çağrı, süren eşitlemeyi ve 15 dakikalık kısıtı bekler; geriye giden saat kısıtı kilitlemez. */
     shouldRun(now: number, force: boolean) {
       if (force) return true;
       if (running) return false;
-      return generatedAt === null || now < generatedAt || now - generatedAt >= minIntervalMs;
+      return attemptedAt === null || now < attemptedAt || now - attemptedAt >= minIntervalMs;
     },
 
     /** Yeni çalıştırma öncekileri geçersiz kılar. `ownerChanged`: kayıtlı başka bir sahibin verisi temizlenmeli. */
-    begin(next: string): SyncTicket {
+    begin(next: string, now?: number): SyncTicket {
       const ownerChanged = owner !== null && owner !== next;
       owner = next;
       running = true;
+      if (now !== undefined) attemptedAt = now;
       return { id: ++latest, generation, owner: next, ownerChanged };
     },
 
@@ -47,10 +54,11 @@ export function createSyncGate(minIntervalMs = SYNC_MIN_INTERVAL_MS) {
       if (!this.canWrite(ticket)) return false;
       running = false;
       generatedAt = now;
+      attemptedAt = now;
       return true;
     },
 
-    /** Yazmadan biten çalıştırma kısıt başlatmaz. */
+    /** Tam başarıya varmayan çalıştırma: kayıt zamanı yazılmaz, deneme zamanı (`begin`) kısıtta kalır. */
     abort(ticket: SyncTicket) {
       if (this.canWrite(ticket)) running = false;
     },
@@ -61,6 +69,7 @@ export function createSyncGate(minIntervalMs = SYNC_MIN_INTERVAL_MS) {
       running = false;
       owner = null;
       generatedAt = null;
+      attemptedAt = null;
     },
 
     snapshot: () => ({ generatedAt, owner }),

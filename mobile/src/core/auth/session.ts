@@ -100,11 +100,14 @@ export const useSession = create<Session>((set, get) => ({
   signOut: async ({ remote = true } = {}) => {
     if (remote) await logout().catch(() => undefined);
     await clearTokens();
-    // Widgets live outside the app sandbox; never let their cleanup block signing out.
-    await clearWidgets().catch(() => undefined);
+    // Widgets live outside the app sandbox. The generation bump inside clearWidgets is
+    // synchronous, so it runs now (tokens are already gone); the slow part (asset
+    // writes) is awaited only after the UI is signed out and can never block it.
+    const widgetsCleared = clearWidgets().catch(() => undefined);
     storage.remove(ME_KEY);
     queryClient.clear();
     set({ status: 'signedOut', me: null });
+    await widgetsCleared;
   },
 }));
 

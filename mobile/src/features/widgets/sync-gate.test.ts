@@ -43,12 +43,33 @@ describe('kısıt', () => {
     assert.equal(gate.shouldRun(T0, true), true);
   });
 
-  it('başarısız (kaydedilmeyen) çalıştırma kısıt başlatmaz', () => {
+  it('başarısız çalıştırma da deneme zamanıyla kısıt başlatır, kayıt zamanı değişmez', () => {
     const gate = createSyncGate();
-    const ticket = gate.begin('u:o');
+    const ticket = gate.begin('u:o', T0);
     gate.abort(ticket);
-    assert.equal(gate.shouldRun(T0 + 1000, false), true);
+    assert.equal(gate.shouldRun(T0 + 1000, false), false);
+    assert.equal(gate.shouldRun(T0 + SYNC_MIN_INTERVAL_MS, false), true);
+    assert.equal(gate.shouldRun(T0 + 1000, true), true);
     assert.equal(gate.snapshot().generatedAt, null);
+  });
+
+  it('deneme zamanı yoksa kısıt başlamaz (geriye uyum)', () => {
+    const gate = createSyncGate();
+    gate.abort(gate.begin('u:o'));
+    assert.equal(gate.shouldRun(T0, false), true);
+  });
+});
+
+describe('en son bilet', () => {
+  it('latest en son başlayan biletin kimliğidir ve invalidate ile değişmez', () => {
+    const gate = createSyncGate();
+    const a = gate.begin('u:o', T0);
+    assert.equal(gate.latest(), a.id);
+    gate.invalidate();
+    assert.equal(gate.latest(), a.id);
+    const b = gate.begin('u2:o', T0);
+    assert.equal(gate.latest(), b.id);
+    assert.notEqual(a.id, b.id);
   });
 });
 

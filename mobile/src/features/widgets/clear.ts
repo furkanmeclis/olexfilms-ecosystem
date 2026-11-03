@@ -10,15 +10,17 @@ import { translator } from './translators';
 /**
  * Sekiz widget'a giriş kartı yazar, müşteri widget'larının araç seçeneklerini
  * sıfırlar ve paylaşılan alandaki görselleri siler. Nesli artırmaz: sahip
- * değişiminde çalışan eşitleme kendi bileti ile bunu çağırır.
+ * değişiminde çalışan eşitleme `alive` ile bileti sorar; her yazımdan önce
+ * bakılır, böylece geç kalan temizlik daha yeni bir eşitlemenin yazımını ezmez.
  */
-export async function wipeWidgets(): Promise<void> {
+export async function wipeWidgets(alive: () => boolean = () => true): Promise<void> {
   if (!widgetsAvailable()) return;
   let images: typeof import('./images') | null = null;
   let markUri = '';
   let markMonoUri = '';
   try {
     images = await import('./images');
+    if (!alive()) return;
     const marks = await images.storeMarks();
     markUri = marks.markUri ?? '';
     markMonoUri = marks.markMonoUri ?? '';
@@ -27,9 +29,11 @@ export async function wipeWidgets(): Promise<void> {
   }
 
   // Giriş kapalı metin o anki dille üretilir.
+  if (!alive()) return;
   const lang = i18n.language;
   const t = translator(lang, 'widgets');
   for (const name of WIDGET_NAMES) {
+    if (!alive()) return;
     try {
       const audience = CUSTOMER_WIDGETS.includes(name) ? 'customer' : 'dealer';
       widgetFor(name)?.updateSnapshot(
@@ -40,12 +44,14 @@ export async function wipeWidgets(): Promise<void> {
     }
   }
   for (const name of CUSTOMER_WIDGETS) {
+    if (!alive()) return;
     try {
       widgetFor(name)?.setConfigurationParameterEnum?.('vehicle', undefined);
     } catch {
       // Seçenekler bir sonraki eşitlemede yeniden yazılır.
     }
   }
+  if (!alive()) return;
   try {
     images?.purgeAll();
   } catch {
@@ -60,8 +66,10 @@ export async function clearWidgets(): Promise<void> {
   } catch {
     // Kapı bellek içidir; atmaz.
   }
+  // Temizlik sürerken yeni bir oturum eşitleme başlatırsa, geç kalan temizlik onun yazımlarını ezmez.
+  const startedAt = syncGate.latest();
   try {
-    await wipeWidgets();
+    await wipeWidgets(() => syncGate.latest() === startedAt);
   } catch {
     // Sessiz.
   }

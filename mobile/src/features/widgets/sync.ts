@@ -60,6 +60,8 @@ type Env = {
   audience: AudienceInput;
   /** Bu çalıştırmada yazılan görsel dosya adları; `reconcile` bunları tutar. */
   keep: Set<string>;
+  /** Çıkış ya da daha yeni bir çalıştırma geçtiyse false: görsel indirme/yazma durur. */
+  alive: () => boolean;
 };
 
 type Plan = { writes: Write[]; failed: boolean };
@@ -159,17 +161,20 @@ async function customerAssets(env: Env, vehicles: PortalVehicleDetail[]): Promis
   };
   if (images) {
     // Aynı model/marka tek dosyaya yazılır: art arda çağrı ikincide taze dosyayı bulur.
-    for (const v of vehicles) heroes.set(v.uuid, remember(await images.storeHero(v)));
+    for (const v of vehicles) {
+      if (!env.alive()) break;
+      heroes.set(v.uuid, remember(await images.storeHero(v)));
+    }
     for (const v of vehicles) {
       const brand = v.car_brand?.uuid;
-      if (brand && !logos.has(brand)) logos.set(brand, remember(await images.storeBrandLogo(brand)));
+      if (brand && !logos.has(brand) && env.alive()) logos.set(brand, remember(await images.storeBrandLogo(brand)));
     }
   }
   return {
     hero: (vehicleUuid) => heroes.get(vehicleUuid) ?? null,
     brandLogo: (brandUuid) => (brandUuid ? (logos.get(brandUuid) ?? null) : null),
     qr: (code) => {
-      if (!images) return null;
+      if (!images || !env.alive()) return null;
       if (!qrs.has(code)) qrs.set(code, remember(images.storeQr(code, publicWarrantyUrl(code))));
       return qrs.get(code) ?? null;
     },
@@ -220,12 +225,14 @@ async function planDealer(env: Env): Promise<Plan> {
   const rows = pendingRows(audience);
   const showCustomers = quickActions(audience).some((a) => a.id === 'customers');
 
+  // Eğilim yalnız özet açıldıysa istenir: engelli ya da hatalıysa çağrı boşa gider.
+  const overviewCall = fetchOverview();
   const [board, customers, overview, trend, ready, claims, pnl] = await Promise.all([
     panomState === 'ok' ? fetchBoard(now) : null,
     showCustomers ? fetchCustomersTotal() : null,
     // Son 30 gün her zaman sorar (tek yetki kaynağı sonuçtur); Bekleyenler'in bitecek garanti sayısı da buradan gelir.
-    fetchOverview(),
-    fetchTrend(),
+    overviewCall,
+    overviewCall.then((o) => (o.status === 'ok' ? fetchTrend() : null)),
     rows.includes('ready') ? fetchReady() : null,
     rows.includes('claim') ? fetchOpenClaims() : null,
     ciroState === 'ok' ? fetchPnl(now) : null,
@@ -239,7 +246,7 @@ async function planDealer(env: Env): Promise<Plan> {
     if (env.images) {
       for (const s of board.value.next.items) {
         const brand = s.car_brand?.uuid;
-        if (brand && !logos.has(brand)) {
+        if (brand && !logos.has(brand) && env.alive()) {
           const uri = await env.images.storeBrandLogo(brand);
           if (uri) env.keep.add(fileName(uri));
           logos.set(brand, uri);
@@ -288,22 +295,23 @@ async function planDealer(env: Env): Promise<Plan> {
   // Bekleyenler
   if (rows.length === 0) writes.push(stateWrite(env, 'OlexBekleyenler', resolveState('OlexBekleyenler', audience)));
   else {
-    const needsExpiring = rows.includes('expiring');
+    // Özet erişimi yoksa (engelli) bitecek garanti satırı düşer, diğerleri kalır; yalnız gerçek hata yazımı atlar.
+    const dropExpiring = rows.includes('expiring') && overview.status === 'blocked';
     const incomplete =
       (rows.includes('ready') && ready?.status !== 'ok') ||
       (rows.includes('claim') && claims?.status !== 'ok') ||
-      (needsExpiring && overview.status !== 'ok');
+      (rows.includes('expiring') && overview.status === 'failed');
     if (incomplete) failed = true;
+    else if (dropExpiring && rows.length === 1) writes.push(stateWrite(env, 'OlexBekleyenler', 'no_permission'));
     else {
       const expiring = valueOf(overview)?.series.find((s) => s.key === 'cards')?.points.find((p) => p.key === 'warranties_expiring')?.value ?? null;
       const input = { audience, ready: valueOf(ready), claims: valueOf(claims), expiring };
       const base = baseFor(env, WIDGET_URLS.OlexBekleyenler());
-      writes.push(
-        timelineWrite(
-          'OlexBekleyenler',
-          buildEntries('OlexBekleyenler', now, (at) => ({ ...base, ...withCard(env, 'OlexBekleyenler', buildPending(input, { t: env.t, locale: env.lang, now: at, brandLogo: () => null })) }), stale),
-        ),
-      );
+      const pending = (at: Date) => {
+        const summary = buildPending(input, { t: env.t, locale: env.lang, now: at, brandLogo: () => null });
+        return withCard(env, 'OlexBekleyenler', dropExpiring ? { ...summary, rows: summary.rows.filter((r) => r.id !== 'expiring') } : summary);
+      };
+      writes.push(timelineWrite('OlexBekleyenler', buildEntries('OlexBekleyenler', now, (at) => ({ ...base, ...pending(at) }), stale)));
     }
   }
 
@@ -329,7 +337,7 @@ function planNone(env: Env): Plan {
 async function run(me: MobileMe, ticket: SyncTicket, now: Date): Promise<boolean> {
   const lang = i18n.language;
   if (ticket.ownerChanged) {
-    await wipeWidgets();
+    await wipeWidgets(() => syncGate.canWrite(ticket));
     if (!syncGate.canWrite(ticket)) return false;
   }
 
@@ -360,12 +368,13 @@ async function run(me: MobileMe, ticket: SyncTicket, now: Date): Promise<boolean
     marks: { markUri: marks.markUri ?? '', markMonoUri: marks.markMonoUri ?? '' },
     audience,
     keep: new Set<string>(),
+    alive: () => syncGate.canWrite(ticket),
   };
   const plan = kind === 'customer' ? await planCustomer(env) : kind === 'dealer' ? await planDealer(env) : planNone(env);
 
-  // Çıkış bu sırada olduysa görseller de silinir; yeni bir eşitleme geçtiyse onun dosyalarına dokunulmaz.
+  // Çıkış bu sırada olduysa ve sonrasında yeni eşitleme başlamadıysa görseller de silinir; yeni eşitlemenin dosyalarına dokunulmaz.
   const aborted = () => {
-    if (syncGate.generation() !== ticket.generation) images?.purgeAll();
+    if (syncGate.generation() !== ticket.generation && syncGate.latest() === ticket.id) images?.purgeAll();
     return false;
   };
   let failed = plan.failed;
@@ -394,7 +403,7 @@ export async function syncWidgets(me: MobileMe | null, { force }: { force: boole
   if (!me || !widgetsAvailable()) return;
   const startedAt = Date.now();
   if (!syncGate.shouldRun(startedAt, force)) return;
-  const ticket = syncGate.begin(`${me.user.uuid}:${me.active_organization_uuid ?? ''}`);
+  const ticket = syncGate.begin(`${me.user.uuid}:${me.active_organization_uuid ?? ''}`, startedAt);
   try {
     if (await run(me, ticket, new Date(startedAt)) && syncGate.finish(ticket, startedAt)) saveSyncRecord();
   } catch {
