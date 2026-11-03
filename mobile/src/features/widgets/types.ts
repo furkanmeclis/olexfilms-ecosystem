@@ -147,3 +147,87 @@ export type HizmetVehicle = {
 export type HizmetData = { eyebrow: string; vehicles: HizmetVehicle[] };
 export type HizmetSummary = SummaryBase & HizmetData;
 export type HizmetProps = BaseProps & HizmetData;
+// --- Bayi widget'ları (dealer-summary.ts) ---
+
+export type PanomRow = {
+  uuid: string;
+  url: string;
+  carTitle: string;
+  plate: string;
+  plateCountry: string;
+  /** İlk kategori + bekleme süresi. */
+  meta: string;
+  /** SF Symbol adı. */
+  statusIcon: string;
+  statusTone: 'neutral' | 'progress' | 'done' | 'problem';
+  logoUri: string | null;
+  initial: string;
+};
+
+export type PanomLongest = { uuid: string; url: string; carTitle: string; plate: string; waitLabel: string };
+
+export type PanomData = {
+  title: string;
+  /** Sayılar dilin rakamlarıyla biçimlenmiş. */
+  next: string;
+  active: string;
+  done: string;
+  rows: PanomRow[];
+  longest: PanomLongest | null;
+};
+export type PanomSummary = SummaryBase & PanomData;
+export type PanomProps = BaseProps & PanomData;
+
+export type QuickAction = { id: 'scan' | 'new_service' | 'measure' | 'customers' | 'services'; label: string; url: string };
+
+export type QuickData = {
+  title: string;
+  actions: QuickAction[];
+  /** "1.284 kayıt"; yalnız müşteriler düğmesi varsa ve sayı biliniyorsa. */
+  customersCount: string | null;
+};
+export type QuickSummary = SummaryBase & QuickData;
+export type QuickProps = BaseProps & QuickData;
+
+export type KpiCard = { key: string; label: string; value: string };
+
+export type KpiBar = { label: string; height: number; current: boolean };
+
+export type KpiData = {
+  title: string;
+  weeklyTitle: string;
+  cards: KpiCard[];
+  /** Küçük boy ana değeri. */
+  primary: KpiCard | null;
+  /** "Açılan 42 · Devam 9"; iki kart da varsa. */
+  summary: string | null;
+  /** Son beş hafta, pt cinsinden yükseklik. */
+  bars: KpiBar[];
+};
+export type KpiSummary = SummaryBase & KpiData;
+export type KpiProps = BaseProps & KpiData;
+
+export type PendingRow = { id: 'ready' | 'claim' | 'expiring'; label: string; detail: string; count: string; url: string };
+
+export type PendingData = { title: string; rows: PendingRow[] };
+export type PendingSummary = SummaryBase & PendingData;
+export type PendingProps = BaseProps & PendingData;
+
+export type RevenueData = {
+  title: string;
+  /** "Kasım geliri" */
+  monthTitle: string;
+  currency: string;
+  incomeLabel: string;
+  netLabel: string;
+  expenseLabel: string;
+  maskedLabel: string;
+  netTitle: string;
+  expenseTitle: string;
+  hiddenTitle: string;
+  tapToReveal: string;
+  /** Varsayılan gizli. */
+  revealed: boolean;
+};
+export type RevenueSummary = SummaryBase & RevenueData;
+export type RevenueProps = BaseProps & RevenueData;
