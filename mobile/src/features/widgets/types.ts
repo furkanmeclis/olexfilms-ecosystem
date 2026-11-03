@@ -39,6 +39,8 @@ export type WidgetCard = {
   title: string;
   body?: string;
   cta?: string;
+  /** Düğmenin açtığı bağlantı; yoksa `cta` köke dokunmayı anlatır. */
+  ctaUrl?: string;
 };
 
 export type BaseProps = {
@@ -52,7 +54,10 @@ export type BaseProps = {
   /** Widget'a dokununca açılan uygulama içi bağlantı. */
   url: string;
   updatedLabel: string;
-  /** Veri bayatsa gösterilen metin, değilse null. */
+  /**
+   * Veri bayatsa gösterilen metin, değilse null. `ok` verisinin üstünde bir satırdır, kartın yerini almaz.
+   * Native'e giderken `null` alanlar atılır (`native-props.ts`): layout'ta `=== null` değil, doğruluk ya da `?.`.
+   */
   staleLabel: string | null;
   card?: WidgetCard;
 };
@@ -64,9 +69,9 @@ export type SummaryBase = Pick<BaseProps, 'state' | 'card'>;
 
 export type KorumaWarranty = {
   name: string;
-  /** Uzun süre ("2 yıl 4 ay"), `customer` çevirisiyle. */
+  /** Eksiz süre ("2 yıl 4 ay"), `leftCaption` ile okunur. */
   leftLabel: string;
-  /** "2 yıl 4 ay kaldı". */
+  /** Tam cümle ("2 yıl 4 ay kaldı"), `customer` çevirisiyle. */
   leftLongLabel: string;
   /** Kilit boyu kısa süre ("2y 4a"). */
   leftShortLabel: string;
@@ -179,7 +184,30 @@ export type PanomRow = {
   initial: string;
 };
 
-export type PanomLongest = { uuid: string; url: string; carTitle: string; plate: string; waitLabel: string };
+export type PanomLongest = {
+  uuid: string;
+  url: string;
+  carTitle: string;
+  plate: string;
+  waitLabel: string;
+  /** Araç kapağı (`file://`); yoksa çizilmez. */
+  heroUri: string | null;
+};
+
+export type PanomLabels = {
+  /** Orta boy çip: "Sıradaki". */
+  next: string;
+  /** Küçük boy: "Sıradaki işlem". */
+  nextAction: string;
+  /** Büyük boy başlık: "Sıradaki işlemler". */
+  queue: string;
+  /** "İşlemde". */
+  active: string;
+  /** Orta ve büyük boy: "Bugün biten". */
+  doneToday: string;
+  /** Küçük boy: "Bugün". */
+  today: string;
+};
 
 /** Kilit ekranı metinleri: yalnız sayılar; ad, plaka, marka, tutar yok. */
 export type PanomLocked = {
@@ -200,6 +228,7 @@ export type PanomData = {
   next: string;
   active: string;
   done: string;
+  labels: PanomLabels;
   rows: PanomRow[];
   longest: PanomLongest | null;
   locked: PanomLocked;
@@ -220,7 +249,13 @@ export type QuickProps = BaseProps & QuickData;
 
 export type KpiCard = { key: string; label: string; value: string };
 
-export type KpiBar = { label: string; height: number; current: boolean };
+export type KpiBar = {
+  label: string;
+  /** Çubuğun üstündeki sayı, dilin rakamlarıyla. */
+  value: string;
+  height: number;
+  current: boolean;
+};
 
 export type KpiData = {
   title: string;

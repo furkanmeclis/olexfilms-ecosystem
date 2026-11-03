@@ -16,7 +16,7 @@ import { CUSTOMER_WIDGETS, DEALER_WIDGETS } from './config';
 import type { CustomerAssets, CustomerCtx, HizmetInput, ServiceLike } from './customer-summary';
 import { buildHizmet, buildKart, buildKoruma } from './customer-summary';
 import type { DealerCtx } from './dealer-summary';
-import { buildKpi, buildPanom, buildPending, buildQuick, buildRevenue } from './dealer-summary';
+import { blockedCard, buildKpi, buildPanom, buildPending, buildQuick, buildRevenue, oldestQueued } from './dealer-summary';
 import type { Fetched } from './fetch';
 import {
   fetchBoard,
@@ -94,29 +94,15 @@ const WIDGET_URLS: Record<WidgetName, () => string> = {
 
 function stateCard(env: Env, name: WidgetName, state: WidgetState): WidgetCard {
   const eyebrow = env.t(signedOutTitleKey(name));
-  if (state === 'no_permission') {
-    return { eyebrow, title: env.t('state.no_permission_title'), body: env.t('state.no_permission_body') };
-  }
-  if (state === 'module_off') {
+  if (state === 'no_permission' || state === 'module_off') {
     // Yalnız talepler için ayrı bir açıklama var.
-    return {
-      eyebrow,
-      title: env.t('state.module_off_title'),
-      ...(name === 'OlexBekleyenler' ? { body: env.t('state.module_off_body_claims') } : {}),
-    };
+    return blockedCard(eyebrow, state, env.t, name === 'OlexBekleyenler' ? env.t('state.module_off_body_claims') : undefined);
   }
   return {
     eyebrow,
     title: env.t('state.wrong_role_title'),
     body: env.t(CUSTOMER_WIDGETS.includes(name) ? 'state.wrong_role_customer_body' : 'state.wrong_role_dealer_body'),
   };
-}
-
-/** Özet kartsız bir engel durumuna düştüyse kart ekler. */
-function withCard<S extends { state: WidgetState; card?: WidgetCard }>(env: Env, name: WidgetName, summary: S): S {
-  const blocked: WidgetState[] = ['no_permission', 'module_off', 'wrong_role'];
-  if (summary.card || !blocked.includes(summary.state)) return summary;
-  return { ...summary, card: stateCard(env, name, summary.state) };
 }
 
 /** Veri çekmeden yazılan engel durumu (rol, izin, modül). */
@@ -253,13 +239,20 @@ async function planDealer(env: Env): Promise<Plan> {
         }
       }
     }
+    // Kapak yeni uç istemez: model ve marka hizmette var, kamuya açık hero ucundan okunur.
+    const oldest = oldestQueued(board.value.next.items);
+    let longestHeroUri: string | null = null;
+    if (env.images && oldest && env.alive()) {
+      longestHeroUri = await env.images.storeHero(oldest);
+      if (longestHeroUri) env.keep.add(fileName(longestHeroUri));
+    }
     const ctxAt = (at: Date): DealerCtx => ({
       t: env.t,
       locale: env.lang,
       now: at,
       brandLogo: (uuid) => (uuid ? (logos.get(uuid) ?? null) : null),
     });
-    const input = { ...board.value, canCreate: can(audience, 'services.write') };
+    const input = { ...board.value, canCreate: can(audience, 'services.write'), longestHeroUri };
     const base = baseFor(env, WIDGET_URLS.OlexPanom());
     writes.push(
       timelineWrite('OlexPanom', buildEntries('OlexPanom', now, (at) => ({ ...base, ...buildPanom(input, ctxAt(at)) }), stale)),
@@ -287,7 +280,7 @@ async function planDealer(env: Env): Promise<Plan> {
     else {
       const input = { overview: valueOf(overview), trend: valueOf(trend), forbidden: overview.status === 'blocked' };
       writes.push(
-        timelineWrite('OlexSon30Gun', buildEntries('OlexSon30Gun', now, (at) => ({ ...base, ...withCard(env, 'OlexSon30Gun', buildKpi(input, dctx(at))) }), stale)),
+        timelineWrite('OlexSon30Gun', buildEntries('OlexSon30Gun', now, (at) => ({ ...base, ...buildKpi(input, dctx(at)) }), stale)),
       );
     }
   }
@@ -309,7 +302,7 @@ async function planDealer(env: Env): Promise<Plan> {
       const base = baseFor(env, WIDGET_URLS.OlexBekleyenler());
       const pending = (at: Date) => {
         const summary = buildPending(input, { t: env.t, locale: env.lang, now: at, brandLogo: () => null });
-        return withCard(env, 'OlexBekleyenler', dropExpiring ? { ...summary, rows: summary.rows.filter((r) => r.id !== 'expiring') } : summary);
+        return dropExpiring ? { ...summary, rows: summary.rows.filter((r) => r.id !== 'expiring') } : summary;
       };
       writes.push(timelineWrite('OlexBekleyenler', buildEntries('OlexBekleyenler', now, (at) => ({ ...base, ...pending(at) }), stale)));
     }

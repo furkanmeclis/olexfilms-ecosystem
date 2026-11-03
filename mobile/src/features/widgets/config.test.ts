@@ -97,6 +97,17 @@ describe('widget config', () => {
     }
   });
 
+  it('araç parametresi: dinamik enum, varsayılan otomatik', () => {
+    for (const w of plugin.widgets) {
+      if (!EXPECTED[w.name].vehicle) continue;
+      assert.deepEqual(
+        w.ios?.configuration?.parameters.vehicle,
+        { title: 'Araç', type: 'enum', dynamic: true, default: 'auto', values: [{ name: 'Otomatik', value: 'auto' }] },
+        w.name,
+      );
+    }
+  });
+
   it('kimlikler yalnız app.json içindedir', () => {
     assert.ok(plugin.bundleIdentifier);
     assert.ok(plugin.groupIdentifier);

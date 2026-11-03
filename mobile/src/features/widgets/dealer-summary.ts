@@ -23,6 +23,8 @@ import type {
   QuickAction,
   QuickSummary,
   RevenueSummary,
+  WidgetCard,
+  WidgetState,
 } from './types.ts';
 
 type Service = components['schemas']['Service'];
@@ -98,8 +100,24 @@ const STATUS_ICONS: Record<string, string> = {
   completed: 'checkmark',
 };
 
+/** Yetki ya da modül engelinin kartı: engelli durum hiçbir widget'ta boş çizilmez. */
+export function blockedCard(
+  eyebrow: string,
+  state: Extract<WidgetState, 'no_permission' | 'module_off'>,
+  t: TFn,
+  moduleOffBody?: string,
+): WidgetCard {
+  if (state === 'no_permission') return { eyebrow, title: t('state.no_permission_title'), body: t('state.no_permission_body') };
+  return { eyebrow, title: t('state.module_off_title'), ...(moduleOffBody ? { body: moduleOffBody } : {}) };
+}
+
+/** Sırada en uzun bekleyen hizmet; `buildPanom` ve kapak görseli aynı seçimi kullanır. */
+export function oldestQueued<S extends ServiceFields>(items: S[]): S | undefined {
+  return boardRows(items, { ...BOARD_GROUPS[0], limit: Infinity })[0];
+}
+
 export function buildPanom(
-  input: { next: ServicePage; active: ServicePage; done: ServicePage; canCreate: boolean },
+  input: { next: ServicePage; active: ServicePage; done: ServicePage; canCreate: boolean; longestHeroUri?: string | null },
   ctx: DealerCtx,
 ): PanomSummary {
   const { t, locale, now } = ctx;
@@ -121,7 +139,7 @@ export function buildPanom(
     initial: firstChar(s.car_brand?.name ?? carTitle(s, t)),
   }));
 
-  const oldest = queue[0];
+  const oldest = oldestQueued(input.next.items);
   const next = count(totals.next, locale);
   const active = count(totals.active, locale);
   const done = count(totals.done, locale);
@@ -130,6 +148,14 @@ export function buildPanom(
     next,
     active,
     done,
+    labels: {
+      next: t('panom.next'),
+      nextAction: t('panom.next_action'),
+      queue: t('panom.queue_title'),
+      active: t('panom.active'),
+      doneToday: t('panom.done_today'),
+      today: t('panom.today_short'),
+    },
     rows,
     longest: oldest
       ? {
@@ -138,6 +164,7 @@ export function buildPanom(
           carTitle: carTitle(oldest, t),
           plate: plateText(oldest.plate ?? ''),
           waitLabel: t('panom.longest_wait', { wait: wait(oldest) }),
+          heroUri: input.longestHeroUri ?? null,
         }
       : null,
     // Yalnız sayılar: kilit ekranında araç, plaka, müşteri yok.
@@ -157,7 +184,7 @@ export function buildPanom(
         eyebrow: title,
         title: t('state.empty_queue_title'),
         body: t('state.empty_queue_body'),
-        ...(input.canCreate ? { cta: t('state.new_service') } : {}),
+        ...(input.canCreate ? { cta: t('state.new_service'), ctaUrl: links.bayi.newService() } : {}),
       },
       ...base,
     };
@@ -175,14 +202,15 @@ const QUICK_URLS: Record<QuickAction['id'], () => string> = {
 
 /** `customersTotal`: bilinmiyorsa `null`/yok; sayı yalnız müşteriler düğmesi varsa gösterilir. */
 export function buildQuick(audience: AudienceInput, ctx: DealerCtx, customersTotal?: number | null): QuickSummary {
-  const { t } = ctx;
+  const { t, locale } = ctx;
   const actions: QuickAction[] = quickActions(audience).map(({ id }) => ({ id, label: t(`quick.${id}`), url: QUICK_URLS[id]() }));
   const showCount = actions.some((a) => a.id === 'customers') && typeof customersTotal === 'number';
   return {
     state: 'ok',
     title: t('quick.title'),
     actions,
-    customersCount: showCount ? t('quick.customers_count', { count: customersTotal }) : null,
+    // `count` çoğul seçer, `total` gruplu yazılır ("1.284 kayıt").
+    customersCount: showCount ? t('quick.customers_count', { count: customersTotal, total: count(customersTotal, locale) }) : null,
   };
 }
 
@@ -205,7 +233,16 @@ export function buildKpi(input: { overview: Report | null; trend: Report | null;
     if (value !== undefined) cards.push({ key: def.key, label: t(def.label), value: count(value, locale) });
   }
   if (cards.length === 0) {
-    return { state: 'no_permission', title, weeklyTitle, cards: [], primary: null, summary: null, bars: [] };
+    return {
+      state: 'no_permission',
+      card: blockedCard(title, 'no_permission', t),
+      title,
+      weeklyTitle,
+      cards: [],
+      primary: null,
+      summary: null,
+      bars: [],
+    };
   }
 
   const completed = cards.find((c) => c.key === 'services_completed');
@@ -217,6 +254,7 @@ export function buildKpi(input: { overview: Report | null; trend: Report | null;
   const max = Math.max(0, ...created5.map((p) => p.value));
   const bars: KpiBar[] = created5.map((p, i) => ({
     label: i === created5.length - 1 ? t('kpi.this_week') : t('kpi.weeks_ago', { count: created5.length - 1 - i }),
+    value: count(Math.max(0, p.value), locale),
     height: max > 0 ? Math.round((Math.max(0, p.value) / max) * MAX_BAR) : 0,
     current: i === created5.length - 1,
   }));
@@ -240,7 +278,10 @@ export function buildPending(
   const { t, locale, now } = ctx;
   const title = t('pending.title');
   const ids = pendingRows(input.audience);
-  if (ids.length === 0) return { state: pendingBlockedState(input.audience), title, rows: [] };
+  if (ids.length === 0) {
+    const state = pendingBlockedState(input.audience) === 'module_off' ? 'module_off' : 'no_permission';
+    return { state, card: blockedCard(title, state, t, t('state.module_off_body_claims')), title, rows: [] };
+  }
 
   const counts = { ready: input.ready?.total ?? 0, claim: input.claims?.total ?? 0, expiring: input.expiring ?? 0 };
   const oldest = [...(input.ready?.items ?? [])].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))[0];

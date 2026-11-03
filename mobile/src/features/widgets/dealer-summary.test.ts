@@ -9,10 +9,12 @@ import {
   buildPending,
   buildQuick,
   buildRevenue,
+  blockedCard,
   type DealerCtx,
   type ServiceFields,
   localDayStartIso,
   MAX_BAR,
+  oldestQueued,
   monthRange,
 } from './dealer-summary.ts';
 
@@ -120,6 +122,24 @@ describe('buildPanom', () => {
     assert.equal(row.initial, 'M');
   });
 
+  it('etiketler mevcut `panom.*` anahtarlarından', () => {
+    assert.deepEqual(buildPanom({ next, active, done, canCreate: true }, ctx).labels, {
+      next: 'panom.next',
+      nextAction: 'panom.next_action',
+      queue: 'panom.queue_title',
+      active: 'panom.active',
+      doneToday: 'panom.done_today',
+      today: 'panom.today_short',
+    });
+  });
+
+  it('en uzun bekleyenin kapağı sync\'ten gelir, yoksa null', () => {
+    const uri = 'file:///hero/m.png';
+    assert.equal(buildPanom({ next, active, done, canCreate: true, longestHeroUri: uri }, ctx).longest?.heroUri, uri);
+    assert.equal(buildPanom({ next, active, done, canCreate: true }, ctx).longest?.heroUri, null);
+    assert.equal(oldestQueued(next.items)?.uuid, id(1));
+  });
+
   it('longest en eski sıradaki hizmet', () => {
     const out = buildPanom({ next, active, done, canCreate: true }, ctx);
     assert.equal(out.longest?.uuid, id(1));
@@ -139,7 +159,10 @@ describe('buildPanom', () => {
     assert.equal(a.state, 'empty');
     assert.equal(a.card?.title, 'state.empty_queue_title');
     assert.equal(a.card?.cta, 'state.new_service');
-    assert.equal(buildPanom({ ...zero, canCreate: false }, ctx).card?.cta, undefined);
+    assert.equal(a.card?.ctaUrl, 'olexfilms://bayi/services/new');
+    const b = buildPanom({ ...zero, canCreate: false }, ctx);
+    assert.equal(b.card?.cta, undefined);
+    assert.equal(b.card?.ctaUrl, undefined);
     assert.equal(a.longest, null);
   });
 
@@ -155,8 +178,19 @@ describe('gizlilik: çıktıda müşteri, telefon, not, VIN, tutar yok', () => {
   const ready = page([svc(2, 'ready', '2026-10-28T10:00:00Z')]);
   const audience: AudienceInput = { kinds: ['bayi'], permissions: new Set(['services.read', 'services.write', 'customers.read', 'warranty_claims.read', 'warranties.read']), superAdmin: false, enabledModules: null };
 
-  it('Panom, Bekleyenler ve Hızlı işlem', () => {
+  it('Panom, Bekleyenler, Hızlı işlem, Son 30 gün ve Ciro', () => {
+    // Rapor ve kasa girdisine de sızıntı yerleştirilir: çıktı yalnız bilinen alanları okumalı.
+    const leakyCard = (key: string, value: number) => ({ key, label: 'Zeynep Örnektepe', value, customer: '+905550001122', note: 'gizli-teslim-notu' });
+    const leakyReport = {
+      series: [
+        { key: 'cards', label: 'Gizli Bayi Ltd', unit: '', points: [leakyCard('services_completed', 3), leakyCard('services_open', 2)] },
+        { key: 'created', label: 'WVWZZZ1JZXW000001', unit: '', points: [leakyCard('2026-10-01', 1), leakyCard('2026-10-08', 2)] },
+      ],
+    } as unknown as Report;
+    const leakyPnl = { currency: 'TRY', totals: { income: '100', expense: '40', net: '60' }, organization: 'Gizli Bayi Ltd', customer: 'Zeynep Örnektepe', note: 'gizli-teslim-notu', gross: '98765.43' };
     const outputs = [
+      buildKpi({ overview: leakyReport, trend: leakyReport }, ctx),
+      buildRevenue(leakyPnl, ctx),
       buildPanom({ next, active: ready, done: page([]), canCreate: true }, ctx),
       buildPending({ audience, ready, claims: { total: 2 }, expiring: 4 }, ctx),
       buildQuick(audience, ctx, 1284),
@@ -183,7 +217,7 @@ describe('buildQuick', () => {
     const withCustomers = { ...base, permissions: new Set(['customers.read', 'services.write']) };
     const out = buildQuick(withCustomers, ctx, 1284);
     assert.deepEqual(out.actions.map((a) => a.id), ['scan', 'new_service', 'customers']);
-    assert.equal(out.customersCount, 'quick.customers_count|count=1284');
+    assert.equal(out.customersCount, 'quick.customers_count|count=1284,total=1.284');
     assert.equal(buildQuick(withCustomers, ctx).customersCount, null);
     const servicesOnly = { ...base, permissions: new Set(['services.read']) };
     assert.equal(buildQuick(servicesOnly, ctx, 99).customersCount, null);
@@ -238,6 +272,7 @@ describe('buildKpi', () => {
     assert.equal(forbidden.state, 'no_permission');
     assert.deepEqual(forbidden.cards, []);
     assert.equal(forbidden.primary, null);
+    assert.deepEqual(forbidden.card, { eyebrow: 'kpi.title', title: 'state.no_permission_title', body: 'state.no_permission_body' });
   });
 
   it('çubuklar: son beş nokta, en büyük MAX_BAR, son nokta current', () => {
@@ -249,6 +284,9 @@ describe('buildKpi', () => {
     assert.equal(out.bars[4].label, 'kpi.this_week');
     assert.equal(out.bars[3].label, 'kpi.weeks_ago|count=1');
     assert.equal(out.bars[0].label, 'kpi.weeks_ago|count=4');
+    assert.deepEqual(out.bars.map((b) => b.value), ['10', '20', '40', '80', '40']);
+    const grouped = buildKpi({ overview: allCards, trend: trend([1284]) }, ctx);
+    assert.equal(grouped.bars[0].value, '1.284');
   });
 
   it('sıfır seri: yükseklikler 0, bölme hatası yok', () => {
@@ -285,15 +323,28 @@ describe('buildPending', () => {
     const noClaims = { ...all, permissions: new Set(['services.read']) };
     assert.deepEqual(buildPending({ audience: noClaims, ready, claims: null, expiring: null }, ctx).rows.map((r) => r.id), ['ready']);
     const none = { ...all, permissions: new Set<string>() };
-    assert.equal(buildPending({ audience: none, ready: null, claims: null, expiring: null }, ctx).state, 'no_permission');
+    const denied = buildPending({ audience: none, ready: null, claims: null, expiring: null }, ctx);
+    assert.equal(denied.state, 'no_permission');
+    assert.equal(denied.card?.title, 'state.no_permission_title');
     const off = { ...none, enabledModules: new Set<string>() };
-    assert.equal(buildPending({ audience: off, ready: null, claims: null, expiring: null }, ctx).state, 'module_off');
+    const disabled = buildPending({ audience: off, ready: null, claims: null, expiring: null }, ctx);
+    assert.equal(disabled.state, 'module_off');
+    assert.equal(disabled.card?.title, 'state.module_off_title');
+    assert.equal(disabled.card?.body, 'state.module_off_body_claims');
   });
 
   it('hepsi sıfırsa empty', () => {
     const out = buildPending({ audience: all, ready: page([]), claims: { total: 0 }, expiring: 0 }, ctx);
     assert.equal(out.state, 'empty');
     assert.equal(out.rows[0].detail, '');
+  });
+});
+
+describe('blockedCard', () => {
+  it('iki engel durumu da başlık taşır; modül gövdesi isteğe bağlı', () => {
+    assert.deepEqual(blockedCard('E', 'no_permission', t), { eyebrow: 'E', title: 'state.no_permission_title', body: 'state.no_permission_body' });
+    assert.deepEqual(blockedCard('E', 'module_off', t), { eyebrow: 'E', title: 'state.module_off_title' });
+    assert.equal(blockedCard('E', 'module_off', t, 'gövde').body, 'gövde');
   });
 });
 

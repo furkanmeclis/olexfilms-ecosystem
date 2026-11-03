@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
+
+import { createInstance } from 'i18next';
 
 import type { components } from '@/core/api/schema';
 import { MAX_VEHICLES } from './config.ts';
@@ -122,9 +127,9 @@ describe('buildKoruma araç içeriği', () => {
 
   it('süre etiketleri iki namespace ile, görseller parametreden', () => {
     const [out] = buildKoruma([v], ctx).vehicles;
-    assert.match(out.warranties[0].leftLabel, /^c:left_/);
+    assert.match(out.warranties[0].leftLabel, /^koruma\.left_short_/);
     assert.match(out.warranties[0].leftShortLabel, /^koruma\.left_compact_/);
-    assert.match(out.warranties[0].leftLongLabel, /^koruma\.left_long\|time=c:left_/);
+    assert.match(out.warranties[0].leftLongLabel, /^c:left_/);
     assert.equal(out.heroUri, `file:///hero/${id(1)}.jpg`);
     assert.equal(out.brandLogoUri, `file:///brand/${id(601)}.png`);
     assert.equal(out.brandInitial, 'M');
@@ -145,8 +150,8 @@ describe('buildKoruma kilit metinleri', () => {
     const [out] = buildKoruma([vehicle(1, [warranty(1, 900, 60, 'Uzun Film'), warranty(2, 30, 10, 'Kısa Film')])], ctx).vehicles;
     assert.deepEqual(Object.keys(out.locked).sort(), ['inline', 'long', 'short', 'title']);
     assert.match(out.locked.short, /^koruma\.left_compact_/);
-    assert.match(out.locked.long, /^koruma\.left_long\|time=c:left_days/);
-    assert.match(out.locked.inline, /^koruma\.lock_inline\|time=c:left_days/);
+    assert.match(out.locked.long, /^c:left_days/);
+    assert.match(out.locked.inline, /^koruma\.lock_inline\|time=koruma\.left_short_days/);
     assert.equal(out.locked.title, 'koruma.eyebrow');
     const text = JSON.stringify(out.locked);
     for (const secret of ['34 ABC 123', 'Marka', 'Model 1', 'Uzun Film', 'Kısa Film', 'TR', 'file://', id(1)]) {
@@ -303,5 +308,97 @@ describe('buildHizmet', () => {
       ctx,
     );
     assert.deepEqual(out.vehicles.map((v) => v.id), [id(2), id(1)]);
+  });
+});
+
+describe('gerçek çeviriler: "kaldı" sözcüğü bir kez', () => {
+  const LOCALES = fileURLToPath(new URL('../../core/i18n/locales/', import.meta.url));
+  const read = (lang: string, ns: string) => JSON.parse(readFileSync(join(LOCALES, lang, `${ns}.json`), 'utf8')) as Record<string, string>;
+  /** Her dilde `left_*` cümlesindeki sözcük kökü. */
+  const LEFT_WORD: Record<string, RegExp> = {
+    tr: /kaldı/g,
+    en: /\bleft\b/g,
+    es: /Qued|restante/g,
+    'zh-CN': /剩余/g,
+    ar: /متبق/g,
+    az: /qal/g,
+    bg: /Оста|оставащ/g,
+    de: /Noch|übrig/g,
+    el: /Απομέν|υπόλοιπο/g,
+    fr: /Encore|Reste|restant/g,
+    it: /Ancora|Restano|rimanent/g,
+    ru: /Остал|осталось/g,
+    uk: /Залиши|залишилось/g,
+  };
+  const occurrences = (text: string, lang: string) => (text.match(LEFT_WORD[lang]) ?? []).length;
+
+  async function ctxFor(lang: string): Promise<CustomerCtx> {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: lang,
+      fallbackLng: 'en',
+      ns: ['widgets', 'customer'],
+      resources: {
+        [lang]: { widgets: read(lang, 'widgets'), customer: read(lang, 'customer') },
+        en: { widgets: read('en', 'widgets'), customer: read('en', 'customer') },
+      },
+      keySeparator: false,
+      nsSeparator: ':',
+      interpolation: { escapeValue: false },
+      initAsync: false,
+    });
+    const fixed = (ns: string) => {
+      const f = i18n.getFixedT(lang, ns);
+      return (key: string, options?: Record<string, unknown>) => String(f(key, options));
+    };
+    return { ...ctx, t: fixed('widgets'), tc: fixed('customer'), locale: lang };
+  }
+
+  // 2 yıl 4 ay; 1 yıl; 3 ay; 10 gün.
+  const DAYS = [850, 370, 95, 10];
+
+  for (const lang of Object.keys(LEFT_WORD)) {
+    it(lang, async () => {
+      const real = await ctxFor(lang);
+      for (const days of DAYS) {
+        const out = buildKoruma([vehicle(1, [warranty(1, days, 50, 'PPF')])], real);
+        const [v] = out.vehicles;
+        const [w] = v.warranties;
+        const context = `${lang} ${days}: ${JSON.stringify([w, v.locked, out.leftCaption])}`;
+        assert.equal(occurrences(w.leftLongLabel, lang), 1, context);
+        assert.equal(occurrences(v.locked.long, lang), 1, context);
+        assert.equal(v.locked.long, w.leftLongLabel, context);
+        // Küçük boy: eksiz süre + `leftCaption`, sözcük yalnız altyazıda.
+        assert.equal(occurrences(w.leftLabel, lang), 0, context);
+        assert.equal(occurrences(out.leftCaption, lang), 1, context);
+        // Satır içi: "Garanti 2 yıl 4 ay"; tam cümle sarılmaz.
+        assert.equal(occurrences(v.locked.inline, lang), 0, context);
+        assert.ok(v.locked.inline.includes(w.leftLabel), context);
+        // Çeviri eksikse anahtar adı görünür.
+        assert.doesNotMatch(JSON.stringify([w, v.locked]), /koruma\.|left_/, context);
+      }
+    });
+  }
+
+  it('dilin her çoğul biçimi var: eksikse i18next İngilizceye düşer', () => {
+    for (const lang of Object.keys(LEFT_WORD)) {
+      const rules = new Intl.PluralRules(lang);
+      const needed = new Set(Array.from({ length: 1001 }, (_, n) => rules.select(n)));
+      const widgets = read(lang, 'widgets');
+      const customer = read(lang, 'customer');
+      const check = (catalog: Record<string, string>, only: (base: string) => boolean) => {
+        for (const key of Object.keys(catalog)) {
+          if (!key.endsWith('_other') || !only(key)) continue;
+          const base = key.slice(0, -'_other'.length);
+          for (const form of needed) assert.ok(`${base}_${form}` in catalog, `${lang}: ${base}_${form}`);
+        }
+      };
+      check(widgets, () => true);
+      check(customer, (key) => key.startsWith('left_'));
+    }
+  });
+
+  it('`koruma.left_long` hiçbir dilde yok', () => {
+    for (const lang of Object.keys(LEFT_WORD)) assert.ok(!('koruma.left_long' in read(lang, 'widgets')), lang);
   });
 });

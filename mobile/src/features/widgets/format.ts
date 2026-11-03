@@ -19,6 +19,18 @@ export function timeLeft(days: number, t: TFn): string {
   return t('left_days', { count: days });
 }
 
+/**
+ * Eksiz süre ("2 yıl 4 ay"); "kaldı" sözcüğü `koruma.left_caption` tarafında durur.
+ * `t` `widgets` namespace'inin çevirisidir.
+ */
+export function timeLeftDuration(days: number, t: TFn): string {
+  const { years, months } = days > 0 ? splitTimeLeft(days) : { years: 0, months: 0 };
+  if (years > 0 && months > 0) return t('koruma.left_short_years_months', { years, months });
+  if (years > 0) return t('koruma.left_short_years', { count: years });
+  if (months > 0) return t('koruma.left_short_months', { count: months });
+  return t('koruma.left_short_days', { count: Math.max(0, days) });
+}
+
 /** Kilit dairesi için kısa süre ("2y 4a"). `t` `widgets` namespace'inin çevirisidir. */
 export function timeLeftShort(days: number, t: TFn): string {
   const { years, months } = days > 0 ? splitTimeLeft(days) : { years: 0, months: 0 };

@@ -1,6 +1,7 @@
 // `props` native tarafta UserDefaults'a yazılır. JS `null`'ı `NSNull` olur (`JavaScriptValue.getAny`)
 // ve `NSNull` içeren sözlük `-[NSUserDefaults setObject:forKey:]` içinde uygulamayı düşürür.
 // `undefined` ise atlanır. Saf dosya.
+// Sonuç: layout isteğe bağlı alanı doğruluk ya da `?.` ile okur, asla `=== null` ile; alan `undefined` gelir.
 
 /** `null` ve `undefined` alanları (dizide elemanları) derinlemesine atar; layout yokluğu `null` gibi okur. */
 export function stripNulls<T>(value: T): T {

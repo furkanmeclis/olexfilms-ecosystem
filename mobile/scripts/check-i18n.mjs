@@ -2,7 +2,9 @@
 /**
  * Mobile i18n check, same rules as the web's scripts/check-i18n.mjs:
  *   - tr and en match key for key (error)
- *   - other languages may miss keys (warning; error with --strict), never extra keys
+ *   - other languages may miss keys (warning; error with --strict), never extra keys,
+ *     except the plural forms their language needs (ru `_few`, ar `_two`): i18next has no
+ *     `_other` fallback within a language, a missing form shows the English text
  *   - {{param}} sets equal to en
  *   - no empty values
  *
@@ -21,6 +23,10 @@ const read = (lang, ns) => {
   return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
 };
 const params = (s) => [...String(s).matchAll(/{{\s*(\w+)\s*}}/g)].map((m) => m[1]).sort().join(',');
+
+const PLURAL_FORM = /_(zero|two|few|many)$/;
+/** en anahtarı; dile özgü çoğul biçimi en'deki `_other` ile eşleşir. */
+const enKey = (en, k) => (k in en ? k : PLURAL_FORM.test(k) && k.replace(PLURAL_FORM, '_other') in en ? k.replace(PLURAL_FORM, '_other') : null);
 
 const namespaces = fs.readdirSync(path.join(dir, 'en')).map((f) => f.replace(/\.json$/, ''));
 let errors = 0;
@@ -43,9 +49,10 @@ for (const ns of namespaces) {
       continue;
     }
     for (const k of Object.keys(cat)) {
-      if (!(k in en)) err(`${lang}/${ns}: extra key ${k}`);
+      const source = enKey(en, k);
+      if (!source) err(`${lang}/${ns}: extra key ${k}`);
       else if (!String(cat[k]).trim()) err(`${lang}/${ns}: empty ${k}`);
-      else if (params(cat[k]) !== params(en[k])) err(`${lang}/${ns}: {{params}} differ for ${k}`);
+      else if (params(cat[k]) !== params(en[source])) err(`${lang}/${ns}: {{params}} differ for ${k}`);
     }
     const missing = Object.keys(en).filter((k) => !(k in cat));
     if (missing.length) {

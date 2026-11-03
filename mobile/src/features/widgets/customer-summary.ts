@@ -5,7 +5,7 @@ import type { components } from '@/core/api/schema';
 import { intlLocale } from '../../core/digits.ts';
 import { MAX_VEHICLES } from './config.ts';
 import type { TFn } from './format.ts';
-import { plateText, timeLeft, timeLeftShort } from './format.ts';
+import { plateText, timeLeft, timeLeftDuration, timeLeftShort } from './format.ts';
 import { links } from './links.ts';
 import type {
   HizmetService,
@@ -135,12 +135,12 @@ function lockedOf(p: Prepared, ctx: CustomerCtx): KorumaLocked {
     const none = t('state.no_warranty_title');
     return { title, short: '', long: none, inline: none };
   }
-  const time = timeLeft(shortest.days_left, tc);
   return {
     title,
     short: timeLeftShort(shortest.days_left, t),
-    long: t('koruma.left_long', { time }),
-    inline: t('koruma.lock_inline', { time }),
+    // `timeLeft` tam cümledir ("2 yıl 4 ay kaldı"); satır içi "kaldı" sözcüğünü taşımaz.
+    long: timeLeft(shortest.days_left, tc),
+    inline: t('koruma.lock_inline', { time: timeLeftDuration(shortest.days_left, t) }),
   };
 }
 
@@ -161,8 +161,8 @@ export function buildKoruma(vehicles: PortalVehicleDetail[], ctx: CustomerCtx): 
       lastServiceLabel: lastService ? t('koruma.last_service', { date: lastService }) : '',
       warranties: p.warranties.slice(0, MAX_WARRANTIES).map((w) => ({
         name: w.product.name,
-        leftLabel: timeLeft(w.days_left, tc),
-        leftLongLabel: t('koruma.left_long', { time: timeLeft(w.days_left, tc) }),
+        leftLabel: timeLeftDuration(w.days_left, t),
+        leftLongLabel: timeLeft(w.days_left, tc),
         leftShortLabel: timeLeftShort(w.days_left, t),
         percent: clampPercent(w.percent_left),
         warn: w.percent_left < WARN_BELOW_PERCENT,
