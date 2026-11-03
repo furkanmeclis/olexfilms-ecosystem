@@ -86,6 +86,50 @@ export function yearSpan(start?: number | null, stop?: number | null): string {
   return `${start}–${stop ?? ''}`;
 }
 
+/**
+ * Order of the brand / model lists: most used first (TEC-1043 backend
+ * popularity: this organization's and the whole brand's usage), then name.
+ * `name` is the fallback when the backend refuses popularity.
+ */
+export type CatalogSort = 'popularity' | 'name';
+export const CATALOG_SORT: CatalogSort = 'popularity';
+export const FALLBACK_SORT: CatalogSort = 'name';
+
+/** Query of one catalog list page (`/v1/vehicle-catalog/brands` or `/models` with `brandUuid`). */
+export function catalogQuery(o: { q?: string; brandUuid?: string; sort: CatalogSort; limit: number; offset: number }) {
+  return {
+    ...(o.brandUuid ? { brand_uuid: o.brandUuid } : {}),
+    q: o.q || undefined,
+    active: true,
+    sort: o.sort,
+    limit: o.limit,
+    offset: o.offset,
+  };
+}
+
+/**
+ * The backend refused the popularity order: an older backend without it
+ * (400 on `sort`) or a session without an organization (403
+ * ORGANIZATION_CONTEXT_REQUIRED). The list then loads by name instead.
+ */
+export function popularityRefused(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const err = e as { status?: unknown; code?: unknown; details?: unknown };
+  if (err.status === 403) return err.code === 'ORGANIZATION_CONTEXT_REQUIRED';
+  if (err.status !== 400 || !Array.isArray(err.details)) return false;
+  return err.details.some((d) => Boolean(d) && (d as { field?: unknown }).field === 'sort');
+}
+
+/** Loads a page by popularity, retrying by name when popularity is refused. */
+export async function withSortFallback<T>(load: (sort: CatalogSort) => Promise<T>): Promise<T> {
+  try {
+    return await load(CATALOG_SORT);
+  } catch (e) {
+    if (popularityRefused(e)) return load(FALLBACK_SORT);
+    throw e;
+  }
+}
+
 export type FrequentRef = { uuid: string };
 
 export type PickerRow<T> =

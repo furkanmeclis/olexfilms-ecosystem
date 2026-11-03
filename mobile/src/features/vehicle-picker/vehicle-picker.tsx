@@ -19,6 +19,8 @@ import { Text } from '@/ui/text';
 import {
   type BrandChoice,
   buildRows,
+  CATALOG_SORT,
+  catalogQuery,
   EMPTY_VEHICLE,
   frequentList,
   type ModelChoice,
@@ -32,6 +34,7 @@ import {
   startStep,
   type VehicleValue,
   vehicleTitle,
+  withSortFallback,
   yearOptions,
   yearSpan,
 } from './picker';
@@ -50,7 +53,7 @@ export type VehiclePickerProps = {
   /** Field label; default "Vehicle". */
   label?: string;
   error?: string;
-  /** List the organization's most serviced brands / models first (dealer side). Default: on. */
+  /** List the most used brands / models first (organization + brand usage, dealer side). Default: on. */
   frequent?: boolean;
   disabled?: boolean;
 };
@@ -301,14 +304,17 @@ function BrandStep({
   const query = useDebounced(q.trim());
 
   const list = useInfiniteQuery({
-    queryKey: ['vehicle-catalog', 'brands', 'picker', query],
+    queryKey: ['vehicle-catalog', 'brands', 'picker', CATALOG_SORT, query],
     initialPageParam: 0,
     staleTime: CATALOG_STALE,
+    // Most used first; by name on a backend that refuses popularity.
     queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET('/v1/vehicle-catalog/brands', {
-          params: { query: { q: query || undefined, active: true, sort: 'name', limit: PAGE, offset: pageParam } },
-        }),
+      withSortFallback((sort) =>
+        unwrap(
+          api.GET('/v1/vehicle-catalog/brands', {
+            params: { query: catalogQuery({ q: query, sort, limit: PAGE, offset: pageParam }) },
+          }),
+        ),
       ),
     getNextPageParam: nextOffset,
   });
@@ -381,16 +387,16 @@ function ModelStep({
   const query = useDebounced(q.trim());
 
   const list = useInfiniteQuery({
-    queryKey: ['vehicle-catalog', 'models', 'picker', brand.uuid, query],
+    queryKey: ['vehicle-catalog', 'models', 'picker', CATALOG_SORT, brand.uuid, query],
     initialPageParam: 0,
     staleTime: CATALOG_STALE,
     queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET('/v1/vehicle-catalog/models', {
-          params: {
-            query: { brand_uuid: brand.uuid, q: query || undefined, active: true, sort: 'name', limit: PAGE, offset: pageParam },
-          },
-        }),
+      withSortFallback((sort) =>
+        unwrap(
+          api.GET('/v1/vehicle-catalog/models', {
+            params: { query: catalogQuery({ brandUuid: brand.uuid, q: query, sort, limit: PAGE, offset: pageParam }) },
+          }),
+        ),
       ),
     getNextPageParam: nextOffset,
   });
