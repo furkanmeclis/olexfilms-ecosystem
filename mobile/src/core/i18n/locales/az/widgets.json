@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} dəq",
   "common.minutes_count_other": "{{count}} dəq",
   "common.hours_count_one": "{{count}} saat",
-  "common.hours_count_other": "{{count}} saat"
+  "common.hours_count_other": "{{count}} saat",
+  "common.auto": "Avtomatik"
 }

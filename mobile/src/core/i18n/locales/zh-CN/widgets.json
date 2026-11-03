@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} 分钟",
   "common.minutes_count_other": "{{count}} 分钟",
   "common.hours_count_one": "{{count}} 小时",
-  "common.hours_count_other": "{{count}} 小时"
+  "common.hours_count_other": "{{count}} 小时",
+  "common.auto": "自动"
 }

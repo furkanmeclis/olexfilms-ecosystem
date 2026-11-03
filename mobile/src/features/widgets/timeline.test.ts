@@ -5,7 +5,7 @@ import { PROPS_BUDGET_BYTES, STALE_AFTER_MS, WIDGET_NAMES } from './config.ts';
 import { staleAgo } from './format.ts';
 import type { TFn } from './format.ts';
 import { WIDGET_THEME } from './theme.ts';
-import { buildEntries, daysLeftAt, staleLabelFor } from './timeline.ts';
+import { buildEntries, daysLeftAt, shiftWarranties, staleLabelFor } from './timeline.ts';
 import type { KorumaProps, WidgetState } from './types.ts';
 
 const HOUR = 3_600_000;
@@ -133,6 +133,26 @@ describe('daysLeftAt', () => {
     assert.equal(daysLeftAt(10, new Date(2026, 10, 3, 23, 59), new Date(2026, 10, 4, 0, 0)), 9);
     assert.equal(daysLeftAt(10, new Date(2026, 10, 3, 0, 1), new Date(2026, 10, 3, 23, 59)), 10);
     assert.equal(daysLeftAt(10, NOW, new Date(NOW.getTime() + 7 * DAY)), 3);
+  });
+});
+
+describe('shiftWarranties', () => {
+  const vehicles = [
+    { id: 'a', active_warranties: [{ days_left: 2, name: 'x' }, { days_left: 40, name: 'y' }] },
+    { id: 'b', active_warranties: [] },
+  ];
+
+  it('her garantinin kalan gününü o ana kaydırır, kaynağa dokunmaz', () => {
+    const out = shiftWarranties(vehicles, NOW, new Date(NOW.getTime() + 3 * DAY));
+    assert.deepEqual(out[0].active_warranties.map((w) => w.days_left), [-1, 37]);
+    assert.equal(out[0].active_warranties[0].name, 'x');
+    assert.equal(out[1].active_warranties.length, 0);
+    assert.equal(vehicles[0].active_warranties[0].days_left, 2);
+  });
+
+  it('aynı gün değişmez', () => {
+    const out = shiftWarranties(vehicles, NOW, new Date(NOW.getTime() + HOUR));
+    assert.deepEqual(out[0].active_warranties.map((w) => w.days_left), [2, 40]);
   });
 });
 

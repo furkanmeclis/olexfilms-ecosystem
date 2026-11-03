@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} dk",
   "common.minutes_count_other": "{{count}} dk",
   "common.hours_count_one": "{{count}} saat",
-  "common.hours_count_other": "{{count}} saat"
+  "common.hours_count_other": "{{count}} saat",
+  "common.auto": "Otomatik"
 }

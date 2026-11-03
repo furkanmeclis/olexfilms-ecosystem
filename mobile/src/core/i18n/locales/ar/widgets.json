@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} دقيقة",
   "common.minutes_count_other": "{{count}} دقائق",
   "common.hours_count_one": "{{count}} ساعة",
-  "common.hours_count_other": "{{count}} ساعات"
+  "common.hours_count_other": "{{count}} ساعات",
+  "common.auto": "تلقائي"
 }

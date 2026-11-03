@@ -31,6 +31,17 @@ export function daysLeftAt(daysLeft: number, now: Date, at: Date): number {
   return daysLeft - Math.round((localDay(at) - localDay(now)) / DAY_MS);
 }
 
+/**
+ * Araçların aktif garantilerinin kalan gününü `at` anına kaydırır; kaynağa dokunmaz.
+ * Süresi dolan garantiyi özet düşürür (`days_left <= 0` aktif sayılmaz).
+ */
+export function shiftWarranties<V extends { active_warranties: { days_left: number }[] }>(vehicles: V[], now: Date, at: Date): V[] {
+  return vehicles.map((v) => ({
+    ...v,
+    active_warranties: v.active_warranties.map((w) => ({ ...w, days_left: daysLeftAt(w.days_left, now, at) })),
+  }));
+}
+
 /** "Güncellenemedi. Son veri 2 saat önce." `t` widgets namespace'inin çevirisidir. */
 export function staleLabelFor(t: TFn): (ageMs: number) => string {
   return (ageMs) => t('state.stale_body', { time: staleAgo(ageMs, t) });

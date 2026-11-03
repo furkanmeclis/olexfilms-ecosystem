@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} λεπτό",
   "common.minutes_count_other": "{{count}} λεπτά",
   "common.hours_count_one": "{{count}} ώρα",
-  "common.hours_count_other": "{{count}} ώρες"
+  "common.hours_count_other": "{{count}} ώρες",
+  "common.auto": "Αυτόματα"
 }

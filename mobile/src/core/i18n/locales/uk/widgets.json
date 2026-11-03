@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} хв",
   "common.minutes_count_other": "{{count}} хв",
   "common.hours_count_one": "{{count}} год",
-  "common.hours_count_other": "{{count}} год"
+  "common.hours_count_other": "{{count}} год",
+  "common.auto": "Автоматично"
 }

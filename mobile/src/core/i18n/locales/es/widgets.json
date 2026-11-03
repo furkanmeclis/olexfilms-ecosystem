@@ -92,5 +92,6 @@
   "common.minutes_count_one": "{{count}} min",
   "common.minutes_count_other": "{{count}} min",
   "common.hours_count_one": "{{count}} h",
-  "common.hours_count_other": "{{count}} h"
+  "common.hours_count_other": "{{count}} h",
+  "common.auto": "Automático"
 }
