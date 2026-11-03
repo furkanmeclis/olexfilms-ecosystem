@@ -53,14 +53,15 @@ function remove(file: File) {
  * Taze dosya varsa ağa çıkmaz. Her hatada `null`: widget görselsiz çizilir.
  */
 async function storeRemote(url: string, fileName: string, width: number): Promise<string | null> {
-  const shared = sharedDir();
-  if (!shared) return null;
-  const target = new File(shared, fileName);
-  if (target.exists && isFresh(target.lastModified, Date.now())) return target.uri;
-
-  const source = new File(downloadDir(), `${fileName}.src`);
+  let source: File | null = null;
   let saved: File | null = null;
   try {
+    const shared = sharedDir();
+    if (!shared) return null;
+    const target = new File(shared, fileName);
+    if (target.exists && isFresh(target.lastModified, Date.now())) return target.uri;
+
+    source = new File(downloadDir(), `${fileName}.src`);
     await File.downloadFileAsync(url, source, { idempotent: true });
     if (isSvg(source)) return null;
     const ref = await ImageManipulator.manipulate(source.uri, { maxWidth: width })
@@ -73,29 +74,38 @@ async function storeRemote(url: string, fileName: string, width: number): Promis
   } catch {
     return null;
   } finally {
-    remove(source);
+    if (source) remove(source);
     if (saved) remove(saved);
   }
 }
 
-export function storeHero(v: Pick<PortalVehicle, 'car_brand' | 'car_model'>): Promise<string | null> {
-  const name = heroFileName(v);
-  return name ? storeRemote(heroUrl(v), name, HERO_MAX_WIDTH_PX) : Promise.resolve(null);
+export async function storeHero(v: Pick<PortalVehicle, 'car_brand' | 'car_model'>): Promise<string | null> {
+  try {
+    const name = heroFileName(v);
+    return name ? await storeRemote(heroUrl(v), name, HERO_MAX_WIDTH_PX) : null;
+  } catch {
+    return null;
+  }
 }
 
-export function storeBrandLogo(brandUuid: string): Promise<string | null> {
-  const name = logoFileName(brandUuid);
-  return name ? storeRemote(brandLogoUrl(brandUuid), name, LOGO_MAX_WIDTH_PX) : Promise.resolve(null);
+export async function storeBrandLogo(brandUuid: string): Promise<string | null> {
+  try {
+    const name = logoFileName(brandUuid);
+    return name ? await storeRemote(brandLogoUrl(brandUuid), name, LOGO_MAX_WIDTH_PX) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** `text` `publicWarrantyUrl(code)` sonucudur; QR cihazda üretilir, ağ yok. */
 export function storeQr(code: string, text: string): string | null {
-  const shared = sharedDir();
-  const name = qrFileName(code);
-  if (!shared || !name) return null;
   try {
+    const shared = sharedDir();
+    const name = qrFileName(code);
+    if (!shared || !name) return null;
     const target = new File(shared, name);
-    target.write(qrPngFromText(text));
+    // Yazma dosyayı yoksa oluşturur (Data.write); eşzamanlı olması uri'nin hazır dosyaya işaret etmesini sağlar.
+    target.writeSync(qrPngFromText(text));
     return target.uri;
   } catch {
     return null;
@@ -109,7 +119,12 @@ const MARK_ASSETS = [
 
 /** Altın işaret ve beyaz tek renkli sürüm; her eşitlemede üzerine yazılır (uygulama güncellemesi gelebilir). */
 export async function storeMarks(): Promise<{ markUri: string | null; markMonoUri: string | null }> {
-  const shared = sharedDir();
+  let shared: Directory | null = null;
+  try {
+    shared = sharedDir();
+  } catch {
+    shared = null;
+  }
   if (!shared) return { markUri: null, markMonoUri: null };
   const uris: (string | null)[] = [];
   for (const { file, module } of MARK_ASSETS) {
@@ -137,9 +152,9 @@ function removeAll(files: File[], doomed: string[]) {
 
 /** `keep` (dosya adları) dışındakileri siler; Olex işaretleri kalır. */
 export function reconcile(keep: Set<string>) {
-  const shared = sharedDir();
-  if (!shared) return;
   try {
+    const shared = sharedDir();
+    if (!shared) return;
     const files = listFiles(shared);
     removeAll(files, staleFiles(files.map((f) => f.name), keep));
   } catch {
