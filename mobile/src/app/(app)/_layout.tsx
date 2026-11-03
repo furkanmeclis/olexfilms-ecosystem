@@ -8,6 +8,7 @@ import { usePushNotifications } from '@/core/push';
 import { rememberPath } from '@/core/space-memory';
 import { kindsOf } from '@/core/spaces';
 import { LARGE_TITLES } from '@/features/shell/large-titles';
+import { useWidgetSync } from '@/features/widgets/use-widget-sync';
 
 /**
  * Signed-in shell. The cached session renders first; /me refreshes it in the
@@ -23,6 +24,8 @@ export default function AppLayout() {
   useEffect(() => rememberPath(me, pathname), [me, pathname]);
   // Expo push: token registration, inbox refresh, tap opens the record.
   usePushNotifications();
+  // Home-screen widgets: refresh on foreground and when user, organization, language or digits change.
+  useWidgetSync();
 
   useQuery({
     queryKey: ['me'],
