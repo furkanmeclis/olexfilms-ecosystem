@@ -43,14 +43,38 @@ describe('kısıt', () => {
     assert.equal(gate.shouldRun(T0, true), true);
   });
 
-  it('başarısız çalıştırma da deneme zamanıyla kısıt başlatır, kayıt zamanı değişmez', () => {
+  it('kayıt varken başarısız çalıştırma da deneme zamanıyla kısıt başlatır, kayıt zamanı değişmez', () => {
     const gate = createSyncGate();
+    gate.restore({ generatedAt: T0 - 3_600_000, owner: 'u:o' });
     const ticket = gate.begin('u:o', T0);
     gate.abort(ticket);
     assert.equal(gate.shouldRun(T0 + 1000, false), false);
     assert.equal(gate.shouldRun(T0 + SYNC_MIN_INTERVAL_MS, false), true);
     assert.equal(gate.shouldRun(T0 + 1000, true), true);
-    assert.equal(gate.snapshot().generatedAt, null);
+    assert.equal(gate.snapshot().generatedAt, T0 - 3_600_000);
+  });
+
+  it('kayıt yokken başarısız ilk eşitleme sonraki öne gelişte hemen yeniden dener', () => {
+    const gate = createSyncGate();
+    const ticket = gate.begin('u:o', T0);
+    gate.abort(ticket);
+    assert.equal(gate.shouldRun(T0 + 1000, false), true);
+  });
+
+  it('kayıt yokken süren eşitleme yine bekletir', () => {
+    const gate = createSyncGate();
+    gate.begin('u:o', T0);
+    assert.equal(gate.shouldRun(T0 + 1000, false), false);
+  });
+
+  it('sahip değişiminde temizlenen kayıt da kısıtı kaldırır; başarılı kayıttan sonra kısıt geri gelir', () => {
+    const gate = createSyncGate();
+    gate.restore({ generatedAt: T0, owner: 'u1:o1' });
+    gate.abort(gate.begin('u2:o1', T0 + 20 * 60_000));
+    // Kayıt hâlâ eski sahibin: o sahip için kayıt yok sayılır, yeniden dene.
+    assert.equal(gate.shouldRun(T0 + 20 * 60_000 + 1000, false), true);
+    gate.finish(gate.begin('u2:o1', T0 + 30 * 60_000), T0 + 30 * 60_000);
+    assert.equal(gate.shouldRun(T0 + 30 * 60_000 + 1000, false), false);
   });
 
   it('deneme zamanı yoksa kısıt başlamaz (geriye uyum)', () => {
@@ -121,6 +145,31 @@ describe('çıkış', () => {
   });
 });
 
+describe('çıkış sonrası görsel temizliği', () => {
+  it('nesil değişti ve bilet hâlâ en yeniyse temizlenir', () => {
+    const gate = createSyncGate();
+    const ticket = gate.begin('u:o', T0);
+    gate.invalidate();
+    assert.equal(gate.shouldPurge(ticket), true);
+  });
+
+  it('çıkıştan sonra yeni eşitleme başladıysa onun dosyalarına dokunulmaz', () => {
+    const gate = createSyncGate();
+    const old = gate.begin('u:o', T0);
+    gate.invalidate();
+    gate.begin('u:o', T0 + 1);
+    assert.equal(gate.shouldPurge(old), false);
+  });
+
+  it('çıkış olmadıysa temizlenmez', () => {
+    const gate = createSyncGate();
+    const older = gate.begin('u:o', T0);
+    assert.equal(gate.shouldPurge(older), false);
+    gate.begin('u:o', T0 + 1);
+    assert.equal(gate.shouldPurge(older), false);
+  });
+});
+
 describe('sahip değişimi', () => {
   it('kayıtlı sahip yoksa temizlik gerekmez', () => {
     assert.equal(createSyncGate().begin('u1:o1').ownerChanged, false);
@@ -141,10 +190,37 @@ describe('sahip değişimi', () => {
     assert.equal(b.begin('u1:o2').ownerChanged, true);
   });
 
-  it('değişim bir kez bildirilir', () => {
+  it('temizlik tamamlanana kadar değişim bildirilmeye devam eder', () => {
     const gate = createSyncGate();
     gate.restore({ generatedAt: T0, owner: 'u1:o1' });
     assert.equal(gate.begin('u2:o1').ownerChanged, true);
+    // İlk çalıştırmanın temizliği bitmeden ikincisi geçti: ikincisi de temizler.
+    assert.equal(gate.begin('u2:o1').ownerChanged, true);
+  });
+
+  it('temizlik tamamlanınca değişim bir daha bildirilmez', () => {
+    const gate = createSyncGate();
+    gate.restore({ generatedAt: T0, owner: 'u1:o1' });
+    const first = gate.begin('u2:o1');
+    gate.wiped(first);
+    assert.equal(gate.begin('u2:o1').ownerChanged, false);
+  });
+
+  it('yazma hakkını yitirmiş biletin tamamlandı bildirimi etkisizdir', () => {
+    const gate = createSyncGate();
+    gate.restore({ generatedAt: T0, owner: 'u1:o1' });
+    const first = gate.begin('u2:o1');
+    const second = gate.begin('u2:o1');
+    gate.wiped(first);
+    assert.equal(gate.begin('u2:o1').ownerChanged, true);
+    assert.equal(gate.canWrite(second), false);
+  });
+
+  it('çıkış bekleyen temizliği sıfırlar', () => {
+    const gate = createSyncGate();
+    gate.restore({ generatedAt: T0, owner: 'u1:o1' });
+    gate.begin('u2:o1');
+    gate.invalidate();
     assert.equal(gate.begin('u2:o1').ownerChanged, false);
   });
 

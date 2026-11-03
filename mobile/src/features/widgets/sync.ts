@@ -33,6 +33,7 @@ import { updatedAt } from './format';
 import type { WidgetHandle } from './layouts';
 import { widgetFor, widgetsAvailable } from './layouts';
 import { links } from './links';
+import { planPending } from './pending-plan';
 import { signedOutTitleKey } from './signed-out';
 import type { SyncTicket } from './sync-gate';
 import { saveSyncRecord, syncGate } from './sync-state';
@@ -107,7 +108,9 @@ function stateCard(env: Env, name: WidgetName, state: WidgetState): WidgetCard {
 
 /** Veri çekmeden yazılan engel durumu (rol, izin, modül). */
 function stateWrite(env: Env, name: WidgetName, state: WidgetState): Write {
-  const props: BaseProps = { ...baseFor(env, WIDGET_URLS[name]()), state, card: stateCard(env, name, state) };
+  // Rol dışı kart, hesabın giremeyeceği alana değil kök adrese gider (giriş kartı gibi).
+  const url = state === 'wrong_role' ? links.home() : WIDGET_URLS[name]();
+  const props: BaseProps = { ...baseFor(env, url), state, card: stateCard(env, name, state) };
   return {
     name,
     options: CUSTOMER_WIDGETS.includes(name) ? null : undefined,
@@ -288,21 +291,17 @@ async function planDealer(env: Env): Promise<Plan> {
   // Bekleyenler
   if (rows.length === 0) writes.push(stateWrite(env, 'OlexBekleyenler', resolveState('OlexBekleyenler', audience)));
   else {
-    // Özet erişimi yoksa (engelli) bitecek garanti satırı düşer, diğerleri kalır; yalnız gerçek hata yazımı atlar.
-    const dropExpiring = rows.includes('expiring') && overview.status === 'blocked';
-    const incomplete =
-      (rows.includes('ready') && ready?.status !== 'ok') ||
-      (rows.includes('claim') && claims?.status !== 'ok') ||
-      (rows.includes('expiring') && overview.status === 'failed');
-    if (incomplete) failed = true;
-    else if (dropExpiring && rows.length === 1) writes.push(stateWrite(env, 'OlexBekleyenler', 'no_permission'));
+    // Engelli (403) kaynağın satırı düşer, diğerleri kalır; yalnız gerçek hata yazımı atlar.
+    const plan = planPending(rows, { ready: ready?.status, claim: claims?.status, expiring: overview.status });
+    if (plan.kind === 'failed') failed = true;
+    else if (plan.kind === 'blocked') writes.push(stateWrite(env, 'OlexBekleyenler', 'no_permission'));
     else {
       const expiring = valueOf(overview)?.series.find((s) => s.key === 'cards')?.points.find((p) => p.key === 'warranties_expiring')?.value ?? null;
       const input = { audience, ready: valueOf(ready), claims: valueOf(claims), expiring };
       const base = baseFor(env, WIDGET_URLS.OlexBekleyenler());
       const pending = (at: Date) => {
         const summary = buildPending(input, { t: env.t, locale: env.lang, now: at, brandLogo: () => null });
-        return dropExpiring ? { ...summary, rows: summary.rows.filter((r) => r.id !== 'expiring') } : summary;
+        return plan.dropped.length === 0 ? summary : { ...summary, rows: summary.rows.filter((r) => !plan.dropped.includes(r.id)) };
       };
       writes.push(timelineWrite('OlexBekleyenler', buildEntries('OlexBekleyenler', now, (at) => ({ ...base, ...pending(at) }), stale)));
     }
@@ -332,6 +331,8 @@ async function run(me: MobileMe, ticket: SyncTicket, now: Date): Promise<boolean
   if (ticket.ownerChanged) {
     await wipeWidgets(() => syncGate.canWrite(ticket));
     if (!syncGate.canWrite(ticket)) return false;
+    // Yarım kalan temizliği sonraki bilet yeniden yapar; tamamlandığı burada kaydedilir.
+    syncGate.wiped(ticket);
   }
 
   const probe: AudienceInput = {
@@ -367,7 +368,7 @@ async function run(me: MobileMe, ticket: SyncTicket, now: Date): Promise<boolean
 
   // Çıkış bu sırada olduysa ve sonrasında yeni eşitleme başlamadıysa görseller de silinir; yeni eşitlemenin dosyalarına dokunulmaz.
   const aborted = () => {
-    if (syncGate.generation() !== ticket.generation && syncGate.latest() === ticket.id) images?.purgeAll();
+    if (syncGate.shouldPurge(ticket)) images?.purgeAll();
     return false;
   };
   let failed = plan.failed;
