@@ -7,7 +7,6 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useCSSVariable } from 'uniwind';
 
 import type { components } from '@/core/api/schema';
-import { API_URL } from '@/core/config';
 import { formatDigits, intlLocale } from '@/core/digits';
 import { formatDate } from '@/features/services/lib';
 import { cn } from '@/ui/cn';
@@ -15,21 +14,13 @@ import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
 import { Text } from '@/ui/text';
 
+import { brandLogoUrl, heroUrl } from './hero-url';
 import { splitTimeLeft } from './time-left';
+
+export { brandLogoUrl, heroUrl };
 
 type PortalVehicle = components['schemas']['PortalVehicle'];
 type ActiveWarranty = components['schemas']['PortalActiveWarranty'];
-
-/** Model hero → brand hero → default (backend fallback chain, public and cacheable). */
-export function heroUrl(v: Pick<PortalVehicle, 'car_brand' | 'car_model'>) {
-  if (v.car_model?.uuid) return `${API_URL}/v1/public/vehicle-heroes/models/${v.car_model.uuid}`;
-  if (v.car_brand?.uuid) return `${API_URL}/v1/public/vehicle-heroes/brands/${v.car_brand.uuid}`;
-  return `${API_URL}/v1/public/vehicle-heroes/default`;
-}
-
-export function brandLogoUrl(brandUuid: string) {
-  return `${API_URL}/v1/public/brand-logos/${brandUuid}`;
-}
 
 /** Cards rise in one after another; Reanimated skips it under Reduce Motion. */
 export function Rise({ index, children, className }: { index: number; children: React.ReactNode; className?: string }) {
