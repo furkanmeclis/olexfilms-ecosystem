@@ -44,7 +44,8 @@ export function moduleOn(input: AudienceInput, key: string): boolean {
 export function quickActions(input: AudienceInput): { id: QuickActionId }[] {
   const ids: QuickActionId[] = ['scan'];
   if (can(input, 'services.write')) ids.push('new_service');
-  if (can(input, 'measurements.read') && moduleOn(input, 'measurements')) ids.push('measure');
+  // Ölçüm sekmesi `services.write` ister (`bayi/_layout.tsx`); gizli sekmeye gidilemez, o yüzden ikisi de gerekir.
+  if (can(input, 'services.write') && can(input, 'measurements.read') && moduleOn(input, 'measurements')) ids.push('measure');
   if (can(input, 'customers.read')) ids.push('customers');
   else if (can(input, 'services.read')) ids.push('services');
   return ids.slice(0, MAX_QUICK_ACTIONS).map((id) => ({ id }));

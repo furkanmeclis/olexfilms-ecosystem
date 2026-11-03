@@ -144,6 +144,11 @@ describe('quickActions', () => {
     assert.ok(!list.includes('customers'));
   });
 
+  it('ölçüm sekmesi services.write ister: yalnız measurements.read ile ölçüm düğmesi yok (gizli sekmeye gidemez)', () => {
+    const list = ids(input({ permissions: perms('services.read', 'measurements.read') }));
+    assert.ok(!list.includes('measure'));
+  });
+
   it('customers.read da services.read da yoksa ikisi de yok', () => {
     const list = ids(input({ permissions: perms('services.write', 'measurements.read') }));
     assert.deepEqual(list, ['scan', 'new_service', 'measure']);
