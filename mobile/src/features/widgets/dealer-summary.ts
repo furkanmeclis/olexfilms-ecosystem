@@ -112,8 +112,10 @@ export function blockedCard(
 }
 
 /** Sırada en uzun bekleyen hizmet; `buildPanom` ve kapak görseli aynı seçimi kullanır. */
-export function oldestQueued<S extends ServiceFields>(items: S[]): S | undefined {
-  return boardRows(items, { ...BOARD_GROUPS[0], limit: Infinity })[0];
+export function oldestQueued<S extends ServiceFields>(next: S[], active: S[]): S | undefined {
+  return next.length > 0
+    ? boardRows(next, { ...BOARD_GROUPS[0], limit: Infinity })[0]
+    : boardRows(active, { ...BOARD_GROUPS[1], limit: Infinity })[0];
 }
 
 export function buildPanom(
@@ -123,7 +125,11 @@ export function buildPanom(
   const { t, locale, now } = ctx;
   const title = t('panom.title');
   const totals = { next: input.next.total, active: input.active.total, done: input.done.total };
-  const queue = boardRows(input.next.items, { ...BOARD_GROUPS[0], limit: Infinity });
+  // Sıra boşsa liste ve "en uzun bekleyen" işlemdeki hizmetlerden gelir.
+  const queueEmpty = totals.next === 0;
+  const queue = queueEmpty
+    ? boardRows(input.active.items, { ...BOARD_GROUPS[1], limit: Infinity })
+    : boardRows(input.next.items, { ...BOARD_GROUPS[0], limit: Infinity });
   const wait = (s: ServiceFields) => staleAgo(now.getTime() - Date.parse(s.created_at), t);
 
   const rows: PanomRow[] = queue.slice(0, PANOM_ROWS).map((s) => ({
@@ -139,7 +145,7 @@ export function buildPanom(
     initial: firstChar(s.car_brand?.name ?? carTitle(s, t)),
   }));
 
-  const oldest = oldestQueued(input.next.items);
+  const oldest = queue[0];
   const next = count(totals.next, locale);
   const active = count(totals.active, locale);
   const done = count(totals.done, locale);
@@ -148,6 +154,7 @@ export function buildPanom(
     next,
     active,
     done,
+    queueEmpty,
     labels: {
       next: t('panom.next'),
       nextAction: t('panom.next_action'),
@@ -170,8 +177,9 @@ export function buildPanom(
     // Yalnız sayılar: kilit ekranında araç, plaka, müşteri yok.
     locked: {
       title,
-      count: next,
-      countLabel: t('panom.lock_queue_label'),
+      // Yuvarlakta tek sayı sığar; sıra boşken "0" yerine işlemdeki sayı.
+      count: queueEmpty ? active : next,
+      countLabel: t(queueEmpty ? 'panom.active' : 'panom.lock_queue_label'),
       main: t('panom.count_next_short', { count: next }),
       sub: t('panom.lock_rect_second', { active, done }),
       inline: t('panom.lock_inline', { next, active }),

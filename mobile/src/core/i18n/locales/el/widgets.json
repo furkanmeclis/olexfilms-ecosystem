@@ -18,6 +18,7 @@
   "koruma.last_service": "Τελευταίο σέρβις {{date}}",
   "card.title": "Κάρτα εγγύησης",
   "card.until": "Έως {{date}}",
+  "service.title": "Κατάσταση υπηρεσίας",
   "service.no_open_title": "Κανένα ανοιχτό σέρβις",
   "service.no_open_body": "Όταν υπάρχει σέρβις σε εξέλιξη, θα δείτε εδώ την κατάστασή του.",
   "service.steps.pending": "Σε αναμονή",

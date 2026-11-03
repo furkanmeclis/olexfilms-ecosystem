@@ -110,6 +110,13 @@ describe('buildPanom', () => {
     for (const secret of [...SECRETS, '34 TST 001', 'Marka', 'Model']) assert.ok(!text.includes(secret), secret);
   });
 
+  it('sıra boşken yuvarlak kilit işlemdeki sayıyı gösterir', () => {
+    const { locked } = buildPanom({ next: { ...next, items: [], total: 0 }, active, done, canCreate: true }, ctx);
+    assert.equal(locked?.count, '5');
+    assert.equal(locked?.countLabel, 'panom.active');
+    assert.equal(locked?.main, 'panom.count_next_short|count=0');
+  });
+
   it('satır alanları ve meta: ilk kategori + bekleme', () => {
     const [row] = buildPanom({ next, active, done, canCreate: true }, ctx).rows;
     assert.equal(row.url, `olexfilms://bayi/services/${id(1)}`);
@@ -137,7 +144,7 @@ describe('buildPanom', () => {
     const uri = 'file:///hero/m.png';
     assert.equal(buildPanom({ next, active, done, canCreate: true, longestHeroUri: uri }, ctx).longest?.heroUri, uri);
     assert.equal(buildPanom({ next, active, done, canCreate: true }, ctx).longest?.heroUri, null);
-    assert.equal(oldestQueued(next.items)?.uuid, id(1));
+    assert.equal(oldestQueued(next.items, [])?.uuid, id(1));
   });
 
   it('longest en eski sıradaki hizmet', () => {
@@ -169,7 +176,9 @@ describe('buildPanom', () => {
   it('sıra boş ama işlemde varsa empty değil', () => {
     const out = buildPanom({ next: page([]), active, done: page([]), canCreate: true }, ctx);
     assert.equal(out.state, 'ok');
-    assert.deepEqual(out.rows, []);
+    assert.equal(out.queueEmpty, true);
+    assert.equal(out.rows.length, active.items.length);
+    assert.equal(out.longest?.uuid, active.items[0].uuid);
   });
 });
 

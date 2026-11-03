@@ -38,7 +38,7 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(props.url),
@@ -115,19 +115,25 @@ const HizliLayout = (props: QuickProps, environment: WidgetEnvironment) => {
         spacing={0}
         modifiers={[
           padding({ all: 14 }),
-          frame({ maxWidth: Infinity, maxHeight: Infinity }),
+          frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
           background(C.green),
           containerBackground(C.green, 'widget'),
           widgetURL(scan?.url ?? props.url),
         ]}>
-        {mark(12, 20, true)}
+        {row({ spacing: 6 }, mark(12, 20, true), label(props.title, props.rtl ? 13 : 12, 'semibold', C.onGreenMuted))}
         <Spacer />
         {row(
-          { spacing: 10 },
-          <ZStack modifiers={[frame({ width: 48, height: 48 }), background(C.amber), clipShape('roundedRectangle', 14)]}>
-            {icon('viewfinder', 26, C.pri)}
-          </ZStack>,
-          label(scan?.label ?? '', 26, 'bold', C.onGreen),
+          {
+            spacing: 10,
+            modifiers: [
+              frame({ height: 72 }),
+              frame({ maxWidth: Infinity }),
+              background(C.amber),
+              clipShape('roundedRectangle', 18),
+            ],
+          },
+          icon('viewfinder', 30, C.green),
+          label(scan?.label ?? '', 26, 'bold', C.green),
         )}
       </VStack>
     );

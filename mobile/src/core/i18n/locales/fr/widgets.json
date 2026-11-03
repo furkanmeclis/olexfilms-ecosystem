@@ -18,6 +18,7 @@
   "koruma.last_service": "Dernière prestation {{date}}",
   "card.title": "Carte de garantie",
   "card.until": "Jusqu’au {{date}}",
+  "service.title": "État du service",
   "service.no_open_title": "Aucune prestation en cours",
   "service.no_open_body": "Quand une prestation sera en cours, vous verrez son état ici.",
   "service.steps.pending": "En attente",

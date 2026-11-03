@@ -628,11 +628,18 @@ describe('Panom düzeni', () => {
 
   it('gerçek etiketler: küçük, orta, büyük', () => {
     const small = texts(panomProps(false), 'systemSmall');
-    for (const s of ['Sıradaki işlem', 'İşlemde 5', 'Bugün 2']) assert.ok(small.includes(s), s);
+    for (const s of ['Sıradaki işlem', 'İşlemde', '5', 'Bugün biten', '2']) assert.ok(small.includes(s), s);
     const medium = texts(panomProps(false), 'systemMedium');
     for (const s of ['Sıradaki', 'İşlemde', 'Bugün biten', 'Audi A4 · 06 DEF 456']) assert.ok(medium.includes(s), s);
     const large = texts(panomProps(false), 'systemLarge');
     for (const s of ['Sıradaki işlemler', 'İşlemde 5', 'Bugün biten 2']) assert.ok(large.includes(s), s);
+  });
+
+  it('sıra boşsa küçük ve büyük boy işlemdekileri öne alır', () => {
+    const props = { ...panomProps(false), queueEmpty: true };
+    assert.ok(texts(props, 'systemSmall').includes('İşlemde'));
+    assert.ok(!texts(props, 'systemSmall').includes('Sıradaki işlem'));
+    assert.ok(!texts(props, 'systemLarge').includes('Sıradaki işlemler'));
   });
 
   it('orta boy kapak: varsa çizilir, yoksa yer kaplamaz', () => {

@@ -228,6 +228,8 @@ export type PanomData = {
   next: string;
   active: string;
   done: string;
+  /** Sırada iş yok: büyük sayı, liste ve "en uzun bekleyen" işlemdekilere döner. */
+  queueEmpty: boolean;
   labels: PanomLabels;
   rows: PanomRow[];
   longest: PanomLongest | null;

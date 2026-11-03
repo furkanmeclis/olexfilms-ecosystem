@@ -243,7 +243,7 @@ function stepsOf(status: string, t: TFn): HizmetStep[] {
 
 export function buildHizmet(inputs: HizmetInput[], ctx: CustomerCtx): HizmetSummary {
   const { t } = ctx;
-  const eyebrow = t('koruma.eyebrow');
+  const eyebrow = t('service.title');
   const sources = new Map(inputs.map((i) => [i.vehicle.uuid, i.services ?? i.vehicle.services]));
   const prepared = prepare(inputs.map((i) => i.vehicle), t);
   if (prepared.length === 0) return { state: 'empty', card: noVehicleCard(eyebrow, t), eyebrow, vehicles: [] };

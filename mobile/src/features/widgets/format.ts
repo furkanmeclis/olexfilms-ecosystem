@@ -70,9 +70,9 @@ export function maskedMoney(currency: string, locale: string): string {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     })
-      .formatToParts(0)
-      .map((p) => (p.type === 'integer' ? MASK : p.value))
-      .join('');
+      // `formatToParts` Hermes'te sembol yerine para kodu verir (TRY); `format` tutarla aynı sembolü verir.
+      .format(0)
+      .replace(/[0-9٠-٩]+/, MASK);
   } catch {
     return `${currency} ${MASK}`;
   }

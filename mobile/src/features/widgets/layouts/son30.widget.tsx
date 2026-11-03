@@ -36,7 +36,7 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(props.url),
@@ -197,7 +197,7 @@ const Son30Layout = (props: KpiProps, environment: WidgetEnvironment) => {
               {label(bar.value, 11, 'semibold', C.fg, 1, [monospacedDigit()])}
               <RoundedRectangle
                 cornerRadius={6}
-                modifiers={[foregroundStyle(bar.current ? C.pri : C.sec), frame({ height: Math.max(2, bar.height) })]}
+                modifiers={[foregroundStyle(bar.current ? C.pri : C.track), frame({ height: Math.max(2, bar.height) })]}
               />
               {label(bar.label, 10, 'regular', C.mfg)}
             </VStack>

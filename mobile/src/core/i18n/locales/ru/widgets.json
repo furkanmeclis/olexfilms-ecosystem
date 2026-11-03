@@ -26,6 +26,7 @@
   "koruma.last_service": "Последний сервис {{date}}",
   "card.title": "Гарантийная карта",
   "card.until": "До {{date}}",
+  "service.title": "Статус услуги",
   "service.no_open_title": "Нет открытой услуги",
   "service.no_open_body": "Когда услуга будет в работе, её статус появится здесь.",
   "service.steps.pending": "Ожидает",

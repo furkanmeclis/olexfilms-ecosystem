@@ -18,6 +18,7 @@
   "koruma.last_service": "Ultimo servizio {{date}}",
   "card.title": "Carta di garanzia",
   "card.until": "Fino al {{date}}",
+  "service.title": "Stato del servizio",
   "service.no_open_title": "Nessun servizio aperto",
   "service.no_open_body": "Quando avrai un servizio in corso, ne vedrai lo stato qui.",
   "service.steps.pending": "In attesa",

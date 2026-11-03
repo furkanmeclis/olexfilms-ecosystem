@@ -37,7 +37,7 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(props.url),
@@ -155,7 +155,8 @@ const BekleyenLayout = (props: PendingProps, environment: WidgetEnvironment) => 
       <VStack alignment={edge} spacing={0} modifiers={[padding({ vertical: 10, horizontal: 14 })].concat(homeRoot)}>
         {row({ spacing: 6 }, header(props.title), <Spacer />, staleLine())}
         <Spacer />
-        {rows.slice(0, 3).map((r) => mediumRow(r))}
+        <VStack spacing={8}>{rows.slice(0, 3).map((r) => mediumRow(r))}</VStack>
+        <Spacer />
       </VStack>
     );
   }

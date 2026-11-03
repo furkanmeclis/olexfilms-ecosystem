@@ -18,6 +18,7 @@
   "koruma.last_service": "Son xidmət {{date}}",
   "card.title": "Zəmanət kartı",
   "card.until": "{{date}} tarixinədək",
+  "service.title": "Xidmət statusu",
   "service.no_open_title": "Açıq xidmət yoxdur",
   "service.no_open_body": "Davam edən xidmətin olduqda statusunu burada görəcəksən.",
   "service.steps.pending": "Gözləyir",

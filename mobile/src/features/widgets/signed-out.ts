@@ -16,7 +16,7 @@ export type SignedOutExtras = {
 const TITLE_KEYS: Record<WidgetName, string> = {
   OlexKoruma: 'koruma.eyebrow',
   OlexGarantiKarti: 'card.title',
-  OlexHizmetDurumu: 'koruma.eyebrow',
+  OlexHizmetDurumu: 'service.title',
   OlexPanom: 'panom.title',
   OlexHizliIslem: 'quick.title',
   OlexSon30Gun: 'kpi.title',

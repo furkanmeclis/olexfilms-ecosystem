@@ -1,8 +1,8 @@
 // Widget görsellerini App Group alanına yazar. Dosya işlemleri native; sınama cihazda (Task 24).
-import { Asset } from 'expo-asset';
 import { Directory, File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { widgetsDirectory } from 'expo-widgets';
+import { Image } from 'react-native';
 
 import type { components } from '@/core/api/schema';
 import { brandLogoUrl, heroUrl } from '@/features/customer-space/hero-url';
@@ -129,10 +129,12 @@ export async function storeMarks(): Promise<{ markUri: string | null; markMonoUr
   const uris: (string | null)[] = [];
   for (const { file, module } of MARK_ASSETS) {
     try {
-      const asset = await Asset.fromModule(module).downloadAsync();
-      if (!asset.localUri) throw new Error('no local uri');
+      // `Asset.fromModule` RN 0.88'de `AssetRegistry` bulamıyor; adres geliştirmede Metro, derlemede dosyadır.
+      const uri = Image.resolveAssetSource(module)?.uri;
+      if (!uri) throw new Error('no asset uri');
       const target = new File(shared, file);
-      await new File(asset.localUri).copy(target, { overwrite: true });
+      if (uri.startsWith('http')) await File.downloadFileAsync(uri, target, { idempotent: true });
+      else await new File(uri).copy(target, { overwrite: true });
       uris.push(target.uri);
     } catch {
       uris.push(null);

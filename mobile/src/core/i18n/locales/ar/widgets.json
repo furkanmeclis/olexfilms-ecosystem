@@ -34,6 +34,7 @@
   "koruma.last_service": "آخر خدمة {{date}}",
   "card.title": "بطاقة الضمان",
   "card.until": "حتى {{date}}",
+  "service.title": "حالة الخدمة",
   "service.no_open_title": "لا توجد خدمة مفتوحة",
   "service.no_open_body": "عندما تكون لديك خدمة قيد التنفيذ، ستظهر حالتها هنا.",
   "service.steps.pending": "قيد الانتظار",

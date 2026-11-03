@@ -40,7 +40,7 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const rootTo = (url: string): Mods => [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(url),
@@ -244,7 +244,20 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
     return props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, lines) : null;
   }
 
+  /** Simge, ad, sağa yaslı değer: dar boyda da değer kesilmez. */
+  function statLine(symbol: string, caption: string, value: string) {
+    return row(
+      { spacing: 4, modifiers: [frame({ maxWidth: Infinity })] },
+      icon(symbol, 11, C.mfg),
+      label(caption, 11, 'regular', C.mfg),
+      <Spacer />,
+      label(value, 12, 'semibold', C.fg, 1, [monospacedDigit()]),
+    );
+  }
+
   function small() {
+    // Sıra boşsa asıl iş işlemdekilerdir: büyük sayı onu gösterir.
+    const idle = props.queueEmpty;
     return (
       <VStack alignment={edge} spacing={0} modifiers={[padding({ all: 14 })].concat(homeRoot)}>
         {header(props.title)}
@@ -252,18 +265,18 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
         {row(
           { spacing: 8 },
           <ZStack modifiers={[frame({ width: 30, height: 30 }), background(C.sec), clipShape('circle')]}>
-            {icon('clock', 16, C.pri)}
+            {icon(idle ? 'wrench.and.screwdriver' : 'clock', 16, C.pri)}
           </ZStack>,
-          label(props.next, 44, 'bold', C.pri, 1, [monospacedDigit()]),
+          label(idle ? props.active : props.next, 40, 'bold', C.pri, 1, [monospacedDigit()]),
         )}
-        {label(props.labels.nextAction, 13, 'semibold', C.fg)}
+        {label(idle ? props.labels.active : props.labels.nextAction, 13, 'semibold', C.fg)}
         <Spacer />
-        {row(
-          { spacing: 4 },
-          stat('wrench.and.screwdriver', props.labels.active, props.active, 11),
-          <Spacer />,
-          stat('checkmark.circle', props.labels.today, props.done, 11),
-        )}
+        <VStack alignment={edge} spacing={2}>
+          {idle
+            ? statLine('clock', props.labels.next, props.next)
+            : statLine('wrench.and.screwdriver', props.labels.active, props.active)}
+          {statLine('checkmark.circle', props.labels.doneToday, props.done)}
+        </VStack>
         {staleLine(2)}
       </VStack>
     );
@@ -311,15 +324,17 @@ const PanomLayout = (props: PanomProps, environment: WidgetEnvironment) => {
           mark(),
           label(props.title, 18, 'semibold', C.fg),
           <Spacer />,
-          stat('wrench.and.screwdriver', props.labels.active, props.active, 12),
+          props.queueEmpty
+            ? stat('clock', props.labels.next, props.next, 12)
+            : stat('wrench.and.screwdriver', props.labels.active, props.active, 12),
           stat('checkmark.circle', props.labels.doneToday, props.done, 12),
         )}
         {staleLine()}
         {row(
           { spacing: 8 },
-          icon('clock', 15, C.pri),
-          label(props.labels.queue, 13, 'semibold', C.fg),
-          label(props.next, 12, 'semibold', C.pri, 1, [
+          icon(props.queueEmpty ? 'wrench.and.screwdriver' : 'clock', 15, C.pri),
+          label(props.queueEmpty ? props.labels.active : props.labels.queue, 13, 'semibold', C.fg),
+          label(props.queueEmpty ? props.active : props.next, 12, 'semibold', C.pri, 1, [
             monospacedDigit(),
             padding({ horizontal: 7, vertical: 1 }),
             background(C.sec),

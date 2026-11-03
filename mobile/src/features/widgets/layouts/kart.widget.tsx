@@ -36,7 +36,7 @@ const KartLayout = (props: KartProps, environment: WidgetEnvironment<KartConfig>
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const root: Mods = [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.green),
     containerBackground(C.green, 'widget'),
   ];

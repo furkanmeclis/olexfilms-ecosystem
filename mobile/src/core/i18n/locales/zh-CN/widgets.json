@@ -18,6 +18,7 @@
   "koruma.last_service": "最近服务 {{date}}",
   "card.title": "质保卡",
   "card.until": "有效期至 {{date}}",
+  "service.title": "服务状态",
   "service.no_open_title": "没有进行中的服务",
   "service.no_open_body": "有服务进行时，您可以在这里查看状态。",
   "service.steps.pending": "待处理",

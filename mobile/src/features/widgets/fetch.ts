@@ -19,10 +19,11 @@ export type Fetched<T> =
   | { status: 'blocked'; state: Extract<WidgetState, 'no_permission' | 'module_off'> }
   | { status: 'failed' };
 
-/** 403 `FEATURE_DISABLED` modül kapalı, diğer 403 izin yok; geri kalanı (ağ, 5xx, 401) hata. */
+/** 403 `FEATURE_DISABLED` ve 404 (uç mobile açık değil) modül kapalı, diğer 403 izin yok; geri kalanı (ağ, 5xx, 401) hata. */
 function classify<T>(result: PromiseSettledResult<T>): Fetched<T> {
   if (result.status === 'fulfilled') return { status: 'ok', value: result.value };
   const e = result.reason;
+  if (isApiError(e) && e.status === 404) return { status: 'blocked', state: 'module_off' };
   if (isApiError(e) && e.status === 403) {
     return { status: 'blocked', state: e.code === 'FEATURE_DISABLED' ? 'module_off' : 'no_permission' };
   }

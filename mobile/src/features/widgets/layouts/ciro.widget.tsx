@@ -39,7 +39,7 @@ const CiroLayout = (props: RevenueProps, environment: WidgetEnvironment) => {
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot: Mods = [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(props.url),

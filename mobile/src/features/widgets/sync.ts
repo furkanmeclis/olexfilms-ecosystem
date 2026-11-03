@@ -233,7 +233,7 @@ async function planDealer(env: Env): Promise<Plan> {
   else if (board?.status === 'ok') {
     const logos = new Map<string, string | null>();
     if (env.images) {
-      for (const s of board.value.next.items) {
+      for (const s of board.value.next.total > 0 ? board.value.next.items : board.value.active.items) {
         const brand = s.car_brand?.uuid;
         if (brand && !logos.has(brand) && env.alive()) {
           const uri = await env.images.storeBrandLogo(brand);
@@ -243,7 +243,7 @@ async function planDealer(env: Env): Promise<Plan> {
       }
     }
     // Kapak yeni uç istemez: model ve marka hizmette var, kamuya açık hero ucundan okunur.
-    const oldest = oldestQueued(board.value.next.items);
+    const oldest = oldestQueued(board.value.next.items, board.value.active.items);
     let longestHeroUri: string | null = null;
     if (env.images && oldest && env.alive()) {
       longestHeroUri = await env.images.storeHero(oldest);

@@ -18,6 +18,7 @@
   "koruma.last_service": "Son hizmet {{date}}",
   "card.title": "Garanti kartı",
   "card.until": "{{date}} tarihine kadar",
+  "service.title": "Hizmet durumu",
   "service.no_open_title": "Açık hizmet yok",
   "service.no_open_body": "Devam eden bir hizmetin olduğunda durumunu burada görürsün.",
   "service.steps.pending": "Beklemede",

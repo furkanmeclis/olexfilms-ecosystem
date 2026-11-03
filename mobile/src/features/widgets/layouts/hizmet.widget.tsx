@@ -38,7 +38,7 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
   // Extension LTR çizer (`CFBundleLocalizations` yok): Arapçada kenarlar elle çevrilir.
   const edge = props.rtl ? 'trailing' : 'leading';
   const homeRoot = (url: string): Mods => [
-    frame({ maxWidth: Infinity, maxHeight: Infinity }),
+    frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: edge }),
     background(C.card),
     containerBackground(C.card, 'widget'),
     widgetURL(url),
@@ -166,16 +166,16 @@ const HizmetLayout = (props: HizmetProps, environment: WidgetEnvironment<HizmetC
   function small(v: HizmetVehicle, s: HizmetService) {
     return (
       <ZStack alignment={props.rtl ? 'topLeading' : 'topTrailing'} modifiers={homeRoot(s.url)}>
-        {hero(v.heroUri, 96, 58, props.rtl ? -8 : 8, 34)}
+        {/* Başlık görselin altında kalır; bayat satırı başlığı yukarı iter, o zaman görsel çizilmez. */}
+        {props.staleLabel ? null : hero(v.heroUri, 96, 58, props.rtl ? -8 : 8, 34)}
         <VStack alignment={edge} spacing={0} modifiers={[padding({ all: 14 })]}>
           {row({ spacing: 6 }, mark(), pill(s))}
           <Spacer />
-          <VStack alignment={edge} spacing={1}>
+          <VStack alignment={edge} spacing={1} modifiers={[padding({ bottom: 8 })]}>
             {latin(v.title, 20, 'semibold', C.fg)}
             {label(s.dealerName, 12, 'regular', C.mfg)}
             {props.staleLabel ? label(props.staleLabel, 11, 'regular', C.mfg, 2) : null}
           </VStack>
-          <Spacer />
           {stepBars(s)}
         </VStack>
       </ZStack>

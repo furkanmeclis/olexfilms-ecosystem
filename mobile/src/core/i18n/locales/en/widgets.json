@@ -18,6 +18,7 @@
   "koruma.last_service": "Last service {{date}}",
   "card.title": "Warranty card",
   "card.until": "Until {{date}}",
+  "service.title": "Service status",
   "service.no_open_title": "No open service",
   "service.no_open_body": "When you have a service in progress, you will see its status here.",
   "service.steps.pending": "Pending",
