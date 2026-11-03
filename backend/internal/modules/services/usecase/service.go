@@ -197,6 +197,7 @@ type Service struct {
 	certificatePolicy CertificatePolicy
 	fleetPortal       FleetPortal     // TEC-474: fleet users on the portal detail / PDF
 	intakePhotos      IntakePhotoGate // TEC-499: photo standard rule
+	pop               Popularity      // TEC-1043: frequent vehicles ranking
 }
 
 // New creates the service.

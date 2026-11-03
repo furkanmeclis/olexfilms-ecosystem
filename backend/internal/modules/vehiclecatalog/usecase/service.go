@@ -17,6 +17,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/popularity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -110,13 +111,56 @@ type Store interface {
 	ListCarModelPowertrainFacets(ctx context.Context, arg db.ListCarModelPowertrainFacetsParams) ([]db.ListCarModelPowertrainFacetsRow, error)
 }
 
+// Popularity scores car brands / models for the popularity sort (TEC-1043,
+// *popularity.Service).
+type Popularity interface {
+	CarBrands(ctx context.Context, scope popularity.Scope) (popularity.Result, error)
+	CarModels(ctx context.Context, scope popularity.Scope, carBrandID int64) (popularity.Result, error)
+}
+
+// ErrPopularityUnavailable: the popularity sort was asked for but no engine
+// is wired (or the scope has no brand).
+var ErrPopularityUnavailable = errors.New("vehicle catalog: popularity sort unavailable")
+
 // Service is the vehicle catalog use case.
 type Service struct {
 	store Store
+	pop   Popularity
 }
 
 // New creates the service.
 func New(store Store) *Service { return &Service{store: store} }
+
+// WithPopularity wires the popularity engine of the popularity sort.
+func (s *Service) WithPopularity(p Popularity) *Service {
+	s.pop = p
+	return s
+}
+
+// popularityArgs returns the pop_ids / pop_scores list arguments: nil unless
+// the sort is popularity. Only the order uses them; no score is returned.
+func (s *Service) popularityArgs(ctx context.Context, sort apiquery.ResolvedSort, scope popularity.Scope, carBrandID int64) ([]int64, []float64, error) {
+	if sort.Key != model.SortPopularity {
+		return nil, nil, nil
+	}
+	if s.pop == nil || scope.BrandID == 0 {
+		return nil, nil, ErrPopularityUnavailable
+	}
+	var (
+		res popularity.Result
+		err error
+	)
+	if carBrandID != 0 {
+		res, err = s.pop.CarModels(ctx, scope, carBrandID)
+	} else {
+		res, err = s.pop.CarBrands(ctx, scope)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	ids, scores := popularity.Arrays(res.Scores)
+	return ids, scores, nil
+}
 
 // --- Image identity ---------------------------------------------------------
 
@@ -260,8 +304,13 @@ func (s *Service) ListBrands(ctx context.Context, f model.BrandFilter) ([]model.
 	if f.Sort.Key == "" {
 		f.Sort = apiquery.ResolvedSort{Key: model.BrandSort.Default.Field}
 	}
+	popIDs, popScores, err := s.popularityArgs(ctx, f.Sort, f.Popularity, 0)
+	if err != nil {
+		return nil, 0, err
+	}
 	rows, err := s.store.ListCarBrands(ctx, db.ListCarBrandsParams{
 		Active: active, HasLogo: hasLogo, Q: q, SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
+		PopIds: popIDs, PopScores: popScores,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
@@ -530,11 +579,21 @@ func (s *Service) ListModels(ctx context.Context, f model.ModelFilter) ([]model.
 	if f.Sort.Key == "" {
 		f.Sort = apiquery.ResolvedSort{Key: model.ModelSort.Default.Field}
 	}
+	if f.Sort.Key == model.SortPopularity && !brandID.Valid {
+		// Model popularity is counted inside one car brand (legacy
+		// carModelScores(brandId)); the handler asks for brand_uuid first.
+		return nil, 0, ErrPopularityUnavailable
+	}
+	popIDs, popScores, err := s.popularityArgs(ctx, f.Sort, f.Popularity, brandID.Int64)
+	if err != nil {
+		return nil, 0, err
+	}
 	yearMin, yearMax := yearArg(f.Year.Min), yearArg(f.Year.Max)
 	rows, err := s.store.ListCarModels(ctx, db.ListCarModelsParams{
 		CarBrandID: brandID, Active: active, BrandActive: brandActive, Q: q,
 		BodyTypes: f.BodyTypes, Powertrains: f.Powertrains, YearMin: yearMin, YearMax: yearMax,
 		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
+		PopIds: popIDs, PopScores: popScores,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {

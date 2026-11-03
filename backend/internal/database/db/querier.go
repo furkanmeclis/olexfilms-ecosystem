@@ -13,6 +13,10 @@ import (
 
 type Querier interface {
 	ActivateScheduledServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error)
+	// Catalog rows of the ids the engine ranked, for GET
+	// /v1/stats/frequent-vehicles (active rows only, like the catalog pickers).
+	ActiveCarBrandsByIDs(ctx context.Context, ids []int64) ([]ActiveCarBrandsByIDsRow, error)
+	ActiveCarModelsByIDs(ctx context.Context, arg ActiveCarModelsByIDsParams) ([]ActiveCarModelsByIDsRow, error)
 	// Projection of one ledger row (period = YYYY-MM of created_at, UTC).
 	AddAIUsageMonthly(ctx context.Context, arg AddAIUsageMonthlyParams) (AiUsageMonthly, error)
 	AddAnnouncementAudience(ctx context.Context, arg AddAnnouncementAudienceParams) (AnnouncementAudience, error)
@@ -887,14 +891,6 @@ type Querier interface {
 	// not void, not past end_at), expired (ended by period_to, not void) and
 	// started within the period.
 	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
-	// Frequent vehicles of one organization: the car brands / models the
-	// organization services most, for the "frequent first" section of the
-	// mobile vehicle picker (legacy LookupPopularityService parity, dealer
-	// counts only). Only services of org_id inside the domain brand (K20);
-	// created_by_user_id narrows own / assigned grants. Every service except
-	// cancelled ones counts, whatever the period. Reads idx_services_org_status.
-	FrequentServicedCarBrands(ctx context.Context, arg FrequentServicedCarBrandsParams) ([]FrequentServicedCarBrandsRow, error)
-	FrequentServicedCarModels(ctx context.Context, arg FrequentServicedCarModelsParams) ([]FrequentServicedCarModelsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -3425,6 +3421,21 @@ type Querier interface {
 	OverviewTopCarModels(ctx context.Context, arg OverviewTopCarModelsParams) ([]OverviewTopCarModelsRow, error)
 	OverviewTopProducts(ctx context.Context, arg OverviewTopProductsParams) ([]OverviewTopProductsRow, error)
 	PingDB(ctx context.Context) (int32, error)
+	// TEC-1043: usage counts of the lookup popularity engine
+	// (internal/platform/popularity, legacy LookupPopularityService parity).
+	// One domain brand only (K20). org_id NULL counts every organization of the
+	// brand (the "general" count); org_id set counts that organization;
+	// created_by_user_id narrows it further for own / assigned grants.
+	//
+	// A car brand / model is used by a service (every status except cancelled,
+	// like the earlier frequent-vehicles query) and by a measurement report through the
+	// vehicle it is linked to (measurement_results has no car columns; legacy
+	// counted nexptg_reports.car_brand_id / car_model_id). Reports without a
+	// vehicle do not count. Like the legacy service, a report linked to a
+	// service counts next to the service.
+	// Service side reads idx_services_brand_car / idx_services_org_status.
+	PopularityCarBrandCounts(ctx context.Context, arg PopularityCarBrandCountsParams) ([]PopularityCarBrandCountsRow, error)
+	PopularityCarModelCounts(ctx context.Context, arg PopularityCarModelCountsParams) ([]PopularityCarModelCountsRow, error)
 	// Country x currency summary of one snapshot day in the caller's scope
 	// (org_ids NULL = whole brand): average / median deviation and the
 	// organizations with at least one product over the threshold.

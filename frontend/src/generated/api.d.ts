@@ -7861,7 +7861,7 @@ export interface paths {
         };
         /**
          * Car brands (paged, searchable)
-         * @description Needs `vehicle_catalog.read`. Global reference data, no organization context. Readers without `vehicle_catalog.write` see active brands only and `active` is ignored for them. Sortable (`sort`, one primary field, id tiebreak): name, model_count, active, created_at, updated_at. Default `name` (TEC-369). Unknown field → 400.
+         * @description Needs `vehicle_catalog.read`. Global reference data, no organization context. Readers without `vehicle_catalog.write` see active brands only and `active` is ignored for them. Sortable (`sort`, one primary field, id tiebreak): name, model_count, active, created_at, updated_at, popularity. Default `name` (TEC-369). Unknown field → 400. TEC-1043: `sort=popularity` orders most used first (60 % the active organization's services and measurement reports, 40 % those of every organization of the domain brand; counts cached 15 min), then name, then id. It needs an organization context (the organization gate runs only for this sort; a super admin without one ranks by the brand-wide usage only). `-popularity` → 400. Only the order changes: no count or score is returned.
          */
         get: operations["listVehicleBrands"];
         put?: never;
@@ -7898,7 +7898,7 @@ export interface paths {
         };
         /**
          * Car models (paged; search "brand model" or external id)
-         * @description Needs `vehicle_catalog.read`. `q` matches "brand model" text or the exact external id; `brand_uuid` limits to one brand. Readers without `vehicle_catalog.write` see active models of active brands only. Sortable (`sort`, one primary field, id tiebreak): brand, name, year_start, year_stop, body_type, powertrain (empty values last), active, created_at, updated_at. Default `brand` (then model name, TEC-369). Unknown field → 400.
+         * @description Needs `vehicle_catalog.read`. `q` matches "brand model" text or the exact external id; `brand_uuid` limits to one brand. Readers without `vehicle_catalog.write` see active models of active brands only. Sortable (`sort`, one primary field, id tiebreak): brand, name, year_start, year_stop, body_type, powertrain (empty values last), active, created_at, updated_at, popularity. Default `brand` (then model name, TEC-369). Unknown field → 400. TEC-1043: `sort=popularity` ranks the models of one car brand like `GET /v1/vehicle-catalog/brands` (`brand_uuid` required, else 400); only the order changes.
          */
         get: operations["listVehicleModels"];
         put?: never;
@@ -8364,7 +8364,7 @@ export interface paths {
         };
         /**
          * Car brands for portal sessions (active only)
-         * @description Same as `GET /v1/vehicle-catalog/brands` for portal (customer/fleet) tokens.
+         * @description Same as `GET /v1/vehicle-catalog/brands` for portal (customer/fleet) tokens, without `sort=popularity`.
          */
         get: operations["listPortalVehicleBrands"];
         put?: never;
@@ -8384,7 +8384,7 @@ export interface paths {
         };
         /**
          * Car models for portal sessions (active only)
-         * @description Same as `GET /v1/vehicle-catalog/models` for portal (customer/fleet) tokens.
+         * @description Same as `GET /v1/vehicle-catalog/models` for portal (customer/fleet) tokens, without `sort=popularity`.
          */
         get: operations["listPortalVehicleModels"];
         put?: never;
@@ -12533,8 +12533,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Car brands / models the active organization services most (vehicle picker)
-         * @description For the "Frequently used" section of the mobile vehicle picker (legacy lookup popularity order, organization counts only). Without car_brand_uuid it returns the most serviced car brands (brands, at most 8, models empty); with it the most serviced models of that car brand (models, at most 8, brands empty). Every service except cancelled ones counts. Same reach as /v1/stats/overview: only the active organization's own services inside the domain brand (K20); own / assigned grants count the services they created. Inactive catalog rows are left out. Ties sort by name.
+         * Most used car brands / models for the active organization (vehicle picker)
+         * @description For the "Frequently used" section of the mobile vehicle picker (legacy lookup popularity order). Without car_brand_uuid it returns the most used car brands (brands, at most 8, models empty); with it the most used models of that car brand (models, at most 8, brands empty). TEC-1043: ranked by the mixed popularity score, 60 % the active organization's usage and 40 % the usage of every organization of the domain brand (K20), so a new organization without services still gets a list. Usage = services (every status except cancelled) plus measurement reports through their linked vehicle; counts are cached 15 min. The organization part has the /v1/stats/overview reach; own / assigned grants count the records they created. Inactive catalog rows are left out. Ties sort by name, then id.
          */
         get: operations["getFrequentVehicles"];
         put?: never;
@@ -27037,14 +27037,20 @@ export interface components {
             has_logo: boolean;
             /** @description /brand-logos/{uuid} with a ?v= cache-buster when a logo exists. */
             logo_url: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The active organization's own usage only (services + measurement reports); 0 when only other organizations of the brand use it. Never another organization's count.
+             */
             service_count: number;
         };
         FrequentCarModel: {
             /** Format: uuid */
             uuid: string;
             name: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The active organization's own usage only (see FrequentCarBrand).
+             */
             service_count: number;
         };
         FrequentVehicles: {
