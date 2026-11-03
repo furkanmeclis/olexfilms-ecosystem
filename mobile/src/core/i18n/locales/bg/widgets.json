@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} месеца",
   "koruma.left_short_days_one": "{{count}} ден",
   "koruma.left_short_days_other": "{{count}} дни",
+  "koruma.left_caption": "остават",
+  "koruma.left_compact_years_months": "{{years}}г {{months}}м",
+  "koruma.left_compact_years": "{{count}}г",
+  "koruma.left_compact_months": "{{count}}м",
+  "koruma.left_compact_days": "{{count}}д",
   "koruma.active_count_one": "{{count}} активна гаранция",
   "koruma.active_count_other": "{{count}} активни гаранции",
   "koruma.last_service": "Последна услуга {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "В процес",
   "panom.done_today": "Завършени днес",
   "panom.longest_wait": "Най-дълго чакаща · {{wait}}",
+  "panom.today_short": "Днес",
   "panom.count_next_short": "{{count}} на опашката",
   "panom.lock_rect_second": "{{active}} в процес · {{done}} готови",
   "panom.lock_inline": "Моето табло · {{next}} на опашката, {{active}} в процес",
@@ -82,5 +88,9 @@
   "common.updated_at": "Обновено {{time}}",
   "common.auto_vehicle": "Автомобил",
   "common.days_count_one": "{{count}} ден",
-  "common.days_count_other": "{{count}} дни"
+  "common.days_count_other": "{{count}} дни",
+  "common.minutes_count_one": "{{count}} мин",
+  "common.minutes_count_other": "{{count}} мин",
+  "common.hours_count_one": "{{count}} ч",
+  "common.hours_count_other": "{{count}} ч"
 }

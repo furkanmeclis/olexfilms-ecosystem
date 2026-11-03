@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} міс.",
   "koruma.left_short_days_one": "{{count}} дн.",
   "koruma.left_short_days_other": "{{count}} дн.",
+  "koruma.left_caption": "залишилось",
+  "koruma.left_compact_years_months": "{{years}}р {{months}}м",
+  "koruma.left_compact_years": "{{count}}р",
+  "koruma.left_compact_months": "{{count}}м",
+  "koruma.left_compact_days": "{{count}}д",
   "koruma.active_count_one": "Активних гарантій: {{count}}",
   "koruma.active_count_other": "Активних гарантій: {{count}}",
   "koruma.last_service": "Останній сервіс {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "У роботі",
   "panom.done_today": "Завершено сьогодні",
   "panom.longest_wait": "Найдовше чекає · {{wait}}",
+  "panom.today_short": "Сьогодні",
   "panom.count_next_short": "У черзі: {{count}}",
   "panom.lock_rect_second": "У роботі: {{active}} · Завершено: {{done}}",
   "panom.lock_inline": "Моя дошка · у черзі {{next}}, у роботі {{active}}",
@@ -82,5 +88,9 @@
   "common.updated_at": "Оновлено {{time}}",
   "common.auto_vehicle": "Авто",
   "common.days_count_one": "{{count}} дн.",
-  "common.days_count_other": "{{count}} дн."
+  "common.days_count_other": "{{count}} дн.",
+  "common.minutes_count_one": "{{count}} хв",
+  "common.minutes_count_other": "{{count}} хв",
+  "common.hours_count_one": "{{count}} год",
+  "common.hours_count_other": "{{count}} год"
 }

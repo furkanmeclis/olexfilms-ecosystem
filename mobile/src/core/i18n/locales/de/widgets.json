@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} Monate",
   "koruma.left_short_days_one": "{{count}} Tag",
   "koruma.left_short_days_other": "{{count}} Tage",
+  "koruma.left_caption": "übrig",
+  "koruma.left_compact_years_months": "{{years}}J {{months}}M",
+  "koruma.left_compact_years": "{{count}}J",
+  "koruma.left_compact_months": "{{count}}M",
+  "koruma.left_compact_days": "{{count}}T",
   "koruma.active_count_one": "{{count}} aktive Garantie",
   "koruma.active_count_other": "{{count}} aktive Garantien",
   "koruma.last_service": "Letzter Service {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "In Arbeit",
   "panom.done_today": "Heute fertig",
   "panom.longest_wait": "Wartet am längsten · {{wait}}",
+  "panom.today_short": "Heute",
   "panom.count_next_short": "{{count}} in der Warteschlange",
   "panom.lock_rect_second": "{{active}} in Arbeit · {{done}} fertig",
   "panom.lock_inline": "Mein Board · {{next}} in der Warteschlange, {{active}} in Arbeit",
@@ -82,5 +88,9 @@
   "common.updated_at": "Aktualisiert {{time}}",
   "common.auto_vehicle": "Fahrzeug",
   "common.days_count_one": "{{count}} Tag",
-  "common.days_count_other": "{{count}} Tage"
+  "common.days_count_other": "{{count}} Tage",
+  "common.minutes_count_one": "{{count}} Min.",
+  "common.minutes_count_other": "{{count}} Min.",
+  "common.hours_count_one": "{{count}} Std.",
+  "common.hours_count_other": "{{count}} Std."
 }

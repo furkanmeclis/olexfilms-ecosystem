@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} μήνες",
   "koruma.left_short_days_one": "{{count}} ημέρα",
   "koruma.left_short_days_other": "{{count}} ημέρες",
+  "koruma.left_caption": "απομένουν",
+  "koruma.left_compact_years_months": "{{years}}ε {{months}}μ",
+  "koruma.left_compact_years": "{{count}}ε",
+  "koruma.left_compact_months": "{{count}}μ",
+  "koruma.left_compact_days": "{{count}}ημ",
   "koruma.active_count_one": "{{count}} ενεργή εγγύηση",
   "koruma.active_count_other": "{{count}} ενεργές εγγυήσεις",
   "koruma.last_service": "Τελευταίο σέρβις {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "Σε εξέλιξη",
   "panom.done_today": "Ολοκληρώθηκαν σήμερα",
   "panom.longest_wait": "Μεγαλύτερη αναμονή · {{wait}}",
+  "panom.today_short": "Σήμερα",
   "panom.count_next_short": "{{count}} στην ουρά",
   "panom.lock_rect_second": "{{active}} σε εξέλιξη · {{done}} έτοιμα",
   "panom.lock_inline": "Ο πίνακάς μου · {{next}} στην ουρά, {{active}} σε εξέλιξη",
@@ -82,5 +88,9 @@
   "common.updated_at": "Ενημερώθηκε {{time}}",
   "common.auto_vehicle": "Όχημα",
   "common.days_count_one": "{{count}} ημέρα",
-  "common.days_count_other": "{{count}} ημέρες"
+  "common.days_count_other": "{{count}} ημέρες",
+  "common.minutes_count_one": "{{count}} λεπτό",
+  "common.minutes_count_other": "{{count}} λεπτά",
+  "common.hours_count_one": "{{count}} ώρα",
+  "common.hours_count_other": "{{count}} ώρες"
 }

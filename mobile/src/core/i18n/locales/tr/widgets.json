@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} ay",
   "koruma.left_short_days_one": "{{count}} gün",
   "koruma.left_short_days_other": "{{count}} gün",
+  "koruma.left_caption": "kaldı",
+  "koruma.left_compact_years_months": "{{years}}y {{months}}a",
+  "koruma.left_compact_years": "{{count}}y",
+  "koruma.left_compact_months": "{{count}}a",
+  "koruma.left_compact_days": "{{count}}g",
   "koruma.active_count_one": "{{count}} aktif garanti",
   "koruma.active_count_other": "{{count}} aktif garanti",
   "koruma.last_service": "Son hizmet {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "İşlemde",
   "panom.done_today": "Bugün biten",
   "panom.longest_wait": "En uzun bekleyen · {{wait}}",
+  "panom.today_short": "Bugün",
   "panom.count_next_short": "{{count}} sırada",
   "panom.lock_rect_second": "{{active}} işlemde · {{done}} bitti",
   "panom.lock_inline": "Panom · {{next}} sırada, {{active}} işlemde",
@@ -82,5 +88,9 @@
   "common.updated_at": "Güncellendi {{time}}",
   "common.auto_vehicle": "Araç",
   "common.days_count_one": "{{count}} gün",
-  "common.days_count_other": "{{count}} gün"
+  "common.days_count_other": "{{count}} gün",
+  "common.minutes_count_one": "{{count}} dk",
+  "common.minutes_count_other": "{{count}} dk",
+  "common.hours_count_one": "{{count}} saat",
+  "common.hours_count_other": "{{count}} saat"
 }

@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} ay",
   "koruma.left_short_days_one": "{{count}} gün",
   "koruma.left_short_days_other": "{{count}} gün",
+  "koruma.left_caption": "qalıb",
+  "koruma.left_compact_years_months": "{{years}}i {{months}}a",
+  "koruma.left_compact_years": "{{count}}i",
+  "koruma.left_compact_months": "{{count}}a",
+  "koruma.left_compact_days": "{{count}}g",
   "koruma.active_count_one": "{{count}} aktiv zəmanət",
   "koruma.active_count_other": "{{count}} aktiv zəmanət",
   "koruma.last_service": "Son xidmət {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "İcradadır",
   "panom.done_today": "Bu gün bitən",
   "panom.longest_wait": "Ən uzun gözləyən · {{wait}}",
+  "panom.today_short": "Bu gün",
   "panom.count_next_short": "Növbədə {{count}}",
   "panom.lock_rect_second": "{{active}} icradadır · {{done}} bitdi",
   "panom.lock_inline": "Panelim · növbədə {{next}}, icrada {{active}}",
@@ -82,5 +88,9 @@
   "common.updated_at": "{{time}} yeniləndi",
   "common.auto_vehicle": "Avtomobil",
   "common.days_count_one": "{{count}} gün",
-  "common.days_count_other": "{{count}} gün"
+  "common.days_count_other": "{{count}} gün",
+  "common.minutes_count_one": "{{count}} dəq",
+  "common.minutes_count_other": "{{count}} dəq",
+  "common.hours_count_one": "{{count}} saat",
+  "common.hours_count_other": "{{count}} saat"
 }

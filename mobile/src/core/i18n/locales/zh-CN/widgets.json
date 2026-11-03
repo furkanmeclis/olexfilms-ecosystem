@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} 个月",
   "koruma.left_short_days_one": "{{count}} 天",
   "koruma.left_short_days_other": "{{count}} 天",
+  "koruma.left_caption": "剩余",
+  "koruma.left_compact_years_months": "{{years}}年{{months}}月",
+  "koruma.left_compact_years": "{{count}}年",
+  "koruma.left_compact_months": "{{count}}月",
+  "koruma.left_compact_days": "{{count}}天",
   "koruma.active_count_one": "{{count}} 项有效质保",
   "koruma.active_count_other": "{{count}} 项有效质保",
   "koruma.last_service": "最近服务 {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "进行中",
   "panom.done_today": "今日完成",
   "panom.longest_wait": "等待最久 · {{wait}}",
+  "panom.today_short": "今日",
   "panom.count_next_short": "{{count}} 项待处理",
   "panom.lock_rect_second": "{{active}} 项进行中 · {{done}} 项已完成",
   "panom.lock_inline": "我的看板 · {{next}} 项待处理，{{active}} 项进行中",
@@ -82,5 +88,9 @@
   "common.updated_at": "{{time}}更新",
   "common.auto_vehicle": "车辆",
   "common.days_count_one": "{{count}} 天",
-  "common.days_count_other": "{{count}} 天"
+  "common.days_count_other": "{{count}} 天",
+  "common.minutes_count_one": "{{count}} 分钟",
+  "common.minutes_count_other": "{{count}} 分钟",
+  "common.hours_count_one": "{{count}} 小时",
+  "common.hours_count_other": "{{count}} 小时"
 }

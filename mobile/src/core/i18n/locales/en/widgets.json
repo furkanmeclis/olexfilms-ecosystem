@@ -7,6 +7,11 @@
   "koruma.left_short_months_other": "{{count}} mo",
   "koruma.left_short_days_one": "{{count}} day",
   "koruma.left_short_days_other": "{{count}} days",
+  "koruma.left_caption": "left",
+  "koruma.left_compact_years_months": "{{years}}y {{months}}m",
+  "koruma.left_compact_years": "{{count}}y",
+  "koruma.left_compact_months": "{{count}}m",
+  "koruma.left_compact_days": "{{count}}d",
   "koruma.active_count_one": "{{count}} active warranty",
   "koruma.active_count_other": "{{count}} active warranties",
   "koruma.last_service": "Last service {{date}}",
@@ -24,6 +29,7 @@
   "panom.active": "In progress",
   "panom.done_today": "Done today",
   "panom.longest_wait": "Longest wait · {{wait}}",
+  "panom.today_short": "Today",
   "panom.count_next_short": "{{count}} in queue",
   "panom.lock_rect_second": "{{active}} in progress · {{done}} done",
   "panom.lock_inline": "My board · {{next}} in queue, {{active}} in progress",
@@ -82,5 +88,9 @@
   "common.updated_at": "Updated {{time}}",
   "common.auto_vehicle": "Vehicle",
   "common.days_count_one": "{{count}} day",
-  "common.days_count_other": "{{count}} days"
+  "common.days_count_other": "{{count}} days",
+  "common.minutes_count_one": "{{count}} min",
+  "common.minutes_count_other": "{{count}} min",
+  "common.hours_count_one": "{{count}} hr",
+  "common.hours_count_other": "{{count}} hr"
 }
