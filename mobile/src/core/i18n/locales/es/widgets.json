@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Este widget es para cuentas de cliente.",
   "state.wrong_role_dealer_body": "Este widget es para cuentas de distribuidor.",
   "state.stale_body": "No se pudo actualizar. Últimos datos de hace {{time}}.",
+  "state.stale_older_one": "No se pudo actualizar. Los últimos datos tienen más de {{count}} día.",
+  "state.stale_older_other": "No se pudo actualizar. Los últimos datos tienen más de {{count}} días.",
   "common.updated_at": "Actualizado {{time}}",
   "common.auto_vehicle": "Vehículo",
   "common.days_count_one": "{{count}} día",

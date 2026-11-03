@@ -15,11 +15,19 @@ export const MAX_ENTRIES = 8;
 const DAILY: readonly WidgetName[] = ['OlexKoruma', 'OlexGarantiKarti'];
 const DAILY_DAYS = 7;
 
-type Timed = { state: WidgetState; staleLabel: string | null };
+type Timed = {
+  state: WidgetState;
+  staleLabel: string | null;
+  /** Ok olmayan durumlarda tek görünen gövde; boş durumun bayat girdisi gövdeyi bayat metinle değiştirir. */
+  card?: { body?: string };
+};
+
+/** Bayat metin: `openEnded` son girdidir, sonrasında sistem yeniden okumaz ve metin "…den eski" diye okunur. */
+export type StaleText = (ageMs: number, openEnded: boolean) => string;
 
 export type TimelineEntry<P> = { date: Date; props: P };
 
-/** `ok` olmayan durum tek `updateSnapshot`; `ok` ise `updateTimeline` girdileri. */
+/** Saatlik widget'ta `ok` ve `empty` `updateTimeline` girdileri; diğer durumlar tek `updateSnapshot`. */
 export type Timeline<P> = { mode: 'snapshot'; props: P } | { mode: 'timeline'; entries: TimelineEntry<P>[] };
 
 function localDay(d: Date): number {
@@ -42,9 +50,15 @@ export function shiftWarranties<V extends { active_warranties: { days_left: numb
   }));
 }
 
-/** "Güncellenemedi. Son veri 2 saat önce." `t` widgets namespace'inin çevirisidir. */
-export function staleLabelFor(t: TFn): (ageMs: number) => string {
-  return (ageMs) => t('state.stale_body', { time: staleAgo(ageMs, t) });
+/**
+ * "Güncellenemedi. Son veri 2 saat önce." `t` widgets namespace'inin çevirisidir.
+ * Açık uçlu (son girdi): "Güncellenemedi. Son veri 1 günden eski."
+ */
+export function staleLabelFor(t: TFn): StaleText {
+  return (ageMs, openEnded = false) =>
+    openEnded
+      ? t('state.stale_older', { count: Math.max(1, Math.floor(ageMs / DAY_MS)) })
+      : t('state.stale_body', { time: staleAgo(ageMs, t) });
 }
 
 type Slot = { date: Date; stale: boolean };
@@ -66,22 +80,28 @@ function slots(name: WidgetName, now: Date): Slot[] {
 /**
  * `build(at)` o an için `props` üretir (kalan gün ve düşen garanti `at`'a göre hesaplanır).
  * Bayat girdilerde `staleLabel` hazır metin olarak yazılır, widget saat hesaplamaz.
- * Politika `.atEnd`: son girdiden sonra sistem listeyi yeniden okur, son bayat hal kalır.
+ * Saatlik widget'ta `empty` de zaman çizelgesidir: bayat girdi `empty` kalır, kart gövdesi bayat metin olur
+ * (yanlış "bekleyen yok" okunmasın). Günlük widget'lar (Koruma, Kart) ve diğer durumlar tek anlık görüntüdür.
+ * Politika `.atEnd`: son girdiden sonra sistem listeyi yeniden okur, son bayat hal kalır;
+ * bu yüzden son girdinin metni açık uçludur ve değerler son girdide donar.
  */
 export function buildEntries<P extends Timed>(
   name: WidgetName,
   now: Date,
   build: (at: Date) => P,
-  staleText: (ageMs: number) => string,
+  staleText: StaleText,
 ): Timeline<P> {
   const first = build(now);
-  if (first.state !== 'ok') return { mode: 'snapshot', props: { ...first, staleLabel: null } };
+  const timed = first.state === 'ok' || (first.state === 'empty' && !DAILY.includes(name));
+  if (!timed) return { mode: 'snapshot', props: { ...first, staleLabel: null } };
 
-  const entries = slots(name, now)
-    .slice(0, MAX_ENTRIES)
-    .map(({ date, stale }, i) => {
-      const props = i === 0 ? first : build(date);
-      return { date, props: stale ? { ...props, staleLabel: staleText(date.getTime() - now.getTime()) } : props };
-    });
+  const all = slots(name, now).slice(0, MAX_ENTRIES);
+  const entries = all.map(({ date, stale }, i) => {
+    const props = i === 0 ? first : build(date);
+    if (!stale) return { date, props };
+    const text = staleText(date.getTime() - now.getTime(), i === all.length - 1);
+    const card = props.state === 'empty' && props.card ? { card: { ...props.card, body: text } } : {};
+    return { date, props: { ...props, ...card, staleLabel: text } };
+  });
   return { mode: 'timeline', entries };
 }

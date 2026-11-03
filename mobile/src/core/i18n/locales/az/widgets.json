@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Bu vidcet müştəri hesabı üçündür.",
   "state.wrong_role_dealer_body": "Bu vidcet diler hesabı üçündür.",
   "state.stale_body": "Yenilənmədi. Son məlumat {{time}} əvvəldir.",
+  "state.stale_older_one": "Yenilənmədi. Son məlumat {{count}} gündən köhnədir.",
+  "state.stale_older_other": "Yenilənmədi. Son məlumat {{count}} gündən köhnədir.",
   "common.updated_at": "{{time}} yeniləndi",
   "common.auto_vehicle": "Avtomobil",
   "common.days_count_one": "{{count}} gün",

@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Questo widget è per gli account cliente.",
   "state.wrong_role_dealer_body": "Questo widget è per gli account rivenditore.",
   "state.stale_body": "Aggiornamento non riuscito. Ultimi dati di {{time}} fa.",
+  "state.stale_older_one": "Aggiornamento non riuscito. Ultimi dati più vecchi di {{count}} giorno.",
+  "state.stale_older_other": "Aggiornamento non riuscito. Ultimi dati più vecchi di {{count}} giorni.",
   "common.updated_at": "Aggiornato {{time}}",
   "common.auto_vehicle": "Veicolo",
   "common.days_count_one": "{{count}} giorno",

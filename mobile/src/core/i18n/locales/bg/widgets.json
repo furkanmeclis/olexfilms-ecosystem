@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Този уиджет е за клиентски акаунти.",
   "state.wrong_role_dealer_body": "Този уиджет е за дилърски акаунти.",
   "state.stale_body": "Неуспешно обновяване. Последните данни са отпреди {{time}}.",
+  "state.stale_older_one": "Неуспешно обновяване. Последните данни са по-стари от {{count}} ден.",
+  "state.stale_older_other": "Неуспешно обновяване. Последните данни са по-стари от {{count}} дни.",
   "common.updated_at": "Обновено {{time}}",
   "common.auto_vehicle": "Автомобил",
   "common.days_count_one": "{{count}} ден",

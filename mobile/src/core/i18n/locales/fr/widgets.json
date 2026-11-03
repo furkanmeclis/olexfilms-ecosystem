@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Ce widget est réservé aux comptes clients.",
   "state.wrong_role_dealer_body": "Ce widget est réservé aux comptes concessionnaires.",
   "state.stale_body": "Mise à jour impossible. Dernières données il y a {{time}}.",
+  "state.stale_older_one": "Mise à jour impossible. Dernières données vieilles de plus de {{count}} jour.",
+  "state.stale_older_other": "Mise à jour impossible. Dernières données vieilles de plus de {{count}} jours.",
   "common.updated_at": "Mis à jour {{time}}",
   "common.auto_vehicle": "Véhicule",
   "common.days_count_one": "{{count}} jour",

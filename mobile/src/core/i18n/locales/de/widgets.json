@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Dieses Widget ist für Kundenkonten.",
   "state.wrong_role_dealer_body": "Dieses Widget ist für Händlerkonten.",
   "state.stale_body": "Aktualisierung fehlgeschlagen. Letzte Daten von vor {{time}}.",
+  "state.stale_older_one": "Aktualisierung fehlgeschlagen. Letzte Daten sind älter als {{count}} Tag.",
+  "state.stale_older_other": "Aktualisierung fehlgeschlagen. Letzte Daten sind älter als {{count}} Tage.",
   "common.updated_at": "Aktualisiert {{time}}",
   "common.auto_vehicle": "Fahrzeug",
   "common.days_count_one": "{{count}} Tag",

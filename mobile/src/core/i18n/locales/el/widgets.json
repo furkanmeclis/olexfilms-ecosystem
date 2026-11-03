@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Αυτό το widget είναι για λογαριασμούς πελατών.",
   "state.wrong_role_dealer_body": "Αυτό το widget είναι για λογαριασμούς συνεργείων.",
   "state.stale_body": "Η ενημέρωση απέτυχε. Τα τελευταία δεδομένα είναι από πριν {{time}}.",
+  "state.stale_older_one": "Η ενημέρωση απέτυχε. Τα τελευταία δεδομένα είναι παλαιότερα από {{count}} ημέρα.",
+  "state.stale_older_other": "Η ενημέρωση απέτυχε. Τα τελευταία δεδομένα είναι παλαιότερα από {{count}} ημέρες.",
   "common.updated_at": "Ενημερώθηκε {{time}}",
   "common.auto_vehicle": "Όχημα",
   "common.days_count_one": "{{count}} ημέρα",

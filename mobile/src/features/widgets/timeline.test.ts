@@ -12,12 +12,18 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const NOW = new Date(2026, 10, 3, 14, 30, 15);
 
-type Props = { state: WidgetState; staleLabel: string | null; at: number; left: number };
+type Props = { state: WidgetState; staleLabel: string | null; at: number; left: number; card?: { eyebrow: string; title: string; body?: string } };
 
-const label = (ms: number) => `stale|${Math.round(ms / HOUR)}h`;
+const label = (ms: number, open = false) => `${open ? 'open' : 'stale'}|${Math.round(ms / HOUR)}h`;
 const make =
   (state: WidgetState = 'ok') =>
-  (at: Date): Props => ({ state, staleLabel: null, at: at.getTime(), left: daysLeftAt(100, NOW, at) });
+  (at: Date): Props => ({
+    state,
+    staleLabel: null,
+    at: at.getTime(),
+    left: daysLeftAt(100, NOW, at),
+    ...(state === 'empty' ? { card: { eyebrow: 'E', title: 'Boş', body: 'Bekleyen yok' } } : {}),
+  });
 
 function entriesOf(name: (typeof WIDGET_NAMES)[number], state: WidgetState = 'ok') {
   const result = buildEntries(name, NOW, make(state), label);
@@ -37,7 +43,7 @@ describe('günlük widget\'lar', () => {
     it(`${name}: yalnız yedinci gün bayat`, () => {
       const e = entriesOf(name);
       assert.ok(e.slice(0, 7).every((x) => x.props.staleLabel === null));
-      assert.equal(e[7].props.staleLabel, label(e[7].date.getTime() - NOW.getTime()));
+      assert.equal(e[7].props.staleLabel, label(e[7].date.getTime() - NOW.getTime(), true));
     });
   }
 
@@ -81,21 +87,21 @@ describe('diğer widget\'lar', () => {
 
     it(`${name}: bayatlık sınırı ve sonrası dolu, öncesi boş`, () => {
       const e = entriesOf(name);
-      for (const x of e) {
+      e.forEach((x, i) => {
         const age = x.date.getTime() - NOW.getTime();
-        assert.equal(x.props.staleLabel, age >= STALE_AFTER_MS[name] ? label(age) : null, `${age}`);
-      }
+        assert.equal(x.props.staleLabel, age >= STALE_AFTER_MS[name] ? label(age, i === e.length - 1) : null, `${age}`);
+      });
     });
   }
 
   it('iki saatlik widget +6s ve +24s için bayat metni taşır', () => {
     const e = entriesOf('OlexPanom');
-    assert.deepEqual(e.map((x) => x.props.staleLabel), [null, label(2 * HOUR), label(6 * HOUR), label(24 * HOUR)]);
+    assert.deepEqual(e.map((x) => x.props.staleLabel), [null, label(2 * HOUR), label(6 * HOUR), label(24 * HOUR, true)]);
   });
 });
 
 describe('ok olmayan durumlar', () => {
-  for (const state of ['signed_out', 'wrong_role', 'no_permission', 'module_off', 'empty'] as const) {
+  for (const state of ['signed_out', 'wrong_role', 'no_permission', 'module_off'] as const) {
     it(`${state}: tek anlık görüntü, bayat metin yok`, () => {
       for (const name of WIDGET_NAMES) {
         const result = buildEntries(name, NOW, make(state), label);
@@ -108,6 +114,52 @@ describe('ok olmayan durumlar', () => {
       }
     });
   }
+
+  for (const name of ['OlexKoruma', 'OlexGarantiKarti'] as const) {
+    it(`${name}: boş durum anlık görüntü kalır`, () => {
+      const result = buildEntries(name, NOW, make('empty'), label);
+      assert.equal(result.mode, 'snapshot');
+    });
+  }
+});
+
+describe('saatlik widget\'larda boş durum', () => {
+  const hourly = WIDGET_NAMES.filter((n) => n !== 'OlexKoruma' && n !== 'OlexGarantiKarti');
+
+  for (const name of hourly) {
+    it(`${name}: ok ile aynı zaman çizelgesi, bayat girdiler empty kalır ve kart gövdesi bayat metin olur`, () => {
+      const empty = entriesOf(name, 'empty');
+      const ok = entriesOf(name);
+      assert.deepEqual(empty.map((x) => x.date.getTime()), ok.map((x) => x.date.getTime()));
+      empty.forEach((x, i) => {
+        const age = x.date.getTime() - NOW.getTime();
+        assert.equal(x.props.state, 'empty');
+        if (age < STALE_AFTER_MS[name]) {
+          assert.equal(x.props.staleLabel, null);
+          assert.equal(x.props.card?.body, 'Bekleyen yok');
+        } else {
+          const text = label(age, i === empty.length - 1);
+          assert.equal(x.props.staleLabel, text);
+          assert.equal(x.props.card?.body, text);
+          assert.equal(x.props.card?.title, 'Boş');
+          assert.equal(x.props.card?.eyebrow, 'E');
+        }
+      });
+    });
+  }
+
+  it('kart yoksa bayat girdi yine de çökmez', () => {
+    const result = buildEntries('OlexPanom', NOW, () => ({ state: 'empty' as const, staleLabel: null }), label);
+    assert.equal(result.mode, 'timeline');
+  });
+});
+
+describe('açık uçlu son girdi', () => {
+  it('yalnız son girdi açık uçlu metin alır', () => {
+    const seen: boolean[] = [];
+    buildEntries('OlexPanom', NOW, make(), (ms, open) => (seen.push(open), label(ms, open)));
+    assert.deepEqual(seen, [false, false, true]);
+  });
 });
 
 describe('sınırlar', () => {
@@ -160,6 +212,13 @@ describe('staleLabelFor', () => {
   const t: TFn = (key, options) => `${key}|${Object.entries(options ?? {}).map(([k, v]) => `${k}=${v}`).join(',')}`;
   it('state.stale_body içine staleAgo süresini koyar', () => {
     assert.equal(staleLabelFor(t)(2 * HOUR), `state.stale_body|time=${staleAgo(2 * HOUR, t)}`);
+    assert.equal(staleLabelFor(t)(2 * HOUR, false), `state.stale_body|time=${staleAgo(2 * HOUR, t)}`);
+  });
+
+  it('açık uçlu metin tam gün sayısıyla state.stale_older kullanır', () => {
+    assert.equal(staleLabelFor(t)(24 * HOUR, true), 'state.stale_older|count=1');
+    assert.equal(staleLabelFor(t)(7 * DAY, true), 'state.stale_older|count=7');
+    assert.equal(staleLabelFor(t)(30 * HOUR, true), 'state.stale_older|count=1');
   });
 });
 

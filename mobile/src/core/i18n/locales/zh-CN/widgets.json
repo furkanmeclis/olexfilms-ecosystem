@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "此小组件适用于客户账户。",
   "state.wrong_role_dealer_body": "此小组件适用于经销商账户。",
   "state.stale_body": "更新失败。最近一次数据为 {{time}}前。",
+  "state.stale_older_one": "更新失败。最近一次数据已超过 {{count}} 天。",
+  "state.stale_older_other": "更新失败。最近一次数据已超过 {{count}} 天。",
   "common.updated_at": "{{time}}更新",
   "common.auto_vehicle": "车辆",
   "common.days_count_one": "{{count}} 天",

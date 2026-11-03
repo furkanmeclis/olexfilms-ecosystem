@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "This widget is for customer accounts.",
   "state.wrong_role_dealer_body": "This widget is for dealer accounts.",
   "state.stale_body": "Could not update. Last data was {{time}} ago.",
+  "state.stale_older_one": "Could not update. Last data is over {{count}} day old.",
+  "state.stale_older_other": "Could not update. Last data is over {{count}} days old.",
   "common.updated_at": "Updated {{time}}",
   "common.auto_vehicle": "Vehicle",
   "common.days_count_one": "{{count}} day",

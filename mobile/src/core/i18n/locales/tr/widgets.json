@@ -88,6 +88,8 @@
   "state.wrong_role_customer_body": "Bu widget müşteri hesabı içindir.",
   "state.wrong_role_dealer_body": "Bu widget bayi hesabı içindir.",
   "state.stale_body": "Güncellenemedi. Son veri {{time}} önce.",
+  "state.stale_older_one": "Güncellenemedi. Son veri {{count}} günden eski.",
+  "state.stale_older_other": "Güncellenemedi. Son veri {{count}} günden eski.",
   "common.updated_at": "Güncellendi {{time}}",
   "common.auto_vehicle": "Araç",
   "common.days_count_one": "{{count}} gün",
