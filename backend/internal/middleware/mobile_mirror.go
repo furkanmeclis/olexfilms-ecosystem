@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
@@ -35,6 +36,11 @@ var MobilePanelMirrorPrefixes = []string{
 	"fleets", "service-subscriptions", "staff-profiles",
 	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
+
+// mobilePanelMirrorExactPaths match only themselves, so their descendants stay off
+// the mirror. TEC-1044: the module list and the income widget read these two; the
+// module request (features/{key}/request) and the P&L export stay web only.
+var mobilePanelMirrorExactPaths = []string{"features", "accounting/reports/pnl"}
 
 type mobilePanelMirrorKey struct{}
 
@@ -69,6 +75,10 @@ func MobilePanelMirror(minVersion, maxVersion int) func(http.Handler) http.Handl
 				return
 			}
 			rest := strings.TrimPrefix(r.URL.Path, prefix)
+			if slices.Contains(mobilePanelMirrorExactPaths, rest) {
+				rewrite.ServeHTTP(w, r)
+				return
+			}
 			for _, allowed := range MobilePanelMirrorPrefixes {
 				if rest == allowed || strings.HasPrefix(rest, allowed+"/") {
 					rewrite.ServeHTTP(w, r)
