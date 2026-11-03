@@ -10,10 +10,13 @@ import { formatDate, PAGE_SIZE, useDebounced, usePagedList, type Warranty } from
 import { ListBody, ListFooter, SearchField, Section, errorText } from '@/features/services/ui';
 import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
+import { confirmAction } from '@/ui/confirm';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { useLeaveGuard } from '@/ui/use-leave-guard';
 
 import { useClaimLinks } from './hooks';
+import { claimFormMissing } from './lib';
 
 const DESCRIPTION_MAX = 20000;
 
@@ -124,13 +127,29 @@ export function NewClaimScreen() {
       ),
     onSuccess: (claim) => {
       void qc.invalidateQueries({ queryKey: ['warranty-claims'] });
+      releaseLeave();
       router.replace(links.detail(claim.uuid));
     },
     onError: (e) =>
       Alert.alert(t('action_failed'), isApiError(e, 'WARRANTY_CLAIM_EXISTS') ? t('claim_exists') : errorText(e)),
   });
 
-  const ready = !!warranty && parts.length > 0 && description.trim() !== '';
+  const missing = claimFormMissing({ parts, description });
+  const ready = !!warranty && !missing;
+  // Picked parts or a typed description would be lost on the way out.
+  const releaseLeave = useLeaveGuard(parts.length > 0 || description.trim() !== '');
+
+  const changeWarranty = () => {
+    const reset = () => {
+      setPicked(null);
+      setParts([]);
+      router.setParams({ warranty_uuid: undefined });
+    };
+    // Another warranty has other parts: the picked ones go (the description stays).
+    if (parts.length) {
+      confirmAction({ title: t('change_confirm'), body: t('change_confirm_body'), action: t('change'), destructive: true, onConfirm: reset });
+    } else reset();
+  };
 
   if (!warranty) {
     return (
@@ -152,11 +171,7 @@ export function NewClaimScreen() {
         <Section title={t('warranty')}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => {
-              setPicked(null);
-              setParts([]);
-              router.setParams({ warranty_uuid: undefined });
-            }}
+            onPress={changeWarranty}
             className="flex-row items-center gap-3 px-4 py-3 active:bg-muted">
             <View className="flex-1 gap-0.5">
               <Text variant="body" numberOfLines={1}>
@@ -211,6 +226,11 @@ export function NewClaimScreen() {
           {t('new_hint')}
         </Text>
         <Button title={t('create')} size="lg" disabled={!ready} loading={create.isPending} onPress={() => create.mutate()} />
+        {missing ? (
+          <Text variant="footnote" tone="muted" className="text-center">
+            {t(`missing.${missing}`)}
+          </Text>
+        ) : null}
       </ScrollView>
     </>
   );

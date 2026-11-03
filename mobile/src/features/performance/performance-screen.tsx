@@ -6,6 +6,7 @@ import { View } from 'react-native';
 
 import { api } from '@/core/api/client';
 import type { paths } from '@/core/api/schema';
+import { intlLocale } from '@/core/digits';
 import { useCan } from '@/core/spaces';
 import { Chips, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
 import { EmptyState } from '@/ui/empty-state';
@@ -15,7 +16,7 @@ import { Text } from '@/ui/text';
 
 import { unwrapPerformance } from './api';
 
-import { formatMetric, type Metric, type MetricValue, recentMonths, ROW_METRICS } from './lib';
+import { formatMetric, type Metric, type MetricValue, monthLabel, recentMonths, ROW_METRICS } from './lib';
 
 type Row = NonNullable<
   paths['/v1/performance/ranking']['get']['responses'][200]['content']['application/json']['data']
@@ -104,7 +105,7 @@ function RankingRow({ row }: { row: Row }) {
  * stay on the web); simple cards, no chart.
  */
 export function PerformanceScreen() {
-  const { t } = useTranslation('governance');
+  const { t, i18n } = useTranslation('governance');
   const canRead = useCan('performance.read');
   const months = recentMonths(new Date());
   const [period, setPeriod] = useState(months[0]!);
@@ -125,7 +126,14 @@ export function PerformanceScreen() {
 
   const header = (
     <View>
-      <Chips options={months.map((m) => ({ key: m, label: m }))} value={period} onChange={setPeriod} />
+      <Chips
+        options={months.map((m, i) => ({
+          key: m,
+          label: monthLabel(m, intlLocale(i18n.language), i === 0 ? t('performance.this_month') : null),
+        }))}
+        value={period}
+        onChange={setPeriod}
+      />
       <Chips
         options={[
           { key: 'all', label: t('performance.type.all') },

@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} 件",
   "order_detail.meters": "{{n}} 米",
   "order_detail.barcodes": "条码",
-  "order_detail.no_barcodes": "未分配条码"
+  "order_detail.no_barcodes": "未分配条码",
+  "balance_sentence.receivable": "{{name}} 欠您 {{amount}}。",
+  "balance_sentence.payable": "您欠 {{name}} {{amount}}。",
+  "balance_sentence.settled": "账户已结清，双方互不相欠。"
 }

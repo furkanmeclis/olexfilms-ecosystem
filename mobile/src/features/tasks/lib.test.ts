@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { dueDateToIso, isOverdue, nextStatuses, priorityTone, statusQuery, statusTone } from './lib.ts';
+import {
+  dueDateToIso,
+  isOverdue,
+  nextStatuses,
+  priorityTone,
+  quickDueDate,
+  statusQuery,
+  statusTone,
+  taskFormMissing,
+} from './lib.ts';
 
 describe('task lib', () => {
   it('maps tones', () => {
@@ -36,5 +45,19 @@ describe('task lib', () => {
     assert.equal(dueDateToIso(''), null);
     assert.equal(dueDateToIso('nope'), undefined);
     assert.equal(typeof dueDateToIso('2026-10-25'), 'string');
+  });
+
+  it('fills quick due dates across a month end', () => {
+    const now = new Date(2026, 9, 31, 22, 15);
+    assert.equal(quickDueDate('today', now), '2026-10-31');
+    assert.equal(quickDueDate('tomorrow', now), '2026-11-01');
+    assert.equal(quickDueDate('week', now), '2026-11-07');
+    assert.equal(typeof dueDateToIso(quickDueDate('week', now)), 'string');
+  });
+
+  it('lists what the new task still needs', () => {
+    assert.deepEqual(taskFormMissing({ title: '', subject: false, due: '' }), ['title', 'subject']);
+    assert.deepEqual(taskFormMissing({ title: 'Visit', subject: true, due: '12.11' }), ['due']);
+    assert.deepEqual(taskFormMissing({ title: 'Visit', subject: true, due: '' }), []);
   });
 });

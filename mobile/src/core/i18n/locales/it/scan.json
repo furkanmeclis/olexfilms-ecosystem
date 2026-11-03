@@ -9,5 +9,10 @@
   "result.unit": "Unità di prodotto",
   "result.warranty": "Garanzia",
   "result.unknown": "Codice non riconosciuto",
-  "scan_again": "Scansiona di nuovo"
+  "scan_again": "Scansiona di nuovo",
+  "open_unit": "Apri unità di magazzino",
+  "open_warranty": "Apri garanzia",
+  "next_hint.unit": "Non hai il permesso di vedere questa unità di magazzino.",
+  "next_hint.location": "Le ubicazioni di magazzino si scansionano nelle schermate del magazzino.",
+  "next_hint.unknown": "Codice non riconosciuto. Scansiona il codice a barre sull'etichetta del prodotto o il QR code sul certificato di garanzia."
 }

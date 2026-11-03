@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} τεμ.",
   "order_detail.meters": "{{n}} μ",
   "order_detail.barcodes": "Γραμμωτοί κώδικες",
-  "order_detail.no_barcodes": "Δεν έχουν αντιστοιχιστεί γραμμωτοί κώδικες"
+  "order_detail.no_barcodes": "Δεν έχουν αντιστοιχιστεί γραμμωτοί κώδικες",
+  "balance_sentence.receivable": "Ο/Η {{name}} σας οφείλει {{amount}}.",
+  "balance_sentence.payable": "Οφείλετε στον/στην {{name}} {{amount}}.",
+  "balance_sentence.settled": "Ο λογαριασμός είναι εξοφλημένος· κανείς δεν οφείλει τίποτα."
 }

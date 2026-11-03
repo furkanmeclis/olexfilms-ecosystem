@@ -11,5 +11,10 @@
   "price_missing_title": "Prodotti senza prezzo",
   "price_missing_body_one": "{{count}} prodotto non aveva un prezzo; è stato aggiunto a 0 e segnalato.",
   "price_missing_body_other": "{{count}} prodotti non avevano un prezzo; sono stati aggiunti a 0 e segnalati.",
-  "errors.price_invalid": "Inserisci un prezzo da 0 in su con al massimo 4 decimali."
+  "errors.price_invalid": "Inserisci un prezzo da 0 in su con al massimo 4 decimali.",
+  "confirm_submit_title": "Inviare l'ordine? ({{count}} prodotti)",
+  "confirm_line_pieces": "{{name}}: {{amount}} pz",
+  "confirm_line_meters": "{{name}}: {{amount}} m",
+  "confirm_more": "+{{count}} altri prodotti",
+  "confirm_no_price": "I prezzi non sono mostrati qui: vengono calcolati al salvataggio e fissati all'approvazione."
 }

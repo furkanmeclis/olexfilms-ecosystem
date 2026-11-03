@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Le richieste che attendono la tua decisione compaiono qui.",
   "home.action.new_service": "Nuovo intervento",
   "home.action.measure": "Misura",
-  "orders.price_missing": "Senza prezzo"
+  "orders.price_missing": "Senza prezzo",
+  "orders.new": "Nuovo ordine",
+  "orders.empty_body": "Scegli i prodotti dal catalogo per ordinare.",
+  "orders.approved_done": "Ordine approvato",
+  "approvals.claims": "Richieste di garanzia"
 }

@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Sifariş dilerə əl ilə və ya anbarda təhvil verilmiş kimi işarələnir; diler onu «Alındı» ilə bağlayır.",
   "orders.actions.deliver.success": "Təhvil verildi kimi işarələndi.",
   "orders.actions.deliver.title": "Təhvil verildi kimi işarələnsin?",
-  "orders.price_missing": "Qiymət yoxdur"
+  "orders.price_missing": "Qiymət yoxdur",
+  "orders.assign.line_full": "{{name}} üçün istənən miqdar artıq tamamdır.",
+  "orders.assign.whole_roll_title": "Rulonun hamısı ({{meters}} m) təyin edilsin?",
+  "orders.assign.whole_roll_body": "Metr xanası boşdur. Daha az lazımdırsa, imtina edib metri yazın.",
+  "orders.assign.whole_roll_confirm": "Hamısını təyin et",
+  "orders.assign.whole_roll_skipped": "Təyin edilmədi: metri yazıb yenidən oxudun.",
+  "orders.assign.remove_confirm": "{{barcode}} sifarişdən çıxarılsın?",
+  "orders.assign.order_complete": "Sifariş tamamdır: bütün sətirlər qarşılandı.",
+  "orders.assign.roll_hint": "Rulonlarda metri yazın. Boş qalsa, rulonun hamısı təyin edilir; daha az metr rulonu yeni barkodla bölür.",
+  "count.remove_scan_confirm": "{{code}} oxuması silinsin?",
+  "entry.remove_line_confirm": "{{barcode}} siyahıdan çıxarılsın?",
+  "m.remove": "Çıxar",
+  "eod.generate_all_warehouses": "Bütün anbarlar",
+  "eod.pdf_ios_only": "Hesabatın PDF-i bu cihazda paylaşıla bilməz; iPhone-dan və ya veb paneldən paylaşın.",
+  "counts.defaults_summary": "Ayarlar: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Ətraflı"
 }

@@ -118,7 +118,7 @@ export function NetworkDetailScreen() {
                 <StatusPill label={t(`network.status.${o.status}`, { defaultValue: o.status })} tone={orgStatusTone(o.status)} />
                 {o.type ? (
                   <Text variant="footnote" tone="muted">
-                    {t(`spaces:org_type.${o.type}`)} · {o.slug}
+                    {t(`spaces:org_type.${o.type}`)}
                   </Text>
                 ) : null}
               </View>
@@ -138,7 +138,7 @@ export function NetworkDetailScreen() {
             <SectionHeader title={t('network.details')} />
             <List>
               <InfoRow label={t('network.parent')} value={o.parent?.name} />
-              <InfoRow label={t('network.plan')} value={o.plan_code} />
+              {/* plan_code is a free-text code with no readable name anywhere (web edits it as text): not shown. */}
               <InfoRow label={t('network.access_starts')} value={f.date(o.access_starts_at)} />
               <InfoRow label={t('network.access_ends')} value={o.access_ends_at ? f.date(o.access_ends_at) : null} />
               <InfoRow label={t('network.contract_until')} value={o.contract_valid_until ? f.date(o.contract_valid_until) : null} />

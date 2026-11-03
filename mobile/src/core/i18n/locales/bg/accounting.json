@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} бр.",
   "order_detail.meters": "{{n}} м",
   "order_detail.barcodes": "Баркодове",
-  "order_detail.no_barcodes": "Няма зачислени баркодове"
+  "order_detail.no_barcodes": "Няма зачислени баркодове",
+  "balance_sentence.receivable": "{{name}} ви дължи {{amount}}.",
+  "balance_sentence.payable": "Вие дължите на {{name}} {{amount}}.",
+  "balance_sentence.settled": "Сметката е уравнена; никой не дължи нищо."
 }

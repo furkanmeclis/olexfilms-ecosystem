@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
@@ -29,6 +29,7 @@ import {
   useSuggestions,
   useUnplaced,
 } from './orders-api';
+import { allCovered as everyLineCovered, asksWholeRoll, assignTarget, isCovered, isRollItem, requiredOf } from './order-assign';
 import { Card, ErrorState, Field, IconButton, ListSkeleton, Segmented } from './parts';
 import { QtyStepper } from './qty-stepper';
 import { useDocAction } from './use-action';
@@ -41,9 +42,9 @@ export function orderTone(s: OrderStatus): StatusTone {
   return 'progress';
 }
 
-const isRoll = (i: OrderItem) => i.product.unit_type === 'roll_meter';
-const required = (i: OrderItem) => Number(isRoll(i) ? (i.meters ?? 0) : (i.quantity ?? 0));
-const covered = (i: OrderItem) => Number(i.assigned) >= required(i) - 1e-9;
+const isRoll = (i: OrderItem) => isRollItem(i);
+const required = (i: OrderItem) => requiredOf(i);
+const covered = (i: OrderItem) => isCovered(i);
 const amount = (i: OrderItem, v: number | string | null) =>
   isRoll(i) ? `${formatNumber(v, 2)} m` : formatNumber(v);
 
@@ -96,15 +97,44 @@ export function OrderScreen() {
         }),
     });
 
+  /** Empty meters on a roll assign all of it: asked while the scanner waits. */
+  const askWholeRoll = (remaining: string | null) =>
+    new Promise<boolean>((resolve) =>
+      Alert.alert(
+        t('orders.assign.whole_roll_title', { meters: remaining ? formatNumber(remaining, 2) : '—' }),
+        t('orders.assign.whole_roll_body'),
+        [
+          { text: t('common:cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('orders.assign.whole_roll_confirm'), onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      ),
+    );
+
+  /** Unassign from the line, asked first (a stray tap would drop it silently). */
+  const askUnassign = (item: string, unit: string, barcode: string) =>
+    confirmAction({
+      title: t('orders.assign.remove_confirm', { barcode }),
+      action: t('orders.assign.remove'),
+      destructive: true,
+      onConfirm: () => void run(`del:${unit}`, () => orderApi.unassign(uuid, item, unit)),
+    });
+
   /** Scan a unit: it goes to the first open line of its product. */
   const onAssign = async (code: string): Promise<ScanOutcome> => {
     if (!o?.items) return { ok: false, title: t('scan.failed') };
     try {
       const r = await resolveScan(code);
       if (r.status !== 'ok' || r.type !== 'unit' || !r.unit) return { ok: false, title: t('m.scan_unit_not_product') };
-      const lines = o.items.filter((i) => i.product.uuid === r.product?.uuid);
-      if (!lines.length) return { ok: false, title: t('m.not_on_order', { barcode: r.unit.barcode }) };
-      const item = lines.find((i) => !covered(i)) ?? lines[0];
+      const line = assignTarget(o.items, r.product?.uuid);
+      if (line.kind === 'not_on_order') return { ok: false, title: t('m.not_on_order', { barcode: r.unit.barcode }) };
+      // Every line of this product is full: say so instead of over-assigning.
+      if (line.kind === 'covered') return { ok: false, title: t('orders.assign.line_full', { name: line.item.product.name }) };
+      const item = line.item;
+      if (r.unit.unit_kind !== 'fixed' && asksWholeRoll(item, meters)) {
+        const whole = await askWholeRoll(r.unit.remaining_meters);
+        if (!whole) return { ok: false, title: t('orders.assign.whole_roll_skipped'), detail: r.unit.barcode };
+      }
       const body: { barcode: string; quantity?: number; meters?: string; idempotency_key?: string } = {
         barcode: r.unit.barcode,
       };
@@ -168,7 +198,7 @@ export function OrderScreen() {
   }
 
   const items = o.items ?? [];
-  const allCovered = items.length > 0 && items.every(covered);
+  const allCovered = everyLineCovered(items);
   const other = seller ? o.buyer : o.seller;
 
   return (
@@ -377,7 +407,7 @@ export function OrderScreen() {
                         tone="destructive"
                         label={t('orders.assign.remove')}
                         busy={busy === `del:${u.unit_uuid}`}
-                        onPress={() => void run(`del:${u.unit_uuid}`, () => orderApi.unassign(uuid, i.uuid, u.unit_uuid))}
+                        onPress={() => askUnassign(i.uuid, u.unit_uuid, u.barcode)}
                       />
                     ) : null}
                   </View>
@@ -429,22 +459,29 @@ export function OrderScreen() {
         title={t('m.scan_to_assign')}
         hint={t('orders.assign.hint')}
         onCode={onAssign}
+        complete={allCovered ? { title: t('orders.assign.order_complete'), action: t('common:close') } : undefined}
         footer={
           <>
             <QtyStepper label={t('m.fixed_qty')} value={qty} onChange={setQty} />
             {items.some(isRoll) ? (
-              <View className="flex-row items-center gap-2 rounded-lg bg-card p-2">
-                <Text variant="footnote" tone="muted" className="flex-1 ps-2 font-medium">
-                  {t('orders.assign.meters')}
+              <View className="gap-1.5 rounded-lg bg-card p-2">
+                {/* The header hint is cut to two lines; the roll rule is told in full here. */}
+                <Text variant="footnote" tone="muted" className="px-2 pt-1">
+                  {t('orders.assign.roll_hint')}
                 </Text>
-                <TextInput
-                  value={meters}
-                  onChangeText={setMeters}
-                  keyboardType="decimal-pad"
-                  placeholder={t('orders.assign.meters_placeholder')}
-                  placeholderTextColorClassName="accent-muted-foreground"
-                  className="min-h-11 w-28 rounded-md border border-border px-2 text-center text-[17px] text-foreground"
-                />
+                <View className="flex-row items-center gap-2">
+                  <Text variant="footnote" tone="muted" className="flex-1 ps-2 font-medium">
+                    {t('orders.assign.meters')}
+                  </Text>
+                  <TextInput
+                    value={meters}
+                    onChangeText={setMeters}
+                    keyboardType="decimal-pad"
+                    placeholder={t('orders.assign.meters_placeholder')}
+                    placeholderTextColorClassName="accent-muted-foreground"
+                    className="min-h-11 w-28 rounded-md border border-border px-2 text-center text-[17px] text-foreground"
+                  />
+                </View>
               </View>
             ) : null}
           </>

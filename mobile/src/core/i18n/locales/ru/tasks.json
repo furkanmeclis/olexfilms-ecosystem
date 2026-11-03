@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Введите заголовок.",
+  "field.subject_required": "Выберите дилера или дистрибьютора.",
+  "field.due_custom": "Или введите дату",
+  "due_quick.none": "Нет",
+  "due_quick.today": "Сегодня",
+  "due_quick.tomorrow": "Завтра",
+  "due_quick.week": "1 неделя",
+  "missing.title": "Нет заголовка.",
+  "missing.subject": "Не выбран субъект (дилер или дистрибьютор).",
+  "missing.due": "Неверный формат срока.",
+  "cancel_confirm": "Отменить задачу?"
+}

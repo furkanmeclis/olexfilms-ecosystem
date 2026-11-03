@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,7 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
-import { CartButton, useCanOrder } from '@/features/catalog/catalog-screen';
+import { CartButton, NEW_ORDER, useCanOrder } from '@/features/catalog/catalog-screen';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -64,6 +65,8 @@ export function OrdersScreen() {
   const pathname = usePathname();
   const canOrder = useCanOrder();
   const cart = canOrder && pathname.startsWith('/bayi');
+  // Same screen as the header cart: the cart, which leads to the catalog when empty.
+  const openNewOrder = () => router.push(NEW_ORDER as never);
   // TEC-1025: the center prepares what it sells in the warehouse screens
   // (assign units, ready, ship, deliver); a seller row opens there when it can.
   const me = useSession((s) => s.me);
@@ -105,13 +108,30 @@ export function OrdersScreen() {
         query={list}
         keyOf={(o) => o.uuid}
         header={
-          <Chips
-            options={(Object.keys(FILTERS) as Filter[]).map((k) => ({ key: k, label: t(`orders.filter.${k}`) }))}
-            value={filter}
-            onChange={setFilter}
-          />
+          <View className="gap-3">
+            {cart ? (
+              // A written button next to the header cart icon: ordering starts here.
+              <View className="px-4">
+                <Button title={t('orders.new')} icon="add" onPress={openNewOrder} />
+              </View>
+            ) : null}
+            <Chips
+              options={(Object.keys(FILTERS) as Filter[]).map((k) => ({ key: k, label: t(`orders.filter.${k}`) }))}
+              value={filter}
+              onChange={setFilter}
+            />
+          </View>
         }
-        empty={{ icon: 'cart', title: query ? t('orders.no_results') : t('orders.empty') }}
+        empty={
+          query
+            ? { icon: 'cart', title: t('orders.no_results') }
+            : {
+                icon: 'cart',
+                title: t('orders.empty'),
+                body: cart ? t('orders.empty_body') : undefined,
+                action: cart ? { title: t('orders.new'), onPress: openNewOrder } : undefined,
+              }
+        }
         renderItem={({ item }) => {
           const other = item.role === 'buyer' ? item.seller : item.buyer;
           return (
@@ -146,9 +166,15 @@ export function OrderDetailScreen() {
   const move = useMutation({
     mutationFn: (status: OrderStatus) =>
       unwrap(api.POST('/v1/orders/{uuid}/transitions', { params: { path: { uuid: uuid! } }, body: { status } })),
-    onSuccess: (data) => {
+    onSuccess: (data, status) => {
       qc.setQueryData(['orders', 'detail', uuid], data);
       void qc.invalidateQueries({ queryKey: ['orders', 'list'] });
+      // The approvals inbox lists submitted orders under its own key.
+      void qc.invalidateQueries({ queryKey: ['approvals'] });
+      if (status === 'approved') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(t('orders.approved_done'), o?.order_no);
+      }
     },
     onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
   });

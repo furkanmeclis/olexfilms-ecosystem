@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} قطعة",
   "order_detail.meters": "{{n}} م",
   "order_detail.barcodes": "الباركودات",
-  "order_detail.no_barcodes": "لا توجد باركودات معيّنة"
+  "order_detail.no_barcodes": "لا توجد باركودات معيّنة",
+  "balance_sentence.receivable": "{{name}} مدين لك بمبلغ {{amount}}.",
+  "balance_sentence.payable": "أنت مدين لـ {{name}} بمبلغ {{amount}}.",
+  "balance_sentence.settled": "الحساب مسدَّد، ولا دين على أحد."
 }

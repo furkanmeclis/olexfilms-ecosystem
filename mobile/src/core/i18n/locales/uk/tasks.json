@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Введіть заголовок.",
+  "field.subject_required": "Виберіть дилера або дистриб'ютора.",
+  "field.due_custom": "Або введіть дату",
+  "due_quick.none": "Немає",
+  "due_quick.today": "Сьогодні",
+  "due_quick.tomorrow": "Завтра",
+  "due_quick.week": "1 тиждень",
+  "missing.title": "Немає заголовка.",
+  "missing.subject": "Не вибрано суб'єкт (дилер або дистриб'ютор).",
+  "missing.due": "Неправильний формат терміну.",
+  "cancel_confirm": "Скасувати завдання?"
+}

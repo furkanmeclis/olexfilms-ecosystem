@@ -10,6 +10,7 @@ import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { Chips, ErrorState, InfoRow, ListSkeleton, useFormat } from '@/features/admin/kit';
 import { Button } from '@/ui/button';
+import { confirmAction } from '@/ui/confirm';
 import { Input } from '@/ui/input';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -112,7 +113,18 @@ export function TaskDetailScreen() {
                     variant={s === 'cancelled' ? 'outline' : s === 'done' ? 'primary' : 'secondary'}
                     loading={update.isPending && update.variables?.status === s}
                     disabled={update.isPending}
-                    onPress={() => update.mutate({ status: s })}
+                    onPress={() =>
+                      s === 'cancelled'
+                        ? // A stray tap would close the task: cancelling is asked first.
+                          confirmAction({
+                            title: t('cancel_confirm'),
+                            body: task.title,
+                            action: t('action.cancelled'),
+                            destructive: true,
+                            onConfirm: () => update.mutate({ status: s }),
+                          })
+                        : update.mutate({ status: s })
+                    }
                   />
                 ))}
               </View>

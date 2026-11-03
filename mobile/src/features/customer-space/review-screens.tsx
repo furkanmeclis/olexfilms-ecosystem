@@ -17,6 +17,7 @@ import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 import { retryPortal, useFleetRoles } from './lib';
+import { reviewMissing } from './review-lib';
 
 type S = components['schemas'];
 type ReviewState = S['PortalServiceReview'];
@@ -124,7 +125,12 @@ function ReviewForm({ uuid, rows }: { uuid: string; rows: Row[] }) {
   const [comment, setComment] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [values, setValues] = useState<Values>({});
-  const missing = platform < 1 || product < 1 || rows.some((r) => r.question.is_required && !isAnswered(r, values[r.key]));
+  const why = reviewMissing({
+    platform,
+    product,
+    requiredUnanswered: rows.filter((r) => r.question.is_required && !isAnswered(r, values[r.key])).length,
+  });
+  const missing = why !== null;
 
   const submit = useMutation({
     mutationFn: () =>
@@ -151,8 +157,8 @@ function ReviewForm({ uuid, rows }: { uuid: string; rows: Row[] }) {
 
   return (
     <View className="gap-4 rounded-lg border border-border bg-card p-4">
-      <Stars label={t('review_platform')} value={platform} onChange={setPlatform} />
-      <Stars label={t('review_product')} value={product} onChange={setProduct} />
+      <Stars label={`${t('review_platform')} *`} value={platform} onChange={setPlatform} />
+      <Stars label={`${t('review_product')} *`} value={product} onChange={setProduct} />
       {rows.map((row) =>
         row.question.question_type === 'rating_1_5' ? (
           <Stars
@@ -186,6 +192,12 @@ function ReviewForm({ uuid, rows }: { uuid: string; rows: Row[] }) {
         </Text>
         <Switch value={anonymous} onValueChange={setAnonymous} />
       </View>
+      {why ? (
+        // The button stays disabled; this says why.
+        <Text variant="footnote" tone="muted">
+          {t(`review_missing.${why}`, { first: t('review_platform'), second: t('review_product') })}
+        </Text>
+      ) : null}
       <Button title={t('review_submit')} size="lg" loading={submit.isPending} disabled={missing} onPress={() => submit.mutate()} />
     </View>
   );

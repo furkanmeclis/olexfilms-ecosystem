@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Alle Scheiben",
   "picker.search": "Suchen",
   "picker.selected": "Ausgewählt",
-  "picker.empty": "Keine Ergebnisse"
+  "picker.empty": "Keine Ergebnisse",
+  "leave_title": "Nicht gespeicherte Änderungen",
+  "leave_body": "Wenn Sie gehen, gehen Ihre Eingaben verloren.",
+  "leave_discard": "Verlassen"
 }

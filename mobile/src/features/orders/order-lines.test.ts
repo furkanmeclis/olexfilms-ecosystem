@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { addLine, cartIsValid, type CartLine, lineError, MAX_ORDER_LINES, toItemInputs, validateCart } from './order-lines.ts';
+import {
+  addLine,
+  cartIsValid,
+  type CartLine,
+  lineError,
+  MAX_ORDER_LINES,
+  submitPreview,
+  toItemInputs,
+  validateCart,
+} from './order-lines.ts';
 
 const piece = { uuid: 'p1', sku: 'PPF-1', name: 'PPF', unit_type: 'piece' };
 const roll = { uuid: 'r1', sku: 'ROLL-1', name: 'Roll', unit_type: 'roll_meter' };
@@ -55,4 +64,16 @@ test('unit price (center orders): optional, ≥ 0, up to 4 decimals, sent only w
   assert.deepEqual(toItemInputs([{ ...base, unit_price: '12,5' }]), [{ product_uuid: 'p', quantity: 2 }]);
   assert.deepEqual(toItemInputs([{ ...base, unit_price: '12,5' }], true), [{ product_uuid: 'p', quantity: 2, unit_price: '12.5' }]);
   assert.deepEqual(toItemInputs([{ ...base, unit_price: ' ' }], true), [{ product_uuid: 'p', quantity: 2 }]);
+});
+
+test('submitPreview: amounts with their unit, capped with a remainder', () => {
+  const lines = addLine(addLine([], piece), roll).map((l) => (l.unit_type === 'roll_meter' ? { ...l, amount: ' 12,5 ' } : l));
+  assert.deepEqual(submitPreview(lines).rows, [
+    { name: 'PPF', amount: '1', roll: false },
+    { name: 'Roll', amount: '12,5', roll: true },
+  ]);
+  assert.equal(submitPreview(lines).more, 0);
+  const many: CartLine[] = Array.from({ length: 11 }, (_, i) => ({ product_uuid: `p${i}`, sku: 's', name: `n${i}`, unit_type: 'piece', amount: '2' }));
+  assert.equal(submitPreview(many, 8).rows.length, 8);
+  assert.equal(submitPreview(many, 8).more, 3);
 });

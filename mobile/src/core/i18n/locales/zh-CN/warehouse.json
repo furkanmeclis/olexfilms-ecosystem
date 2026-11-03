@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "订单标记为已当面或在仓库交给经销商，由经销商点击“已收货”完成。",
   "orders.actions.deliver.success": "已标记为已送达。",
   "orders.actions.deliver.title": "标记为已送达？",
-  "orders.price_missing": "无价格"
+  "orders.price_missing": "无价格",
+  "orders.assign.line_full": "{{name}} 已满足所需数量。",
+  "orders.assign.whole_roll_title": "分配整卷（{{meters}} 米）？",
+  "orders.assign.whole_roll_body": "米数为空。如需更少，请取消并输入米数。",
+  "orders.assign.whole_roll_confirm": "全部分配",
+  "orders.assign.whole_roll_skipped": "未分配：请输入米数后重新扫描。",
+  "orders.assign.remove_confirm": "从订单中移除 {{barcode}}？",
+  "orders.assign.order_complete": "订单已备齐：所有行均已满足。",
+  "orders.assign.roll_hint": "卷材请输入米数。留空则分配整卷；较少的米数会用新条码拆分该卷。",
+  "count.remove_scan_confirm": "删除 {{code}} 的扫描记录？",
+  "entry.remove_line_confirm": "从列表中移除 {{barcode}}？",
+  "m.remove": "移除",
+  "eod.generate_all_warehouses": "所有仓库",
+  "eod.pdf_ios_only": "此设备无法分享报告 PDF；请在 iPhone 或网页后台分享。",
+  "counts.defaults_summary": "设置：{{scope}}，{{method}}，{{visibility}}。",
+  "counts.advanced": "高级"
 }

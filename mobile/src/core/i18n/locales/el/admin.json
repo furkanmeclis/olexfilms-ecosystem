@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Τα αιτήματα που περιμένουν την απόφασή σας εμφανίζονται εδώ.",
   "home.action.new_service": "Νέο σέρβις",
   "home.action.measure": "Μέτρηση",
-  "orders.price_missing": "Χωρίς τιμή"
+  "orders.price_missing": "Χωρίς τιμή",
+  "orders.new": "Νέα παραγγελία",
+  "orders.empty_body": "Επιλέξτε προϊόντα από τον κατάλογο για να παραγγείλετε.",
+  "orders.approved_done": "Η παραγγελία εγκρίθηκε",
+  "approvals.claims": "Αιτήματα εγγύησης"
 }

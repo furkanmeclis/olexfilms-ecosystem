@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Заявките, които чакат вашето решение, се появяват тук.",
   "home.action.new_service": "Ново обслужване",
   "home.action.measure": "Измерване",
-  "orders.price_missing": "Няма цена"
+  "orders.price_missing": "Няма цена",
+  "orders.new": "Нова поръчка",
+  "orders.empty_body": "Изберете продукти от каталога, за да поръчате.",
+  "orders.approved_done": "Поръчката е одобрена",
+  "approvals.claims": "Гаранционни заявки"
 }

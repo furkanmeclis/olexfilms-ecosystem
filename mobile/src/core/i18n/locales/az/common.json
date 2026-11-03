@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Bütün şüşələr",
   "picker.search": "Axtar",
   "picker.selected": "Seçilib",
-  "picker.empty": "Nəticə yoxdur"
+  "picker.empty": "Nəticə yoxdur",
+  "leave_title": "Yadda saxlanmamış dəyişikliklər var",
+  "leave_body": "Çıxsanız, daxil etdikləriniz silinəcək.",
+  "leave_discard": "Çıx"
 }

@@ -49,5 +49,16 @@
   "field.subject_placeholder": "Ada göre ara",
   "field.due": "Son tarih",
   "field.due_placeholder": "YYYY-AA-GG (isteğe bağlı)",
-  "field.due_invalid": "YYYY-AA-GG biçimini kullan"
+  "field.due_invalid": "YYYY-AA-GG biçimini kullan",
+  "field.title_required": "Bir başlık yazın.",
+  "field.subject_required": "Bir bayi veya distribütör seçin.",
+  "field.due_custom": "Ya da tarih yazın",
+  "due_quick.none": "Yok",
+  "due_quick.today": "Bugün",
+  "due_quick.tomorrow": "Yarın",
+  "due_quick.week": "1 hafta",
+  "missing.title": "Başlık eksik.",
+  "missing.subject": "Konu (bayi veya distribütör) seçilmedi.",
+  "missing.due": "Son tarihin biçimi hatalı.",
+  "cancel_confirm": "Görev iptal edilsin mi?"
 }

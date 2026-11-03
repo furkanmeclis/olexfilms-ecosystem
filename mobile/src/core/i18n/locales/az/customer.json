@@ -127,5 +127,9 @@
   "home_no_car_title": "Avtomobilini Olex ilə taclandır",
   "home_no_car_body": "Səlahiyyətli dilerdə tətbiq olunan film və zəmanəti burada görünür.",
   "booking_dealer_pick": "Diler seçin",
-  "booking_vehicle_pick": "Avtomobil seçin"
+  "booking_vehicle_pick": "Avtomobil seçin",
+  "fleet_link_accept_title": "Diler sorğusu qəbul edilsin?",
+  "fleet_link_accept_body": "{{name}} parkınızın avtomobillərinə xidmət göstərə biləcək və bu dilerdə parkınız üçün cari hesab açılacaq.",
+  "review_missing.ratings": "Göndərmək üçün “{{first}}” və “{{second}}” suallarına ulduz verin.",
+  "review_missing.questions": "Ulduzlu (*) suallara da cavab verin."
 }

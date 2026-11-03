@@ -11,5 +11,10 @@
   "price_missing_title": "Товари без ціни",
   "price_missing_body_one": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
   "price_missing_body_other": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
-  "errors.price_invalid": "Введіть ціну від 0, не більше 4 знаків після коми."
+  "errors.price_invalid": "Введіть ціну від 0, не більше 4 знаків після коми.",
+  "confirm_submit_title": "Надіслати замовлення? (товарів: {{count}})",
+  "confirm_line_pieces": "{{name}}: {{amount}} шт.",
+  "confirm_line_meters": "{{name}}: {{amount}} м",
+  "confirm_more": "Ще товарів: {{count}}",
+  "confirm_no_price": "Ціни тут не показано: їх розраховують під час збереження замовлення й фіксують під час схвалення."
 }

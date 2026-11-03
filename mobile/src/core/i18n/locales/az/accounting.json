@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} əd.",
   "order_detail.meters": "{{n}} metr",
   "order_detail.barcodes": "Barkodlar",
-  "order_detail.no_barcodes": "Təyin edilmiş barkod yoxdur"
+  "order_detail.no_barcodes": "Təyin edilmiş barkod yoxdur",
+  "balance_sentence.receivable": "{{name}} sizə {{amount}} borcludur.",
+  "balance_sentence.payable": "Siz {{name}} tərəfinə {{amount}} borclusunuz.",
+  "balance_sentence.settled": "Hesab bağlıdır, heç kimin borcu yoxdur."
 }

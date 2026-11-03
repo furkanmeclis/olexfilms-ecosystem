@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "销售尚未保存",
+  "quick_sale.leave_body": "离开后，购物车将被清空。",
+  "quick_sale.confirm_title": "完成销售？",
+  "quick_sale.confirm_total": "合计：{{total}}",
+  "quick_sale.confirm_payment": "付款方式：{{method}}",
+  "quick_sale.confirm_customer": "客户：{{name}}",
+  "quick_sale.confirm_no_customer": "未选择",
+  "quick_sale.confirm_lines": "产品数：{{count}}"
+}

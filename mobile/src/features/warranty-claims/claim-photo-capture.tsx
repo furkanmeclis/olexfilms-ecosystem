@@ -47,8 +47,9 @@ export function ClaimPhotoCapture({ claimUuid, onClose }: { claimUuid: string; o
     try {
       const pic = await camera.current.takePictureAsync({ quality: 0.7, skipProcessing: false });
       if (pic?.uri) setShot(pic.uri);
-    } catch (e) {
-      Alert.alert(t('action_failed'), e instanceof Error ? e.message : String(e));
+    } catch {
+      // The device's own error text is technical (and often English).
+      Alert.alert(t('action_failed'), t('camera_failed'));
     } finally {
       setTaking(false);
     }

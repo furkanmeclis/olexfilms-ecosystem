@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Escribe un título.",
+  "field.subject_required": "Elige un concesionario o distribuidor.",
+  "field.due_custom": "O escribe una fecha",
+  "due_quick.none": "Ninguna",
+  "due_quick.today": "Hoy",
+  "due_quick.tomorrow": "Mañana",
+  "due_quick.week": "1 semana",
+  "missing.title": "Falta el título.",
+  "missing.subject": "No se eligió asunto (concesionario o distribuidor).",
+  "missing.due": "El formato de la fecha límite no es correcto.",
+  "cancel_confirm": "¿Cancelar la tarea?"
+}

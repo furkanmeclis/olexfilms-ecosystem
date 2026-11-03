@@ -66,5 +66,8 @@
   "vehicle_parts.preset.windows_all": "Tüm camlar",
   "picker.search": "Ara",
   "picker.selected": "Seçili",
-  "picker.empty": "Sonuç yok"
+  "picker.empty": "Sonuç yok",
+  "leave_title": "Kaydedilmemiş bilgiler var",
+  "leave_body": "Çıkarsanız girdikleriniz silinir.",
+  "leave_discard": "Çık"
 }

@@ -49,5 +49,16 @@
   "field.subject_placeholder": "Search by name",
   "field.due": "Due date",
   "field.due_placeholder": "YYYY-MM-DD (optional)",
-  "field.due_invalid": "Use the format YYYY-MM-DD"
+  "field.due_invalid": "Use the format YYYY-MM-DD",
+  "field.title_required": "Enter a title.",
+  "field.subject_required": "Pick a dealer or distributor.",
+  "field.due_custom": "Or type a date",
+  "due_quick.none": "None",
+  "due_quick.today": "Today",
+  "due_quick.tomorrow": "Tomorrow",
+  "due_quick.week": "1 week",
+  "missing.title": "Title missing.",
+  "missing.subject": "No subject (dealer or distributor) picked.",
+  "missing.due": "The due date format is wrong.",
+  "cancel_confirm": "Cancel the task?"
 }

@@ -25,3 +25,18 @@ export function classifyCode(raw: string): ScannedCode {
   // A bare unit barcode, SKU or short code: the warehouse scan endpoint resolves it.
   return { kind: /^[A-Z0-9-]{4,40}$/i.test(v) ? 'unit' : 'unknown', code: v };
 }
+
+/** Main action of a scan result outside the warehouse: the screen the code belongs to. */
+export type ScanAction = { kind: 'unit'; path: string } | { kind: 'warranty'; code: string } | null;
+
+/**
+ * A unit opens its stock unit screen (`/<space>/menu/stock/unit/<barcode>`,
+ * stock.read), a warranty its public page (the one on the certificate).
+ */
+export function scanAction(code: ScannedCode, opts: { space: 'bayi' | 'admin'; canStock: boolean }): ScanAction {
+  if (code.kind === 'warranty') return { kind: 'warranty', code: code.code };
+  if (code.kind === 'unit' && opts.canStock) {
+    return { kind: 'unit', path: `/${opts.space}/menu/stock/unit/${encodeURIComponent(code.code)}` };
+  }
+  return null;
+}

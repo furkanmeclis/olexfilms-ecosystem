@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Geben Sie einen Titel ein.",
+  "field.subject_required": "Wählen Sie einen Händler oder Distributor.",
+  "field.due_custom": "Oder ein Datum eingeben",
+  "due_quick.none": "Keins",
+  "due_quick.today": "Heute",
+  "due_quick.tomorrow": "Morgen",
+  "due_quick.week": "1 Woche",
+  "missing.title": "Titel fehlt.",
+  "missing.subject": "Kein Betreff (Händler oder Distributor) gewählt.",
+  "missing.due": "Das Fälligkeitsdatum hat das falsche Format.",
+  "cancel_confirm": "Aufgabe abbrechen?"
+}

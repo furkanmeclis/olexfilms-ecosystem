@@ -33,6 +33,7 @@ import {
   retryPortal,
   sharePublicWarranty,
   useCustomerLinks,
+  useFleetRoles,
   usePortalPages,
   whatsappUrl,
 } from './lib';
@@ -99,6 +100,7 @@ export function CustomerServiceDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const { t, i18n } = useTranslation('customer');
   const reviewsOn = useModule('reviews');
+  const fleetReadOnly = useFleetRoles().readOnly;
   const links = useCustomerLinks();
   const statusLabel = useServiceStatusLabel();
   const q = useQuery({
@@ -177,7 +179,8 @@ export function CustomerServiceDetailScreen() {
                   }
                 />
               ) : null}
-              {s.status === 'completed' && reviewsOn ? (
+              {/* A fleet-only account cannot send a review (the form refuses it): no dead end. */}
+              {s.status === 'completed' && reviewsOn && !fleetReadOnly ? (
                 <Button
                   title={t('review_service')}
                   variant="outline"

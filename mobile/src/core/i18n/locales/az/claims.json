@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "Şəkil çəkilmədi. Yenidən cəhd edin.",
+  "submit_needs_photo": "Göndərmək üçün ən azı bir şəkil əlavə edin.",
+  "confirm_to.dealer_review": "Müraciət yoxlamaya göndərilir. Yoxlayan qurum razı olsa, mərkəzə ötürür.",
+  "confirm_to.center_review": "Müraciət qərar üçün mərkəzə göndərilir.",
+  "confirm_to.approved": "Müraciət təsdiqlənir.",
+  "change_confirm": "Zəmanət dəyişdirilsin?",
+  "change_confirm_body": "Seçdiyiniz hissələr silinir; təsvir qalır.",
+  "missing.parts": "Nasaz hissələri seçin.",
+  "missing.description": "Problemi qısaca təsvir edin."
+}

@@ -80,7 +80,8 @@ export function CustomerHomeScreen() {
   const { width } = useWindowDimensions();
   const user = useSession((s) => s.me?.user);
   const links = useCustomerLinks();
-  const { fleet } = useFleetRoles();
+  // readOnly: a fleet-only account, which cannot book (the booking screen refuses it).
+  const { fleet, readOnly } = useFleetRoles();
   const statusLabel = useServiceStatusLabel();
   // Booking is a module the admin can switch off (TEC-1023).
   const booking = useModule('appointments');
@@ -222,7 +223,7 @@ export function CustomerHomeScreen() {
 
         <View className="gap-7 px-5 pt-6">
           {/* Next step */}
-          {!booking || isHidden(next.error) ? null : (
+          {!booking || readOnly || isHidden(next.error) ? null : (
             <Rise index={0}>
               {appt ? (
                 <NextStepCard

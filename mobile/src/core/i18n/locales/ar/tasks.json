@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "اكتب عنوانًا.",
+  "field.subject_required": "اختر وكيلًا أو موزعًا.",
+  "field.due_custom": "أو اكتب تاريخًا",
+  "due_quick.none": "لا يوجد",
+  "due_quick.today": "اليوم",
+  "due_quick.tomorrow": "غدًا",
+  "due_quick.week": "أسبوع واحد",
+  "missing.title": "العنوان مفقود.",
+  "missing.subject": "لم يُختر موضوع (وكيل أو موزع).",
+  "missing.due": "صيغة تاريخ الاستحقاق غير صحيحة.",
+  "cancel_confirm": "إلغاء المهمة؟"
+}

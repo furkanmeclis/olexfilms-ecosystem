@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Въведете заглавие.",
+  "field.subject_required": "Изберете дилър или дистрибутор.",
+  "field.due_custom": "Или въведете дата",
+  "due_quick.none": "Няма",
+  "due_quick.today": "Днес",
+  "due_quick.tomorrow": "Утре",
+  "due_quick.week": "1 седмица",
+  "missing.title": "Липсва заглавие.",
+  "missing.subject": "Не е избран субект (дилър или дистрибутор).",
+  "missing.due": "Форматът на крайния срок е грешен.",
+  "cancel_confirm": "Да се отмени ли задачата?"
+}

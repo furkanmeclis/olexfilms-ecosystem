@@ -78,5 +78,6 @@
   "measurements.all": "All",
   "measurements.search": "Search",
   "measurements.search_placeholder": "VIN, plate or device serial",
-  "measurements.empty": "No measurements found"
+  "measurements.empty": "No measurements found",
+  "performance.this_month": "This month"
 }

@@ -37,13 +37,29 @@ export type AccountRow = { key: 'warehouse' | 'search' | 'spaces' | 'settings'; 
  * a closed module is not drawn at all. Rows open their screens as they are built.
  * Order inside a group is the order here.
  */
+/**
+ * Who has a section on the approvals screen: orders, module requests, stock
+ * reclassifications, warranty claims to review. Without any of them the
+ * screen would only say "nothing for you", so its shortcuts stay hidden.
+ */
+export const APPROVAL_PERMISSIONS = ['orders.approve', 'modules.manage', 'stock.reclassify', 'warranty_claims.review'];
+
 export const ITEMS: MenuItem[] = [
   // Operations: the day's queue.
   // TEC-1016: the center works in the dealer workplace; its admin tabs (approvals, network) become menu rows.
-  { key: 'approvals', icon: 'warrantyClaim', group: 'operations', spaces: [], built: [], orgTypes: ['center'] },
+  {
+    key: 'approvals',
+    icon: 'warrantyClaim',
+    group: 'operations',
+    permission: APPROVAL_PERMISSIONS,
+    spaces: [],
+    built: [],
+    orgTypes: ['center'],
+  },
   { key: 'appointments', icon: 'appointment', group: 'operations', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
   { key: 'occupancy', icon: 'calendar', group: 'operations', permission: 'appointments.read', spaces: ['admin'], built: ['admin'] },
-  { key: 'tasks', icon: 'task', group: 'operations', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
+  // Alone in operations (e.g. center accounting, no approvals row): next to the business rows.
+  { key: 'tasks', icon: 'task', group: 'operations', fallback: ['business'], permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
   // TEC-866: no warranty list row for dealers (bayi); warranties open from the service detail.
   { key: 'warranty_claims', icon: 'warrantyClaim', group: 'operations', fallback: ['customers'], permission: 'warranty_claims.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'measurements', icon: 'measure', group: 'operations', permission: 'measurements.read', spaces: ['admin'], built: ['admin'] },

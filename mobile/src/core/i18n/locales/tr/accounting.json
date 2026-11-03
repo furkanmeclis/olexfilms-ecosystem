@@ -152,5 +152,8 @@
   "order_detail.pieces": "{{n}} adet",
   "order_detail.meters": "{{n}} m",
   "order_detail.barcodes": "Barkodlar",
-  "order_detail.no_barcodes": "Atanmış barkod yok"
+  "order_detail.no_barcodes": "Atanmış barkod yok",
+  "balance_sentence.receivable": "{{name}} size {{amount}} borçlu.",
+  "balance_sentence.payable": "Siz {{name}} tarafına {{amount}} borçlusunuz.",
+  "balance_sentence.settled": "Hesap kapalı, kimsenin borcu yok."
 }

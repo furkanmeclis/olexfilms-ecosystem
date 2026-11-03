@@ -9,5 +9,10 @@
   "result.unit": "Ürün birimi",
   "result.warranty": "Garanti",
   "result.unknown": "Tanınmayan kod",
-  "scan_again": "Tekrar tara"
+  "scan_again": "Tekrar tara",
+  "open_unit": "Stok birimini aç",
+  "open_warranty": "Garantiyi aç",
+  "next_hint.unit": "Bu ürün biriminin ayrıntılarını görme izniniz yok.",
+  "next_hint.location": "Depo konumları depo ekranlarında okutulur.",
+  "next_hint.unknown": "Bu kod tanınmadı. Ürün etiketindeki barkodu ya da garanti belgesindeki QR kodu okutun."
 }

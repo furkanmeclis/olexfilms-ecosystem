@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "Продажбата не е запазена",
+  "quick_sale.leave_body": "Ако излезете, количката ще се изпразни.",
+  "quick_sale.confirm_title": "Да се завърши ли продажбата?",
+  "quick_sale.confirm_total": "Общо: {{total}}",
+  "quick_sale.confirm_payment": "Плащане: {{method}}",
+  "quick_sale.confirm_customer": "Клиент: {{name}}",
+  "quick_sale.confirm_no_customer": "не е избран",
+  "quick_sale.confirm_lines": "Продукти: {{count}}"
+}

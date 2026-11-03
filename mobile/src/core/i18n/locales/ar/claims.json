@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "تعذّر التقاط الصورة. حاول مرة أخرى.",
+  "submit_needs_photo": "أضف صورة واحدة على الأقل للإرسال.",
+  "confirm_to.dealer_review": "يُرسل الطلب للمراجعة. إذا وافق المراجع يُحوَّل إلى المركز.",
+  "confirm_to.center_review": "يُرسل الطلب إلى المركز لاتخاذ القرار.",
+  "confirm_to.approved": "تتم الموافقة على الطلب.",
+  "change_confirm": "تغيير الضمان؟",
+  "change_confirm_body": "تُمسح الأجزاء المختارة، ويبقى الوصف.",
+  "missing.parts": "اختر الأجزاء المعيبة.",
+  "missing.description": "صف المشكلة باختصار."
+}

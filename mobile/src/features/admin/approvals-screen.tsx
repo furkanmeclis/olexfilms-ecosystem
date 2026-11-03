@@ -14,6 +14,8 @@ import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
+import { useClaimLinks } from '@/features/warranty-claims/hooks';
+
 import { ErrorState, useChildHref, useFormat } from './kit';
 
 const LIMIT = 20;
@@ -130,7 +132,11 @@ function ModuleApprovals() {
             <View key={r.uuid} className="gap-2 rounded-lg border border-border bg-card px-4 py-3">
               <Text variant="headline">{r.organization_name}</Text>
               <Text variant="footnote" tone="muted">
-                {t('approvals.module_line', { module: r.module_key, name: r.requested_by_name || '–' })} · {f.date(r.created_at)}
+                {t('approvals.module_line', {
+                  module: t(`modules:names.${r.module_key}`, { defaultValue: r.module_key }),
+                  name: r.requested_by_name || '–',
+                })}{' '}
+                · {f.date(r.created_at)}
               </Text>
               {r.note ? <Text variant="callout">{r.note}</Text> : null}
               <View className="flex-row gap-2">
@@ -205,9 +211,41 @@ function ReclassApprovals() {
   );
 }
 
+/** Warranty claims waiting for the reviewer (dealer_review, warranty_claims.review). */
+function ClaimApprovals() {
+  const { t } = useTranslation('admin');
+  const f = useFormat();
+  const links = useClaimLinks();
+  const q = useQuery({
+    queryKey: ['approvals', 'claims'],
+    queryFn: () => unwrap(api.GET('/v1/warranty-claims', { params: { query: { status: 'dealer_review', limit: LIMIT } } })),
+  });
+  const items = q.data?.items ?? [];
+  return (
+    <Section title={t('approvals.claims')} query={q} count={q.data?.total}>
+      {items.length ? (
+        <List>
+          {items.map((c, i) => (
+            <ListRow
+              key={c.uuid}
+              title={t('claims:claim_no', { no: c.claim_no })}
+              subtitle={[c.organization_name, c.product_name, f.date(c.created_at)].filter(Boolean).join(' · ')}
+              onPress={() => router.push(links.detail(c.uuid))}
+              last={i === items.length - 1}
+            />
+          ))}
+        </List>
+      ) : (
+        <Nothing />
+      )}
+    </Section>
+  );
+}
+
 /**
- * Pending decisions of the admin: orders to approve, dealers' module requests
- * and stock reclassifications. Each section shows only with its permission.
+ * Pending decisions of the admin: orders to approve, dealers' module requests,
+ * stock reclassifications and warranty claims to review. Each section shows
+ * only with its permission.
  */
 export function ApprovalsScreen() {
   const { t } = useTranslation('admin');
@@ -215,7 +253,8 @@ export function ApprovalsScreen() {
   const orders = useCan('orders.approve');
   const modules = useCan('modules.manage');
   const reclass = useCan('stock.reclassify');
-  const any = orders || modules || reclass;
+  const claims = useCan('warranty_claims.review');
+  const any = orders || modules || reclass || claims;
 
   return (
     <>
@@ -229,6 +268,7 @@ export function ApprovalsScreen() {
             {orders ? <OrderApprovals /> : null}
             {modules ? <ModuleApprovals /> : null}
             {reclass ? <ReclassApprovals /> : null}
+            {claims ? <ClaimApprovals /> : null}
           </>
         ) : (
           <EmptyState icon="warrantyClaim" title={t('approvals.no_access')} body={t('approvals.no_access_body')} />

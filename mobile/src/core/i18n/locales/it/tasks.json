@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Scrivi un titolo.",
+  "field.subject_required": "Scegli un rivenditore o un distributore.",
+  "field.due_custom": "Oppure scrivi una data",
+  "due_quick.none": "Nessuna",
+  "due_quick.today": "Oggi",
+  "due_quick.tomorrow": "Domani",
+  "due_quick.week": "1 settimana",
+  "missing.title": "Manca il titolo.",
+  "missing.subject": "Nessun soggetto (rivenditore o distributore) scelto.",
+  "missing.due": "Il formato della scadenza non è corretto.",
+  "cancel_confirm": "Annullare l'attività?"
+}

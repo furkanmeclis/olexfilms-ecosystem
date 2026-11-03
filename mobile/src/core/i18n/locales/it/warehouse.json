@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "L’ordine è segnato come consegnato al rivenditore a mano o in magazzino; il rivenditore lo chiude con «Ricevuto».",
   "orders.actions.deliver.success": "Segnato come consegnato.",
   "orders.actions.deliver.title": "Segnare come consegnato?",
-  "orders.price_missing": "Senza prezzo"
+  "orders.price_missing": "Senza prezzo",
+  "orders.assign.line_full": "{{name}} ha già la quantità richiesta.",
+  "orders.assign.whole_roll_title": "Assegnare il rotolo intero ({{meters}} m)?",
+  "orders.assign.whole_roll_body": "Il campo dei metri è vuoto. Se ne servono meno, annulla e scrivi i metri.",
+  "orders.assign.whole_roll_confirm": "Assegna tutto",
+  "orders.assign.whole_roll_skipped": "Non assegnato: scrivi i metri e scansiona di nuovo.",
+  "orders.assign.remove_confirm": "Togliere {{barcode}} dall'ordine?",
+  "orders.assign.order_complete": "Ordine completo: tutte le righe sono coperte.",
+  "orders.assign.roll_hint": "Per i rotoli inserisci i metri. Se lasci vuoto viene assegnato il rotolo intero; meno metri dividono il rotolo con un nuovo codice a barre.",
+  "count.remove_scan_confirm": "Eliminare la scansione di {{code}}?",
+  "entry.remove_line_confirm": "Togliere {{barcode}} dall'elenco?",
+  "m.remove": "Togli",
+  "eod.generate_all_warehouses": "Tutti i magazzini",
+  "eod.pdf_ios_only": "Il PDF del report non si può condividere su questo dispositivo; condividilo da un iPhone o dal pannello web.",
+  "counts.defaults_summary": "Impostazioni: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Avanzate"
 }

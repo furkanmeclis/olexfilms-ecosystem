@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Anfragen, die Ihre Entscheidung brauchen, erscheinen hier.",
   "home.action.new_service": "Neuer Service",
   "home.action.measure": "Messung",
-  "orders.price_missing": "Kein Preis"
+  "orders.price_missing": "Kein Preis",
+  "orders.new": "Neue Bestellung",
+  "orders.empty_body": "Wählen Sie Produkte im Katalog, um zu bestellen.",
+  "orders.approved_done": "Bestellung freigegeben",
+  "approvals.claims": "Garantieanträge"
 }

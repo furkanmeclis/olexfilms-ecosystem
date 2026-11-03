@@ -78,5 +78,6 @@
   "measurements.all": "Tümü",
   "measurements.search": "Ara",
   "measurements.search_placeholder": "Şasi no, plaka veya cihaz seri no",
-  "measurements.empty": "Ölçüm bulunamadı"
+  "measurements.empty": "Ölçüm bulunamadı",
+  "performance.this_month": "Bu ay"
 }

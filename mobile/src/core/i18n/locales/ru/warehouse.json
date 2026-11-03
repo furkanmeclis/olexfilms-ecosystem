@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Заказ отмечается как переданный дилеру лично или на складе; дилер закрывает его кнопкой «Получен».",
   "orders.actions.deliver.success": "Отмечен как доставленный.",
   "orders.actions.deliver.title": "Отметить как доставленный?",
-  "orders.price_missing": "Нет цены"
+  "orders.price_missing": "Нет цены",
+  "orders.assign.line_full": "Для «{{name}}» нужное количество уже набрано.",
+  "orders.assign.whole_roll_title": "Назначить весь рулон ({{meters}} м)?",
+  "orders.assign.whole_roll_body": "Поле метров пустое. Если нужно меньше, отмените и введите метры.",
+  "orders.assign.whole_roll_confirm": "Назначить весь",
+  "orders.assign.whole_roll_skipped": "Не назначено: введите метры и отсканируйте снова.",
+  "orders.assign.remove_confirm": "Убрать {{barcode}} из заказа?",
+  "orders.assign.order_complete": "Заказ собран: все позиции закрыты.",
+  "orders.assign.roll_hint": "Для рулонов введите метры. Если оставить пустым, назначается весь рулон; меньшее число метров делит рулон под новым штрихкодом.",
+  "count.remove_scan_confirm": "Удалить сканирование {{code}}?",
+  "entry.remove_line_confirm": "Убрать {{barcode}} из списка?",
+  "m.remove": "Убрать",
+  "eod.generate_all_warehouses": "Все склады",
+  "eod.pdf_ios_only": "PDF отчёта нельзя отправить с этого устройства; отправьте его с iPhone или из веб-панели.",
+  "counts.defaults_summary": "Настройки: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Дополнительно"
 }

@@ -80,5 +80,14 @@
   "item_missing": "The service item of this warranty could not be found.",
   "loading": "Loading...",
   "claim_exists": "An open claim already exists on this warranty.",
-  "new_hint": "Add photos and submit the claim for review on the next screen."
+  "new_hint": "Add photos and submit the claim for review on the next screen.",
+  "camera_failed": "The photo could not be taken. Try again.",
+  "submit_needs_photo": "Add at least one photo to send it.",
+  "confirm_to.dealer_review": "The claim goes to review. If the reviewer agrees, it is forwarded to the center.",
+  "confirm_to.center_review": "The claim is sent to the center for a decision.",
+  "confirm_to.approved": "The claim is approved.",
+  "change_confirm": "Change the warranty?",
+  "change_confirm_body": "The picked parts are cleared; the description stays.",
+  "missing.parts": "Pick the faulty parts.",
+  "missing.description": "Describe the problem briefly."
 }

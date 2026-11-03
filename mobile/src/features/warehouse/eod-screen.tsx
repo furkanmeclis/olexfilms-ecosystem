@@ -89,7 +89,7 @@ export function EodListScreen() {
 
   const askGenerate = () =>
     Alert.alert(t('eod.generate_title'), t('eod.generate_description'), [
-      { text: t('eod.scope.system'), onPress: () => void generate() },
+      { text: t('eod.generate_all_warehouses'), onPress: () => void generate() },
       ...(warehouse ? [{ text: warehouse.name, onPress: () => void generate(warehouse.uuid) }] : []),
       { text: t('common:cancel'), style: 'cancel' as const },
     ]);
@@ -120,7 +120,13 @@ export function EodListScreen() {
             onChange={setScope}
           />
         }
-        empty={{ icon: 'report', title: t('eod.empty_title'), body: t('eod.empty_description') }}
+        empty={{
+          icon: 'report',
+          title: t('eod.empty_title'),
+          body: t('eod.empty_description'),
+          // A written button, not only the header "+".
+          action: write ? { title: t('eod.generate_title'), onPress: busy ? () => {} : askGenerate } : undefined,
+        }}
         renderItem={({ item }) => (
           <CardRow
             title={f.date(item.report_date)}
@@ -264,7 +270,12 @@ export function EodDetailScreen() {
                 loading={sharing}
                 onPress={() => void share()}
               />
-            ) : null}
+            ) : (
+              // The share sheet for PDFs is iOS only: say so instead of hiding it silently.
+              <Text variant="footnote" tone="muted">
+                {t('eod.pdf_ios_only')}
+              </Text>
+            )}
           </>
         )}
       </Screen>

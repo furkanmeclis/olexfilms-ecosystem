@@ -42,6 +42,25 @@ export function statusQuery(f: StatusFilter): string | undefined {
   return f === 'all' ? undefined : f;
 }
 
+export const QUICK_DUES = ['today', 'tomorrow', 'week'] as const;
+export type QuickDue = (typeof QUICK_DUES)[number];
+
+/** Due date of a quick choice in the date input's form (YYYY-MM-DD, local day). */
+export function quickDueDate(kind: QuickDue, now: Date = new Date()): string {
+  const days = kind === 'today' ? 0 : kind === 'tomorrow' ? 1 : 7;
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** What still blocks creating a task, in screen order (empty = ready). */
+export function taskFormMissing(v: { title: string; subject: boolean; due: string }): ('title' | 'subject' | 'due')[] {
+  const out: ('title' | 'subject' | 'due')[] = [];
+  if (!v.title.trim()) out.push('title');
+  if (!v.subject) out.push('subject');
+  if (dueDateToIso(v.due) === undefined) out.push('due');
+  return out;
+}
+
 /** Date input (YYYY-MM-DD) to the RFC3339 instant the API wants; empty clears, invalid is undefined. */
 export function dueDateToIso(input: string): string | null | undefined {
   const v = input.trim();

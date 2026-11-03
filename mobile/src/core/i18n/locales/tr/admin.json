@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Kararınızı bekleyen talepler burada görünür.",
   "home.action.new_service": "Yeni hizmet",
   "home.action.measure": "Ölçüm",
-  "orders.price_missing": "Fiyat yok"
+  "orders.price_missing": "Fiyat yok",
+  "orders.new": "Yeni sipariş",
+  "orders.empty_body": "Katalogdan ürün seçerek sipariş verin.",
+  "orders.approved_done": "Sipariş onaylandı",
+  "approvals.claims": "Garanti talepleri"
 }

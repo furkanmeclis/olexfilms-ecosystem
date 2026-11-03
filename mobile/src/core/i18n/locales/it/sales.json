@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "La vendita non è salvata",
+  "quick_sale.leave_body": "Se esci, il carrello viene svuotato.",
+  "quick_sale.confirm_title": "Completare la vendita?",
+  "quick_sale.confirm_total": "Totale: {{total}}",
+  "quick_sale.confirm_payment": "Pagamento: {{method}}",
+  "quick_sale.confirm_customer": "Cliente: {{name}}",
+  "quick_sale.confirm_no_customer": "nessuno",
+  "quick_sale.confirm_lines": "Prodotti: {{count}}"
+}

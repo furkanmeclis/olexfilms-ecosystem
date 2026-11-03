@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -40,6 +40,7 @@ export function CountNewScreen() {
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
 
   const whId = wh ?? warehouse?.uuid;
   const rooms = useRooms(scope === 'room' ? whId : undefined);
@@ -119,6 +120,27 @@ export function CountNewScreen() {
           }}
         />
 
+        {/* The defaults fit most counts: start right away, the options stay folded. */}
+        <Text variant="callout" tone="muted">
+          {t('counts.defaults_summary', {
+            scope: t(`count_scope.${effectiveScope}`),
+            method: t(`count_method.${method}`),
+            visibility: t(`count_visibility.${visibility}`),
+          })}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: advanced }}
+          onPress={() => setAdvanced((v) => !v)}
+          className="min-h-11 flex-row items-center gap-2 active:opacity-70">
+          <Icon name={advanced ? 'chevronDown' : 'forward'} tone="primary" size={16} />
+          <Text variant="callout" tone="primary" className="font-semibold">
+            {t('counts.advanced')}
+          </Text>
+        </Pressable>
+
+        {advanced ? (
+        <>
         <View className="gap-2">
           <Text variant="footnote" tone="muted" className="font-medium">
             {t('fields.method')}
@@ -198,7 +220,14 @@ export function CountNewScreen() {
         ) : null}
 
         <Input label={t('fields.note')} placeholder={t('placeholder_note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
-        <Button size="lg" title={t('counts.create')} loading={busy} onPress={() => void submit()} />
+        </>
+        ) : null}
+        {tried && missing && !advanced ? (
+          <Text variant="footnote" tone="danger">
+            {missing}
+          </Text>
+        ) : null}
+        <Button size="lg" title={t('count.start')} loading={busy} onPress={() => void submit()} />
       </Screen>
 
       <ContinuousScanner

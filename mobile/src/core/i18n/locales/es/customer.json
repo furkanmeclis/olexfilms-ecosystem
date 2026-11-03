@@ -127,5 +127,9 @@
   "home_no_car_title": "Corona tu coche con Olex",
   "home_no_car_body": "El film instalado en un distribuidor autorizado y su garantía aparecen aquí.",
   "booking_dealer_pick": "Elige un distribuidor",
-  "booking_vehicle_pick": "Elige un vehículo"
+  "booking_vehicle_pick": "Elige un vehículo",
+  "fleet_link_accept_title": "¿Aceptar la solicitud del concesionario?",
+  "fleet_link_accept_body": "{{name}} podrá dar servicio a los vehículos de tu flota y se abrirá una cuenta de flota en este concesionario.",
+  "review_missing.ratings": "Para enviar, valora «{{first}}» y «{{second}}» con estrellas.",
+  "review_missing.questions": "Responde también las preguntas marcadas con *."
 }

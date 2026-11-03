@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Η παραγγελία σημειώνεται ως παραδομένη στον αντιπρόσωπο ιδιοχείρως ή στην αποθήκη· εκείνος την κλείνει με «Παραλήφθηκε».",
   "orders.actions.deliver.success": "Σημειώθηκε ως παραδομένη.",
   "orders.actions.deliver.title": "Σήμανση ως παραδομένη;",
-  "orders.price_missing": "Χωρίς τιμή"
+  "orders.price_missing": "Χωρίς τιμή",
+  "orders.assign.line_full": "Το {{name}} έχει ήδη την ποσότητα που ζητήθηκε.",
+  "orders.assign.whole_roll_title": "Ανάθεση ολόκληρου του ρολού ({{meters}} m);",
+  "orders.assign.whole_roll_body": "Το πεδίο μέτρων είναι κενό. Αν χρειάζονται λιγότερα, ακυρώστε και γράψτε τα μέτρα.",
+  "orders.assign.whole_roll_confirm": "Ανάθεση όλου",
+  "orders.assign.whole_roll_skipped": "Δεν ανατέθηκε: γράψτε τα μέτρα και σαρώστε ξανά.",
+  "orders.assign.remove_confirm": "Αφαίρεση του {{barcode}} από την παραγγελία;",
+  "orders.assign.order_complete": "Η παραγγελία είναι πλήρης: όλες οι γραμμές καλύφθηκαν.",
+  "orders.assign.roll_hint": "Στα ρολά γράψτε τα μέτρα. Αν μείνει κενό, ανατίθεται ολόκληρο το ρολό· λιγότερα μέτρα χωρίζουν το ρολό με νέο barcode.",
+  "count.remove_scan_confirm": "Διαγραφή της σάρωσης του {{code}};",
+  "entry.remove_line_confirm": "Αφαίρεση του {{barcode}} από τη λίστα;",
+  "m.remove": "Αφαίρεση",
+  "eod.generate_all_warehouses": "Όλες οι αποθήκες",
+  "eod.pdf_ios_only": "Το PDF της αναφοράς δεν κοινοποιείται από αυτή τη συσκευή· κοινοποιήστε το από iPhone ή από το web panel.",
+  "counts.defaults_summary": "Ρυθμίσεις: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Για προχωρημένους"
 }

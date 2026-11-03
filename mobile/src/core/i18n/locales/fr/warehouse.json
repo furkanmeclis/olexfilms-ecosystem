@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "La commande est marquée comme remise au revendeur en main propre ou à l’entrepôt ; il la clôture avec « Reçue ».",
   "orders.actions.deliver.success": "Marquée comme livrée.",
   "orders.actions.deliver.title": "Marquer comme livrée ?",
-  "orders.price_missing": "Sans prix"
+  "orders.price_missing": "Sans prix",
+  "orders.assign.line_full": "{{name}} a déjà la quantité demandée.",
+  "orders.assign.whole_roll_title": "Affecter le rouleau entier ({{meters}} m) ?",
+  "orders.assign.whole_roll_body": "Le champ des mètres est vide. S'il en faut moins, annulez et saisissez les mètres.",
+  "orders.assign.whole_roll_confirm": "Tout affecter",
+  "orders.assign.whole_roll_skipped": "Non affecté : saisissez les mètres et scannez à nouveau.",
+  "orders.assign.remove_confirm": "Retirer {{barcode}} de la commande ?",
+  "orders.assign.order_complete": "Commande complète : toutes les lignes sont couvertes.",
+  "orders.assign.roll_hint": "Pour les rouleaux, saisissez les mètres. Laissé vide, le rouleau entier est affecté ; moins de mètres divisent le rouleau sous un nouveau code-barres.",
+  "count.remove_scan_confirm": "Supprimer le scan de {{code}} ?",
+  "entry.remove_line_confirm": "Retirer {{barcode}} de la liste ?",
+  "m.remove": "Retirer",
+  "eod.generate_all_warehouses": "Tous les entrepôts",
+  "eod.pdf_ios_only": "Le PDF du rapport ne peut pas être partagé sur cet appareil ; partagez-le depuis un iPhone ou le panneau web.",
+  "counts.defaults_summary": "Réglages : {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Avancé"
 }

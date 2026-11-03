@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "Das Foto konnte nicht aufgenommen werden. Versuchen Sie es erneut.",
+  "submit_needs_photo": "Fügen Sie mindestens ein Foto hinzu, um zu senden.",
+  "confirm_to.dealer_review": "Der Antrag geht zur Prüfung. Stimmt die prüfende Stelle zu, wird er an die Zentrale weitergeleitet.",
+  "confirm_to.center_review": "Der Antrag wird der Zentrale zur Entscheidung gesendet.",
+  "confirm_to.approved": "Der Antrag wird genehmigt.",
+  "change_confirm": "Garantie wechseln?",
+  "change_confirm_body": "Die gewählten Teile werden entfernt; die Beschreibung bleibt.",
+  "missing.parts": "Wählen Sie die fehlerhaften Teile.",
+  "missing.description": "Beschreiben Sie das Problem kurz."
+}

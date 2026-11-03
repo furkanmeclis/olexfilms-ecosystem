@@ -66,5 +66,8 @@
   "vehicle_parts.preset.windows_all": "All windows",
   "picker.search": "Search",
   "picker.selected": "Selected",
-  "picker.empty": "No results"
+  "picker.empty": "No results",
+  "leave_title": "You have unsaved changes",
+  "leave_body": "If you leave, what you entered is lost.",
+  "leave_discard": "Leave"
 }

@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "请输入标题。",
+  "field.subject_required": "请选择经销商或分销商。",
+  "field.due_custom": "或输入日期",
+  "due_quick.none": "无",
+  "due_quick.today": "今天",
+  "due_quick.tomorrow": "明天",
+  "due_quick.week": "1 周",
+  "missing.title": "缺少标题。",
+  "missing.subject": "未选择对象（经销商或分销商）。",
+  "missing.due": "截止日期格式不正确。",
+  "cancel_confirm": "取消此任务？"
+}

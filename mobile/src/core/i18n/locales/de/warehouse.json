@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Die Bestellung gilt als persönlich oder im Lager an den Händler übergeben; der Händler schließt sie mit „Erhalten“ ab.",
   "orders.actions.deliver.success": "Als zugestellt markiert.",
   "orders.actions.deliver.title": "Als zugestellt markieren?",
-  "orders.price_missing": "Kein Preis"
+  "orders.price_missing": "Kein Preis",
+  "orders.assign.line_full": "{{name}} hat die angeforderte Menge bereits.",
+  "orders.assign.whole_roll_title": "Ganze Rolle ({{meters}} m) zuweisen?",
+  "orders.assign.whole_roll_body": "Das Meterfeld ist leer. Wenn weniger nötig ist, brechen Sie ab und geben Sie die Meter ein.",
+  "orders.assign.whole_roll_confirm": "Alles zuweisen",
+  "orders.assign.whole_roll_skipped": "Nicht zugewiesen: Meter eingeben und erneut scannen.",
+  "orders.assign.remove_confirm": "{{barcode}} aus der Bestellung entfernen?",
+  "orders.assign.order_complete": "Bestellung vollständig: alle Positionen sind gedeckt.",
+  "orders.assign.roll_hint": "Bei Rollen die Meter eingeben. Leer gelassen wird die ganze Rolle zugewiesen; weniger Meter teilen die Rolle unter einem neuen Barcode.",
+  "count.remove_scan_confirm": "Scan von {{code}} löschen?",
+  "entry.remove_line_confirm": "{{barcode}} aus der Liste entfernen?",
+  "m.remove": "Entfernen",
+  "eod.generate_all_warehouses": "Alle Lager",
+  "eod.pdf_ios_only": "Das Berichts-PDF kann auf diesem Gerät nicht geteilt werden; teilen Sie es von einem iPhone oder im Webpanel.",
+  "counts.defaults_summary": "Einstellungen: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Erweitert"
 }

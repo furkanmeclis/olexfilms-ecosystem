@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "无法拍照，请重试。",
+  "submit_needs_photo": "请至少添加一张照片后再发送。",
+  "confirm_to.dealer_review": "申请将进入审核。审核方同意后转交总部。",
+  "confirm_to.center_review": "申请将发送至总部决定。",
+  "confirm_to.approved": "申请将被批准。",
+  "change_confirm": "更换保修？",
+  "change_confirm_body": "已选部件将被清除，描述保留。",
+  "missing.parts": "请选择故障部件。",
+  "missing.description": "请简要描述问题。"
+}

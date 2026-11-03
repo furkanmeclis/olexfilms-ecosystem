@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "لم يُحفظ البيع",
+  "quick_sale.leave_body": "إذا خرجت فستُفرَّغ السلة.",
+  "quick_sale.confirm_title": "إتمام البيع؟",
+  "quick_sale.confirm_total": "الإجمالي: {{total}}",
+  "quick_sale.confirm_payment": "الدفع: {{method}}",
+  "quick_sale.confirm_customer": "العميل: {{name}}",
+  "quick_sale.confirm_no_customer": "غير محدد",
+  "quick_sale.confirm_lines": "عدد المنتجات: {{count}}"
+}

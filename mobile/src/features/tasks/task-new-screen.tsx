@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +14,9 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
+import { Text } from '@/ui/text';
 
-import { dueDateToIso, TASK_PRIORITIES, type TaskPriority } from './lib';
+import { dueDateToIso, QUICK_DUES, type QuickDue, quickDueDate, TASK_PRIORITIES, type TaskPriority, taskFormMissing } from './lib';
 
 /** Search results shown in the subject sheet (the organizations endpoint is not paged). */
 const ORG_LIMIT = 50;
@@ -45,7 +47,21 @@ export function TaskNewScreen() {
   });
 
   const dueIso = dueDateToIso(due);
-  const valid = !!title.trim() && !!org && dueIso !== undefined;
+  const missing = taskFormMissing({ title, subject: !!org, due });
+  // Errors show once the user tried to create (or left the date field), not while typing.
+  const [tried, setTried] = useState(false);
+  const [dueLeft, setDueLeft] = useState(false);
+  const showError = (f: (typeof missing)[number]) => missing.includes(f) && (tried || (f === 'due' && dueLeft));
+  const quick = QUICK_DUES.find((k) => quickDueDate(k) === due.trim()) ?? null;
+
+  const submit = () => {
+    setTried(true);
+    if (missing.length) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    create.mutate();
+  };
 
   const create = useMutation({
     mutationFn: () =>
@@ -72,7 +88,13 @@ export function TaskNewScreen() {
     <>
       <Stack.Screen options={{ title: t('new'), headerLargeTitle: false }} />
       <Screen>
-        <Input label={t('field.title')} placeholder={t('field.title_placeholder')} value={title} onChangeText={setTitle} />
+        <Input
+          label={t('field.title')}
+          placeholder={t('field.title_placeholder')}
+          value={title}
+          onChangeText={setTitle}
+          error={showError('title') ? t('field.title_required') : undefined}
+        />
         <Input
           label={t('field.description')}
           placeholder={t('field.description_placeholder')}
@@ -84,7 +106,13 @@ export function TaskNewScreen() {
         />
 
         <SectionHeader title={t('subject')} />
-        <PickerField icon="building" value={org?.name} placeholder={t('field.subject_search')} onPress={() => setPicking(true)} />
+        <PickerField
+          icon="building"
+          value={org?.name}
+          placeholder={t('field.subject_search')}
+          error={showError('subject') ? t('field.subject_required') : undefined}
+          onPress={() => setPicking(true)}
+        />
         <PickerSheet
           visible={picking}
           title={t('field.subject_search')}
@@ -122,18 +150,38 @@ export function TaskNewScreen() {
           onChange={setAssignee}
         />
 
+        <SectionHeader title={t('field.due')} />
+        <Chips<string>
+          className="-mx-4"
+          options={[
+            { key: '', label: t('due_quick.none') },
+            ...QUICK_DUES.map((k) => ({ key: k, label: t(`due_quick.${k}`) })),
+          ]}
+          value={quick ?? (due.trim() ? 'custom' : '')}
+          onChange={(k) => {
+            setDue(k ? quickDueDate(k as QuickDue) : '');
+            setDueLeft(false);
+          }}
+        />
         <Input
-          label={t('field.due')}
+          label={t('field.due_custom')}
           placeholder={t('field.due_placeholder')}
           value={due}
           onChangeText={setDue}
+          onBlur={() => setDueLeft(true)}
           keyboardType="numbers-and-punctuation"
           autoCapitalize="none"
-          error={dueIso === undefined ? t('field.due_invalid') : undefined}
+          error={showError('due') ? t('field.due_invalid') : undefined}
         />
 
-        <View className="pt-2">
-          <Button title={t('create')} size="lg" loading={create.isPending} disabled={!valid} onPress={() => create.mutate()} />
+        <View className="gap-2 pt-2">
+          {tried && missing.length ? (
+            <Text variant="footnote" tone="danger">
+              {missing.map((m) => t(`missing.${m}`)).join(' ')}
+            </Text>
+          ) : null}
+          {/* Always pressable: a tap says what is missing instead of doing nothing. */}
+          <Button title={t('create')} size="lg" loading={create.isPending} onPress={submit} />
         </View>
       </Screen>
     </>

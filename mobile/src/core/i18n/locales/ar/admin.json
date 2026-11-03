@@ -103,5 +103,9 @@
   "approvals.no_access_body": "تظهر هنا الطلبات التي تحتاج إلى قرارك.",
   "home.action.new_service": "خدمة جديدة",
   "home.action.measure": "قياس",
-  "orders.price_missing": "بلا سعر"
+  "orders.price_missing": "بلا سعر",
+  "orders.new": "طلب جديد",
+  "orders.empty_body": "اختر منتجات من الكتالوج لتقديم طلب.",
+  "orders.approved_done": "تمت الموافقة على الطلب",
+  "approvals.claims": "طلبات الضمان"
 }

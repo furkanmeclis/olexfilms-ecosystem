@@ -317,13 +317,20 @@ export function VehicleStep({
   customer,
   selected,
   onPick,
+  onFix,
 }: {
   customer: PickedCustomer;
   selected: Vehicle | null;
   onPick: (v: Vehicle) => void;
+  /**
+   * A vehicle without brand / model was tapped (the backend refuses a service
+   * for it); the caller opens the edit sheet. Left out, the row stays dimmed.
+   */
+  onFix?: (v: Vehicle) => void;
 }) {
   const { t } = useTranslation('dealer');
   const canCreate = useCan('vehicles.write');
+  const fix = canCreate ? onFix : undefined;
   const [creating, setCreating] = useState(false);
   const list = useQuery({
     queryKey: ['vehicles', 'of-customer', customer.uuid],
@@ -354,11 +361,11 @@ export function VehicleStep({
               subtitle={
                 v.car_model
                   ? vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year)
-                  : t('vehicle_needs_model')
+                  : t(fix ? 'vehicle_needs_model_tap' : 'vehicle_needs_model')
               }
-              disabled={!v.car_model}
+              disabled={!v.car_model && !fix}
               selected={v.uuid === selected?.uuid}
-              onPress={() => onPick(v)}
+              onPress={() => (v.car_model ? onPick(v) : fix?.(v))}
               last={i === items.length - 1}
             />
           ))}

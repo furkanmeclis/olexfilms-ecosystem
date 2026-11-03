@@ -100,5 +100,13 @@
   "validation.cari_customer": "Pick a customer for a sale on account.",
   "validation.lines": "Add at least one product.",
   "validation.price": "Enter a valid price (e.g. 1250.50).",
-  "validation.supplier": "Select a supplier."
+  "validation.supplier": "Select a supplier.",
+  "quick_sale.leave_title": "The sale is not saved",
+  "quick_sale.leave_body": "If you leave, the cart is cleared.",
+  "quick_sale.confirm_title": "Complete the sale?",
+  "quick_sale.confirm_total": "Total: {{total}}",
+  "quick_sale.confirm_payment": "Payment: {{method}}",
+  "quick_sale.confirm_customer": "Customer: {{name}}",
+  "quick_sale.confirm_no_customer": "none",
+  "quick_sale.confirm_lines": "Products: {{count}}"
 }

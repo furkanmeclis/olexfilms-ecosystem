@@ -98,7 +98,16 @@ export function EditCustomerSheet({ customer, onClose }: { customer: CustomerDet
 }
 
 /** Edits plate, brand / model, year and VIN of a vehicle (PATCH /v1/vehicles/{uuid}). */
-export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => void }) {
+export function EditVehicleSheet({
+  vehicle,
+  onClose,
+  onSaved,
+}: {
+  vehicle: Vehicle;
+  onClose: () => void;
+  /** Gets the saved vehicle (the service wizard picks it once it has a model). */
+  onSaved?: (v: Vehicle) => void;
+}) {
   const { t } = useTranslation('dealer');
   const qc = useQueryClient();
   const [plate, setPlate] = useState(vehicle.plate ?? '');
@@ -124,8 +133,9 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
           },
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       void qc.invalidateQueries({ queryKey: ['vehicles'] });
+      onSaved?.(saved);
       onClose();
     },
     onError: (e) => {

@@ -14,6 +14,7 @@ import { activeMembership, kindsOf } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { cn } from '@/ui/cn';
+import { confirmAction } from '@/ui/confirm';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
@@ -21,7 +22,7 @@ import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
 import { useCart } from './cart';
-import { cartIsValid, isRoll, NOTE_MAX, toItemInputs, validateCart } from './order-lines';
+import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
 
 const CATALOG = '/bayi/menu/catalog/products';
 
@@ -247,6 +248,21 @@ export function OrderNewScreen() {
     }
   };
 
+  /** Dealer submit: the lines and amounts are confirmed first (prices follow on approval). */
+  const askSubmit = () => {
+    setTouched(true);
+    if (inFlight.current || !cartIsValid(errors)) return;
+    const { rows, more } = submitPreview(lines);
+    const list = rows.map((r) => t(r.roll ? 'confirm_line_meters' : 'confirm_line_pieces', { name: r.name, amount: r.amount }));
+    if (more) list.push(t('confirm_more', { count: more }));
+    confirmAction({
+      title: t('confirm_submit_title', { count: lines.length }),
+      body: `${list.join('\n')}\n\n${t('confirm_no_price')}`,
+      action: t('submit'),
+      onConfirm: () => void save(true),
+    });
+  };
+
   const askClear = () =>
     Alert.alert(t('clear_title'), undefined, [
       { text: t('common:cancel'), style: 'cancel' },
@@ -374,7 +390,7 @@ export function OrderNewScreen() {
               />
             ) : (
               <View className="gap-2.5">
-                <Button title={t('submit')} size="lg" loading={busy === 'submit'} disabled={!!busy} onPress={() => void save(true)} />
+                <Button title={t('submit')} size="lg" loading={busy === 'submit'} disabled={!!busy} onPress={askSubmit} />
                 <Button
                   title={t('save_draft')}
                   variant="outline"

@@ -79,6 +79,18 @@ export function toItemInputs(lines: CartLine[], withPrice = false): ItemInput[] 
   });
 }
 
+export type PreviewRow = { name: string; amount: string; roll: boolean };
+
+/**
+ * Lines listed in the "send the order?" confirmation: name and the amount as
+ * typed (pieces or meters, local decimal comma kept), the first `max` lines
+ * and how many more follow.
+ */
+export function submitPreview(lines: CartLine[], max = 8): { rows: PreviewRow[]; more: number } {
+  const rows = lines.slice(0, max).map((l) => ({ name: l.name, amount: l.amount.trim(), roll: isRoll(l.unit_type) }));
+  return { rows, more: Math.max(0, lines.length - max) };
+}
+
 /** Adds a product once (the API refuses a product twice); a roll starts empty, a piece at 1. */
 export function addLine(lines: CartLine[], product: { uuid: string; sku: string; name: string; unit_type: string }): CartLine[] {
   if (lines.some((l) => l.product_uuid === product.uuid)) return lines;

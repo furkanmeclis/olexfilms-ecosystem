@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "La photo n'a pas pu être prise. Réessayez.",
+  "submit_needs_photo": "Ajoutez au moins une photo pour l'envoyer.",
+  "confirm_to.dealer_review": "La demande part en examen. Si l'examinateur est d'accord, elle est transmise au siège.",
+  "confirm_to.center_review": "La demande est envoyée au siège pour décision.",
+  "confirm_to.approved": "La demande est approuvée.",
+  "change_confirm": "Changer de garantie ?",
+  "change_confirm_body": "Les pièces choisies sont effacées ; la description reste.",
+  "missing.parts": "Choisissez les pièces défectueuses.",
+  "missing.description": "Décrivez brièvement le problème."
+}

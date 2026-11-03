@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Γράψτε έναν τίτλο.",
+  "field.subject_required": "Επιλέξτε έναν αντιπρόσωπο ή διανομέα.",
+  "field.due_custom": "Ή γράψτε μια ημερομηνία",
+  "due_quick.none": "Καμία",
+  "due_quick.today": "Σήμερα",
+  "due_quick.tomorrow": "Αύριο",
+  "due_quick.week": "1 εβδομάδα",
+  "missing.title": "Λείπει ο τίτλος.",
+  "missing.subject": "Δεν επιλέχθηκε θέμα (αντιπρόσωπος ή διανομέας).",
+  "missing.due": "Η μορφή της προθεσμίας είναι λάθος.",
+  "cancel_confirm": "Ακύρωση της εργασίας;"
+}
