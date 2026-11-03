@@ -157,40 +157,5 @@ WHERE s.brand_id = sqlc.arg(brand_id)
 ORDER BY s.completed_at DESC, s.id DESC
 LIMIT sqlc.arg(row_limit);
 
--- Frequent vehicles of one organization: the car brands / models the
--- organization services most, for the "frequent first" section of the
--- mobile vehicle picker (legacy LookupPopularityService parity, dealer
--- counts only). Only services of org_id inside the domain brand (K20);
--- created_by_user_id narrows own / assigned grants. Every service except
--- cancelled ones counts, whatever the period. Reads idx_services_org_status.
-
--- name: FrequentServicedCarBrands :many
-SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
-       cb.logo_object_key AS car_brand_logo_key,
-       COUNT(*)::bigint AS service_count
-FROM services s
-JOIN car_brands cb ON cb.id = s.car_brand_id
-WHERE s.brand_id = sqlc.arg(brand_id)
-  AND s.organization_id = sqlc.arg(org_id)
-  AND s.status <> 'cancelled'
-  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(created_by_user_id))
-  AND cb.active
-GROUP BY cb.id, cb.uuid, cb.name, cb.logo_object_key
-ORDER BY service_count DESC, lower(cb.name), cb.id
-LIMIT sqlc.arg(row_limit);
-
--- name: FrequentServicedCarModels :many
-SELECT cm.uuid AS car_model_uuid, cm.name AS car_model_name,
-       COUNT(*)::bigint AS service_count
-FROM services s
-JOIN car_brands cb ON cb.id = s.car_brand_id
-JOIN car_models cm ON cm.id = s.car_model_id
-WHERE s.brand_id = sqlc.arg(brand_id)
-  AND s.organization_id = sqlc.arg(org_id)
-  AND s.status <> 'cancelled'
-  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(created_by_user_id))
-  AND cb.uuid = sqlc.arg(car_brand_uuid)
-  AND cm.active
-GROUP BY cm.id, cm.uuid, cm.name
-ORDER BY service_count DESC, lower(cm.name), cm.id
-LIMIT sqlc.arg(row_limit);
+-- Frequent vehicles (mobile vehicle picker): TEC-1043 moved them to the
+-- popularity engine, see popularity.sql.

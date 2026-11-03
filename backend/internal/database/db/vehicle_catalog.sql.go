@@ -291,42 +291,50 @@ WHERE ($1::bool IS NULL OR b.active = $1::bool)
   AND ($3::text IS NULL OR b.name ILIKE '%' || $3::text || '%'
        OR b.external_id = $3::text)
 ORDER BY
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text WHEN 'name' THEN lower(b.name) END
-  END ASC,
-  CASE WHEN $4::bool THEN
-    CASE $5::text WHEN 'name' THEN lower(b.name) END
+  -- TEC-1043: popularity (most used first); pop_scores[i] is the score of
+  -- pop_ids[i] from internal/platform/popularity, unused ids score 0. Ties
+  -- fall through to lower(name), then id.
+  CASE WHEN $4::text = 'popularity' THEN
+    COALESCE(($5::float8[])[array_position($6::bigint[], b.id)], 0)
   END DESC,
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
+  CASE WHEN NOT $7::bool THEN
+    CASE $4::text WHEN 'name' THEN lower(b.name) END
   END ASC,
-  CASE WHEN $4::bool THEN
-    CASE $5::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
+  CASE WHEN $7::bool THEN
+    CASE $4::text WHEN 'name' THEN lower(b.name) END
   END DESC,
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text WHEN 'active' THEN b.active END
+  CASE WHEN NOT $7::bool THEN
+    CASE $4::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
   END ASC,
-  CASE WHEN $4::bool THEN
-    CASE $5::text WHEN 'active' THEN b.active END
+  CASE WHEN $7::bool THEN
+    CASE $4::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
   END DESC,
-  CASE WHEN NOT $4::bool THEN
-    CASE $5::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
+  CASE WHEN NOT $7::bool THEN
+    CASE $4::text WHEN 'active' THEN b.active END
   END ASC,
-  CASE WHEN $4::bool THEN
-    CASE $5::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
+  CASE WHEN $7::bool THEN
+    CASE $4::text WHEN 'active' THEN b.active END
+  END DESC,
+  CASE WHEN NOT $7::bool THEN
+    CASE $4::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
+  END ASC,
+  CASE WHEN $7::bool THEN
+    CASE $4::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
   END DESC,
   lower(b.name) ASC,
-  CASE WHEN $4::bool THEN b.id END DESC,
+  CASE WHEN $7::bool THEN b.id END DESC,
   b.id ASC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListCarBrandsParams struct {
 	Active      pgtype.Bool `json:"active"`
 	HasLogo     pgtype.Bool `json:"has_logo"`
 	Q           pgtype.Text `json:"q"`
-	SortDesc    bool        `json:"sort_desc"`
 	SortKey     string      `json:"sort_key"`
+	PopScores   []float64   `json:"pop_scores"`
+	PopIds      []int64     `json:"pop_ids"`
+	SortDesc    bool        `json:"sort_desc"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -352,8 +360,10 @@ func (q *Queries) ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([
 		arg.Active,
 		arg.HasLogo,
 		arg.Q,
-		arg.SortDesc,
 		arg.SortKey,
+		arg.PopScores,
+		arg.PopIds,
+		arg.SortDesc,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -499,37 +509,42 @@ WHERE ($1::bigint IS NULL OR m.car_brand_id = $1::bigint)
   AND ($8::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || $8::text || '%'
        OR m.external_id = $8::text)
 ORDER BY
-  CASE WHEN NOT $9::bool THEN
-    CASE $10::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
-  END ASC,
-  CASE WHEN $9::bool THEN
-    CASE $10::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
+  -- TEC-1043: popularity inside one car brand (brand_uuid required), like
+  -- ListCarBrands; ties fall through to lower(brand), lower(name), id.
+  CASE WHEN $9::text = 'popularity' THEN
+    COALESCE(($10::float8[])[array_position($11::bigint[], m.id)], 0)
   END DESC,
-  CASE WHEN NOT $9::bool AND $10::text = 'year_start' THEN m.year_start END ASC NULLS LAST,
-  CASE WHEN $9::bool AND $10::text = 'year_start' THEN m.year_start END DESC NULLS LAST,
-  CASE WHEN NOT $9::bool AND $10::text = 'year_stop' THEN m.year_stop END ASC NULLS LAST,
-  CASE WHEN $9::bool AND $10::text = 'year_stop' THEN m.year_stop END DESC NULLS LAST,
-  CASE WHEN NOT $9::bool AND $10::text = 'body_type' THEN lower(m.body_type) END ASC NULLS LAST,
-  CASE WHEN $9::bool AND $10::text = 'body_type' THEN lower(m.body_type) END DESC NULLS LAST,
-  CASE WHEN NOT $9::bool AND $10::text = 'powertrain' THEN lower(m.powertrain) END ASC NULLS LAST,
-  CASE WHEN $9::bool AND $10::text = 'powertrain' THEN lower(m.powertrain) END DESC NULLS LAST,
-  CASE WHEN NOT $9::bool THEN
-    CASE $10::text WHEN 'active' THEN m.active END
+  CASE WHEN NOT $12::bool THEN
+    CASE $9::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
   END ASC,
-  CASE WHEN $9::bool THEN
-    CASE $10::text WHEN 'active' THEN m.active END
+  CASE WHEN $12::bool THEN
+    CASE $9::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
   END DESC,
-  CASE WHEN NOT $9::bool THEN
-    CASE $10::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
+  CASE WHEN NOT $12::bool AND $9::text = 'year_start' THEN m.year_start END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $9::text = 'year_start' THEN m.year_start END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $9::text = 'year_stop' THEN m.year_stop END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $9::text = 'year_stop' THEN m.year_stop END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $9::text = 'body_type' THEN lower(m.body_type) END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $9::text = 'body_type' THEN lower(m.body_type) END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool AND $9::text = 'powertrain' THEN lower(m.powertrain) END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $9::text = 'powertrain' THEN lower(m.powertrain) END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool THEN
+    CASE $9::text WHEN 'active' THEN m.active END
   END ASC,
-  CASE WHEN $9::bool THEN
-    CASE $10::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
+  CASE WHEN $12::bool THEN
+    CASE $9::text WHEN 'active' THEN m.active END
+  END DESC,
+  CASE WHEN NOT $12::bool THEN
+    CASE $9::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
+  END ASC,
+  CASE WHEN $12::bool THEN
+    CASE $9::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
   END DESC,
   lower(b.name) ASC,
   lower(m.name) ASC,
-  CASE WHEN $9::bool THEN m.id END DESC,
+  CASE WHEN $12::bool THEN m.id END DESC,
   m.id ASC
-LIMIT $12 OFFSET $11
+LIMIT $14 OFFSET $13
 `
 
 type ListCarModelsParams struct {
@@ -541,8 +556,10 @@ type ListCarModelsParams struct {
 	YearMax     pgtype.Int4 `json:"year_max"`
 	YearMin     pgtype.Int4 `json:"year_min"`
 	Q           pgtype.Text `json:"q"`
-	SortDesc    bool        `json:"sort_desc"`
 	SortKey     string      `json:"sort_key"`
+	PopScores   []float64   `json:"pop_scores"`
+	PopIds      []int64     `json:"pop_ids"`
+	SortDesc    bool        `json:"sort_desc"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -578,8 +595,10 @@ func (q *Queries) ListCarModels(ctx context.Context, arg ListCarModelsParams) ([
 		arg.YearMax,
 		arg.YearMin,
 		arg.Q,
-		arg.SortDesc,
 		arg.SortKey,
+		arg.PopScores,
+		arg.PopIds,
+		arg.SortDesc,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

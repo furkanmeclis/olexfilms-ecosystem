@@ -47,6 +47,12 @@ WHERE (sqlc.narg(active)::bool IS NULL OR b.active = sqlc.narg(active)::bool)
   AND (sqlc.narg(q)::text IS NULL OR b.name ILIKE '%' || sqlc.narg(q)::text || '%'
        OR b.external_id = sqlc.narg(q)::text)
 ORDER BY
+  -- TEC-1043: popularity (most used first); pop_scores[i] is the score of
+  -- pop_ids[i] from internal/platform/popularity, unused ids score 0. Ties
+  -- fall through to lower(name), then id.
+  CASE WHEN sqlc.arg(sort_key)::text = 'popularity' THEN
+    COALESCE((sqlc.narg(pop_scores)::float8[])[array_position(sqlc.narg(pop_ids)::bigint[], b.id)], 0)
+  END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
     CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(b.name) END
   END ASC,
@@ -141,6 +147,11 @@ WHERE (sqlc.narg(car_brand_id)::bigint IS NULL OR m.car_brand_id = sqlc.narg(car
   AND (sqlc.narg(q)::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || sqlc.narg(q)::text || '%'
        OR m.external_id = sqlc.narg(q)::text)
 ORDER BY
+  -- TEC-1043: popularity inside one car brand (brand_uuid required), like
+  -- ListCarBrands; ties fall through to lower(brand), lower(name), id.
+  CASE WHEN sqlc.arg(sort_key)::text = 'popularity' THEN
+    COALESCE((sqlc.narg(pop_scores)::float8[])[array_position(sqlc.narg(pop_ids)::bigint[], m.id)], 0)
+  END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
     CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
   END ASC,

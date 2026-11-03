@@ -10,6 +10,7 @@ package vehiclecatalog
 import (
 	"net/http"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
@@ -17,10 +18,24 @@ import (
 )
 
 // RegisterRoutes mounts the vehicle catalog routes.
-func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader) {
+func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader, q *db.Queries) {
 	authn := middleware.Authenticate(tokens, loader)
 	read := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermVehicleCatalogRead))
+	}
+	// TEC-1043: sort=popularity ranks by the caller organization's usage, so
+	// only such requests pass the organization gate (membership + domain
+	// brand); every other order keeps working without an organization.
+	org := middleware.RequireOrganization(tokens, q)
+	panelList := func(fn http.HandlerFunc) http.Handler {
+		withOrg := org(fn)
+		return read(func(w http.ResponseWriter, r *http.Request) {
+			if handler.WantsPopularity(r) {
+				withOrg.ServeHTTP(w, r)
+				return
+			}
+			fn(w, r)
+		})
 	}
 	write := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermVehicleCatalogWrite))
@@ -33,16 +48,16 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.HandleFunc("GET /v1/public/vehicle-heroes/models/{uuid}", h.PublicModelHero)
 
 	// Panel reads (any organization role; super_admin also sees inactive rows).
-	mux.Handle("GET /v1/vehicle-catalog/brands", read(h.ListBrands))
+	mux.Handle("GET /v1/vehicle-catalog/brands", panelList(h.ListBrands))
 	mux.Handle("GET /v1/vehicle-catalog/brands/{uuid}", read(h.GetBrand))
-	mux.Handle("GET /v1/vehicle-catalog/models", read(h.ListModels))
+	mux.Handle("GET /v1/vehicle-catalog/models", panelList(h.ListModels))
 	// TEC-369: faceted filter options (distinct body_type / powertrain).
 	mux.Handle("GET /v1/vehicle-catalog/models/facets", read(h.ModelFacets))
 	mux.Handle("GET /v1/vehicle-catalog/models/{uuid}", read(h.GetModel))
 
 	// Portal reads (customer / fleet sessions; active rows only).
-	mux.Handle("GET /v1/portal/vehicle-catalog/brands", read(h.ListBrands))
-	mux.Handle("GET /v1/portal/vehicle-catalog/models", read(h.ListModels))
+	mux.Handle("GET /v1/portal/vehicle-catalog/brands", read(h.PortalListBrands))
+	mux.Handle("GET /v1/portal/vehicle-catalog/models", read(h.PortalListModels))
 
 	// super_admin writes.
 	mux.Handle("POST /v1/platform/vehicle-catalog/brands", write(h.CreateBrand))

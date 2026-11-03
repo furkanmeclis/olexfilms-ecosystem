@@ -3,8 +3,10 @@
 package model
 
 import (
+	"maps"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/popularity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
@@ -101,14 +103,39 @@ var ModelSort = apiquery.SortSpec{
 	Default: apiquery.SortField{Field: "brand"},
 }
 
+// SortPopularity is the TEC-1043 popularity sort key: most used first
+// (internal/platform/popularity), then name, then id. Panel lists only: it
+// needs the caller's brand and organization, so the portal lists and the
+// /meta defaults keep BrandSort / ModelSort. Only the order changes; no
+// count or score is returned.
+const SortPopularity = "popularity"
+
+// withPopularity copies spec and adds the popularity key.
+func withPopularity(spec apiquery.SortSpec) apiquery.SortSpec {
+	cols := make(apiquery.SortColumns, len(spec.Columns)+1)
+	maps.Copy(cols, spec.Columns)
+	cols[SortPopularity] = SortPopularity
+	return apiquery.SortSpec{Columns: cols, Default: spec.Default}
+}
+
+// BrandPanelSort is BrandSort plus popularity (GET /v1/vehicle-catalog/brands).
+var BrandPanelSort = withPopularity(BrandSort)
+
+// ModelPanelSort is ModelSort plus popularity (GET /v1/vehicle-catalog/models,
+// popularity needs brand_uuid).
+var ModelPanelSort = withPopularity(ModelSort)
+
 // BrandFilter filters the brand list.
 type BrandFilter struct {
 	Q       string
 	Active  *bool
 	HasLogo *bool
 	Sort    apiquery.ResolvedSort
-	Limit   int32
-	Offset  int32
+	// Popularity is who the popularity sort ranks for (Sort.Key ==
+	// SortPopularity only).
+	Popularity popularity.Scope
+	Limit      int32
+	Offset     int32
 }
 
 // ModelFilter filters the model list / search.
@@ -122,10 +149,12 @@ type ModelFilter struct {
 	BodyTypes   []string
 	Powertrains []string
 	// Year: the production span overlaps [Min, Max] (year_min / year_max).
-	Year   apiquery.NumberRange
-	Sort   apiquery.ResolvedSort
-	Limit  int32
-	Offset int32
+	Year apiquery.NumberRange
+	Sort apiquery.ResolvedSort
+	// Popularity: see BrandFilter.Popularity.
+	Popularity popularity.Scope
+	Limit      int32
+	Offset     int32
 }
 
 // FacetValue is one distinct value of a free-text model column.

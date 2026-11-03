@@ -21,6 +21,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/popularity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -124,6 +127,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 			[]response.Detail{{Field: conflict.Field, Message: "already exists", Code: "duplicate"}})
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Vehicle catalog record not found")
+	case errors.Is(err, usecase.ErrPopularityUnavailable):
+		response.ValidationError(w, r, []response.Detail{{Field: "sort", Message: "popularity needs an organization or domain brand", Code: "unavailable"}})
 	case errors.Is(err, usecase.ErrInUse):
 		response.Conflict(w, r, response.CodeConflict, "The record is still in use")
 	default:
@@ -184,8 +189,52 @@ func readerActive(w http.ResponseWriter, r *http.Request) (*bool, bool, bool) {
 
 // --- Brands -----------------------------------------------------------------
 
-// ListBrands serves GET /v1/vehicle-catalog/brands (and the portal copy).
+// ListBrands serves GET /v1/vehicle-catalog/brands; sort=popularity
+// (TEC-1043) ranks by the caller organization's and brand's usage.
 func (h *Handler) ListBrands(w http.ResponseWriter, r *http.Request) {
+	h.listBrands(w, r, model.BrandPanelSort)
+}
+
+// PortalListBrands serves GET /v1/portal/vehicle-catalog/brands (no
+// popularity: portal sessions have no organization).
+func (h *Handler) PortalListBrands(w http.ResponseWriter, r *http.Request) {
+	h.listBrands(w, r, model.BrandSort)
+}
+
+// WantsPopularity reports whether the request's primary sort is popularity;
+// the routes put the organization gate in front of such requests only, so
+// the default (name) order keeps working without an organization.
+func WantsPopularity(r *http.Request) bool {
+	s := apiquery.ParseSort(r.URL.Query().Get("sort"))
+	return len(s) > 0 && s[0].Field == model.SortPopularity
+}
+
+// popularityScope resolves who a popularity sort ranks for: the active
+// organization and its brand (RequireOrganization ran first), or, for the
+// super admin brand-center fallback, the domain brand alone (general counts
+// only). -popularity is refused: the order is "most used first" only.
+func popularityScope(r *http.Request, sort apiquery.ResolvedSort) (popularity.Scope, error) {
+	if sort.Key != model.SortPopularity {
+		return popularity.Scope{}, nil
+	}
+	if sort.Desc {
+		return popularity.Scope{}, &apiquery.ValidationError{Details: []apiquery.Detail{{
+			Field: "sort", Message: "popularity is most used first only; use sort=popularity", Code: "invalid",
+		}}}
+	}
+	if s, ok := orgctx.ScopeFrom(r.Context()); ok && s.BrandID != 0 {
+		if s.SuperAdminFallback {
+			return popularity.Scope{BrandID: s.BrandID}, nil
+		}
+		return popularity.Scope{BrandID: s.BrandID, OrgID: s.InternalID}, nil
+	}
+	if b, ok := brandctx.From(r.Context()); ok && b.ID != 0 {
+		return popularity.Scope{BrandID: b.ID}, nil
+	}
+	return popularity.Scope{}, usecase.ErrPopularityUnavailable
+}
+
+func (h *Handler) listBrands(w http.ResponseWriter, r *http.Request, spec apiquery.SortSpec) {
 	q := apiquery.Parse(r.URL.Query())
 	active, _, ok := readerActive(w, r)
 	if !ok {
@@ -197,7 +246,11 @@ func (h *Handler) ListBrands(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	if f.Sort, err = apiquery.ResolveSort(q.Sort, model.BrandSort); err != nil {
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, spec); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if f.Popularity, err = popularityScope(r, f.Sort); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -282,9 +335,20 @@ func (h *Handler) DeleteBrand(w http.ResponseWriter, r *http.Request) {
 
 // ListModels serves GET /v1/vehicle-catalog/models: list/search by
 // "brand model" text, optionally inside one brand (brand_uuid). TEC-369:
-// sort, body_type / powertrain (CSV), year_min / year_max.
+// sort, body_type / powertrain (CSV), year_min / year_max. TEC-1043:
+// sort=popularity inside one car brand (brand_uuid required).
 func (h *Handler) ListModels(w http.ResponseWriter, r *http.Request) {
-	f, ok := h.modelFilter(w, r)
+	h.listModels(w, r, model.ModelPanelSort)
+}
+
+// PortalListModels serves GET /v1/portal/vehicle-catalog/models (no
+// popularity).
+func (h *Handler) PortalListModels(w http.ResponseWriter, r *http.Request) {
+	h.listModels(w, r, model.ModelSort)
+}
+
+func (h *Handler) listModels(w http.ResponseWriter, r *http.Request, spec apiquery.SortSpec) {
+	f, ok := h.modelFilter(w, r, spec)
 	if !ok {
 		return
 	}
@@ -300,7 +364,7 @@ func (h *Handler) ListModels(w http.ResponseWriter, r *http.Request) {
 // distinct body_type and powertrain values with counts, for the faceted
 // filters of the model list. brand_uuid and active narrow it like the list.
 func (h *Handler) ModelFacets(w http.ResponseWriter, r *http.Request) {
-	f, ok := h.modelFilter(w, r)
+	f, ok := h.modelFilter(w, r, model.ModelSort)
 	if !ok {
 		return
 	}
@@ -318,7 +382,7 @@ const (
 	maxModelYear = 2100
 )
 
-func (h *Handler) modelFilter(w http.ResponseWriter, r *http.Request) (model.ModelFilter, bool) {
+func (h *Handler) modelFilter(w http.ResponseWriter, r *http.Request, spec apiquery.SortSpec) (model.ModelFilter, bool) {
 	values := r.URL.Query()
 	q := apiquery.Parse(values)
 	active, onlyActiveBrands, ok := readerActive(w, r)
@@ -352,7 +416,15 @@ func (h *Handler) modelFilter(w http.ResponseWriter, r *http.Request) (model.Mod
 			return f, false
 		}
 	}
-	if f.Sort, err = apiquery.ResolveSort(q.Sort, model.ModelSort); err != nil {
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, spec); err != nil {
+		writeError(w, r, err)
+		return f, false
+	}
+	if f.Sort.Key == model.SortPopularity && f.BrandUUID == nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "brand_uuid", Message: "is required with sort=popularity", Code: "required"}})
+		return f, false
+	}
+	if f.Popularity, err = popularityScope(r, f.Sort); err != nil {
 		writeError(w, r, err)
 		return f, false
 	}

@@ -3,15 +3,20 @@ import { describe, it } from 'node:test';
 
 import {
   buildRows,
+  CATALOG_SORT,
+  catalogQuery,
   EMPTY_VEHICLE,
+  FALLBACK_SORT,
   frequentList,
   isComplete,
   pickBrand,
   pickModel,
+  popularityRefused,
   previousStep,
   reachableSteps,
   startStep,
   vehicleTitle,
+  withSortFallback,
   yearOptions,
   yearSpan,
   type VehicleValue,
@@ -118,5 +123,68 @@ describe('frequentList', () => {
     assert.deepEqual(frequentList(undefined), []);
     assert.deepEqual(frequentList({ items: [] }), []);
     assert.deepEqual(frequentList([null, { name: 'x' }, { uuid: 'a', name: 'A' }]), [{ uuid: 'a', name: 'A' }]);
+  });
+});
+
+describe('catalog list order (TEC-1043)', () => {
+  it('asks for the popularity order, name as the fallback', () => {
+    assert.equal(CATALOG_SORT, 'popularity');
+    assert.equal(FALLBACK_SORT, 'name');
+  });
+
+  it('builds the brand and model page queries', () => {
+    assert.deepEqual(catalogQuery({ q: '', sort: CATALOG_SORT, limit: 100, offset: 0 }), {
+      q: undefined,
+      active: true,
+      sort: 'popularity',
+      limit: 100,
+      offset: 0,
+    });
+    assert.deepEqual(catalogQuery({ q: 'x5', brandUuid: 'b1', sort: 'name', limit: 100, offset: 200 }), {
+      brand_uuid: 'b1',
+      q: 'x5',
+      active: true,
+      sort: 'name',
+      limit: 100,
+      offset: 200,
+    });
+  });
+
+  it('recognises a refused popularity order only', () => {
+    assert.equal(popularityRefused({ status: 400, details: [{ field: 'sort', message: 'unknown' }] }), true);
+    assert.equal(popularityRefused({ status: 403, code: 'ORGANIZATION_CONTEXT_REQUIRED' }), true);
+    assert.equal(popularityRefused({ status: 400, details: [{ field: 'brand_uuid' }] }), false);
+    assert.equal(popularityRefused({ status: 403, code: 'FORBIDDEN' }), false);
+    assert.equal(popularityRefused({ status: 500 }), false);
+    assert.equal(popularityRefused(null), false);
+  });
+
+  it('retries by name when popularity is refused', async () => {
+    const asked: string[] = [];
+    const page = await withSortFallback(async (sort) => {
+      asked.push(sort);
+      if (sort === 'popularity') throw { status: 400, details: [{ field: 'sort' }] };
+      return { items: ['a'] };
+    });
+    assert.deepEqual(asked, ['popularity', 'name']);
+    assert.deepEqual(page, { items: ['a'] });
+  });
+
+  it('loads once by popularity and keeps other errors', async () => {
+    const asked: string[] = [];
+    assert.deepEqual(
+      await withSortFallback(async (sort) => {
+        asked.push(sort);
+        return 1;
+      }),
+      1,
+    );
+    assert.deepEqual(asked, ['popularity']);
+    await assert.rejects(
+      withSortFallback(async () => {
+        throw { status: 500 };
+      }),
+      (e: unknown) => (e as { status: number }).status === 500,
+    );
   });
 });

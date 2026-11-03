@@ -216,6 +216,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/popularity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
@@ -577,11 +578,20 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithFeatures(featureSvc).
 		WithOutbox(outbox.NewStore(deps.DB, deps.Queries)).
 		WithStorage(deps.Storage)
+	// TEC-1043: lookup popularity engine (15 min Redis cache of usage counts).
+	var popCache popularity.Cache = popularity.NoCache{}
+	if deps.Redis != nil {
+		popCache = popularity.NewRedisCache(deps.Redis, cfg.App.Env, func(op string, err error) {
+			log.Warn("popularity_cache_error", "op", op, "error", err)
+		})
+	}
+	popularitySvc := popularity.New(deps.Queries, popCache)
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
 		WithContractRequirement(sysSvc, featureSvc).
 		WithCompletedCancelAccounting(accountingPoster).
 		WithCertificatePolicy(certificatesSvc).
-		WithIntakePhotoGate(photoStandardSvc)
+		WithIntakePhotoGate(photoStandardSvc).
+		WithPopularity(popularitySvc)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}
@@ -1060,8 +1070,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: deps.Queue}, log)
 	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
+	// TEC-1043: sort=popularity on the panel lists.
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
-		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
+		vehiclecatalogusecase.New(deps.Queries).WithPopularity(popularitySvc), deps.Storage, activityRec), tokens, loader, deps.Queries)
 	// TEC-317: public dealer application form (territory routing, admin
 	// switch leads.dealer_application_enabled guarded by the leads module).
 	dealerApps := leadsusecase.NewApplications(deps.DB, deps.Queries, geoSvc, featureSvc, sysSvc,
