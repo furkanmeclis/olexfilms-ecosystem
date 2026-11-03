@@ -42,3 +42,7 @@ Diğer tüm önekler 404 `NOT_FOUND` döndürür; `auth`, `platform`, `portal`,
 `public`, `mobile`, `oauth`, `realtime`, `ai`, `impersonation` ve yukarıdakiler dışındaki
 `accounting/*` alt yolları (`accounts`, `reports`, `exports`, `collections`, `payments`,
 `opening-balances`) aynaya açık değildir. Kodda tek liste `middleware.MobilePanelMirrorPrefixes` olur.
+
+TEC-1044: `features` ve `accounting/reports/pnl` önek değil tam yol olarak açıktır
+(`middleware.mobilePanelMirrorExactPaths`). Alt yolları, yani `features/{key}/request` ve
+`accounting/reports/pnl/export`, ile diğer `accounting/reports/*` raporları kapalıdır.

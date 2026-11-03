@@ -257,6 +257,37 @@ func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
 	}
 }
 
+func TestMobilePanelMirrorTEC1044ExactPaths(t *testing.T) {
+	for _, path := range []string{"features", "accounting/reports/pnl"} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+	for _, path := range []string{
+		"features/", "features/warranty/request", "featuresx",
+		"accounting/reports/pnl/", "accounting/reports/pnl/export", "accounting/reports/pnlx",
+		"accounting/reports/balances", "accounting/reports/margin",
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
+		rec := httptest.NewRecorder()
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Errorf("%s reached next", path)
+		})).ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d", path, rec.Code)
+		}
+	}
+}
+
 func TestMobilePanelMirrorTEC958Allowed(t *testing.T) {
 	id := uuid.NewString()
 	for _, path := range []string{
