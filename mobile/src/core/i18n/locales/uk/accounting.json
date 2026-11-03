@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} шт.",
   "order_detail.meters": "{{n}} м",
   "order_detail.barcodes": "Штрихкоди",
-  "order_detail.no_barcodes": "Штрихкоди не призначено"
+  "order_detail.no_barcodes": "Штрихкоди не призначено",
+  "balance_sentence.receivable": "{{name}} винен вам {{amount}}.",
+  "balance_sentence.payable": "Ви винні {{name}} {{amount}}.",
+  "balance_sentence.settled": "Рахунок закрито, боргів немає."
 }

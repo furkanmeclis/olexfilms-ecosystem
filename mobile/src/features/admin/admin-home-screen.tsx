@@ -10,6 +10,7 @@ import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
+import { APPROVAL_PERMISSIONS } from '@/features/menu/groups';
 import { usePendingOrderCount } from '@/features/warehouse/orders-api';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Icon } from '@/ui/icon';
@@ -27,7 +28,8 @@ function greetingKey(hour: number) {
   return 'home:greeting_evening';
 }
 
-type Action = { key: string; icon: IconName; href: Href; permission?: string };
+/** `permission`: any of them shows the shortcut. */
+type Action = { key: string; icon: IconName; href: Href; permission?: string | string[] };
 
 /**
  * Quick actions. The center opens this home inside its workplace (`bayi`,
@@ -39,7 +41,7 @@ function actionsFor(workplace: boolean): Action[] {
     return [
       { key: 'new_service', icon: 'add', href: '/bayi/services/new' as Href, permission: 'services.write' },
       { key: 'measure', icon: 'gauge', href: '/bayi/measure' as Href, permission: 'services.write' },
-      { key: 'approvals', icon: 'warrantyClaim', href: '/bayi/menu/approvals' as Href },
+      { key: 'approvals', icon: 'warrantyClaim', href: '/bayi/menu/approvals' as Href, permission: APPROVAL_PERMISSIONS },
       { key: 'network', icon: 'network', href: '/bayi/menu/network' as Href, permission: 'organizations.read' },
       { key: 'orders', icon: 'cart', href: '/bayi/menu/orders' as Href, permission: 'orders.read' },
       { key: 'reports', icon: 'chart', href: '/bayi/menu/reports' as Href },
@@ -47,7 +49,7 @@ function actionsFor(workplace: boolean): Action[] {
   }
   return [
     { key: 'network', icon: 'network', href: '/admin/network', permission: 'organizations.read' },
-    { key: 'approvals', icon: 'warrantyClaim', href: '/admin/approvals' },
+    { key: 'approvals', icon: 'warrantyClaim', href: '/admin/approvals', permission: APPROVAL_PERMISSIONS },
     { key: 'orders', icon: 'cart', href: '/admin/menu/orders' as Href, permission: 'orders.read' },
     { key: 'reports', icon: 'chart', href: '/admin/menu/reports' as Href },
   ];
@@ -68,7 +70,7 @@ export function AdminHomeScreen() {
   // Orders waiting for the center's warehouse, as a badge on the Orders shortcut (TEC-1025).
   const pendingOrders = usePendingOrderCount(isCenterWorkplace(me) && perms.has('orders.read'));
   const actions = actionsFor(isCenterWorkplace(me)).filter(
-    (a) => (!a.permission || me?.user.is_super_admin || perms.has(a.permission)) && moduleOn(a.key),
+    (a) => (!a.permission || me?.user.is_super_admin || [a.permission].flat().some((p) => perms.has(p))) && moduleOn(a.key),
   );
 
   const overview = useReport('overview', { period });

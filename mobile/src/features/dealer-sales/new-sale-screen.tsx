@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,12 +13,14 @@ import { PickerSheet } from '@/features/picker-sheet';
 import { fullName } from '@/features/services/lib';
 import { ContinuousScanner, type ScanOutcome } from '@/features/warehouse/continuous-scanner';
 import { Button } from '@/ui/button';
+import { confirmAction } from '@/ui/confirm';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { useLeaveGuard } from '@/ui/use-leave-guard';
 
 import { createSale, dealerSalesKeys, lookupSaleItem, useProductSearch } from './api';
 import { alertError, failMessage, success } from './errors';
@@ -178,10 +181,31 @@ export function NewSaleScreen() {
   const currency = lines[0]?.currency ?? 'TRY';
   const errors = touched ? saleErrors(lines, payment, customer?.uuid ?? null) : {};
 
-  const submit = async () => {
+  // A filled cart lives only on this screen: leaving asks first.
+  const releaseLeave = useLeaveGuard(lines.length > 0, { title: t('quick_sale.leave_title'), body: t('quick_sale.leave_body') });
+
+  /** Checks, then a short summary to confirm (a sale can only be voided the same day). */
+  const askSubmit = () => {
     setTouched(true);
     const errs = saleErrors(lines, payment, customer?.uuid ?? null);
-    if (Object.keys(errs).length) return;
+    if (Object.keys(errs).length) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    confirmAction({
+      title: t('quick_sale.confirm_title'),
+      body: [
+        t('quick_sale.confirm_total', { total: f.money(totals.total, currency) }),
+        t('quick_sale.confirm_payment', { method: t(`payment_methods.${payment}`) }),
+        t('quick_sale.confirm_customer', { name: customer?.label ?? t('quick_sale.confirm_no_customer') }),
+        t('quick_sale.confirm_lines', { count: lines.length }),
+      ].join('\n'),
+      action: t('quick_sale.submit'),
+      onConfirm: () => void submit(),
+    });
+  };
+
+  const submit = async () => {
     setBusy(true);
     try {
       await createSale({
@@ -198,6 +222,7 @@ export function NewSaleScreen() {
       void qc.invalidateQueries({ queryKey: ['stock'] });
       success();
       Alert.alert(t('quick_sale.saved'));
+      releaseLeave();
       router.back();
     } catch (e) {
       alertError(e);
@@ -401,7 +426,18 @@ export function NewSaleScreen() {
             </Text>
           ) : null}
         </View>
-        <Button title={t('quick_sale.submit')} size="lg" loading={busy} disabled={!lines.length} onPress={() => void submit()} />
+        {errors.lines || errors.customer ? (
+          // The fields above may be off screen: repeat what blocks the sale next to the button.
+          <View className="flex-row items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2.5">
+            <Icon name="alert" tone="destructive" size={16} />
+            <Text variant="footnote" tone="danger" className="flex-1">
+              {[errors.lines ? t(`validation.${errors.lines}`) : null, errors.customer ? t(`validation.${errors.customer}`) : null]
+                .filter(Boolean)
+                .join('\n')}
+            </Text>
+          </View>
+        ) : null}
+        <Button title={t('quick_sale.submit')} size="lg" loading={busy} disabled={!lines.length} onPress={askSubmit} />
       </Screen>
       <ContinuousScanner
         visible={scanning}

@@ -71,6 +71,19 @@ export function formatMetric(metric: string, v: MetricValue, fmt: Formatters, fa
   }
 }
 
+/**
+ * Chip label of a `YYYY-MM` period: `thisMonth` for the first (current)
+ * month, else the local month name and year ("Kasım 2026"). `locale` is an
+ * Intl locale (digits already chosen by the caller).
+ */
+export function monthLabel(period: string, locale: string, thisMonth: string | null): string {
+  if (thisMonth) return thisMonth;
+  const m = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!m) return period;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(d);
+}
+
 /** The last `count` months (YYYY-MM), newest first. */
 export function recentMonths(now: Date, count = 6): string[] {
   const out: string[] = [];

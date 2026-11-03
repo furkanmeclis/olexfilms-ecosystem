@@ -268,5 +268,9 @@
   "home_no_car_title": "Aracını Olex ile taçlandır",
   "home_no_car_body": "Yetkili bayide uygulanan film ve garantin burada görünür.",
   "booking_dealer_pick": "Bayi seç",
-  "booking_vehicle_pick": "Araç seç"
+  "booking_vehicle_pick": "Araç seç",
+  "fleet_link_accept_title": "Bayi isteği kabul edilsin mi?",
+  "fleet_link_accept_body": "{{name}} filonuzun araçlarına hizmet verebilecek ve bu bayide filonuz için bir cari hesap açılacak.",
+  "review_missing.ratings": "Göndermek için “{{first}}” ve “{{second}}” sorularına yıldız verin.",
+  "review_missing.questions": "Yıldızlı (*) soruları da yanıtlayın."
 }

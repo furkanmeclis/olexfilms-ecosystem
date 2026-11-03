@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "全部车窗",
   "picker.search": "搜索",
   "picker.selected": "已选",
-  "picker.empty": "没有结果"
+  "picker.empty": "没有结果",
+  "leave_title": "有未保存的更改",
+  "leave_body": "离开后，已输入的内容将丢失。",
+  "leave_discard": "离开"
 }

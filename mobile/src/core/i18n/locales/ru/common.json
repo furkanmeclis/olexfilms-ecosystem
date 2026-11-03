@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Все стёкла",
   "picker.search": "Поиск",
   "picker.selected": "Выбрано",
-  "picker.empty": "Ничего не найдено"
+  "picker.empty": "Ничего не найдено",
+  "leave_title": "Есть несохранённые изменения",
+  "leave_body": "Если выйти, введённые данные пропадут.",
+  "leave_discard": "Выйти"
 }

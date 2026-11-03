@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "يُعلَّم الطلب كمُسلَّم للوكيل يدويًا أو في المستودع، ويغلقه الوكيل بـ«تم الاستلام».",
   "orders.actions.deliver.success": "تم تعليمه كمُسلَّم.",
   "orders.actions.deliver.title": "تعليمه كمُسلَّم؟",
-  "orders.price_missing": "بلا سعر"
+  "orders.price_missing": "بلا سعر",
+  "orders.assign.line_full": "{{name}} لديه الكمية المطلوبة بالفعل.",
+  "orders.assign.whole_roll_title": "تخصيص اللفة كاملة ({{meters}} م)؟",
+  "orders.assign.whole_roll_body": "حقل الأمتار فارغ. إذا احتجت أقل، ألغِ واكتب الأمتار.",
+  "orders.assign.whole_roll_confirm": "تخصيص الكل",
+  "orders.assign.whole_roll_skipped": "لم يُخصَّص: اكتب الأمتار وامسح مرة أخرى.",
+  "orders.assign.remove_confirm": "إزالة {{barcode}} من الطلب؟",
+  "orders.assign.order_complete": "اكتمل الطلب: تمت تغطية جميع البنود.",
+  "orders.assign.roll_hint": "في اللفائف اكتب الأمتار. إذا تُرك فارغًا تُخصَّص اللفة كاملة؛ وعدد أمتار أقل يقسم اللفة بباركود جديد.",
+  "count.remove_scan_confirm": "حذف مسح {{code}}؟",
+  "entry.remove_line_confirm": "إزالة {{barcode}} من القائمة؟",
+  "m.remove": "إزالة",
+  "eod.generate_all_warehouses": "جميع المستودعات",
+  "eod.pdf_ios_only": "لا يمكن مشاركة ملف PDF للتقرير من هذا الجهاز؛ شاركه من iPhone أو من لوحة الويب.",
+  "counts.defaults_summary": "الإعدادات: {{scope}}، {{method}}، {{visibility}}.",
+  "counts.advanced": "متقدم"
 }

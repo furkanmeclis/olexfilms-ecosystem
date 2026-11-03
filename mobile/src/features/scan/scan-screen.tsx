@@ -1,18 +1,20 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { router, useIsFocused } from 'expo-router';
+import { type Href, router, useIsFocused, usePathname } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { Text } from '@/ui/text';
 
+import { openWarranty } from '@/features/services/share';
 import { WarehouseScan } from '@/features/warehouse/warehouse-scan';
 
-import { classifyCode, type ScannedCode } from './scan-codes';
+import { classifyCode, scanAction, type ScannedCode } from './scan-codes';
 
 const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8'] as const;
 
@@ -28,6 +30,9 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
   const [permission, requestPermission] = useCameraPermissions();
   const [result, setResult] = useState<ScannedCode | null>(null);
   const busy = useRef(false);
+  const pathname = usePathname();
+  const canStock = useCan('stock.read');
+  const action = result ? scanAction(result, { space: pathname.startsWith('/admin') ? 'admin' : 'bayi', canStock }) : null;
 
   if (!permission) return <View className="flex-1 bg-black" />;
 
@@ -87,6 +92,20 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
           <Text variant="title" selectable className="font-mono">
             {result.code}
           </Text>
+          {action ? (
+            <Button
+              title={t(action.kind === 'unit' ? 'open_unit' : 'open_warranty')}
+              icon={action.kind === 'unit' ? 'barcode' : 'shield'}
+              onPress={() => {
+                if (action.kind === 'unit') router.push(action.path as Href);
+                else void openWarranty(action.code);
+              }}
+            />
+          ) : (
+            <Text variant="callout" tone="muted">
+              {t(`next_hint.${result.kind}`)}
+            </Text>
+          )}
           <Button
             title={t('scan_again')}
             variant="secondary"

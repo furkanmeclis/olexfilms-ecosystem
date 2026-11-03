@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Saisissez un titre.",
+  "field.subject_required": "Choisissez un revendeur ou un distributeur.",
+  "field.due_custom": "Ou saisissez une date",
+  "due_quick.none": "Aucune",
+  "due_quick.today": "Aujourd'hui",
+  "due_quick.tomorrow": "Demain",
+  "due_quick.week": "1 semaine",
+  "missing.title": "Titre manquant.",
+  "missing.subject": "Aucun sujet (revendeur ou distributeur) choisi.",
+  "missing.due": "Le format de l'échéance est incorrect.",
+  "cancel_confirm": "Annuler la tâche ?"
+}

@@ -127,5 +127,9 @@
   "home_no_car_title": "Коронуйте своє авто з Olex",
   "home_no_car_body": "Тут з’являться плівка, нанесена в авторизованого дилера, та її гарантія.",
   "booking_dealer_pick": "Виберіть дилера",
-  "booking_vehicle_pick": "Виберіть автомобіль"
+  "booking_vehicle_pick": "Виберіть автомобіль",
+  "fleet_link_accept_title": "Прийняти запит дилера?",
+  "fleet_link_accept_body": "{{name}} зможе обслуговувати автомобілі вашого автопарку, і в цього дилера відкриється рахунок автопарку.",
+  "review_missing.ratings": "Щоб надіслати, оцініть «{{first}}» і «{{second}}» зірками.",
+  "review_missing.questions": "Дайте відповідь і на запитання із зірочкою (*)."
 }

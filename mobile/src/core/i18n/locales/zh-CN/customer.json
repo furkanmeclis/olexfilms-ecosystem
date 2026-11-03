@@ -127,5 +127,9 @@
   "home_no_car_title": "用 Olex 为爱车加冕",
   "home_no_car_body": "在授权经销商施工的膜及其质保会显示在这里。",
   "booking_dealer_pick": "选择经销商",
-  "booking_vehicle_pick": "选择车辆"
+  "booking_vehicle_pick": "选择车辆",
+  "fleet_link_accept_title": "接受经销商的请求？",
+  "fleet_link_accept_body": "{{name}} 将可以为您车队的车辆提供服务，并会在该经销商处为车队开立往来账户。",
+  "review_missing.ratings": "发送前，请为“{{first}}”和“{{second}}”打星。",
+  "review_missing.questions": "也请回答带 * 的问题。"
 }

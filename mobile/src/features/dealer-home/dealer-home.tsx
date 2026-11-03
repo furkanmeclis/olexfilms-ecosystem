@@ -43,6 +43,9 @@ export function DealerHome() {
   const canWrite = useCan('services.write');
   const canServices = useCan('services.read');
   const canCustomers = useCan('customers.read');
+  const canAccounting = useCan('accounting.read');
+  const canSell = useCan('product_sales.write');
+  const canOrders = useCan('orders.read');
 
   const overview = useQuery({
     queryKey: ['dealer-home', 'overview', i18n.language],
@@ -73,6 +76,10 @@ export function DealerHome() {
       // TEC-866: the warranty list is closed to dealers; its shortcut became the
       // services list (warranties open from the service detail).
       { key: 'services', icon: 'service', href: '/bayi/services', show: canServices },
+      // Without services (accounting roles): the desk jobs of the finance side.
+      { key: 'accounting', icon: 'accounting', href: '/bayi/menu/accounting' as Href, show: !canServices && canAccounting },
+      { key: 'quick_sale', icon: 'cart', href: '/bayi/menu/quick_sale/new' as Href, show: !canServices && canSell },
+      { key: 'orders', icon: 'order', href: '/bayi/menu/orders' as Href, show: !canServices && canOrders },
     ] satisfies Action[]
   ).filter((a) => moduleOn(a.key) && a.show);
 
@@ -137,6 +144,13 @@ export function DealerHome() {
                 <KpiCard key={c.key} icon={kpiIcon(c.key)} label={c.label} value={formatNumber(c.value, i18n.language)} />
               ))}
             </KpiGrid>
+          </View>
+        ) : overview.isError ? (
+          <View className="items-center gap-2 rounded-2xl border border-border bg-card p-4">
+            <Text variant="callout" tone="muted" className="text-center">
+              {errorText(overview.error)}
+            </Text>
+            <Button title={t('common:retry')} variant="secondary" onPress={() => void overview.refetch()} />
           </View>
         ) : null}
 

@@ -161,7 +161,7 @@ type PagedListProps<T> = {
   query: ReturnType<typeof usePagedQuery<T>>;
   renderItem: ListRenderItem<T>;
   keyOf: (item: T) => string;
-  empty: { icon?: IconName; title: string; body?: string };
+  empty: { icon?: IconName; title: string; body?: string; action?: { title: string; onPress: () => void } };
   header?: React.ReactElement;
 };
 
@@ -174,7 +174,7 @@ export function PagedList<T>({ query, renderItem, keyOf, empty, header }: PagedL
   let body: React.ReactElement | null = null;
   if (query.isPending) body = <ListSkeleton />;
   else if (query.isError && !items.length) body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  else if (!items.length) body = <EmptyState icon={empty.icon ?? 'inbox'} title={empty.title} body={empty.body} />;
+  else if (!items.length) body = <EmptyState icon={empty.icon ?? 'inbox'} title={empty.title} body={empty.body} action={empty.action} />;
 
   return (
     <FlatList

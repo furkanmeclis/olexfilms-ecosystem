@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Запросы, требующие вашего решения, появятся здесь.",
   "home.action.new_service": "Новый сервис",
   "home.action.measure": "Замер",
-  "orders.price_missing": "Нет цены"
+  "orders.price_missing": "Нет цены",
+  "orders.new": "Новый заказ",
+  "orders.empty_body": "Выберите товары в каталоге, чтобы оформить заказ.",
+  "orders.approved_done": "Заказ одобрен",
+  "approvals.claims": "Гарантийные заявки"
 }

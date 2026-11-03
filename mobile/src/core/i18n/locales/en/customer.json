@@ -268,5 +268,9 @@
   "home_no_car_title": "Crown your car with Olex",
   "home_no_car_body": "Film installed at an authorized dealer and its warranty show up here.",
   "booking_dealer_pick": "Choose a dealer",
-  "booking_vehicle_pick": "Choose a vehicle"
+  "booking_vehicle_pick": "Choose a vehicle",
+  "fleet_link_accept_title": "Accept the dealer request?",
+  "fleet_link_accept_body": "{{name}} will be able to service your fleet's vehicles, and a fleet account opens with this dealer.",
+  "review_missing.ratings": "To send, rate “{{first}}” and “{{second}}” with stars.",
+  "review_missing.questions": "Also answer the questions marked with *."
 }

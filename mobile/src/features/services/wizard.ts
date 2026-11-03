@@ -181,6 +181,46 @@ export function finishChoices<S extends string>(current: S, available: readonly 
   return [current, ...available.filter((s) => s !== current && s !== 'cancelled')];
 }
 
+/** Forward order of the service statuses (cancelled is not a step forward). */
+const FORWARD = ['draft', 'pending', 'processing', 'ready', 'completed'];
+
+/**
+ * Status the summary step preselects: the first forward transition that is
+ * neither the draft nor the completion (completing deducts stock, so the user
+ * picks it on purpose), else the current status.
+ */
+export function defaultFinishChoice<S extends string>(current: S, available: readonly S[]): S {
+  const at = FORWARD.indexOf(current);
+  const next = available
+    .filter((s) => s !== current && s !== 'draft' && s !== 'completed' && s !== 'cancelled')
+    .filter((s) => FORWARD.indexOf(s) > at)
+    .sort((a, b) => FORWARD.indexOf(a) - FORWARD.indexOf(b));
+  return next[0] ?? current;
+}
+
+/**
+ * i18n key (dealer namespace) of the summary button: it names what happens,
+ * "Save as draft" when the draft stays, the transition otherwise.
+ */
+export function finishButtonKey(current: string, choice: string): string {
+  if (choice !== current) return `transition.${choice}`;
+  return current === 'draft' ? 'wizard.save_draft' : 'wizard.save_keep';
+}
+
+/**
+ * Whether leaving the wizard would lose something: before the draft exists
+ * any pick or kilometre, afterwards a summary field that differs from the
+ * service (the same diff the save would send).
+ */
+export function wizardDirty(v: {
+  service: Editable | null;
+  form: SummaryForm;
+  picked: boolean;
+}): boolean {
+  if (!v.service) return v.picked || v.form.km.trim() !== '';
+  return servicePatch(v.service, v.form) !== null;
+}
+
 export type FinishBlocker = 'needs_items';
 
 /** The backend refuses to complete a service without items (400 on `items`). */

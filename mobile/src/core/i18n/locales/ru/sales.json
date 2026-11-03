@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "Продажа не сохранена",
+  "quick_sale.leave_body": "Если выйти, корзина очистится.",
+  "quick_sale.confirm_title": "Завершить продажу?",
+  "quick_sale.confirm_total": "Итого: {{total}}",
+  "quick_sale.confirm_payment": "Оплата: {{method}}",
+  "quick_sale.confirm_customer": "Клиент: {{name}}",
+  "quick_sale.confirm_no_customer": "не выбран",
+  "quick_sale.confirm_lines": "Товаров: {{count}}"
+}

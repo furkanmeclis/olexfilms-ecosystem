@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "La vente n'est pas enregistrée",
+  "quick_sale.leave_body": "Si vous quittez, le panier est vidé.",
+  "quick_sale.confirm_title": "Finaliser la vente ?",
+  "quick_sale.confirm_total": "Total : {{total}}",
+  "quick_sale.confirm_payment": "Paiement : {{method}}",
+  "quick_sale.confirm_customer": "Client : {{name}}",
+  "quick_sale.confirm_no_customer": "aucun",
+  "quick_sale.confirm_lines": "Produits : {{count}}"
+}

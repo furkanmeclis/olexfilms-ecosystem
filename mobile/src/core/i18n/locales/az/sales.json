@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "Satış yadda saxlanmadı",
+  "quick_sale.leave_body": "Çıxsanız, səbət boşalacaq.",
+  "quick_sale.confirm_title": "Satış tamamlansın?",
+  "quick_sale.confirm_total": "Cəmi: {{total}}",
+  "quick_sale.confirm_payment": "Ödəniş: {{method}}",
+  "quick_sale.confirm_customer": "Müştəri: {{name}}",
+  "quick_sale.confirm_no_customer": "seçilməyib",
+  "quick_sale.confirm_lines": "Məhsul sayı: {{count}}"
+}

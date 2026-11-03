@@ -18,7 +18,7 @@ import { plainText } from './plain-text';
 import { type Category, firstImage, type Product, productImageUrl, useCategories, useProduct, useProducts } from './api';
 
 const BASE = '/bayi/menu/catalog';
-const NEW_ORDER = '/bayi/menu/orders/new';
+export const NEW_ORDER = '/bayi/menu/orders/new';
 
 /** A dealer may order (orders.write) only what the catalog shows (catalog.read). */
 export function useCanOrder() {

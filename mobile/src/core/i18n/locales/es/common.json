@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Todos los cristales",
   "picker.search": "Buscar",
   "picker.selected": "Seleccionado",
-  "picker.empty": "Sin resultados"
+  "picker.empty": "Sin resultados",
+  "leave_title": "Hay cambios sin guardar",
+  "leave_body": "Si sales, se pierde lo que has escrito.",
+  "leave_discard": "Salir"
 }

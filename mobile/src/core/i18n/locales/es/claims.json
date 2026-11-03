@@ -1,1 +1,11 @@
-{}
+{
+  "camera_failed": "No se pudo tomar la foto. Inténtalo de nuevo.",
+  "submit_needs_photo": "Añade al menos una foto para enviarla.",
+  "confirm_to.dealer_review": "La reclamación pasa a revisión. Si el revisor está de acuerdo, se envía a la central.",
+  "confirm_to.center_review": "La reclamación se envía a la central para que decida.",
+  "confirm_to.approved": "La reclamación se aprueba.",
+  "change_confirm": "¿Cambiar la garantía?",
+  "change_confirm_body": "Se borran las piezas elegidas; la descripción se mantiene.",
+  "missing.parts": "Elige las piezas defectuosas.",
+  "missing.description": "Describe brevemente el problema."
+}

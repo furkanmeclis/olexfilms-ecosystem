@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "كل الزجاج",
   "picker.search": "بحث",
   "picker.selected": "المحدد",
-  "picker.empty": "لا توجد نتائج"
+  "picker.empty": "لا توجد نتائج",
+  "leave_title": "توجد تغييرات غير محفوظة",
+  "leave_body": "إذا خرجت فستضيع البيانات التي أدخلتها.",
+  "leave_discard": "خروج"
 }

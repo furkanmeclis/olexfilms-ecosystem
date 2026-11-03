@@ -232,7 +232,14 @@ export function TransferScreen() {
                     tone="destructive"
                     label={t('entry.remove_line', { barcode: l.barcode })}
                     busy={busy === `del:${l.uuid}`}
-                    onPress={() => void run(`del:${l.uuid}`, () => transferApi.deleteLine(uuid, l.uuid))}
+                    onPress={() =>
+                      confirmAction({
+                        title: t('entry.remove_line_confirm', { barcode: l.barcode }),
+                        action: t('m.remove'),
+                        destructive: true,
+                        onConfirm: () => void run(`del:${l.uuid}`, () => transferApi.deleteLine(uuid, l.uuid)),
+                      })
+                    }
                   />
                 ) : null}
               </View>

@@ -103,5 +103,9 @@
   "approvals.no_access_body": "需要您决定的申请会显示在这里。",
   "home.action.new_service": "新服务",
   "home.action.measure": "测量",
-  "orders.price_missing": "无价格"
+  "orders.price_missing": "无价格",
+  "orders.new": "新订单",
+  "orders.empty_body": "从目录中选择产品来下单。",
+  "orders.approved_done": "订单已批准",
+  "approvals.claims": "保修申请"
 }

@@ -9,5 +9,10 @@
   "result.unit": "Məhsul vahidi",
   "result.warranty": "Zəmanət",
   "result.unknown": "Tanınmayan kod",
-  "scan_again": "Yenidən skan et"
+  "scan_again": "Yenidən skan et",
+  "open_unit": "Stok vahidini aç",
+  "open_warranty": "Zəmanəti aç",
+  "next_hint.unit": "Bu stok vahidinin təfərrüatlarını görmək icazəniz yoxdur.",
+  "next_hint.location": "Anbar yerləri anbar ekranlarında oxudulur.",
+  "next_hint.unknown": "Bu kod tanınmadı. Məhsul etiketindəki barkodu və ya zəmanət sənədindəki QR kodu oxudun."
 }

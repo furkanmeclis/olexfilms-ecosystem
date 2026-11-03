@@ -331,11 +331,18 @@ export function CountScreen() {
                         label={t('count.remove_scan', { code: s.raw_code })}
                         busy={busy === `del:${s.uuid}`}
                         onPress={() =>
-                          void run(`del:${s.uuid}`, () => countApi.deleteScan(uuid, s.uuid), {
-                            done: () => {
-                              void scans.refetch();
-                              void q.refetch();
-                            },
+                          // Asked first: in a blind count a lost scan cannot be told apart.
+                          confirmAction({
+                            title: t('count.remove_scan_confirm', { code: s.unit?.barcode ?? s.raw_code }),
+                            action: t('m.remove'),
+                            destructive: true,
+                            onConfirm: () =>
+                              void run(`del:${s.uuid}`, () => countApi.deleteScan(uuid, s.uuid), {
+                                done: () => {
+                                  void scans.refetch();
+                                  void q.refetch();
+                                },
+                              }),
                           })
                         }
                       />

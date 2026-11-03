@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Поръчката се отбелязва като предадена на дилъра лично или в склада; дилърът я затваря с „Получена“.",
   "orders.actions.deliver.success": "Отбелязана като доставена.",
   "orders.actions.deliver.title": "Да се отбележи като доставена?",
-  "orders.price_missing": "Няма цена"
+  "orders.price_missing": "Няма цена",
+  "orders.assign.line_full": "За „{{name}}“ исканото количество вече е събрано.",
+  "orders.assign.whole_roll_title": "Да се назначи ли цялата ролка ({{meters}} м)?",
+  "orders.assign.whole_roll_body": "Полето за метри е празно. Ако трябва по-малко, откажете и въведете метрите.",
+  "orders.assign.whole_roll_confirm": "Назначи цялата",
+  "orders.assign.whole_roll_skipped": "Не е назначено: въведете метрите и сканирайте отново.",
+  "orders.assign.remove_confirm": "Да се махне ли {{barcode}} от поръчката?",
+  "orders.assign.order_complete": "Поръчката е пълна: всички редове са покрити.",
+  "orders.assign.roll_hint": "За ролките въведете метри. Ако е празно, се назначава цялата ролка; по-малко метри разделят ролката под нов баркод.",
+  "count.remove_scan_confirm": "Да се изтрие ли сканирането на {{code}}?",
+  "entry.remove_line_confirm": "Да се махне ли {{barcode}} от списъка?",
+  "m.remove": "Махни",
+  "eod.generate_all_warehouses": "Всички складове",
+  "eod.pdf_ios_only": "PDF на отчета не може да се сподели от това устройство; споделете го от iPhone или от уеб панела.",
+  "counts.defaults_summary": "Настройки: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Разширени"
 }

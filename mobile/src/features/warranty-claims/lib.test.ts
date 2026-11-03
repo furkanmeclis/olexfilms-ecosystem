@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { canAddClaimPhoto, canSubmitClaim, claimActions, claimTone, isLiveClaim, statusParam, togglePart } from './lib.ts';
+import {
+  canAddClaimPhoto,
+  canSubmitClaim,
+  claimActions,
+  claimFormMissing,
+  claimTone,
+  isLiveClaim,
+  statusParam,
+  togglePart,
+} from './lib.ts';
 
 const none = { write: false, review: false, decide: false };
 
@@ -61,5 +70,13 @@ describe('claim helpers', () => {
     assert.equal(statusParam('approved'), 'approved');
     assert.deepEqual(togglePart(['a'], 'b'), ['a', 'b']);
     assert.deepEqual(togglePart(['a', 'b'], 'a'), ['b']);
+  });
+});
+
+describe('claimFormMissing', () => {
+  it('names the first missing field', () => {
+    assert.equal(claimFormMissing({ parts: [], description: '' }), 'parts');
+    assert.equal(claimFormMissing({ parts: ['hood'], description: '  ' }), 'description');
+    assert.equal(claimFormMissing({ parts: ['hood'], description: 'peeling' }), null);
   });
 });

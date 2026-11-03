@@ -30,7 +30,9 @@ const ORDER_SCOPE: Record<Scope, OrderScope> = { open: 'prepare', done: 'receive
 export function JobsScreen() {
   const { t } = useTranslation('warehouse');
   const params = useLocalSearchParams<{ tab?: JobsTab }>();
-  const [tab, setTab] = useState<JobsTab>(params.tab ?? 'transfers');
+  const orders = useCan('orders.read');
+  // Preparing orders is the daily job: with orders.read the tab opens there.
+  const [tab, setTab] = useState<JobsTab>(params.tab ?? (orders ? 'orders' : 'transfers'));
   // Home counters open a given tab, also when this screen is already mounted.
   const [seenTab, setSeenTab] = useState(params.tab);
   if (params.tab !== seenTab) {
@@ -39,7 +41,6 @@ export function JobsScreen() {
   }
   const [scope, setScope] = useState<Scope>('open');
   const write = useCan('warehouse.write');
-  const orders = useCan('orders.read');
 
   const newPath =
     tab === 'orders'
@@ -76,10 +77,10 @@ export function JobsScreen() {
               value={tab}
               onChange={setTab}
               options={[
-                { value: 'transfers', label: t('m.tab_transfers') },
-                { value: 'counts', label: t('m.tab_counts') },
-                { value: 'entries', label: t('m.tab_entries') },
                 ...(orders ? [{ value: 'orders' as const, label: t('orders.nav') }] : []),
+                { value: 'transfers' as const, label: t('m.tab_transfers') },
+                { value: 'counts' as const, label: t('m.tab_counts') },
+                { value: 'entries' as const, label: t('m.tab_entries') },
               ]}
             />
             <Chips

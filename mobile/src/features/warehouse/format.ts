@@ -31,13 +31,8 @@ export function alertError(e: unknown) {
   Alert.alert(whError(e));
 }
 
-/** Asks before an irreversible step. */
-export function confirmAction(opts: { title: string; body?: string; action: string; destructive?: boolean; onConfirm: () => void }) {
-  Alert.alert(opts.title, opts.body, [
-    { text: i18n.t('common:cancel'), style: 'cancel' },
-    { text: opts.action, style: opts.destructive ? 'destructive' : 'default', onPress: opts.onConfirm },
-  ]);
-}
+/** Asks before an irreversible step (shared with the other features). */
+export { confirmAction } from '@/ui/confirm';
 
 export function formatDate(iso: string | null | undefined, withTime = true) {
   if (!iso) return '';

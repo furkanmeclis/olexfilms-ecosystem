@@ -66,6 +66,14 @@ export function AddItemScreen() {
 
   const items = units.data?.items ?? [];
 
+  // A scanned barcode that matches exactly one stock unit opens its form directly.
+  const [scanned, setScanned] = useState<string | null>(null);
+  if (scanned && query === scanned && units.isSuccess && !units.isFetching) {
+    setScanned(null);
+    const hits = items.filter((u) => u.barcode === scanned);
+    if (hits.length === 1) setPicked(hits[0]);
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: t('item_add'), headerLargeTitle: false }} />
@@ -99,6 +107,7 @@ export function AddItemScreen() {
                   onCode={(code) => {
                     setScanning(false);
                     setQ(code);
+                    setScanned(code);
                   }}
                 />
               ) : null}
@@ -126,7 +135,6 @@ export function AddItemScreen() {
                 <Text variant="footnote" tone="muted" numberOfLines={1}>
                   {[
                     u.barcode,
-                    u.product.sku,
                     u.unit_kind === 'fixed'
                       ? t('on_hand', { count: u.quantity_on_hand })
                       : u.remaining_meters
@@ -187,7 +195,8 @@ function UnitForm({
   const { t } = useTranslation('dealer');
   const fixed = unit.unit_kind === 'fixed';
   const roll = !fixed && unit.remaining_meters !== null;
-  const [kind, setKind] = useState<Kind>('full');
+  // A roll is usually cut: the meters field is open from the start.
+  const [kind, setKind] = useState<Kind>(roll ? 'partial' : 'full');
   const [quantity, setQuantity] = useState('1');
   const [meters, setMeters] = useState('');
   const [notes, setNotes] = useState('');
@@ -221,7 +230,7 @@ function UnitForm({
       <View className="gap-1 rounded-lg border border-border bg-card p-4">
         <Text variant="headline">{unit.product.name}</Text>
         <Text variant="footnote" tone="muted">
-          {unit.barcode} · {unit.product.sku}
+          {unit.barcode}
         </Text>
       </View>
 

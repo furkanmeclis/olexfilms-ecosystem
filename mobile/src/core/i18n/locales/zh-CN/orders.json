@@ -11,5 +11,10 @@
   "price_missing_title": "无价格的产品",
   "price_missing_body_one": "{{count}} 个产品没有价格，已按 0 添加并标记。",
   "price_missing_body_other": "{{count}} 个产品没有价格，已按 0 添加并标记。",
-  "errors.price_invalid": "请输入大于等于 0、最多 4 位小数的价格。"
+  "errors.price_invalid": "请输入大于等于 0、最多 4 位小数的价格。",
+  "confirm_submit_title": "发送订单？（{{count}} 个产品）",
+  "confirm_line_pieces": "{{name}}：{{amount}} 件",
+  "confirm_line_meters": "{{name}}：{{amount}} 米",
+  "confirm_more": "另有 {{count}} 个产品",
+  "confirm_no_price": "此处不显示价格：保存订单时计算，批准时锁定。"
 }

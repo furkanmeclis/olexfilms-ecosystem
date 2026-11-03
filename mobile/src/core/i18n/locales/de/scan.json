@@ -9,5 +9,10 @@
   "result.unit": "Produkteinheit",
   "result.warranty": "Garantie",
   "result.unknown": "Unbekannter Code",
-  "scan_again": "Erneut scannen"
+  "scan_again": "Erneut scannen",
+  "open_unit": "Lagereinheit öffnen",
+  "open_warranty": "Garantie öffnen",
+  "next_hint.unit": "Sie dürfen diese Lagereinheit nicht ansehen.",
+  "next_hint.location": "Lagerplätze werden in den Lagerbildschirmen gescannt.",
+  "next_hint.unknown": "Dieser Code wurde nicht erkannt. Scannen Sie den Barcode auf dem Produktetikett oder den QR-Code auf dem Garantiezertifikat."
 }

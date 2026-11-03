@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} uds.",
   "order_detail.meters": "{{n}} metros",
   "order_detail.barcodes": "Códigos de barras",
-  "order_detail.no_barcodes": "Sin códigos de barras asignados"
+  "order_detail.no_barcodes": "Sin códigos de barras asignados",
+  "balance_sentence.receivable": "{{name}} le debe {{amount}}.",
+  "balance_sentence.payable": "Usted debe {{amount}} a {{name}}.",
+  "balance_sentence.settled": "La cuenta está saldada; nadie debe nada."
 }

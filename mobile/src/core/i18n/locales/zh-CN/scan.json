@@ -9,5 +9,10 @@
   "result.unit": "产品单元",
   "result.warranty": "质保",
   "result.unknown": "无法识别的代码",
-  "scan_again": "重新扫描"
+  "scan_again": "重新扫描",
+  "open_unit": "打开库存单元",
+  "open_warranty": "打开保修",
+  "next_hint.unit": "您无权查看此库存单元。",
+  "next_hint.location": "仓库库位需在仓库界面中扫描。",
+  "next_hint.unknown": "无法识别此代码。请扫描产品标签上的条码或保修证书上的二维码。"
 }

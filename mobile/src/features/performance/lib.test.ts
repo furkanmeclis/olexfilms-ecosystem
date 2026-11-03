@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatMetric, metricKind, metricNumber, recentMonths } from './lib.ts';
+import { formatMetric, metricKind, metricNumber, monthLabel, recentMonths } from './lib.ts';
 
 const fmt = {
   number: (n: number, d = 0) => n.toFixed(d),
@@ -23,6 +23,14 @@ describe('formatMetric', () => {
   it('knows metric kinds and defaults unknown ones to score', () => {
     assert.equal(metricKind('services_count'), 'count');
     assert.equal(metricKind('whatever'), 'score');
+  });
+});
+
+describe('monthLabel', () => {
+  it('names the current month and spells the others out', () => {
+    assert.equal(monthLabel('2026-11', 'tr-TR', 'Bu ay'), 'Bu ay');
+    assert.equal(monthLabel('2026-10', 'en-US', null), 'October 2026');
+    assert.equal(monthLabel('bad', 'en-US', null), 'bad');
   });
 });
 

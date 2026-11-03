@@ -1,1 +1,13 @@
-{}
+{
+  "field.title_required": "Başlıq yazın.",
+  "field.subject_required": "Diler və ya distribyutor seçin.",
+  "field.due_custom": "Və ya tarix yazın",
+  "due_quick.none": "Yoxdur",
+  "due_quick.today": "Bu gün",
+  "due_quick.tomorrow": "Sabah",
+  "due_quick.week": "1 həftə",
+  "missing.title": "Başlıq yoxdur.",
+  "missing.subject": "Mövzu (diler və ya distribyutor) seçilməyib.",
+  "missing.due": "Son tarixin formatı səhvdir.",
+  "cancel_confirm": "Tapşırıq ləğv edilsin?"
+}

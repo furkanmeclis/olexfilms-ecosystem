@@ -127,5 +127,9 @@
   "home_no_car_title": "توّج سيارتك مع Olex",
   "home_no_car_body": "يظهر هنا الغشاء المركّب لدى وكيل معتمد وضمانه.",
   "booking_dealer_pick": "اختر وكيلًا",
-  "booking_vehicle_pick": "اختر مركبة"
+  "booking_vehicle_pick": "اختر مركبة",
+  "fleet_link_accept_title": "قبول طلب الوكيل؟",
+  "fleet_link_accept_body": "سيتمكن {{name}} من خدمة مركبات أسطولك، وسيُفتح حساب للأسطول لدى هذا الوكيل.",
+  "review_missing.ratings": "للإرسال، قيّم «{{first}}» و«{{second}}» بالنجوم.",
+  "review_missing.questions": "أجب أيضًا عن الأسئلة المميزة بـ *."
 }

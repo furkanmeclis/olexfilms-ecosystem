@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "Η πώληση δεν αποθηκεύτηκε",
+  "quick_sale.leave_body": "Αν φύγετε, το καλάθι αδειάζει.",
+  "quick_sale.confirm_title": "Ολοκλήρωση της πώλησης;",
+  "quick_sale.confirm_total": "Σύνολο: {{total}}",
+  "quick_sale.confirm_payment": "Πληρωμή: {{method}}",
+  "quick_sale.confirm_customer": "Πελάτης: {{name}}",
+  "quick_sale.confirm_no_customer": "κανένας",
+  "quick_sale.confirm_lines": "Προϊόντα: {{count}}"
+}

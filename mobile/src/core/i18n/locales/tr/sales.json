@@ -100,5 +100,13 @@
   "validation.cari_customer": "Cari satış için müşteri seçin.",
   "validation.lines": "En az bir ürün ekleyin.",
   "validation.price": "Geçerli bir fiyat girin (ör. 1250.50).",
-  "validation.supplier": "Bir tedarikçi seçin."
+  "validation.supplier": "Bir tedarikçi seçin.",
+  "quick_sale.leave_title": "Satış kaydedilmedi",
+  "quick_sale.leave_body": "Çıkarsanız sepet silinir.",
+  "quick_sale.confirm_title": "Satış tamamlansın mı?",
+  "quick_sale.confirm_total": "Toplam: {{total}}",
+  "quick_sale.confirm_payment": "Ödeme: {{method}}",
+  "quick_sale.confirm_customer": "Müşteri: {{name}}",
+  "quick_sale.confirm_no_customer": "seçilmedi",
+  "quick_sale.confirm_lines": "Ürün sayısı: {{count}}"
 }

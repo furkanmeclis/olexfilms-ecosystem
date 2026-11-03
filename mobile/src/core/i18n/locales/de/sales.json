@@ -1,1 +1,10 @@
-{}
+{
+  "quick_sale.leave_title": "Der Verkauf ist nicht gespeichert",
+  "quick_sale.leave_body": "Wenn Sie gehen, wird der Warenkorb geleert.",
+  "quick_sale.confirm_title": "Verkauf abschließen?",
+  "quick_sale.confirm_total": "Summe: {{total}}",
+  "quick_sale.confirm_payment": "Zahlung: {{method}}",
+  "quick_sale.confirm_customer": "Kunde: {{name}}",
+  "quick_sale.confirm_no_customer": "keiner",
+  "quick_sale.confirm_lines": "Produkte: {{count}}"
+}

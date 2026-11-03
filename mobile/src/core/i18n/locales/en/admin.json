@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Requests that need your decision appear here.",
   "home.action.new_service": "New service",
   "home.action.measure": "Measure",
-  "orders.price_missing": "No price"
+  "orders.price_missing": "No price",
+  "orders.new": "New order",
+  "orders.empty_body": "Pick products from the catalog to place an order.",
+  "orders.approved_done": "Order approved",
+  "approvals.claims": "Warranty claims"
 }

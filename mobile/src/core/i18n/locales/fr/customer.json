@@ -127,5 +127,9 @@
   "home_no_car_title": "Couronnez votre voiture avec Olex",
   "home_no_car_body": "Le film posé chez un revendeur agréé et sa garantie apparaissent ici.",
   "booking_dealer_pick": "Choisir un revendeur",
-  "booking_vehicle_pick": "Choisir un véhicule"
+  "booking_vehicle_pick": "Choisir un véhicule",
+  "fleet_link_accept_title": "Accepter la demande du revendeur ?",
+  "fleet_link_accept_body": "{{name}} pourra entretenir les véhicules de votre flotte, et un compte de flotte sera ouvert chez ce revendeur.",
+  "review_missing.ratings": "Pour envoyer, notez « {{first}} » et « {{second}} » avec des étoiles.",
+  "review_missing.questions": "Répondez aussi aux questions marquées d'un *."
 }

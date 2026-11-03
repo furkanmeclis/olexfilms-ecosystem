@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Всички стъкла",
   "picker.search": "Търсене",
   "picker.selected": "Избрано",
-  "picker.empty": "Няма резултати"
+  "picker.empty": "Няма резултати",
+  "leave_title": "Има незапазени промени",
+  "leave_body": "Ако излезете, въведеното ще се загуби.",
+  "leave_discard": "Изход"
 }

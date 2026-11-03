@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -9,6 +9,7 @@ import { errorMessage } from '@/core/i18n';
 import { formatDate, formatNumber, vehicleLabel } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, ListBody, ListFooter, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
+import { confirmAction } from '@/ui/confirm';
 import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
@@ -25,6 +26,7 @@ import {
   reportPeriod,
   sortLinks,
 } from './fleet-lib';
+import { useDirectDownload } from './files';
 import { PAGE_SIZE, portalServiceTone, retryPortal, usePortalPages } from './lib';
 import { StatTile, useServiceStatusLabel } from './parts';
 
@@ -101,7 +103,15 @@ export function FleetVehicleRow({ vehicle: v, meta, children }: { vehicle: Vehic
 }
 
 /** Fleet report row: kind, period and creation date (plus an optional state pill). */
-export function FleetReportRow({ report: r, pill }: { report: Pick<FleetReport, 'period_kind' | 'period_start' | 'period_end' | 'created_at'>; pill?: React.ReactNode }) {
+export function FleetReportRow({
+  report: r,
+  pill,
+  onPress,
+}: {
+  report: Pick<FleetReport, 'period_kind' | 'period_start' | 'period_end' | 'created_at'>;
+  pill?: React.ReactNode;
+  onPress?: () => void;
+}) {
   const { t, i18n } = useTranslation('customer');
   return (
     <FleetRow
@@ -109,6 +119,7 @@ export function FleetReportRow({ report: r, pill }: { report: Pick<FleetReport, 
       subtitle={reportPeriod(r.period_start, r.period_end)}
       meta={t('fleet_report_created', { date: formatDate(r.created_at, i18n.language) })}
       pill={pill}
+      onPress={onPress}
     />
   );
 }
@@ -246,16 +257,32 @@ export function FleetWarrantiesScreen() {
   );
 }
 
-/** Generated fleet reports (read only: kind, period, creation date). */
+/** Generated fleet reports (kind, period, creation date); a row opens its PDF. */
 export function FleetReportsScreen() {
   const { t } = useTranslation('customer');
+  // The report file is a ready PDF (no export job): the direct download of the portal files.
+  const file = useDirectDownload();
   return (
     <FleetList<FleetReport>
       title={t('fleet_reports')}
       queryKey={['portal', 'fleet', 'reports']}
       fetchPage={(offset) => unwrap(api.GET('/v1/portal/fleet/reports', { params: { query: { limit: PAGE_SIZE, offset } } }))}
       empty={{ icon: 'report', title: t('fleet_reports_empty'), body: t('fleet_reports_empty_body') }}
-      renderItem={(r) => <FleetReportRow report={r} />}
+      renderItem={(r) => (
+        <FleetReportRow
+          report={r}
+          pill={file.isPending && file.variables?.path.includes(r.uuid) ? <ActivityIndicator size="small" /> : undefined}
+          onPress={
+            file.isPending
+              ? undefined
+              : () =>
+                  file.mutate({
+                    path: `/fleet/reports/${encodeURIComponent(r.uuid)}/file`,
+                    filename: `${t(`fleet_report_kind.${r.period_kind}`)} ${r.period_start}.pdf`,
+                  })
+          }
+        />
+      )}
     />
   );
 }
@@ -315,6 +342,15 @@ export function FleetHomeScreen() {
       Alert.alert(t('fleet_link_failed'), errorMessage(isApiError(e) ? e.code : undefined));
     },
   });
+
+  // What accepting does (POST .../accept): the dealer may serve the fleet's vehicles and a fleet cari opens in its ledger.
+  const confirmAccept = (l: FleetLink) =>
+    confirmAction({
+      title: t('fleet_link_accept_title'),
+      body: t('fleet_link_accept_body', { name: l.dealer_name }),
+      action: t('fleet_link_accept'),
+      onConfirm: () => answer.mutate({ uuid: l.uuid, accept: true }),
+    });
 
   const confirmReject = (l: FleetLink) =>
     Alert.alert(t('fleet_link_reject_title'), l.dealer_name, [
@@ -397,7 +433,7 @@ export function FleetHomeScreen() {
                   key={l.uuid}
                   link={l}
                   busy={answer.isPending && answer.variables?.uuid === l.uuid}
-                  onAccept={() => answer.mutate({ uuid: l.uuid, accept: true })}
+                  onAccept={() => confirmAccept(l)}
                   onReject={() => confirmReject(l)}
                 />
               ))

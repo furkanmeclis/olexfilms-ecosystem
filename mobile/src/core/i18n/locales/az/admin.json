@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Qərarınızı tələb edən sorğular burada görünəcək.",
   "home.action.new_service": "Yeni xidmət",
   "home.action.measure": "Ölçmə",
-  "orders.price_missing": "Qiymət yoxdur"
+  "orders.price_missing": "Qiymət yoxdur",
+  "orders.new": "Yeni sifariş",
+  "orders.empty_body": "Kataloqdan məhsul seçərək sifariş verin.",
+  "orders.approved_done": "Sifariş təsdiqləndi",
+  "approvals.claims": "Zəmanət müraciətləri"
 }

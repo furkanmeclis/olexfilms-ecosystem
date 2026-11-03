@@ -103,5 +103,9 @@
   "approvals.no_access_body": "Запити, що потребують вашого рішення, з’являться тут.",
   "home.action.new_service": "Новий сервіс",
   "home.action.measure": "Замір",
-  "orders.price_missing": "Немає ціни"
+  "orders.price_missing": "Немає ціни",
+  "orders.new": "Нове замовлення",
+  "orders.empty_body": "Виберіть товари в каталозі, щоб оформити замовлення.",
+  "orders.approved_done": "Замовлення схвалено",
+  "approvals.claims": "Гарантійні заявки"
 }

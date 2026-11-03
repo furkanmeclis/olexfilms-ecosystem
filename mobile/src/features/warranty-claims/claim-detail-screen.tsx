@@ -65,8 +65,9 @@ export function ClaimDetailScreen() {
     onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
   });
 
+  // The body says where the claim goes next (review, the center, decided).
   const confirm = (title: string, status: ClaimStatus) =>
-    Alert.alert(title, t('confirm_body'), [
+    Alert.alert(title, t(`confirm_to.${status}`, { defaultValue: t('confirm_body') }), [
       { text: t('common:cancel'), style: 'cancel' },
       { text: title, onPress: () => transition.mutate({ status }) },
     ]);
@@ -108,6 +109,17 @@ export function ClaimDetailScreen() {
                 <Text variant="footnote" tone="danger">
                   {t('rejection_reason', { reason: c.rejection_reason })}
                 </Text>
+              ) : null}
+              {photoCount === 0 && canAddClaimPhoto(c.status, grants.write) ? (
+                // The one missing thing before sending: a large button, not the small header link.
+                <Button
+                  title={t('photo_take')}
+                  size="lg"
+                  icon="camera"
+                  className="mt-2"
+                  disabled={busy}
+                  onPress={() => setCapture(true)}
+                />
               ) : null}
               {actions && (actions.submitReview || actions.forward || actions.decide || actions.reopen) ? (
                 <View className="mt-2 flex-row flex-wrap gap-2">
@@ -166,7 +178,8 @@ export function ClaimDetailScreen() {
               ) : null}
               {actions?.submitReview && !submitReady ? (
                 <Text variant="footnote" tone="muted">
-                  {t('submit_needs')}
+                  {/* The backend requires only a photo (CLAIM_PHOTO_REQUIRED); say just that. */}
+                  {t('submit_needs_photo')}
                 </Text>
               ) : null}
             </View>

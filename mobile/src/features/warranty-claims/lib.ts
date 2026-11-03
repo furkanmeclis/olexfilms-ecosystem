@@ -32,6 +32,13 @@ export function canSubmitClaim(input: { parts: readonly string[]; description: s
   return input.parts.length > 0 && input.description.trim() !== '' && input.photos > 0;
 }
 
+/** First thing the new-claim form still needs, told under its button (null = ready). */
+export function claimFormMissing(input: { parts: readonly string[]; description: string }): 'parts' | 'description' | null {
+  if (input.parts.length === 0) return 'parts';
+  if (input.description.trim() === '') return 'description';
+  return null;
+}
+
 export type ClaimGrants = { write: boolean; review: boolean; decide: boolean; superAdmin?: boolean };
 
 export type ClaimActions = {

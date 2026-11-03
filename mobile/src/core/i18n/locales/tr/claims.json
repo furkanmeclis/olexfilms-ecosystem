@@ -80,5 +80,14 @@
   "item_missing": "Bu garantinin hizmet kalemi bulunamadı.",
   "loading": "Yükleniyor...",
   "claim_exists": "Bu garanti için zaten açık bir talep var.",
-  "new_hint": "Fotoğrafları ekleyip talebi bir sonraki ekranda incelemeye gönderin."
+  "new_hint": "Fotoğrafları ekleyip talebi bir sonraki ekranda incelemeye gönderin.",
+  "camera_failed": "Fotoğraf çekilemedi. Tekrar deneyin.",
+  "submit_needs_photo": "Göndermek için en az bir fotoğraf ekleyin.",
+  "confirm_to.dealer_review": "Talep incelemeye gönderilir. İnceleyen kuruluş uygun bulursa merkeze iletir.",
+  "confirm_to.center_review": "Talep karar için merkeze gönderilir.",
+  "confirm_to.approved": "Talep onaylanır.",
+  "change_confirm": "Garanti değiştirilsin mi?",
+  "change_confirm_body": "Seçtiğiniz parçalar silinir; açıklama kalır.",
+  "missing.parts": "Arızalı parçaları seçin.",
+  "missing.description": "Sorunu kısaca açıklayın."
 }

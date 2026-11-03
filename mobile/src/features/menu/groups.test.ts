@@ -43,15 +43,15 @@ const ROLES: Record<string, Partial<MenuViewer>> = {
     orgType: 'center',
     workplace: true,
     permissions: [
-      'catalog.read', 'organizations.read', 'customers.read', 'pricing.recommended.read', 'orders.read', 'tasks.read', 'service_subscriptions.read',
-      'measurements.read', 'announcements.read', 'leads.read', 'appointments.read', 'warranty_claims.read', 'certificates.read', 'fleets.read',
-      'performance.read', 'pricing.discipline.read', ...AI,
+      'catalog.read', 'organizations.read', 'customers.read', 'pricing.recommended.read', 'orders.read', 'orders.approve', 'tasks.read',
+      'service_subscriptions.read', 'measurements.read', 'announcements.read', 'leads.read', 'appointments.read', 'warranty_claims.read',
+      'certificates.read', 'fleets.read', 'performance.read', 'pricing.discipline.read', ...AI,
     ],
   },
   center_warehouse: {
     orgType: 'center',
     workplace: true,
-    permissions: ['catalog.read', 'organizations.read', 'stock.read', 'orders.read', 'tasks.read', 'announcements.read', ...AI],
+    permissions: ['catalog.read', 'organizations.read', 'stock.read', 'stock.reclassify', 'orders.read', 'tasks.read', 'announcements.read', ...AI],
   },
   center_accounting: {
     orgType: 'center',
@@ -180,6 +180,22 @@ describe('menuGroups per role', () => {
     const gs = layout(menuGroups(viewer({ permissions: ['orders.read', 'appointments.read', 'warranty_claims.read'] })));
     assert.deepEqual(gs.operations, ['appointments', 'warranty_claims', 'orders']);
     assert.equal(gs.stock, undefined);
+  });
+
+  it('approvals only for roles with a section on that screen', () => {
+    const has = (role: string) => keysOf(menuGroups(viewer(ROLES[role]!))).includes('approvals');
+    assert.equal(has('center_staff'), true); // orders.approve
+    assert.equal(has('center_warehouse'), true); // stock.reclassify
+    assert.equal(has('center_accounting'), false);
+    assert.equal(has('center_social'), false);
+    const reviewer = viewer({ orgType: 'center', workplace: true, permissions: ['warranty_claims.review'] });
+    assert.ok(keysOf(menuGroups(reviewer)).includes('approvals'));
+  });
+
+  it('center accounting: tasks alone in operations join business', () => {
+    const gs = layout(menuGroups(viewer(ROLES.center_accounting!)));
+    assert.equal(gs.operations, undefined);
+    assert.ok(gs.business!.includes('tasks'));
   });
 
   it('warehouse space: one untitled list over account', () => {

@@ -152,5 +152,8 @@
   "order_detail.pieces": "{{n}} pcs",
   "order_detail.meters": "{{n}} m",
   "order_detail.barcodes": "Barcodes",
-  "order_detail.no_barcodes": "No barcodes assigned"
+  "order_detail.no_barcodes": "No barcodes assigned",
+  "balance_sentence.receivable": "{{name}} owes you {{amount}}.",
+  "balance_sentence.payable": "You owe {{name}} {{amount}}.",
+  "balance_sentence.settled": "The account is settled; nobody owes anything."
 }

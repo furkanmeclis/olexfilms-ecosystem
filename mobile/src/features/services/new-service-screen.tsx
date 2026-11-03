@@ -11,15 +11,18 @@ import { useModule } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { readJSON, storage, writeJSON } from '@/core/storage';
 import { PlateBadge } from '@/features/customer-space/home-parts';
+import { EditVehicleSheet } from '@/features/customers/edit-sheets';
 import { type PickerOption, PickerSheet } from '@/features/picker-sheet';
 import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
+import { confirmAction } from '@/ui/confirm';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { useLeaveGuard } from '@/ui/use-leave-guard';
 
 import { customerSubtitle, customerTitle } from './customer-name';
 import { IntakePhotos, intakeKey } from './intake-photos';
@@ -31,7 +34,9 @@ import { ServiceNoField } from './service-no-field';
 import { DetailSkeleton, ErrorState, errorText, Section } from './ui';
 import {
   customerStepError,
+  defaultFinishChoice,
   finishBlocker,
+  finishButtonKey,
   finishChoices,
   type GateCtx,
   initialParts,
@@ -48,6 +53,7 @@ import {
   summaryError,
   type SummaryForm,
   summaryFromService,
+  wizardDirty,
   wizardSteps,
   type WizardStep,
 } from './wizard';
@@ -162,6 +168,14 @@ export function NewServiceScreen() {
   const patchForm = (p: Partial<SummaryForm>) => setForm((f) => ({ ...f, ...p }));
 
   const [choice, setChoice] = useState<ServiceStatus | null>(null);
+  // Completion is never preselected (it deducts stock); the next forward step is.
+  const finishTo = s ? (choice ?? defaultFinishChoice(s.status, s.available_transitions)) : null;
+  // Vehicle without brand / model tapped on the first step: fixed in the edit sheet.
+  const [fixing, setFixing] = useState<Vehicle | null>(null);
+
+  // Typed or picked values not saved yet: leaving asks first (saving does not).
+  const releaseLeave = useLeaveGuard(wizardDirty({ service: s, form, picked: !!customer || performer !== OWN }));
+  const performerName = performer === OWN ? null : (performers.dealers.find((d) => d.uuid === performer)?.name ?? null);
 
   const create = useMutation({
     mutationFn: () => {
@@ -215,6 +229,9 @@ export function NewServiceScreen() {
       } catch {
         // Nothing to clean up.
       }
+      // A kept draft is easy to mistake for a finished service: say so.
+      if (done.status === 'draft') Alert.alert(t('wizard.saved_draft'));
+      releaseLeave();
       if (params.uuid && router.canGoBack()) router.back();
       else router.replace(links.service(uuid));
     },
@@ -244,7 +261,15 @@ export function NewServiceScreen() {
     if (err === 'km') return setKmInvalid(true);
     if (err) return setStepError(t(`wizard.error.${err}`));
     if (s) leave('customer');
-    else create.mutate();
+    else if (performerName) {
+      // Opened for another dealer: the performer cannot be changed afterwards.
+      confirmAction({
+        title: t('wizard.open_for_confirm', { name: performerName }),
+        body: t('wizard.open_for_body'),
+        action: t('wizard.open_draft'),
+        onConfirm: () => create.mutate(),
+      });
+    } else create.mutate();
   };
 
   const submit = () => {
@@ -254,7 +279,7 @@ export function NewServiceScreen() {
     if (closed) return setBlocked(closed);
     const err = summaryError(form);
     if (err) return setStepError(t(`wizard.error.${err}`));
-    const to = choice ?? s.status;
+    const to = finishTo ?? s.status;
     if (finishBlocker(to, s.items?.length ?? 0)) return setStepError(t('complete_needs_items'));
     if (to === 'completed') {
       Alert.alert(t('transition_confirm.completed'), t('wizard.complete_body'), [
@@ -313,6 +338,10 @@ export function NewServiceScreen() {
               <LockedIntake s={s} />
             ) : (
               <>
+                {performers.enabled ? (
+                  // Center workplace: who performs the service is the first question.
+                  <PerformerPicker performers={performers} value={performer} onChange={setPerformer} />
+                ) : null}
                 <StepBlock icon="customer" title={t('customer')} done={!!customer}>
                   {customer ? (
                     <Chosen
@@ -337,12 +366,18 @@ export function NewServiceScreen() {
                         onChange={() => setVehicle(null)}
                       />
                     ) : (
-                      <VehicleStep customer={customer} selected={vehicle} onPick={(v) => setVehicle(v)} />
+                      <VehicleStep customer={customer} selected={vehicle} onPick={(v) => setVehicle(v)} onFix={setFixing} />
                     )}
                   </StepBlock>
                 ) : null}
-                {vehicle && performers.enabled ? (
-                  <PerformerPicker performers={performers} value={performer} onChange={setPerformer} />
+                {fixing ? (
+                  <EditVehicleSheet
+                    vehicle={fixing}
+                    onClose={() => setFixing(null)}
+                    onSaved={(v) => {
+                      if (v.car_model) setVehicle(v);
+                    }}
+                  />
                 ) : null}
               </>
             )}
@@ -362,6 +397,14 @@ export function NewServiceScreen() {
             ) : null}
             {create.error ? <ErrorLine text={errorText(create.error)} /> : null}
             {!s && !vehicle && stepError ? <ErrorLine text={stepError} /> : null}
+            {!s && vehicle && performerName ? (
+              <View className="flex-row items-center gap-2 rounded-lg bg-primary/10 px-3 py-2.5">
+                <Icon name="building" tone="primary" size={16} />
+                <Text variant="callout" tone="primary" className="flex-1 font-semibold">
+                  {t('wizard.open_for', { name: performerName })}
+                </Text>
+              </View>
+            ) : null}
             {s || vehicle ? (
               <StepActions
                 error={stepError}
@@ -434,7 +477,7 @@ export function NewServiceScreen() {
             form={form}
             onForm={patchForm}
             parts={parts}
-            choice={choice ?? s.status}
+            choice={finishTo ?? s.status}
             onChoice={setChoice}
             error={stepError}
             busy={finish.isPending}
@@ -903,7 +946,7 @@ function SummaryStep({
         onBack={onBack}
         onNext={onSubmit}
         loading={busy}
-        nextTitle={choice === s.status ? t('wizard.save') : t(`transition.${choice}`)}
+        nextTitle={t(finishButtonKey(s.status, choice), { status: t(`service_status.${choice}`) })}
       />
     </View>
   );

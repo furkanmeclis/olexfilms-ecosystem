@@ -60,5 +60,8 @@
   "vehicle_parts.preset.windows_all": "Toutes les vitres",
   "picker.search": "Rechercher",
   "picker.selected": "Sélectionné",
-  "picker.empty": "Aucun résultat"
+  "picker.empty": "Aucun résultat",
+  "leave_title": "Modifications non enregistrées",
+  "leave_body": "Si vous quittez, votre saisie est perdue.",
+  "leave_discard": "Quitter"
 }

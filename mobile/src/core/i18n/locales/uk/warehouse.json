@@ -544,5 +544,20 @@
   "orders.actions.deliver.description": "Замовлення позначається як передане дилеру особисто або на складі; дилер закриває його кнопкою «Отримано».",
   "orders.actions.deliver.success": "Позначено як доставлене.",
   "orders.actions.deliver.title": "Позначити як доставлене?",
-  "orders.price_missing": "Немає ціни"
+  "orders.price_missing": "Немає ціни",
+  "orders.assign.line_full": "Для «{{name}}» потрібну кількість уже набрано.",
+  "orders.assign.whole_roll_title": "Призначити весь рулон ({{meters}} м)?",
+  "orders.assign.whole_roll_body": "Поле метрів порожнє. Якщо потрібно менше, скасуйте й введіть метри.",
+  "orders.assign.whole_roll_confirm": "Призначити весь",
+  "orders.assign.whole_roll_skipped": "Не призначено: введіть метри й відскануйте знову.",
+  "orders.assign.remove_confirm": "Прибрати {{barcode}} із замовлення?",
+  "orders.assign.order_complete": "Замовлення зібрано: усі позиції закрито.",
+  "orders.assign.roll_hint": "Для рулонів введіть метри. Якщо залишити порожнім, призначається весь рулон; менша кількість метрів ділить рулон під новим штрихкодом.",
+  "count.remove_scan_confirm": "Видалити сканування {{code}}?",
+  "entry.remove_line_confirm": "Прибрати {{barcode}} зі списку?",
+  "m.remove": "Прибрати",
+  "eod.generate_all_warehouses": "Усі склади",
+  "eod.pdf_ios_only": "PDF звіту не можна надіслати з цього пристрою; надішліть його з iPhone або з вебпанелі.",
+  "counts.defaults_summary": "Налаштування: {{scope}}, {{method}}, {{visibility}}.",
+  "counts.advanced": "Додатково"
 }

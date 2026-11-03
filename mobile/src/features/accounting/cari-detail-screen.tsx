@@ -84,6 +84,13 @@ export function CariDetailScreen() {
         <Text variant="title" className="tabular-nums">
           {formatMoney(Math.abs(Number(c.balance)), c.currency, i18n.language)}
         </Text>
+        {/* Read from the active organization's book (the default): positive = the counterparty owes it. */}
+        <Text variant="callout">
+          {t(`balance_sentence.${side}`, {
+            name: c.counterparty.name,
+            amount: formatMoney(Math.abs(Number(c.balance)), c.currency, i18n.language),
+          })}
+        </Text>
         <Text variant="footnote" tone="muted">
           {t(`counterparty.${counterpartyKind(c)}`)}
         </Text>

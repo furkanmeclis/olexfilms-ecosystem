@@ -134,5 +134,8 @@
   "order_detail.pieces": "{{n}} Stk.",
   "order_detail.meters": "{{n}} Meter",
   "order_detail.barcodes": "Strichcodes",
-  "order_detail.no_barcodes": "Keine Strichcodes zugeordnet"
+  "order_detail.no_barcodes": "Keine Strichcodes zugeordnet",
+  "balance_sentence.receivable": "{{name}} schuldet Ihnen {{amount}}.",
+  "balance_sentence.payable": "Sie schulden {{name}} {{amount}}.",
+  "balance_sentence.settled": "Das Konto ist ausgeglichen; niemand schuldet etwas."
 }

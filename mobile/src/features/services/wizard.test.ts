@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import {
   canOpenStep,
   customerStepError,
+  defaultFinishChoice,
   finishBlocker,
+  finishButtonKey,
   finishChoices,
   initialParts,
   leaveBlocker,
@@ -20,6 +22,7 @@ import {
   stepBlocker,
   summaryError,
   summaryFromService,
+  wizardDirty,
   wizardSteps,
 } from './wizard.ts';
 
@@ -180,5 +183,35 @@ describe('summary', () => {
     assert.equal(servicePatch(base, { ...f, serviceNo: 'DS12AB34CD' }), null);
     assert.equal(servicePatch({ ...base, service_no_editable: false }, { ...f, serviceNo: 'X1234' }), null);
     assert.equal(servicePatch({ ...base, vin: null }, { ...f, measure: true }), null);
+  });
+});
+
+describe('summary finish', () => {
+  it('preselects the first forward step that is neither draft nor completion', () => {
+    assert.equal(defaultFinishChoice('draft', ['pending', 'completed', 'cancelled']), 'pending');
+    assert.equal(defaultFinishChoice('draft', ['completed', 'processing', 'pending']), 'pending');
+    assert.equal(defaultFinishChoice('pending', ['draft', 'processing', 'cancelled']), 'processing');
+    // Completion is never preselected; with nothing else the status stays.
+    assert.equal(defaultFinishChoice('ready', ['completed', 'cancelled']), 'ready');
+    assert.equal(defaultFinishChoice('draft', []), 'draft');
+  });
+
+  it('names the button after the outcome', () => {
+    assert.equal(finishButtonKey('draft', 'draft'), 'wizard.save_draft');
+    assert.equal(finishButtonKey('processing', 'processing'), 'wizard.save_keep');
+    assert.equal(finishButtonKey('draft', 'pending'), 'transition.pending');
+    assert.equal(finishButtonKey('draft', 'completed'), 'transition.completed');
+  });
+
+  it('knows when leaving loses input', () => {
+    const empty = { km: '', notes: '', serviceNo: '', measure: false };
+    assert.equal(wizardDirty({ service: null, form: empty, picked: false }), false);
+    assert.equal(wizardDirty({ service: null, form: empty, picked: true }), true);
+    assert.equal(wizardDirty({ service: null, form: { ...empty, km: '1200' }, picked: false }), true);
+    const f = summaryFromService(base);
+    assert.equal(wizardDirty({ service: base, form: f, picked: true }), false);
+    assert.equal(wizardDirty({ service: base, form: { ...f, notes: 'scratch' }, picked: false }), true);
+    assert.equal(wizardDirty({ service: base, form: { ...f, serviceNo: 'X1234' }, picked: false }), true);
+    assert.equal(wizardDirty({ service: base, form: { ...f, km: '1300' }, picked: false }), true);
   });
 });

@@ -37,6 +37,7 @@ export function ContinuousScanner({
   onCode,
   footer,
   single,
+  complete,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -47,6 +48,8 @@ export function ContinuousScanner({
   footer?: React.ReactNode;
   /** Close after the first successful code. */
   single?: boolean;
+  /** The job is done (e.g. every order line is covered): a success row with a close button. */
+  complete?: { title: string; action: string };
 }) {
   const { t } = useTranslation('warehouse');
   const insets = useSafeAreaInsets();
@@ -186,6 +189,21 @@ export function ContinuousScanner({
             <View className="flex-row items-center gap-2 self-center rounded-full bg-card/90 px-3 py-1.5">
               <ActivityIndicator size="small" />
               <Text variant="footnote">{t('m.checking')}</Text>
+            </View>
+          ) : null}
+          {complete ? (
+            <View className="flex-row items-center gap-3 rounded-lg bg-card p-3">
+              <View className="size-7 items-center justify-center rounded-full bg-success/20">
+                <Icon name="check" tone="primary" size={16} weight="semibold" />
+              </View>
+              <Text variant="callout" className="flex-1 font-semibold">
+                {complete.title}
+              </Text>
+              <Pressable accessibilityRole="button" onPress={close} className="min-h-11 justify-center rounded-md bg-primary px-4">
+                <Text variant="callout" tone="onPrimary" className="font-semibold">
+                  {complete.action}
+                </Text>
+              </Pressable>
             </View>
           ) : null}
           {feed.map((f, i) => (

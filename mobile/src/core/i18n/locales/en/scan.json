@@ -9,5 +9,10 @@
   "result.unit": "Product unit",
   "result.warranty": "Warranty",
   "result.unknown": "Unrecognized code",
-  "scan_again": "Scan again"
+  "scan_again": "Scan again",
+  "open_unit": "Open stock unit",
+  "open_warranty": "Open warranty",
+  "next_hint.unit": "You are not allowed to see this stock unit.",
+  "next_hint.location": "Warehouse locations are scanned in the warehouse screens.",
+  "next_hint.unknown": "This code is not recognized. Scan the barcode on the product label or the QR code on the warranty certificate."
 }
