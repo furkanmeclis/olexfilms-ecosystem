@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} 天",
   "koruma.left_short_days_other": "{{count}} 天",
   "koruma.left_caption": "剩余",
+  "koruma.left_long": "剩余 {{time}}",
   "koruma.left_compact_years_months": "{{years}}年{{months}}月",
   "koruma.left_compact_years": "{{count}}年",
   "koruma.left_compact_months": "{{count}}月",

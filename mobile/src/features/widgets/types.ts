@@ -27,6 +27,7 @@ export type Palette = {
   onGreenMuted: string;
   amber: string;
   plate: string;
+  plateFg: string;
   plateStrip: string;
 };
 
@@ -65,6 +66,8 @@ export type KorumaWarranty = {
   name: string;
   /** Uzun süre ("2 yıl 4 ay"), `customer` çevirisiyle. */
   leftLabel: string;
+  /** "2 yıl 4 ay kaldı". */
+  leftLongLabel: string;
   /** Kilit boyu kısa süre ("2y 4a"). */
   leftShortLabel: string;
   /** Çubuk genişliği, 0-100. */

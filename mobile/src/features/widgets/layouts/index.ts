@@ -1,7 +1,7 @@
 // Widget kayıt defteri: eşitleme ve temizleme native modüle yalnız buradan erişir.
 // `expo-widgets` bu dosyada hiç import edilmez; native modülü olmayan derlemede
-// kayıt boş kalır ve eşitleme ile temizleme hiçbir şey yapmaz. Task 13 `index.ios.ts`
-// ile gerçek widget'ları (korumalı `require` ile) kaydeder.
+// kayıt boş kalır ve eşitleme ile temizleme hiçbir şey yapmaz. iOS'ta Metro `index.ios.ts`'i seçer;
+// o da gerçek widget'ları korumalı `require` ile kaydeder.
 import type { WidgetConfigurationEnum } from 'expo-widgets';
 
 import type { WidgetName } from '../config';

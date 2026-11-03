@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} Tag",
   "koruma.left_short_days_other": "{{count}} Tage",
   "koruma.left_caption": "übrig",
+  "koruma.left_long": "{{time}} übrig",
   "koruma.left_compact_years_months": "{{years}}J {{months}}M",
   "koruma.left_compact_years": "{{count}}J",
   "koruma.left_compact_months": "{{count}}M",

@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} gün",
   "koruma.left_short_days_other": "{{count}} gün",
   "koruma.left_caption": "kaldı",
+  "koruma.left_long": "{{time}} kaldı",
   "koruma.left_compact_years_months": "{{years}}y {{months}}a",
   "koruma.left_compact_years": "{{count}}y",
   "koruma.left_compact_months": "{{count}}a",

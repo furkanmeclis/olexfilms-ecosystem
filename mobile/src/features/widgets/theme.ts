@@ -7,6 +7,7 @@ const SHARED = {
   onGreenMuted: '#c9dacf',
   amber: '#f2ac4a',
   plate: '#ffffff',
+  plateFg: '#000000',
   plateStrip: '#1f4fb4',
 } as const;
 

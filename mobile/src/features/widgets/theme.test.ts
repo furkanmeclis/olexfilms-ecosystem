@@ -19,7 +19,7 @@ describe('widget teması', () => {
   });
 
   it('iki temada aynı olan jetonlar eşit', () => {
-    for (const key of ['onGreen', 'onGreenMuted', 'amber', 'plate', 'plateStrip'] as const) {
+    for (const key of ['onGreen', 'onGreenMuted', 'amber', 'plate', 'plateFg', 'plateStrip'] as const) {
       assert.equal(LIGHT_PALETTE[key], DARK_PALETTE[key], key);
     }
   });

@@ -124,6 +124,7 @@ describe('buildKoruma araç içeriği', () => {
     const [out] = buildKoruma([v], ctx).vehicles;
     assert.match(out.warranties[0].leftLabel, /^c:left_/);
     assert.match(out.warranties[0].leftShortLabel, /^koruma\.left_compact_/);
+    assert.match(out.warranties[0].leftLongLabel, /^koruma\.left_long\|time=c:left_/);
     assert.equal(out.heroUri, `file:///hero/${id(1)}.jpg`);
     assert.equal(out.brandLogoUri, `file:///brand/${id(601)}.png`);
     assert.equal(out.brandInitial, 'M');

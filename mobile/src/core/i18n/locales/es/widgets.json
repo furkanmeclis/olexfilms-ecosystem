@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} día",
   "koruma.left_short_days_other": "{{count}} días",
   "koruma.left_caption": "restante",
+  "koruma.left_long": "Quedan {{time}}",
   "koruma.left_compact_years_months": "{{years}}a {{months}}m",
   "koruma.left_compact_years": "{{count}}a",
   "koruma.left_compact_months": "{{count}}m",

@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} дн.",
   "koruma.left_short_days_other": "{{count}} дн.",
   "koruma.left_caption": "залишилось",
+  "koruma.left_long": "Залишилось {{time}}",
   "koruma.left_compact_years_months": "{{years}}р {{months}}м",
   "koruma.left_compact_years": "{{count}}р",
   "koruma.left_compact_months": "{{count}}м",

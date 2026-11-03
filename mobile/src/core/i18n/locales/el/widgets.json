@@ -8,6 +8,7 @@
   "koruma.left_short_days_one": "{{count}} ημέρα",
   "koruma.left_short_days_other": "{{count}} ημέρες",
   "koruma.left_caption": "απομένουν",
+  "koruma.left_long": "Απομένουν {{time}}",
   "koruma.left_compact_years_months": "{{years}}ε {{months}}μ",
   "koruma.left_compact_years": "{{count}}ε",
   "koruma.left_compact_months": "{{count}}μ",

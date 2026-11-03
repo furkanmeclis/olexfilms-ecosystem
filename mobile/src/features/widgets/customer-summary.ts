@@ -143,6 +143,7 @@ export function buildKoruma(vehicles: PortalVehicleDetail[], ctx: CustomerCtx): 
       warranties: p.warranties.slice(0, MAX_WARRANTIES).map((w) => ({
         name: w.product.name,
         leftLabel: timeLeft(w.days_left, tc),
+        leftLongLabel: t('koruma.left_long', { time: timeLeft(w.days_left, tc) }),
         leftShortLabel: timeLeftShort(w.days_left, t),
         percent: clampPercent(w.percent_left),
         warn: w.percent_left < WARN_BELOW_PERCENT,
