@@ -22,6 +22,9 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
+import { useWarehouses } from '@/features/warehouse/api';
+import { WarehouseField } from '@/features/warehouse/warehouse-picker';
+
 import { useCart } from './cart';
 import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
 
@@ -171,6 +174,14 @@ export function OrderNewScreen() {
   // TEC-1051: a warehouse role without pricing permissions neither sees nor sets prices.
   const prices = usePricesVisible();
   const [buyer, setBuyer] = useState<Dealer | null>(null);
+  // TEC-1053 (TEC-1028 API): the center picks the warehouse that prepares the
+  // order (seller_warehouse_uuid), the primary one until changed. Without
+  // access to the warehouse list the field is hidden and the API uses the primary.
+  const warehouses = useWarehouses(center);
+  const activeWarehouses = warehouses.data ?? [];
+  const [pickedWarehouse, setPickedWarehouse] = useState<string | null>(null);
+  const sellerWarehouse =
+    pickedWarehouse ?? activeWarehouses.find((w) => w.is_primary)?.uuid ?? activeWarehouses[0]?.uuid ?? '';
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const errors = useMemo(() => validateCart(lines), [lines]);
@@ -191,6 +202,7 @@ export function OrderNewScreen() {
         api.POST('/v1/orders', {
           body: {
             buyer_org_uuid: buyer.uuid,
+            ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
             items: toItemInputs(lines, prices),
             ...(note.trim() ? { note: note.trim() } : {}),
           },
@@ -298,6 +310,18 @@ export function OrderNewScreen() {
         ) : (
           <>
             {center ? <DealerPicker value={buyer} onChange={setBuyer} error={touched && !buyer ? t('buyer_required') : undefined} /> : null}
+            {center && activeWarehouses.length > 0 ? (
+              <View className="gap-1.5">
+                <WarehouseField
+                  label={t('seller_warehouse')}
+                  value={sellerWarehouse}
+                  onChange={(w) => setPickedWarehouse(w.uuid)}
+                />
+                <Text variant="footnote" tone="muted">
+                  {t('seller_warehouse_hint')}
+                </Text>
+              </View>
+            ) : null}
             <SectionHeader title={t('lines', { count: lines.length })} />
             <View className="gap-2.5">
               {lines.map((l) => {

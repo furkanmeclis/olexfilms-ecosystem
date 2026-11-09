@@ -226,6 +226,8 @@ export function OrderScreen() {
             <StatusPill tone={orderTone(o.status)} label={t(`orders.status.${o.status}`)} />
           </View>
           <Field label={t('orders.detail.role')} value={t(`orders.role.${o.role}`)} />
+          {/* TEC-1053: the warehouse the center picked for this order (seller side). */}
+          <Field label={t('fields.warehouse')} value={o.seller_warehouse?.name} />
           <Field label={t('orders.shipping.method')} value={o.delivery_method?.name} />
           <Field label={t('orders.shipping.tracking_no')} value={o.tracking_no} mono />
           <Field label={t('fields.note')} value={o.note} />

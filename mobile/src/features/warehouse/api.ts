@@ -45,9 +45,10 @@ export { wk };
 
 // --- warehouses ----------------------------------------------------------------
 
-export function useWarehouses() {
+export function useWarehouses(enabled = true) {
   return useQuery({
     queryKey: wk.warehouses(),
+    enabled,
     queryFn: () => unwrap(api.GET('/v1/mobile/warehouse/warehouses', { params: { ...mobile, query: { active: true } } })),
     select: (d) => d.items,
     staleTime: 5 * 60_000,
