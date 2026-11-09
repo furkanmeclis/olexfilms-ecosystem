@@ -2261,6 +2261,12 @@ type Querier interface {
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
 	// Assigned (not yet shipped) serial units of an order with their location.
 	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
+	// TEC-1054: list facts of a page of orders: the line amounts (pieces and
+	// roll meters apart), the seller warehouse and the last actor. The last
+	// actor is the user of the latest status change with an actor, else the
+	// creator; last_action is that change's new status, or "created" for the
+	// first row (no from status) and for an order without an actor row.
+	ListOrderFacts(ctx context.Context, orderIds []int64) ([]ListOrderFactsRow, error)
 	ListOrderInvoiceItemsByOrder(ctx context.Context, orderID int64) ([]ListOrderInvoiceItemsByOrderRow, error)
 	ListOrderInvoices(ctx context.Context, orderID int64) ([]ListOrderInvoicesRow, error)
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)

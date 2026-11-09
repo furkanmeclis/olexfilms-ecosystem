@@ -27479,12 +27479,36 @@ export interface components {
             uuid: string;
             /** @example ORD-00000001 */
             order_no: string;
+            /**
+             * Format: int64
+             * @description TEC-1054. Sum of the piece lines' quantities (roll lines are in total_meters)
+             */
+            total_quantity: number;
+            /**
+             * @description TEC-1054. Sum of the roll lines' meters; null without a roll line
+             * @example 12.50
+             */
+            total_meters: string | null;
+            /**
+             * Format: int64
+             * @description Number of lines (TEC-1054)
+             */
+            line_count: number;
+            /** @description TEC-1054. Today's order currency → TRY rate ("1" for a TRY order); null without a stored rate. Display only: the books use try_rate, frozen at approval. */
+            live_try_rate: string | null;
+            /**
+             * @description TEC-1054. total × live_try_rate, rounded to cents; null without a rate
+             * @example 4200.00
+             */
+            live_total_try: string | null;
+            /** @description TEC-1054. The latest recorded step of the order and the user who took it */
+            last_activity: components["schemas"]["OrderLastActivity"] | null;
             invoice_status: components["schemas"]["OrderInvoiceStatus"];
             /** @description Manual invoice records (detail responses only, TEC-1030) */
             invoices?: components["schemas"]["OrderInvoice"][];
             /** @description The center opened the order for the dealer; it started approved (TEC-1024) */
             created_by_seller: boolean;
-            /** @description TEC-1028: the seller warehouse the order falls into (set at approval: the warehouse picked on creation, else the seller's primary warehouse). Seller side only, detail responses; null otherwise. */
+            /** @description TEC-1028: the seller warehouse the order falls into (set at approval: the warehouse picked on creation, else the seller's primary warehouse). Seller side only (list rows too since TEC-1054); null otherwise. */
             seller_warehouse?: components["schemas"]["OrderSellerWarehouse"] | null;
             status: components["schemas"]["OrderStatus"];
             /** @description Status in the request language */
@@ -27560,6 +27584,20 @@ export interface components {
             has_shipping_document: boolean;
             /** @description The buyer's delivery receipt is stored */
             has_receipt_document: boolean;
+        };
+        /** @description TEC-1054: the latest recorded step of an order. action is created or the status the order moved to; user is the user who took it (the creator for created), null for a system or migrated step. */
+        OrderLastActivity: {
+            /** @example preparing */
+            action: string;
+            /** Format: date-time */
+            at: string;
+            user: components["schemas"]["OrderUserRef"] | null;
+        };
+        OrderUserRef: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description First name and surname */
+            name: string;
         };
         /** @description Set on an assignment response when the assignment split the roll (TEC-184): the new unit and its barcode to label. */
         OrderRollSplit: {
@@ -55701,6 +55739,8 @@ export interface operations {
                 seller_org_uuid?: string;
                 /** @description Comma separated buyer organization uuids (any of). */
                 buyer_org_uuid?: string;
+                /** @description TEC-1054. Comma separated seller warehouse uuids (any of): the orders falling into these warehouses (the warehouse preparation list). A bad uuid → 400. */
+                seller_warehouse?: string;
                 /** @description Inclusive lower bound of the order total. */
                 total_min?: number;
                 /** @description Inclusive upper bound of the order total. */

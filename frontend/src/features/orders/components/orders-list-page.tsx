@@ -48,6 +48,10 @@ import {
   type OrderSide,
 } from "@/features/orders/services/orders.service";
 import { ExportMenu } from "@/features/io/components/export-menu";
+import {
+  warehouseKeys,
+  warehouseService,
+} from "@/features/warehouse/services/warehouse.service";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 import { useLocale } from "@/providers/locale-provider";
@@ -58,6 +62,43 @@ export const ORDERS_PERSIST_KEY = "tenant-orders-v1";
 
 /** The counterpart column: the buyer on incoming, the seller on outgoing. */
 const PARTY_COLUMN = "party";
+
+/** TEC-1054: pieces, and the meters of roll lines next to them. */
+function OrderAmount({ order }: { order: Order }) {
+  const { t, format } = useLocale();
+  const meters = amountNumber(order.total_meters);
+  return (
+    <span className="whitespace-nowrap tabular-nums">
+      {order.total_quantity > 0 || !order.total_meters
+        ? format.number(order.total_quantity)
+        : null}
+      {order.total_meters ? (
+        <span className="text-muted-foreground ms-1 text-xs">
+          {t("orders.list.quantity_meters", {
+            meters: format.number(meters, { maximumFractionDigits: 2 }),
+          })}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** TEC-1054 / TEC-1060: who last handled the order, and the step. */
+function OrderHandler({ order }: { order: Order }) {
+  const { t } = useLocale();
+  const last = order.last_activity;
+  if (!last?.user) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="flex flex-col">
+      <span className="whitespace-nowrap">{last.user.name}</span>
+      <span className="text-muted-foreground text-xs">
+        {last.action === "created"
+          ? t("orders.activity.created")
+          : t(`orders.status.${last.action}`)}
+      </span>
+    </span>
+  );
+}
 
 /**
  * Tenant > Orders (TEC-170, TEC-374): incoming orders (the organization
@@ -94,6 +135,24 @@ export function OrdersListPage({ slug }: { slug: string }) {
     enabled: canFilterParty,
     staleTime: 5 * 60_000,
   });
+  // TEC-1054: the seller warehouse filter lists the own warehouses.
+  const canFilterWarehouse =
+    side === "seller" && can(permissions.warehouse.read);
+  const warehouses = useQuery({
+    queryKey: warehouseKeys.warehouses,
+    queryFn: () => warehouseService.listWarehouses(),
+    enabled: canFilterWarehouse,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const warehouseOptions = useMemo(
+    () =>
+      (warehouses.data?.items ?? []).map((w) => ({
+        value: w.uuid,
+        label: w.name,
+      })),
+    [warehouses.data?.items],
+  );
   const partyOptions = useMemo(
     () =>
       (organizations.data ?? []).map((o) => ({ value: o.uuid, label: o.name })),
@@ -157,6 +216,41 @@ export function OrdersListPage({ slug }: { slug: string }) {
               ? row.original.buyer.name
               : row.original.seller.name,
         }),
+        // TEC-1054: the seller warehouse is the seller's own business.
+        ...(side === "seller"
+          ? [
+              createColumn<Order>({
+                id: "seller_warehouse",
+                accessorFn: (o) => o.seller_warehouse?.uuid ?? "",
+                labelKey: "orders.list.columns.seller_warehouse",
+                enableSorting: false,
+                filterVariant: "faceted",
+                filterOptions: warehouseOptions,
+                enableColumnFilter:
+                  canFilterWarehouse && warehouseOptions.length > 0,
+                param: "seller_warehouse",
+                cell: ({ row }) =>
+                  row.original.seller_warehouse?.name ?? (
+                    <span className="text-muted-foreground">—</span>
+                  ),
+              }),
+            ]
+          : []),
+        createColumn<Order>({
+          id: "total_quantity",
+          accessorFn: (o) => o.total_quantity,
+          labelKey: "orders.list.columns.quantity",
+          enableSorting: false,
+          meta: { cellClassName: "text-end", headerClassName: "text-end" },
+          cell: ({ row }) => <OrderAmount order={row.original} />,
+        }),
+        createColumn<Order>({
+          id: "handled_by",
+          accessorFn: (o) => o.last_activity?.user?.name ?? "",
+          labelKey: "orders.list.columns.handled_by",
+          enableSorting: false,
+          cell: ({ row }) => <OrderHandler order={row.original} />,
+        }),
         createColumn<Order>({
           accessorKey: "invoice_status",
           labelKey: "orders.invoice.column",
@@ -194,11 +288,29 @@ export function OrdersListPage({ slug }: { slug: string }) {
                   headerClassName: "text-end",
                 },
                 cell: ({ row }) => (
-                  <span className="whitespace-nowrap tabular-nums">
-                    {format.currency(
-                      amountNumber(row.original.total),
-                      row.original.currency,
-                    )}
+                  <span className="flex flex-col items-end whitespace-nowrap tabular-nums">
+                    <span>
+                      {format.currency(
+                        amountNumber(row.original.total),
+                        row.original.currency,
+                      )}
+                    </span>
+                    {/* TEC-1054: today's rate in lira; a TRY order needs none. */}
+                    {canSeePrices &&
+                    row.original.currency !== "TRY" &&
+                    row.original.live_total_try ? (
+                      <span
+                        className="text-muted-foreground text-xs"
+                        data-testid="order-live-try"
+                      >
+                        {t("orders.list.live_try", {
+                          amount: format.currency(
+                            amountNumber(row.original.live_total_try),
+                            "TRY",
+                          ),
+                        })}
+                      </span>
+                    ) : null}
                   </span>
                 ),
               }),
@@ -281,9 +393,11 @@ export function OrdersListPage({ slug }: { slug: string }) {
     [
       can,
       canFilterParty,
+      canFilterWarehouse,
       canSeePrices,
       format,
       partyOptions,
+      warehouseOptions,
       router,
       side,
       slug,
@@ -462,6 +576,10 @@ export function OrdersListPage({ slug }: { slug: string }) {
             <p className="text-sm">
               {side === "seller" ? order.buyer.name : order.seller.name}
             </p>
+            <div className="text-muted-foreground flex justify-between gap-2 text-xs">
+              <span>{order.seller_warehouse?.name ?? ""}</span>
+              <span>{order.last_activity?.user?.name ?? ""}</span>
+            </div>
             <div className="text-muted-foreground flex justify-between gap-2 text-xs">
               <span>{format.dateTime(order.created_at)}</span>
               {canSeePrices && order.total != null ? (

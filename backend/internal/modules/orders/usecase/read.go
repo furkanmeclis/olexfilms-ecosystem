@@ -100,8 +100,21 @@ type OrderView struct {
 	// (TEC-1024); it started approved.
 	CreatedBySeller bool `json:"created_by_seller"`
 	// SellerWarehouse: the seller warehouse the order falls into
-	// (TEC-1028; detail only, null before approval or without one).
+	// (TEC-1028; seller side only, null before approval or without one;
+	// list rows carry it too since TEC-1054).
 	SellerWarehouse *WarehouseRef `json:"seller_warehouse"`
+	// TEC-1054: TotalQuantity sums the piece lines, TotalMeters the roll
+	// lines (null without one); LineCount counts the lines.
+	TotalQuantity int64   `json:"total_quantity"`
+	TotalMeters   *string `json:"total_meters"`
+	LineCount     int64   `json:"line_count"`
+	// LiveTryRate is today's order currency → TRY rate ("1" for TRY) and
+	// LiveTotalTry the total at that rate; null without a stored rate.
+	// Display only: the books use the rate frozen at approval (try_rate).
+	LiveTryRate  *string `json:"live_try_rate"`
+	LiveTotalTry *string `json:"live_total_try"`
+	// LastActivity: the user who last handled the order (TEC-1054).
+	LastActivity *LastActivity `json:"last_activity"`
 	// InvoiceStatus: pending, partial or invoiced by the seller's manual
 	// invoice records (TEC-1030); meaningful once the order is received.
 	InvoiceStatus string     `json:"invoice_status"`
@@ -151,6 +164,7 @@ type SplitView struct {
 // prices (TEC-1050). Lines are cleared by ItemView.hidePrices.
 func (v *OrderView) hidePrices() {
 	v.Subtotal, v.TaxTotal, v.Total, v.TryRate = nil, nil, nil, nil
+	v.LiveTryRate, v.LiveTotalTry = nil, nil // TEC-1054 (5.4 ile birleşme)
 	v.RateSnapshot = json.RawMessage("null")
 	for i := range v.Items {
 		v.Items[i].hidePrices()
@@ -266,6 +280,11 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		}
 		v.SellerWarehouse = warehouseRef(w)
 	}
+	views := []OrderView{v}
+	if err := s.withFacts(ctx, q, c, []db.Order{o}, views); err != nil {
+		return OrderView{}, err
+	}
+	v = views[0]
 	items, err := q.ListOrderItems(ctx, o.ID)
 	if err != nil {
 		return OrderView{}, fmt.Errorf("orders: lines: %w", err)
@@ -360,8 +379,11 @@ type ListFilter struct {
 	CreatedTo       *time.Time
 	SellerOrgUUIDs  []uuid.UUID
 	BuyerOrgUUIDs   []uuid.UUID
-	TotalMin        *float64
-	TotalMax        *float64
+	// SellerWarehouseUUIDs narrows to orders falling into these seller
+	// warehouses (TEC-1054, the warehouse preparation list).
+	SellerWarehouseUUIDs []uuid.UUID
+	TotalMin             *float64
+	TotalMax             *float64
 	// Q searches the order number, tracking number, external reference
 	// and (index) the parties' names and dealer codes (TEC-210).
 	Q            string
@@ -425,6 +447,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		p := sc.params()
 		p.CreatedFrom, p.CreatedBefore, p.Q = tsArg(f.CreatedFrom), tsArg(f.CreatedTo), q
 		p.SellerUuids, p.BuyerUuids = f.SellerOrgUUIDs, f.BuyerOrgUUIDs
+		p.SellerWarehouseUuids = f.SellerWarehouseUUIDs
 		p.InvoiceStatuses = f.InvoiceStatuses
 		p.TotalMin, p.TotalMax = numArg(f.TotalMin), numArg(f.TotalMax)
 		p.SortKey, p.SortDesc, p.RowLimit, p.RowOffset = key, desc, f.Limit, f.Offset
@@ -434,6 +457,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 				BrandID: p.BrandID, SellerOrgID: p.SellerOrgID, BuyerOrgID: p.BuyerOrgID, OrgIds: p.OrgIds,
 				Statuses: p.Statuses, InvoiceStatuses: p.InvoiceStatuses, CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q,
 				SellerUuids: p.SellerUuids, BuyerUuids: p.BuyerUuids, TotalMin: p.TotalMin, TotalMax: p.TotalMax,
+				SellerWarehouseUuids: p.SellerWarehouseUuids,
 			})
 		}
 	}
@@ -448,6 +472,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 			return nil, 0, err
 		}
 		out = append(out, v)
+	}
+	if err := s.withFacts(ctx, s.q, c, rows, out); err != nil {
+		return nil, 0, err
 	}
 	return out, total, nil
 }

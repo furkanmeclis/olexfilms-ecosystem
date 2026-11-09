@@ -30,12 +30,14 @@ const (
 	QueryStatus        = "status"
 	QuerySellerOrgUUID = "seller_org_uuid"
 	QueryBuyerOrgUUID  = "buyer_org_uuid"
+	// QuerySellerWarehouse filters by seller warehouse uuids (TEC-1054).
+	QuerySellerWarehouse = "seller_warehouse"
 )
 
 // listKeys are the list parameters an export job carries.
 var listKeys = []string{
 	"q", "sort", QuerySide, QueryStatus, "created_from", "created_to",
-	QuerySellerOrgUUID, QueryBuyerOrgUUID, "total_min", "total_max",
+	QuerySellerOrgUUID, QueryBuyerOrgUUID, "total_min", "total_max", QuerySellerWarehouse,
 }
 
 // ListValues keeps the list parameters of a job query (or export body).
@@ -50,7 +52,7 @@ func ListValues(q map[string]string) url.Values {
 }
 
 // ParseListFilter reads side, status (CSV), created_from / created_to,
-// seller_org_uuid / buyer_org_uuid (CSV), total_min / total_max, q, sort,
+// seller_org_uuid / buyer_org_uuid / seller_warehouse (CSV), total_min / total_max, q, sort,
 // limit and offset. Errors are *apiquery.ValidationError (400).
 func ParseListFilter(values url.Values) (ListFilter, error) {
 	q := apiquery.Parse(values)
@@ -71,6 +73,9 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 		return f, err
 	}
 	if f.BuyerOrgUUIDs, err = uuidList(values, QueryBuyerOrgUUID); err != nil {
+		return f, err
+	}
+	if f.SellerWarehouseUUIDs, err = uuidList(values, QuerySellerWarehouse); err != nil {
 		return f, err
 	}
 	total, err := apiquery.NumRange(values, "total")
@@ -103,7 +108,8 @@ func uuidList(values url.Values, key string) ([]uuid.UUID, error) {
 // cannot answer (TEC-210 keeps q on the index otherwise).
 func (f ListFilter) sqlOnly() bool {
 	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil || len(f.InvoiceStatuses) > 0 ||
-		len(f.SellerOrgUUIDs) > 0 || len(f.BuyerOrgUUIDs) > 0 || f.TotalMin != nil || f.TotalMax != nil
+		len(f.SellerOrgUUIDs) > 0 || len(f.BuyerOrgUUIDs) > 0 || len(f.SellerWarehouseUUIDs) > 0 ||
+		f.TotalMin != nil || f.TotalMax != nil
 }
 
 func sortArgs(f ListFilter) (string, bool) {
