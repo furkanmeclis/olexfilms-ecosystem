@@ -26,12 +26,15 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
-import { CartButton, NEW_ORDER, useCanOrder } from '@/features/catalog/catalog-screen';
+import { CartButton, CATALOG_PRODUCTS, useCanOrder } from '@/features/catalog/catalog-screen';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+
+import { creatorOf, liveTryAmount } from './order-summary';
+import { OrderTimeline, useActivityText, useAmountText } from './order-timeline';
 
 type ListOp = paths['/v1/orders']['get'];
 export type Order = ListOp['responses'][200]['content']['application/json']['data']['items'][number];
@@ -67,8 +70,11 @@ export function OrdersScreen() {
   const pathname = usePathname();
   const canOrder = useCanOrder();
   const cart = canOrder && pathname.startsWith('/bayi');
-  // Same screen as the header cart: the cart, which leads to the catalog when empty.
-  const openNewOrder = () => router.push(NEW_ORDER as never);
+  // TEC-1055 (revize 5.1): a new order starts in the product list itself; the
+  // header cart icon still opens the cart.
+  const openNewOrder = () => router.push(CATALOG_PRODUCTS as never);
+  const amountText = useAmountText();
+  const activityText = useActivityText();
   // TEC-1025: the center prepares what it sells in the warehouse screens
   // (assign units, ready, ship, deliver); a seller row opens there when it can.
   const me = useSession((s) => s.me);
@@ -138,19 +144,24 @@ export function OrdersScreen() {
         }
         renderItem={({ item }) => {
           const other = item.role === 'buyer' ? item.seller : item.buyer;
+          const party =
+            item.role === 'observer'
+              ? `${item.seller.name} → ${item.buyer.name}`
+              : t(item.role === 'seller' ? 'orders.to' : 'orders.from', { name: other.name });
+          // TEC-1055 (revize 5): warehouse, amount, USD with a small live TRY figure, who handles it.
+          const tl = liveTryAmount(item);
+          const money =
+            prices && hasAmount(item.total)
+              ? `${f.money(item.total, item.currency)}${tl ? ` (≈ ${f.money(tl, 'TRY')})` : ''}`
+              : null;
           return (
             <CardRow
               title={item.order_no}
               subtitle={
-                item.role === 'observer'
-                  ? `${item.seller.name} → ${item.buyer.name}`
-                  : t(item.role === 'seller' ? 'orders.to' : 'orders.from', { name: other.name })
+                item.seller_warehouse ? `${party} · ${t('orders:card.warehouse', { name: item.seller_warehouse.name })}` : party
               }
-              meta={
-                prices && hasAmount(item.total)
-                  ? `${f.money(item.total, item.currency)} · ${f.date(item.created_at)}`
-                  : f.date(item.created_at)
-              }
+              meta={[amountText(item), money, f.date(item.created_at)].filter(Boolean).join(' · ')}
+              detail={activityText(item.last_activity)}
               trailing={<StatusPill label={item.status_label} tone={orderTone(item.status)} />}
               onPress={() => router.push(openInWarehouse(item) ? (`/depo/jobs/order/${item.uuid}` as never) : href(item.uuid))}
             />
@@ -167,6 +178,7 @@ export function OrderDetailScreen() {
   const qc = useQueryClient();
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const prices = usePricesVisible();
+  const amountText = useAmountText();
   const q = useQuery({
     queryKey: ['orders', 'detail', uuid],
     queryFn: () => unwrap(api.GET('/v1/orders/{uuid}', { params: { path: { uuid: uuid! } } })),
@@ -218,9 +230,16 @@ export function OrderDetailScreen() {
                 <StatusPill label={o.status_label} tone={orderTone(o.status)} />
               </View>
               {prices && hasAmount(o.total) ? (
-                <Text variant="title" className="tabular-nums">
-                  {f.money(o.total, o.currency)}
-                </Text>
+                <View className="gap-0.5">
+                  <Text variant="title" className="tabular-nums">
+                    {f.money(o.total, o.currency)}
+                  </Text>
+                  {liveTryAmount(o) ? (
+                    <Text variant="footnote" tone="muted" className="tabular-nums">
+                      {t('orders:card.try_approx', { amount: f.money(liveTryAmount(o), 'TRY') })}
+                    </Text>
+                  ) : null}
+                </View>
               ) : null}
             </View>
 
@@ -242,6 +261,9 @@ export function OrderDetailScreen() {
             <List>
               <InfoRow label={t('orders.seller')} value={o.seller.name} />
               <InfoRow label={t('orders.buyer')} value={o.buyer.name} />
+              {o.seller_warehouse ? <InfoRow label={t('orders:seller_warehouse')} value={o.seller_warehouse.name} /> : null}
+              {creatorOf(o.timeline) ? <InfoRow label={t('orders:detail.created_by')} value={creatorOf(o.timeline)!.name} /> : null}
+              {amountText(o) ? <InfoRow label={t('orders:detail.amount')} value={amountText(o)!} /> : null}
               <InfoRow label={t('orders.created')} value={f.dateTime(o.created_at)} />
               {o.delivery_method ? <InfoRow label={t('orders.delivery')} value={o.delivery_method.name} /> : null}
               {o.tracking_no ? <InfoRow label={t('orders.tracking')} value={o.tracking_no} last={!prices} /> : null}
@@ -297,7 +319,10 @@ export function OrderDetailScreen() {
               </Text>
             )}
 
-            {o.history?.length ? (
+            {/* TEC-1059 (revize 5.4.1): who did what and when; the status history stays for orders without one. */}
+            {o.timeline?.length ? (
+              <OrderTimeline timeline={o.timeline} />
+            ) : o.history?.length ? (
               <>
                 <SectionHeader title={t('orders.history')} />
                 <List>

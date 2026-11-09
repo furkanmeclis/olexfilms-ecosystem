@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "Disponibile: {{amount}}",
+  "stock_out": "Non disponibile",
+  "stock_pieces": "{{n}} pz",
+  "stock_meters": "{{n}} m"
+}

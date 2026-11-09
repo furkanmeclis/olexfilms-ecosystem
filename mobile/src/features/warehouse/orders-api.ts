@@ -1,7 +1,8 @@
-import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
+import { sellerWarehouseFilter } from '@/features/orders/order-summary';
 
 import { PAGE } from './api';
 
@@ -24,7 +25,8 @@ const SCOPES: Record<OrderScope, { side?: 'seller' | 'buyer'; status?: string }>
 };
 
 export const orderKeys = {
-  orders: (scope: OrderScope) => ['warehouse', 'orders', scope] as const,
+  orders: (scope: OrderScope, warehouse = '') => ['warehouse', 'orders', scope, warehouse] as const,
+  counts: (warehouse = '') => ['warehouse', 'orders', 'counts', warehouse] as const,
   order: (uuid: string) => ['warehouse', 'order', uuid] as const,
   pickList: (uuid: string) => ['warehouse', 'order', uuid, 'pick-list'] as const,
   suggestions: (uuid: string, item: string, unlocated: boolean) =>
@@ -34,19 +36,26 @@ export const orderKeys = {
   deliveryMethods: () => ['warehouse', 'delivery-methods'] as const,
 };
 
-export function useOrders(scope: OrderScope, enabled = true) {
+/**
+ * Orders of one scope. TEC-1067 / TEC-1049: the orders to prepare are the
+ * picked warehouse's (`seller_warehouse`); the receive side has no warehouse
+ * filter in the API, so it lists the organization's.
+ */
+export function useOrders(scope: OrderScope, enabled = true, warehouse?: { uuid: string | undefined; ready: boolean }) {
+  const wh = scope === 'prepare' ? (warehouse?.uuid ?? '') : '';
   return useInfiniteQuery({
-    queryKey: orderKeys.orders(scope),
-    enabled,
+    queryKey: orderKeys.orders(scope, wh),
+    enabled: enabled && (warehouse?.ready ?? true),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/orders', {
-          params: { query: { ...SCOPES[scope], limit: PAGE, offset: pageParam } },
+          params: { query: { ...SCOPES[scope], ...sellerWarehouseFilter(wh || undefined), limit: PAGE, offset: pageParam } },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
-    placeholderData: keepPreviousData,
+    // Placeholder rows only from the same warehouse: a switch must not keep the old one's orders.
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[3] === wh ? prev : undefined),
   });
 }
 
@@ -63,6 +72,30 @@ export function usePendingOrderCount(enabled = true) {
     queryFn: async () => {
       const page = await unwrap(api.GET('/v1/orders', { params: { query: { ...SCOPES.prepare, limit: 1, offset: 0 } } }));
       return page.total;
+    },
+  });
+}
+
+/**
+ * Warehouse home counters (TEC-1067, revize 7.2) of the picked warehouse:
+ * open = every order still to ship (approved up to ready), new = approved and
+ * not started yet.
+ */
+export function useWarehouseOrderCounts(enabled: boolean, warehouse: { uuid: string | undefined; ready: boolean }) {
+  return useQuery({
+    queryKey: orderKeys.counts(warehouse.uuid),
+    enabled: enabled && warehouse.ready,
+    staleTime: 30_000,
+    refetchInterval: 120_000,
+    queryFn: async () => {
+      const count = (status: string) =>
+        unwrap(
+          api.GET('/v1/orders', {
+            params: { query: { side: 'seller', status, ...sellerWarehouseFilter(warehouse.uuid), limit: 1, offset: 0 } },
+          }),
+        ).then((p) => p.total);
+      const [open, fresh] = await Promise.all([count(SCOPES.prepare.status ?? ''), count('approved')]);
+      return { open, new: fresh };
     },
   });
 }

@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "En stock: {{amount}}",
+  "stock_out": "Sin stock",
+  "stock_pieces": "{{n}} uds.",
+  "stock_meters": "{{n}} m"
+}

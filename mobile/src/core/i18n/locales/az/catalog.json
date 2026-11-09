@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "Stokda: {{amount}}",
+  "stock_out": "Stokda yoxdur",
+  "stock_pieces": "{{n}} ədəd",
+  "stock_meters": "{{n}} m"
+}

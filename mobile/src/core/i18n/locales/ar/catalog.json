@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "متوفر: {{amount}}",
+  "stock_out": "غير متوفر",
+  "stock_pieces": "{{n}} قطعة",
+  "stock_meters": "{{n}} م"
+}

@@ -6,6 +6,8 @@ import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput,
 
 import { useCan } from '@/core/spaces';
 import { usePricesVisible } from '@/core/use-prices-visible';
+import { creatorOf } from '@/features/orders/order-summary';
+import { OrderTimeline, useAmountText } from '@/features/orders/order-timeline';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -72,6 +74,7 @@ export function OrderScreen() {
   const canPlace = useCan('warehouse.write');
   const prices = usePricesVisible();
   const q = useOrder(uuid);
+  const amountText = useAmountText();
   const o = q.data;
   const { busy, run } = useDocAction<Order>(orderKeys.order(uuid));
   const [view, setView] = useState<'lines' | 'pick'>('lines');
@@ -265,6 +268,9 @@ export function OrderScreen() {
           <Field label={t('orders.shipping.method')} value={o.delivery_method?.name} />
           <Field label={t('orders.shipping.tracking_no')} value={o.tracking_no} mono />
           <Field label={t('fields.note')} value={o.note} />
+          {/* TEC-1067 / TEC-1059: how much is ordered and who placed it. */}
+          <Field label={t('orders:detail.amount')} value={amountText(o)} />
+          <Field label={t('orders:detail.created_by')} value={creatorOf(o.timeline)?.name} />
           <Field label={t('orders.detail.created_at')} value={formatDate(o.created_at)} />
           <Field label={t('orders.detail.approved_at')} value={formatDate(o.approved_at)} />
           <Field label={t('orders.detail.shipped_at')} value={formatDate(o.shipped_at)} />
@@ -490,6 +496,8 @@ export function OrderScreen() {
             ))}
           </View>
         )}
+
+        <OrderTimeline timeline={o.timeline} />
       </Screen>
 
       <ContinuousScanner
