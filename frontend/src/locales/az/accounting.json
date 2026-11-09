@@ -239,7 +239,7 @@
   "queue.tabs.orders": "Faktura kəsiləcək",
   "queue.tabs.transit": "Yolda",
   "queue.tabs.returns": "Qaytarmalar",
-  "queue.transit_hint": "Göndərilmiş və ya çatdırılmış sifarişlər. Alıcı qəbul edəndə “Faktura kəsiləcək” bölməsinə keçir.",
+  "queue.transit_hint": "Göndərilmiş və ya çatdırılmış, tam fakturalanmamış sifarişlər. Burada da fakturalanmış kimi işarələnə bilər; alıcı qəbul edəndə “Faktura kəsiləcək” bölməsinə keçir.",
   "queue.orders_empty": "Faktura kəsiləcək sifariş yoxdur.",
   "queue.returns_empty": "Qaytarma yoxdur.",
   "queue.mark_invoiced": "Faktura kəsildi",

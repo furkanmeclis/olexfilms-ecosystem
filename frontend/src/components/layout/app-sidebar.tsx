@@ -3,6 +3,7 @@
 import { Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 
 import { AppSidebarLogo } from "@/components/brand";
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
@@ -16,6 +17,10 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useShellNav } from "@/components/layout/use-shell-nav";
+import {
+  accountingSidebarCatalog,
+  isAccountingHomeRole,
+} from "@/features/accounting/lib/home-role";
 import { NavEngine } from "@/features/nav-engine";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 import { useLocale } from "@/providers/locale-provider";
@@ -30,6 +35,14 @@ export function AppSidebar({
   const { t } = useLocale();
   const pathname = usePathname();
   const nav = useShellNav(variant, tenantSlug);
+  // TEC-1070: an accounting home account sees no catalog groups in the
+  // menu (permissions and routes unchanged).
+  const accountingHome =
+    variant === "tenant" && isAccountingHomeRole(nav.access.can, nav.org?.type);
+  const main = useMemo(
+    () => (accountingHome ? accountingSidebarCatalog(nav.main) : nav.main),
+    [accountingHome, nav.main],
+  );
 
   // TEC-771: one entry into the settings area, shown when any of its
   // pages is open to the user.
@@ -59,7 +72,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <NavEngine catalog={nav.main} homeHref={nav.homeHref} org={nav.org} />
+      <NavEngine catalog={main} homeHref={nav.homeHref} org={nav.org} />
 
       <SidebarFooter>
         {hasSettings && settingsHref ? (

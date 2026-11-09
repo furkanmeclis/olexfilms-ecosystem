@@ -262,7 +262,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		HasShippingDocument: o.ShippingDocumentKey.Valid && o.ShippingDocumentKey.String != "",
 		HasReceiptDocument:  o.ReceiptDocumentKey.Valid && o.ReceiptDocumentKey.String != "",
 		CreatedAt:           o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
-		AvailableTransitions: availableTransitions(o.Status, party, c.can),
+		AvailableTransitions: invoicedGuard(o, availableTransitions(o.Status, party, c.can)),
 		CanEditItems:         canEditItems(c, o),
 	}
 	if o.DeliveryMethodID.Valid {

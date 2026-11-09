@@ -174,9 +174,10 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "La ricevuta deve essere PDF, JPEG, PNG o WebP (fino a 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Posiziona questa unità nel magazzino prima di assegnarla.",
   "page_forbidden_body": "Non hai l'autorizzazione per visualizzare questa pagina.",
-  "codes.ORDER_NOT_INVOICEABLE": "Solo un ordine ricevuto può essere segnato come fatturato.",
+  "codes.ORDER_NOT_INVOICEABLE": "Solo un ordine spedito, consegnato o ricevuto può essere segnato come fatturato.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Una delle righe selezionate è già fatturata.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Tutte le righe dell'ordine sono già fatturate.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine.",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nuova quantità è inferiore ai codici a barre assegnati; rimuovi prima l'assegnazione."
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nuova quantità è inferiore ai codici a barre assegnati; rimuovi prima l'assegnazione.",
+  "codes.ORDER_INVOICED": "Un ordine fatturato non può essere annullato; elimina prima la registrazione della fattura."
 }

@@ -25821,7 +25821,10 @@ paths:
         back: one ledger order_cancel_restore per shipped unit returns it to
         the seller's source owner and status). A received order cannot be
         cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate
-        flow). A request for the current status is a no-op (a repeated
+        flow). An order with an invoice mark (invoice_status partial or
+        invoiced, TEC-1030 / TEC-1070) is not cancelled either (409
+        ORDER_INVOICED) and its available_transitions offer no cancel. A
+        request for the current status is a no-op (a repeated
         ship, receipt or cancel writes no movement). Other moves answer 409
         ORDER_INVALID_TRANSITION. Every move writes the status history and
         an orders.* outbox event.
@@ -26340,11 +26343,14 @@ paths:
       operationId: markOrderInvoiced
       summary: Record an external invoice on order lines (seller, einvoice.manage)
       description: >-
-        TEC-1030. The seller's accounting marks lines of a received order as
-        invoiced by hand (no integrator): the invoice number and date, the
-        lines (empty item_uuids = every line not invoiced yet). The order's
-        invoice_status follows (partial / invoiced). 403 for the buyer side,
-        409 ORDER_NOT_INVOICEABLE before receipt, ORDER_ITEM_ALREADY_INVOICED,
+        TEC-1030. The seller's accounting marks lines of a shipped, delivered
+        or received order (TEC-1070: like legacy, also while the goods are on
+        the road) as invoiced by hand (no integrator): the invoice number and
+        date, the lines (empty item_uuids = every line not invoiced yet). The
+        order's invoice_status follows (partial / invoiced). An order with an
+        invoice record is not cancelled (409 ORDER_INVOICED on the cancel
+        transition; delete the record first). 403 for the buyer side,
+        409 ORDER_NOT_INVOICEABLE before shipping, ORDER_ITEM_ALREADY_INVOICED,
         ORDER_NOTHING_TO_INVOICE, ORDER_INVOICE_NO_TAKEN (same number twice on
         one order).
       security:

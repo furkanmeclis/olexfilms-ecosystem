@@ -56,6 +56,7 @@ import {
   lineFullyAssigned,
   orderActions,
   orderFullyAssigned,
+  orderInvoiceable,
   type OrderAction,
 } from "@/features/orders/lib/access";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
@@ -391,7 +392,7 @@ function Items({
     "cancelled",
   ].includes(order.status);
   // TEC-1030: the seller sees which lines it invoiced once received.
-  const showInvoice = order.status === "received" && order.role === "seller";
+  const showInvoice = orderInvoiceable(order);
 
   const columns = useMemo(() => {
     const cols: ColumnDef<OrderItem, unknown>[] = [
@@ -905,7 +906,7 @@ export function OrderDetailPage({
                 {t("orders.detail.created_by_seller")}
               </Badge>
             ) : null}
-            {order.status === "received" && order.role === "seller" ? (
+            {orderInvoiceable(order) ? (
               <StatusChip
                 label={t(`orders.invoice.status.${order.invoice_status}`)}
                 tone={invoiceStatusTone(order.invoice_status)}
@@ -1053,7 +1054,7 @@ export function OrderDetailPage({
           }
         >
           <Parties order={order} />
-          {order.status === "received" && order.role === "seller" ? (
+          {orderInvoiceable(order) ? (
             <InvoicesCard
               order={order}
               canManage={can(permissions.einvoice.manage)}

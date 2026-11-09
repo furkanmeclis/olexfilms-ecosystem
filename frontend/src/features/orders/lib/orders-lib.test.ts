@@ -6,6 +6,7 @@ import {
   canEditSellerLines,
   orderActions,
   orderFullyAssigned,
+  orderInvoiceable,
   resolveOrderListAccess,
 } from "@/features/orders/lib/access";
 import {
@@ -580,5 +581,17 @@ describe("plotter mark (TEC-1058)", () => {
       detail: "Film · orders.plotter.marked_on",
     });
     expect(steps[1].detail).toBe('orders.plotter.change_off:{"product":"Kit"}');
+  });
+});
+
+describe("orderInvoiceable (TEC-1070)", () => {
+  it("lets the seller mark shipped, delivered and received orders", () => {
+    for (const status of ["shipped", "delivered", "received"] as const) {
+      expect(orderInvoiceable({ status, role: "seller" })).toBe(true);
+      expect(orderInvoiceable({ status, role: "buyer" })).toBe(false);
+    }
+    for (const status of ["approved", "ready", "cancelled"] as const) {
+      expect(orderInvoiceable({ status, role: "seller" })).toBe(false);
+    }
   });
 });

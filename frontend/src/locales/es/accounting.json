@@ -239,7 +239,7 @@
   "queue.tabs.orders": "Por facturar",
   "queue.tabs.transit": "En camino",
   "queue.tabs.returns": "Devoluciones",
-  "queue.transit_hint": "Pedidos despachados o entregados. Pasan a la pestaña «Por facturar» cuando el comprador los recibe.",
+  "queue.transit_hint": "Pedidos despachados o entregados sin facturar por completo. También pueden marcarse como facturados aquí; pasan a la pestaña «Por facturar» cuando el comprador los recibe.",
   "queue.orders_empty": "No hay pedidos por facturar.",
   "queue.returns_empty": "No hay devoluciones.",
   "queue.mark_invoiced": "Marcar facturado",

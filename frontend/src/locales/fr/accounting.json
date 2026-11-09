@@ -239,7 +239,7 @@
   "queue.tabs.orders": "À facturer",
   "queue.tabs.transit": "En route",
   "queue.tabs.returns": "Retours",
-  "queue.transit_hint": "Commandes expédiées ou livrées. Elles passent dans l'onglet « À facturer » quand l'acheteur les réceptionne.",
+  "queue.transit_hint": "Commandes expédiées ou livrées, pas entièrement facturées. Elles peuvent aussi être marquées facturées ici ; elles passent dans l'onglet « À facturer » quand l'acheteur les réceptionne.",
   "queue.orders_empty": "Aucune commande à facturer.",
   "queue.returns_empty": "Aucun retour.",
   "queue.mark_invoiced": "Marquer facturée",

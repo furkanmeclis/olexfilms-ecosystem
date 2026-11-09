@@ -174,5 +174,7 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "يجب أن يكون إيصال الاستلام PDF أو JPEG أو PNG أو WebP (حتى 10 ميغابايت).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "ضع هذه الوحدة في موقع بالمستودع قبل تخصيصها.",
   "page_forbidden_body": "ليست لديك صلاحية لعرض هذه الصفحة.",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "الكمية الجديدة أقل من الباركودات المعيّنة؛ ألغِ التعيين أولًا."
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "الكمية الجديدة أقل من الباركودات المعيّنة؛ ألغِ التعيين أولًا.",
+  "codes.ORDER_NOT_INVOICEABLE": "لا يمكن وضع علامة «مفوتر» إلا على طلب مشحون أو مسلَّم أو مستلَم.",
+  "codes.ORDER_INVOICED": "لا يمكن إلغاء طلب مفوتر؛ احذف سجل الفاتورة أولاً."
 }

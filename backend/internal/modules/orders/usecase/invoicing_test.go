@@ -28,6 +28,7 @@ func (invoicingOutbox) Enqueue(context.Context, pgx.Tx, events.Event) error { re
 // (TEC-1030), everything inside one rolled-back transaction.
 type invoicingFixture struct {
 	ctx    context.Context
+	tx     pgx.Tx
 	svc    *Service
 	center Caller
 	dealer Caller
@@ -94,7 +95,7 @@ func newInvoicingFixture(t *testing.T) *invoicingFixture {
 		"T1030-"+suffix, center.ID, brand.ID, dealer.ID).Scan(&orderID, &orderUUID); err != nil {
 		t.Fatalf("order: %v", err)
 	}
-	f := &invoicingFixture{ctx: ctx, order: orderUUID}
+	f := &invoicingFixture{ctx: ctx, tx: tx, order: orderUUID}
 	for i, price := range []string{"100.00", "0"} {
 		product, err := q.CreateProduct(ctx, db.CreateProductParams{
 			OrganizationID: center.ID, BrandID: brand.ID, CategoryID: category.ID,
@@ -211,5 +212,59 @@ func TestMarkInvoicedValidation(t *testing.T) {
 	}
 	if _, err := f.svc.MarkInvoiced(f.ctx, f.center, f.order, MarkInvoicedInput{InvoiceNo: "X", InvoiceDate: "2026-10-27", ItemUUIDs: []string{uuid.New().String()}}); !errors.Is(err, ErrItemNotFound) {
 		t.Fatalf("unknown line: %v", err)
+	}
+}
+
+// TEC-1070 (decision follow-up): like legacy, the invoice mark is allowed
+// once the order is shipped (shipped, delivered, received), not before; an
+// order with a mark is not cancelled and offers no cancel move.
+func TestMarkInvoicedOnShippedAndDelivered(t *testing.T) {
+	f := newInvoicingFixture(t)
+	setStatus := func(status string) {
+		t.Helper()
+		if _, err := f.tx.Exec(f.ctx, `UPDATE orders SET status = $1, received_at = NULL WHERE uuid = $2`, status, f.order); err != nil {
+			t.Fatalf("status %s: %v", status, err)
+		}
+	}
+	for _, st := range []string{StatusApproved, StatusPreparing, StatusReady} {
+		setStatus(st)
+		if _, err := f.svc.MarkInvoiced(f.ctx, f.center, f.order, MarkInvoicedInput{InvoiceNo: "FTR-" + st, InvoiceDate: "2026-11-09"}); !errors.Is(err, ErrNotInvoiceable) {
+			t.Fatalf("%s: want ErrNotInvoiceable, got %v", st, err)
+		}
+	}
+	setStatus(StatusShipped)
+	v, err := f.svc.MarkInvoiced(f.ctx, f.center, f.order, MarkInvoicedInput{
+		InvoiceNo: "FTR-S1", InvoiceDate: "2026-11-09", ItemUUIDs: []string{f.items[0].Uuid.String()},
+	})
+	if err != nil || v.InvoiceStatus != InvoiceStatusPartial {
+		t.Fatalf("shipped mark: %+v, %v", v.InvoiceStatus, err)
+	}
+	// The marked order is not cancelled (the seller may cancel otherwise).
+	f.center.Principal.PermissionScopes = map[string]rbac.Scope{rbac.PermOrdersCancel: rbac.ScopeManaged}
+	if _, err := f.svc.Transition(f.ctx, f.center, f.order, TransitionInput{Status: StatusCancelling}); !errors.Is(err, ErrOrderInvoiced) {
+		t.Fatalf("cancel invoiced order: want ErrOrderInvoiced, got %v", err)
+	}
+	setStatus(StatusDelivered)
+	v, err = f.svc.MarkInvoiced(f.ctx, f.center, f.order, MarkInvoicedInput{InvoiceNo: "FTR-D1", InvoiceDate: "2026-11-09"})
+	if err != nil || v.InvoiceStatus != InvoiceStatusInvoiced {
+		t.Fatalf("delivered mark: %+v, %v", v.InvoiceStatus, err)
+	}
+	for _, m := range v.AvailableTransitions {
+		if m == StatusCancelling || m == StatusCancelled {
+			t.Fatalf("invoiced order offers %s: %v", m, v.AvailableTransitions)
+		}
+	}
+}
+
+func TestInvoicedGuard(t *testing.T) {
+	moves := []string{StatusReceived, StatusCancelling}
+	if got := invoicedGuard(db.Order{InvoiceStatus: InvoiceStatusPending}, moves); len(got) != 2 {
+		t.Fatalf("pending = %v", got)
+	}
+	if got := invoicedGuard(db.Order{InvoiceStatus: InvoiceStatusPartial}, moves); len(got) != 1 || got[0] != StatusReceived {
+		t.Fatalf("partial = %v", got)
+	}
+	if !Invoiceable(StatusShipped) || !Invoiceable(StatusDelivered) || !Invoiceable(StatusReceived) || Invoiceable(StatusReady) {
+		t.Fatal("invoiceable statuses")
 	}
 }

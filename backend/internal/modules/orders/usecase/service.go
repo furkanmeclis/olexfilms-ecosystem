@@ -780,6 +780,11 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 				return ErrForbidden
 			}
 		}
+		// TEC-1070: an order with an invoice mark (possible from shipped
+		// on) is not cancelled; the seller deletes the record first.
+		if (to == StatusCancelling || to == StatusCancelled) && o.InvoiceStatus != InvoiceStatusPending {
+			return ErrOrderInvoiced
+		}
 		from := o.Status
 		var meta map[string]any
 		switch to {
