@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
@@ -706,6 +707,23 @@ export function StockEntryDetailPage({
                   removing={removeLine.isPending}
                 />
               )}
+            </CardContent>
+          </Card>
+          {/* TEC-1060: who took each step. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("warehouse.entry.timeline")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityTimeline
+                testId="entry-timeline"
+                steps={(entry.timeline ?? []).map((s, i) => ({
+                  key: `${s.action}-${s.at}-${i}`,
+                  at: s.at,
+                  user: s.user?.name ?? null,
+                  label: t(`warehouse.entry.activity.${s.action}`),
+                }))}
+              />
             </CardContent>
           </Card>
           <EntryFixedQuantityDialog

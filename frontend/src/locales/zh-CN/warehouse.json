@@ -688,5 +688,10 @@
   "entry_import.save": "保存",
   "entry_import.template_saved": "映射模板已保存。",
   "sections.orders.title": "待备货订单",
-  "sections.orders.description": "已批准、备货中和已就绪的经销商订单：拣货、扫码和发货。"
+  "sections.orders.description": "已批准、备货中和已就绪的经销商订单：拣货、扫码和发货。",
+  "entry.timeline": "操作记录",
+  "entry.activity.created": "已创建",
+  "entry.activity.header_updated": "编辑了到货信息",
+  "entry.activity.confirmed": "已确认",
+  "entry.activity.cancelled": "已取消"
 }

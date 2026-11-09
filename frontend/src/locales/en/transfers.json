@@ -95,6 +95,7 @@
   "detail.not_found": "Transfer request not found.",
   "detail.error": "The action could not be completed.",
   "detail.summary": "Summary",
+  "detail.timeline": "Activity",
   "detail.parent": "Parent organization",
   "detail.role": "Your role",
   "detail.total": "Total",

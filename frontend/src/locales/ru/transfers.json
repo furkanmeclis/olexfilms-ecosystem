@@ -95,6 +95,7 @@
   "detail.not_found": "Заявка на перемещение не найдена.",
   "detail.error": "Не удалось выполнить действие.",
   "detail.summary": "Сводка",
+  "detail.timeline": "История действий",
   "detail.parent": "Родительская организация",
   "detail.role": "Ваша роль",
   "detail.total": "Итого",

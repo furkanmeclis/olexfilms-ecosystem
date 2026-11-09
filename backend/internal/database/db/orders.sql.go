@@ -1312,17 +1312,30 @@ SELECT o.id AS order_id,
        (SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id)::bigint AS line_count,
        w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
        w.is_primary AS warehouse_is_primary,
-       (CASE WHEN la.to_status IS NULL OR la.from_status IS NULL THEN 'created'
-             ELSE la.to_status END)::text AS last_action,
+       COALESCE(la.action, 'created')::text AS last_action,
        COALESCE(la.created_at, o.created_at)::timestamptz AS last_at,
        u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
 FROM orders o
 LEFT JOIN warehouses w ON w.id = o.seller_warehouse_id
 LEFT JOIN LATERAL (
-    SELECT h.actor_user_id, h.from_status, h.to_status, h.created_at
-    FROM order_status_history h
-    WHERE h.order_id = o.id AND h.actor_user_id IS NOT NULL
-    ORDER BY h.created_at DESC, h.id DESC
+    SELECT x.actor_user_id, x.action, x.created_at
+    FROM (
+        SELECT h.actor_user_id,
+               (CASE WHEN h.from_status IS NULL THEN 'created' ELSE h.to_status END)::text AS action,
+               h.created_at, 1 AS src, h.id AS seq
+        FROM order_status_history h
+        WHERE h.order_id = o.id AND h.actor_user_id IS NOT NULL
+        UNION ALL
+        SELECT e.actor_user_id, regexp_replace(e.action, '^order\.', '')::text, e.created_at, 2, e.id
+        FROM activity_events e
+        WHERE e.resource = 'order' AND e.resource_uuid = o.uuid AND e.actor_user_id IS NOT NULL
+        UNION ALL
+        SELECT oiu.assigned_by_user_id, 'unit_assigned'::text, oiu.assigned_at, 3, oiu.id
+        FROM order_item_units oiu
+        JOIN order_items i ON i.id = oiu.order_item_id
+        WHERE i.order_id = o.id AND oiu.assigned_by_user_id IS NOT NULL
+    ) x
+    ORDER BY x.created_at DESC, x.src DESC, x.seq DESC
     LIMIT 1
 ) la ON TRUE
 LEFT JOIN users u ON u.id = COALESCE(la.actor_user_id, o.created_by_user_id)
@@ -1346,10 +1359,12 @@ type ListOrderFactsRow struct {
 }
 
 // TEC-1054: list facts of a page of orders: the line amounts (pieces and
-// roll meters apart), the seller warehouse and the last actor. The last
-// actor is the user of the latest status change with an actor, else the
-// creator; last_action is that change's new status, or "created" for the
-// first row (no from status) and for an order without an actor row.
+// roll meters apart), the seller warehouse and the last actor. TEC-1060:
+// the last actor is the user of the latest step with a user — a status
+// change, an order activity event (assignment, unassignment, edit; the
+// "order." prefix dropped) or a unit assignment written before those
+// events — else the creator. last_action is "created" for the first status
+// row and for an order without any step with a user.
 func (q *Queries) ListOrderFacts(ctx context.Context, orderIds []int64) ([]ListOrderFactsRow, error) {
 	rows, err := q.db.Query(ctx, listOrderFacts, orderIds)
 	if err != nil {

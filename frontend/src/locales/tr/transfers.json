@@ -95,6 +95,7 @@
   "detail.not_found": "Transfer talebi bulunamadı.",
   "detail.error": "İşlem tamamlanamadı.",
   "detail.summary": "Özet",
+  "detail.timeline": "İşlem geçmişi",
   "detail.parent": "Üst kuruluş",
   "detail.role": "Rolünüz",
   "detail.total": "Toplam",

@@ -95,6 +95,7 @@
   "detail.not_found": "طلب التحويل غير موجود.",
   "detail.error": "تعذّر إكمال الإجراء.",
   "detail.summary": "ملخص",
+  "detail.timeline": "سجل العمليات",
   "detail.parent": "المؤسسة الأم",
   "detail.role": "دورك",
   "detail.total": "الإجمالي",

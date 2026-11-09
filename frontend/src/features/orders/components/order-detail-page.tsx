@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { StatusChip } from "@/components/common/status-chip";
@@ -36,6 +37,7 @@ import {
   useStoreOrder,
 } from "@/features/orders/components/order-action-dialog";
 import { OrderInvoiceDialog } from "@/features/orders/components/order-invoice-dialog";
+import { orderTimelineSteps } from "@/features/orders/lib/activity";
 import {
   LinePickingActions,
   ShippingCard,
@@ -780,49 +782,28 @@ function Parties({ order }: { order: Order }) {
   );
 }
 
+/** TEC-1060: who did what on the order, newest first. */
 function HistoryList({ order }: { order: Order }) {
   const { t, format } = useLocale();
-  const rows = [...(order.history ?? [])].sort((a, b) =>
-    a.created_at < b.created_at ? 1 : -1,
-  );
   return (
     <Section
       title={t("orders.detail.history")}
       icon={<History className="size-4" />}
       testId="order-history"
     >
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">—</p>
-      ) : (
-        <ol className="space-y-3">
-          {rows.map((h, i) => (
-            <li
-              key={`${h.created_at}-${i}`}
-              className="border-s-2 ps-3"
-              data-testid="history-row"
-            >
-              <div className="text-sm font-medium">
-                {h.from_status
-                  ? `${t(`orders.status.${h.from_status}`)} → `
-                  : ""}
-                {t(`orders.status.${h.to_status}`)}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {format.dateTime(h.created_at)}
-              </div>
-              {h.on_behalf_of_buyer ? (
-                <div
-                  className="text-muted-foreground text-xs"
-                  data-testid="history-on-behalf"
-                >
-                  {t("orders.detail.history_on_behalf")}
-                </div>
-              ) : null}
-              {h.reason ? <div className="text-sm">{h.reason}</div> : null}
-            </li>
-          ))}
-        </ol>
-      )}
+      <ActivityTimeline
+        steps={orderTimelineSteps(order, t, format)}
+        stepTestId="history-row"
+      />
+      {/* TEC-1062: the seller received for a memberless pool recipient. */}
+      {order.history?.some((h) => h.on_behalf_of_buyer) ? (
+        <p
+          className="text-muted-foreground mt-2 text-xs"
+          data-testid="history-on-behalf"
+        >
+          {t("orders.detail.history_on_behalf")}
+        </p>
+      ) : null}
     </Section>
   );
 }

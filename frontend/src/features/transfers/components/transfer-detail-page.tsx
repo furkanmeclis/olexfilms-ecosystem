@@ -5,6 +5,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
@@ -239,6 +240,23 @@ export function TransferDetailPage({
         </CardHeader>
         <CardContent>
           <TransferItemsTable items={r.items ?? []} currency={r.currency} />
+        </CardContent>
+      </Card>
+      {/* TEC-1060: who took each step. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("transfers.detail.timeline")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ActivityTimeline
+            testId="transfer-timeline"
+            steps={(r.timeline ?? []).map((s) => ({
+              key: `${s.action}-${s.at}`,
+              at: s.at,
+              user: s.user?.name ?? null,
+              label: t(`transfers.status.${s.action}`),
+            }))}
+          />
         </CardContent>
       </Card>
       <ReasonDialog

@@ -144,6 +144,8 @@ type OrderView struct {
 	ReceiveOnBehalf bool          `json:"receive_on_behalf,omitempty"`
 	Items           []ItemView    `json:"items,omitempty"`
 	History         []HistoryView `json:"history,omitempty"`
+	// Timeline: every recorded step with its user (detail only, TEC-1060).
+	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
 	Invoices []OrderInvoiceView `json:"invoices,omitempty"`
 	// Split is set on an assignment that cut the meters off a roll as a
@@ -311,11 +313,13 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	}
 	v.Invoices = invoices
 	v.Items = make([]ItemView, 0, len(items))
+	products := make(map[int64]string, len(items))
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
 		if err != nil {
 			return OrderView{}, fmt.Errorf("orders: product: %w", err)
 		}
+		products[it.ID] = p.Name
 		iv := ItemView{
 			UUID:      it.Uuid,
 			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
@@ -348,6 +352,9 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			FromStatus: textPtr(h.FromStatus), ToStatus: h.ToStatus, Reason: textPtr(h.Reason), CreatedAt: h.CreatedAt.Time,
 			OnBehalfOfBuyer: historyOnBehalf(h.Metadata),
 		})
+	}
+	if v.Timeline, err = s.timeline(ctx, q, o, hist, assigned, products); err != nil {
+		return OrderView{}, err
 	}
 	return v, nil
 }

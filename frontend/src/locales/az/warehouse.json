@@ -688,5 +688,10 @@
   "entry_import.save": "Yadda saxla",
   "entry_import.template_saved": "Uyğunlaşdırma şablonu yadda saxlanıldı.",
   "sections.orders.title": "Hazırlanacaq sifarişlər",
-  "sections.orders.description": "Təsdiqlənmiş, hazırlanan və hazır diler sifarişləri: yığım, barkod oxutma və göndərmə."
+  "sections.orders.description": "Təsdiqlənmiş, hazırlanan və hazır diler sifarişləri: yığım, barkod oxutma və göndərmə.",
+  "entry.timeline": "Əməliyyat tarixçəsi",
+  "entry.activity.created": "Yaratdı",
+  "entry.activity.header_updated": "Çatdırılma məlumatını redaktə etdi",
+  "entry.activity.confirmed": "Təsdiqlədi",
+  "entry.activity.cancelled": "Ləğv etdi"
 }

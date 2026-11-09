@@ -9,6 +9,7 @@ import (
 	"context"
 	"net/netip"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -180,6 +181,62 @@ func (q *Queries) ListActivityEvents(ctx context.Context, arg ListActivityEvents
 			&i.IpAddress,
 			&i.UserAgent,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listResourceActivityEvents = `-- name: ListResourceActivityEvents :many
+SELECT e.id, e.action, e.payload, e.created_at,
+       u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM activity_events e
+LEFT JOIN users u ON u.id = e.actor_user_id
+WHERE e.resource = $1::text AND e.resource_uuid = $2::uuid
+ORDER BY e.created_at, e.id
+LIMIT 1000
+`
+
+type ListResourceActivityEventsParams struct {
+	Resource     string    `json:"resource"`
+	ResourceUuid uuid.UUID `json:"resource_uuid"`
+}
+
+type ListResourceActivityEventsRow struct {
+	ID           int64              `json:"id"`
+	Action       string             `json:"action"`
+	Payload      []byte             `json:"payload"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ActorUuid    pgtype.UUID        `json:"actor_uuid"`
+	ActorName    pgtype.Text        `json:"actor_name"`
+	ActorSurname pgtype.Text        `json:"actor_surname"`
+}
+
+// TEC-1060: the activity events of one record (an order, a stock entry)
+// with their users, oldest first; the timeline of a detail page
+// (activity_events_resource_uuid_idx).
+func (q *Queries) ListResourceActivityEvents(ctx context.Context, arg ListResourceActivityEventsParams) ([]ListResourceActivityEventsRow, error) {
+	rows, err := q.db.Query(ctx, listResourceActivityEvents, arg.Resource, arg.ResourceUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListResourceActivityEventsRow{}
+	for rows.Next() {
+		var i ListResourceActivityEventsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Action,
+			&i.Payload,
+			&i.CreatedAt,
+			&i.ActorUuid,
+			&i.ActorName,
+			&i.ActorSurname,
 		); err != nil {
 			return nil, err
 		}

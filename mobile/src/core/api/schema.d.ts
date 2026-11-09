@@ -23881,12 +23881,21 @@ export interface components {
             lines?: components["schemas"]["StockEntryLine"][];
             /** @description Detail responses only. */
             label_batches?: components["schemas"]["StockEntryLabelBatch"][];
+            /** @description TEC-1060. The recorded steps (created, header_updated, confirmed, cancelled) with their users, oldest first. Detail responses only. */
+            timeline?: components["schemas"]["StockEntryTimelineStep"][];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             confirmed_at: string | null;
             /** Format: date-time */
             cancelled_at: string | null;
+        };
+        StockEntryTimelineStep: {
+            /** @example confirmed */
+            action: string;
+            /** Format: date-time */
+            at: string;
+            user: components["schemas"]["OrderUserRef"] | null;
         };
         EnvelopeStockEntry: {
             /** @enum {boolean} */
@@ -27503,7 +27512,7 @@ export interface components {
              * @example 4200.00
              */
             live_total_try: string | null;
-            /** @description TEC-1054. The latest recorded step of the order and the user who took it */
+            /** @description TEC-1054. The latest recorded step of the order and the user who took it (TEC-1060: status steps, barcode assignments and unassignments, draft edits; see OrderTimelineEntry.action) */
             last_activity: components["schemas"]["OrderLastActivity"] | null;
             invoice_status: components["schemas"]["OrderInvoiceStatus"];
             /** @description Manual invoice records (detail responses only, TEC-1030) */
@@ -27572,6 +27581,8 @@ export interface components {
             items?: components["schemas"]["OrderItem"][];
             /** @description Status history (detail responses only) */
             history?: components["schemas"]["OrderHistoryEntry"][];
+            /** @description TEC-1060. Every recorded step with its user, oldest first (detail responses only): status steps, barcode assignments and unassignments, draft edits. */
+            timeline?: components["schemas"]["OrderTimelineEntry"][];
             split?: components["schemas"]["OrderRollSplit"];
             /** @description Roll splits of an applied suggestion (TEC-768) */
             splits?: components["schemas"]["OrderRollSplit"][];
@@ -27596,6 +27607,24 @@ export interface components {
             /** Format: date-time */
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
+        };
+        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned or updated (draft edit). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines. */
+        OrderTimelineEntry: {
+            /** @example unit_assigned */
+            action: string;
+            /** Format: date-time */
+            at: string;
+            user: components["schemas"]["OrderUserRef"] | null;
+            from_status?: components["schemas"]["OrderStatus"];
+            reason?: string;
+            product?: string;
+            barcode?: string;
+            /** Format: int64 */
+            quantity?: number;
+            /** @example 12.00 */
+            meters?: string;
+            /** Format: int64 */
+            lines?: number;
         };
         OrderUserRef: {
             /** Format: uuid */
@@ -28194,6 +28223,15 @@ export interface components {
             available_transitions: components["schemas"]["StockTransferStatus"][];
             /** @description Detail only */
             items?: components["schemas"]["StockTransferItem"][];
+            /** @description TEC-1060. The steps with their users, oldest first (detail only) */
+            timeline?: components["schemas"]["StockTransferTimelineStep"][];
+        };
+        StockTransferTimelineStep: {
+            /** @enum {string} */
+            action: "requested" | "approved" | "rejected" | "shipped" | "received" | "cancelled";
+            /** Format: date-time */
+            at: string;
+            user: components["schemas"]["OrderUserRef"] | null;
         };
         StockTransferItemInput: {
             barcode: string;

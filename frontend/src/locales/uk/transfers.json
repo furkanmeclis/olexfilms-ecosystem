@@ -95,6 +95,7 @@
   "detail.not_found": "Заявку на переміщення не знайдено.",
   "detail.error": "Не вдалося виконати дію.",
   "detail.summary": "Підсумок",
+  "detail.timeline": "Історія дій",
   "detail.parent": "Батьківська організація",
   "detail.role": "Ваша роль",
   "detail.total": "Разом",

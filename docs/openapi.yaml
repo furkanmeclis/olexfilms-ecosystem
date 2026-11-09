@@ -42126,9 +42126,26 @@ components:
           type: array
           description: Detail responses only.
           items: { $ref: "#/components/schemas/StockEntryLabelBatch" }
+        timeline:
+          type: array
+          description: >-
+            TEC-1060. The recorded steps (created, header_updated, confirmed,
+            cancelled) with their users, oldest first. Detail responses only.
+          items: { $ref: "#/components/schemas/StockEntryTimelineStep" }
         created_at: { type: string, format: date-time }
         confirmed_at: { type: [string, "null"], format: date-time }
         cancelled_at: { type: [string, "null"], format: date-time }
+
+    StockEntryTimelineStep:
+      type: object
+      required: [action, at, user]
+      properties:
+        action: { type: string, example: confirmed }
+        at: { type: string, format: date-time }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
 
     EnvelopeStockEntry:
       type: object
@@ -46866,7 +46883,10 @@ components:
           example: "4200.00"
           description: TEC-1054. total × live_try_rate, rounded to cents; null without a rate
         last_activity:
-          description: TEC-1054. The latest recorded step of the order and the user who took it
+          description: >-
+            TEC-1054. The latest recorded step of the order and the user who
+            took it (TEC-1060: status steps, barcode assignments and
+            unassignments, draft edits; see OrderTimelineEntry.action)
           oneOf:
             - $ref: "#/components/schemas/OrderLastActivity"
             - type: "null"
@@ -46937,6 +46957,13 @@ components:
           type: array
           description: Status history (detail responses only)
           items: { $ref: "#/components/schemas/OrderHistoryEntry" }
+        timeline:
+          type: array
+          description: >-
+            TEC-1060. Every recorded step with its user, oldest first (detail
+            responses only): status steps, barcode assignments and
+            unassignments, draft edits.
+          items: { $ref: "#/components/schemas/OrderTimelineEntry" }
         split:
           $ref: "#/components/schemas/OrderRollSplit"
         splits:
@@ -46971,6 +46998,31 @@ components:
           oneOf:
             - $ref: "#/components/schemas/OrderUserRef"
             - type: "null"
+
+    OrderTimelineEntry:
+      type: object
+      description: >-
+        TEC-1060: one step of an order. action is created, a status the order
+        moved to, unit_assigned, unit_unassigned or updated (draft edit). The
+        unit steps carry product, barcode and the amount of that step
+        (quantity or meters; a fixed barcode scanned again counts the
+        growth); a status step may carry from_status and reason; an edit
+        carries the number of lines.
+      required: [action, at, user]
+      properties:
+        action: { type: string, example: unit_assigned }
+        at: { type: string, format: date-time }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        from_status: { $ref: "#/components/schemas/OrderStatus" }
+        reason: { type: string }
+        product: { type: string }
+        barcode: { type: string }
+        quantity: { type: integer, format: int64 }
+        meters: { type: string, example: "12.00" }
+        lines: { type: integer, format: int64 }
 
     OrderUserRef:
       type: object
@@ -47709,6 +47761,21 @@ components:
           type: array
           description: Detail only
           items: { $ref: "#/components/schemas/StockTransferItem" }
+        timeline:
+          type: array
+          description: TEC-1060. The steps with their users, oldest first (detail only)
+          items: { $ref: "#/components/schemas/StockTransferTimelineStep" }
+
+    StockTransferTimelineStep:
+      type: object
+      required: [action, at, user]
+      properties:
+        action: { type: string, enum: [requested, approved, rejected, shipped, received, cancelled] }
+        at: { type: string, format: date-time }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
 
     StockTransferItemInput:
       type: object

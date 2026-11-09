@@ -308,6 +308,10 @@ func (s *Service) ApplySuggestions(ctx context.Context, c Caller, orderUUID, ite
 		if err != nil {
 			return err
 		}
+		before, err := lineUnits(ctx, q, o, it)
+		if err != nil {
+			return err
+		}
 		for i, u := range units {
 			split, err := s.assignLocked(ctx, q, tx, c, o, it, AssignInput{
 				UnitUUID: u.UnitUUID, Quantity: u.Quantity, Meters: u.Meters,
@@ -322,6 +326,9 @@ func (s *Service) ApplySuggestions(ctx context.Context, c Caller, orderUUID, ite
 			if split != nil {
 				splits = append(splits, *split)
 			}
+		}
+		if err := s.recordAssigned(ctx, q, c, o, it, before); err != nil {
+			return err
 		}
 		result = o
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
