@@ -33,6 +33,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { LinePlotter, OrderLinesEditor } from './order-edit';
 import { creatorOf, liveTryAmount } from './order-summary';
 import { OrderTimeline, useActivityText, useAmountText } from './order-timeline';
 
@@ -179,6 +180,7 @@ export function OrderDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const prices = usePricesVisible();
   const amountText = useAmountText();
+  const [editing, setEditing] = useState(false);
   const q = useQuery({
     queryKey: ['orders', 'detail', uuid],
     queryFn: () => unwrap(api.GET('/v1/orders/{uuid}', { params: { path: { uuid: uuid! } } })),
@@ -287,6 +289,10 @@ export function OrderDetailScreen() {
             ) : null}
 
             <SectionHeader title={t('orders.items', { count: o.items?.length ?? 0 })} />
+            {/* TEC-1057: before the order is ready (or the buyer's draft) the lines can be fixed. */}
+            {o.can_edit_items ? (
+              <Button title={t('orders:edit.button')} icon="edit" variant="outline" onPress={() => setEditing(true)} />
+            ) : null}
             {o.items?.length ? (
               <List>
                 {o.items.map((it, i, arr) => (
@@ -310,6 +316,7 @@ export function OrderDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
+                    <LinePlotter order={o} item={it} />
                   </View>
                 ))}
               </List>
@@ -337,6 +344,7 @@ export function OrderDetailScreen() {
                 </List>
               </>
             ) : null}
+            <OrderLinesEditor order={o} visible={editing} onClose={() => setEditing(false)} />
           </>
         )}
       </Screen>

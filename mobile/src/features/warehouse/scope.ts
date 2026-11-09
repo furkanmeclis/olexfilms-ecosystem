@@ -66,14 +66,15 @@ export function transferFilter(
   return direction === 'in' ? { to_warehouse_uuid: warehouse } : { from_warehouse_uuid: warehouse };
 }
 
-/** A center manager holds these on top of the warehouse role: writes the warehouse and manages the center's staff (TEC-1087). */
+/** A center or distributor manager holds these on top of the warehouse role: writes the warehouse and manages the organization's staff (TEC-1087). */
 export const STOCK_ENTRY_MANAGER_PERMISSIONS = ['warehouse.write', 'members.write'] as const;
 
 /**
  * Whether the warehouse home offers "new stock entry" and its open drafts
- * (TEC-1087, revize 7.4): stock is loaded by the center's management, so only
- * a center manager sees them; warehouse staff (warehouse.write without
- * members.write) do not. Client side only; the API rules do not change.
+ * (TEC-1087, revize 7.4): stock is loaded by the organization's management,
+ * so only a center manager or a distributor owner (the distributor has its own
+ * warehouse) sees them; warehouse staff (warehouse.write without members.write)
+ * do not. Client side only; the API rules do not change.
  */
 export function showsStockEntries(input: {
   permissions: readonly string[];
@@ -81,6 +82,6 @@ export function showsStockEntries(input: {
   orgType: string | undefined;
 }): boolean {
   if (input.superAdmin) return true;
-  if (input.orgType !== 'center') return false;
+  if (input.orgType !== 'center' && input.orgType !== 'distributor') return false;
   return STOCK_ENTRY_MANAGER_PERMISSIONS.every((p) => input.permissions.includes(p));
 }
