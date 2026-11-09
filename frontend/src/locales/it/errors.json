@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Il proprietario del veicolo è cambiato; avvii un nuovo trasferimento.",
   "codes.ORDER_INVALID_TRANSITION": "Lo stato dell'ordine non consente questa azione.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Questo passaggio non è ancora disponibile.",
-  "codes.ORDER_NOT_EDITABLE": "Solo le bozze d'ordine sono modificabili.",
+  "codes.ORDER_NOT_EDITABLE": "Le righe dell'ordine non sono modificabili in questo stato.",
   "codes.ORDER_NO_SUPPLIER": "Solo un distributore (al centro) o un rivenditore (al proprio distributore) può ordinare prodotti.",
   "codes.ORDER_NOT_ASSIGNABLE": "Le unità si possono assegnare solo durante la preparazione.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Questa unità è già sulla riga.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Solo un ordine ricevuto può essere segnato come fatturato.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Una delle righe selezionate è già fatturata.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Tutte le righe dell'ordine sono già fatturate.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nuova quantità è inferiore ai codici a barre assegnati; rimuovi prima l'assegnazione."
 }

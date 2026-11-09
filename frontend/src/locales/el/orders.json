@@ -305,5 +305,17 @@
   "discounts.save": "Αποθήκευση",
   "discounts.saved": "Οι εκπτώσεις αποθηκεύτηκαν.",
   "discounts.save_failed": "Οι εκπτώσεις δεν αποθηκεύτηκαν.",
-  "discounts.load_failed": "Οι εκπτώσεις δεν φορτώθηκαν."
+  "discounts.load_failed": "Οι εκπτώσεις δεν φορτώθηκαν.",
+  "edit_lines.button": "Επεξεργασία γραμμών",
+  "edit_lines.title": "Επεξεργασία γραμμών",
+  "edit_lines.hint": "Προσθέστε προϊόντα, αλλάξτε ποσότητες ή αφαιρέστε γραμμές. Η νέα γραμμή τιμολογείται από τον τιμοκατάλογο. Η αφαίρεση γραμμής με ανατεθειμένα barcode τα αποδεσμεύει.",
+  "edit_lines.save": "Αποθήκευση",
+  "edit_lines.cancel": "Ακύρωση",
+  "edit_lines.saved": "Οι γραμμές ενημερώθηκαν",
+  "edit_lines.failed": "Δεν ήταν δυνατή η ενημέρωση των γραμμών",
+  "edit_lines.assigned": "{{amount}} ανατεθειμένα",
+  "edit_lines.below_assigned": "Δεν μπορεί να είναι κάτω από την ανατεθειμένη ποσότητα· αφαιρέστε πρώτα ένα barcode.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

@@ -344,5 +344,17 @@
   "discounts.save": "Speichern",
   "discounts.saved": "Rabatte gespeichert.",
   "discounts.save_failed": "Rabatte konnten nicht gespeichert werden.",
-  "discounts.load_failed": "Rabatte konnten nicht geladen werden."
+  "discounts.load_failed": "Rabatte konnten nicht geladen werden.",
+  "edit_lines.button": "Positionen bearbeiten",
+  "edit_lines.title": "Positionen bearbeiten",
+  "edit_lines.hint": "Produkte hinzufügen, Mengen ändern oder Positionen entfernen. Eine neue Position erhält den Preis aus der Preisliste. Wird eine Position mit zugewiesenen Barcodes entfernt, werden diese freigegeben.",
+  "edit_lines.save": "Speichern",
+  "edit_lines.cancel": "Abbrechen",
+  "edit_lines.saved": "Positionen aktualisiert",
+  "edit_lines.failed": "Die Positionen konnten nicht aktualisiert werden",
+  "edit_lines.assigned": "{{amount}} zugewiesen",
+  "edit_lines.below_assigned": "Darf nicht unter der zugewiesenen Menge liegen; zuerst einen Barcode entfernen.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

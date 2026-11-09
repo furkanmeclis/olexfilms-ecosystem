@@ -49,6 +49,8 @@ type TimelineEntry struct {
 	Quantity   *int64    `json:"quantity,omitempty"`
 	Meters     *string   `json:"meters,omitempty"`
 	Lines      *int64    `json:"lines,omitempty"`
+	// Changes: the lines an edit added, changed or removed (TEC-1056).
+	Changes []LineChange `json:"changes,omitempty"`
 }
 
 // activityPayload is the payload of the order activity events.
@@ -60,6 +62,8 @@ type activityPayload struct {
 	Quantity *int64  `json:"quantity,omitempty"`
 	Meters   *string `json:"meters,omitempty"`
 	Lines    *int64  `json:"lines,omitempty"`
+	// Changes of an edit (TEC-1056): before/after amount by product.
+	Changes []LineChange `json:"changes,omitempty"`
 }
 
 func (p activityPayload) mapped() map[string]any {
@@ -170,10 +174,11 @@ func (s *Service) recordUnassigned(ctx context.Context, q *db.Queries, c Caller,
 	return s.recordActivity(ctx, q, c, o, ActionUnitUnassigned, p)
 }
 
-// recordUpdated writes the updated event of a draft edit.
-func (s *Service) recordUpdated(ctx context.Context, q *db.Queries, c Caller, o db.Order, lines int) error {
+// recordUpdated writes the updated event of a line edit with the line
+// count after it and the before/after amounts of the changed lines.
+func (s *Service) recordUpdated(ctx context.Context, q *db.Queries, c Caller, o db.Order, lines int, changes []LineChange) error {
 	n := int64(lines)
-	return s.recordActivity(ctx, q, c, o, ActionUpdated, activityPayload{Lines: &n})
+	return s.recordActivity(ctx, q, c, o, ActionUpdated, activityPayload{Lines: &n, Changes: changes})
 }
 
 func userRef(id pgtype.UUID, name, surname pgtype.Text) *UserRef {
@@ -259,6 +264,7 @@ func (s *Service) timeline(ctx context.Context, q *db.Queries, o db.Order, hist 
 			Action: strings.TrimPrefix(ev.Action, activityActionPrefix), At: ev.CreatedAt.Time,
 			User:    userRef(ev.ActorUuid, ev.ActorName, ev.ActorSurname),
 			Product: strRef(p.Product), Barcode: strRef(p.Barcode), Quantity: p.Quantity, Meters: p.Meters, Lines: p.Lines,
+			Changes: p.Changes,
 		}
 		if ev.Action == ActionUnitAssigned {
 			recorded[p.ItemUUID+"/"+p.UnitUUID] = struct{}{}

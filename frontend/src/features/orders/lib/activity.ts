@@ -64,6 +64,32 @@ export function orderTimelineSteps(
     if (e.lines != null) {
       parts.push(t("orders.activity.lines", { count: format.number(e.lines) }));
     }
+    // TEC-1056: the lines an edit added, changed or removed.
+    for (const c of e.changes ?? []) {
+      if (c.before == null && c.after != null) {
+        parts.push(
+          t("orders.activity.change_added", {
+            product: c.product,
+            after: c.after,
+          }),
+        );
+      } else if (c.after == null && c.before != null) {
+        parts.push(
+          t("orders.activity.change_removed", {
+            product: c.product,
+            before: c.before,
+          }),
+        );
+      } else {
+        parts.push(
+          t("orders.activity.change_changed", {
+            product: c.product,
+            before: c.before ?? "",
+            after: c.after ?? "",
+          }),
+        );
+      }
+    }
     if (e.reason) parts.push(e.reason);
     return {
       key: `${e.at}-${i}`,

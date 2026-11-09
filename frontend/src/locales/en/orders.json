@@ -344,5 +344,17 @@
   "discounts.save": "Save",
   "discounts.saved": "Discounts saved.",
   "discounts.save_failed": "Discounts could not be saved.",
-  "discounts.load_failed": "Discounts could not be loaded."
+  "discounts.load_failed": "Discounts could not be loaded.",
+  "edit_lines.button": "Edit lines",
+  "edit_lines.title": "Edit lines",
+  "edit_lines.hint": "Add products, change amounts or remove lines. A new line is priced from the price list. Removing a line with assigned barcodes frees them.",
+  "edit_lines.save": "Save",
+  "edit_lines.cancel": "Cancel",
+  "edit_lines.saved": "Lines updated",
+  "edit_lines.failed": "The lines could not be updated",
+  "edit_lines.assigned": "{{amount}} assigned",
+  "edit_lines.below_assigned": "Cannot go below the assigned amount; unassign a barcode first.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

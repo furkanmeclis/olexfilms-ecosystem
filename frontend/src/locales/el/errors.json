@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Ο ιδιοκτήτης του οχήματος άλλαξε· ξεκινήστε νέα μεταβίβαση.",
   "codes.ORDER_INVALID_TRANSITION": "Η κατάσταση της παραγγελίας δεν επιτρέπει αυτή την ενέργεια.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Αυτό το βήμα δεν είναι ακόμη διαθέσιμο.",
-  "codes.ORDER_NOT_EDITABLE": "Μόνο οι πρόχειρες παραγγελίες μπορούν να επεξεργαστούν.",
+  "codes.ORDER_NOT_EDITABLE": "Οι γραμμές της παραγγελίας δεν μπορούν να επεξεργαστούν σε αυτή την κατάσταση.",
   "codes.ORDER_NO_SUPPLIER": "Μόνο διανομέας (από το κέντρο) ή αντιπρόσωπος (από τον διανομέα του) μπορεί να παραγγείλει προϊόντα.",
   "codes.ORDER_NOT_ASSIGNABLE": "Οι μονάδες ανατίθενται μόνο κατά την προετοιμασία.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Αυτή η μονάδα είναι ήδη στη γραμμή.",
@@ -173,5 +173,6 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Η αποθήκευση εγγράφων ή η υπηρεσία PDF δεν είναι διαθέσιμη.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "Το αποδεικτικό πρέπει να είναι PDF, JPEG, PNG ή WebP (έως 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Τοποθετήστε τη μονάδα στην αποθήκη πριν από την ανάθεση.",
-  "page_forbidden_body": "Δεν έχετε δικαίωμα προβολής αυτής της σελίδας."
+  "page_forbidden_body": "Δεν έχετε δικαίωμα προβολής αυτής της σελίδας.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Η νέα ποσότητα είναι κάτω από τα ανατεθειμένα barcode· αφαιρέστε πρώτα την ανάθεση."
 }

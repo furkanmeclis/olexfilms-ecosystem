@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Avtomobilin sahibi dəyişdi; yeni təhvil başladın.",
   "codes.ORDER_INVALID_TRANSITION": "Sifarişin statusu bu əməliyyata icazə vermir.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Bu addım hələ əlçatan deyil.",
-  "codes.ORDER_NOT_EDITABLE": "Yalnız qaralama sifarişlər redaktə edilə bilər.",
+  "codes.ORDER_NOT_EDITABLE": "Bu statusda sifariş sətirləri redaktə edilə bilməz.",
   "codes.ORDER_NO_SUPPLIER": "Məhsul sifarişini yalnız distribyutor (mərkəzdən) və ya diler (öz distribyutorundan) verə bilər.",
   "codes.ORDER_NOT_ASSIGNABLE": "Vahidlər yalnız sifariş hazırlanarkən təyin edilə bilər.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Bu vahid artıq bu sətirdədir.",
@@ -173,5 +173,6 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Sənəd anbarı və ya PDF xidməti hazırda əlçatan deyil.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "Təhvil sənədi PDF, JPEG, PNG və ya WebP olmalıdır (10 MB-a qədər).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Təyinatdan əvvəl bu vahidi anbarda yerləşdirin.",
-  "page_forbidden_body": "Bu səhifəyə baxmaq icazəniz yoxdur."
+  "page_forbidden_body": "Bu səhifəyə baxmaq icazəniz yoxdur.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Yeni miqdar təyin olunmuş barkodlardan azdır; əvvəlcə təyinatı ləğv edin."
 }

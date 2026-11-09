@@ -305,5 +305,17 @@
   "discounts.save": "保存",
   "discounts.saved": "折扣已保存。",
   "discounts.save_failed": "无法保存折扣。",
-  "discounts.load_failed": "无法加载折扣。"
+  "discounts.load_failed": "无法加载折扣。",
+  "edit_lines.button": "编辑明细",
+  "edit_lines.title": "编辑明细",
+  "edit_lines.hint": "添加产品、修改数量或删除明细。新明细按价目表定价。删除已分配条码的明细会释放这些条码。",
+  "edit_lines.save": "保存",
+  "edit_lines.cancel": "取消",
+  "edit_lines.saved": "明细已更新",
+  "edit_lines.failed": "无法更新明细",
+  "edit_lines.assigned": "已分配 {{amount}}",
+  "edit_lines.below_assigned": "不能低于已分配数量;请先移除条码。",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

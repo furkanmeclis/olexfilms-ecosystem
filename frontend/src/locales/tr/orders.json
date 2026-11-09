@@ -344,5 +344,17 @@
   "discounts.save": "Kaydet",
   "discounts.saved": "İskontolar kaydedildi.",
   "discounts.save_failed": "İskontolar kaydedilemedi.",
-  "discounts.load_failed": "İskontolar yüklenemedi."
+  "discounts.load_failed": "İskontolar yüklenemedi.",
+  "edit_lines.button": "Kalemleri düzenle",
+  "edit_lines.title": "Kalemleri düzenle",
+  "edit_lines.hint": "Ürün ekleyin, miktarı değiştirin ya da kalemi çıkarın. Yeni kalemin fiyatı fiyat listesinden gelir. Barkodu atanmış bir kalem çıkarılırsa barkodlar serbest kalır.",
+  "edit_lines.save": "Kaydet",
+  "edit_lines.cancel": "Vazgeç",
+  "edit_lines.saved": "Kalemler güncellendi",
+  "edit_lines.failed": "Kalemler güncellenemedi",
+  "edit_lines.assigned": "{{amount}} atandı",
+  "edit_lines.below_assigned": "Atanmış miktarın altına inemez; önce barkodu çıkarın.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

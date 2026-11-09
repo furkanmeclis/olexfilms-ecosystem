@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAssignUnits,
   canEditDraft,
+  canEditSellerLines,
   orderActions,
   orderFullyAssigned,
   resolveOrderListAccess,
@@ -10,6 +11,7 @@ import {
 import {
   addLine,
   formIsValid,
+  linesBelowAssigned,
   toItemInputs,
   unitPriceValid,
   validateOrderForm,
@@ -32,6 +34,7 @@ function order(over: Partial<Order> = {}): Order {
     order_no: "ORD-00000001",
     created_by_seller: false,
     invoice_status: "pending",
+    can_edit_items: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -418,6 +421,36 @@ describe("order timeline (TEC-1060)", () => {
     });
   });
 
+  it("lists the line changes of an edit (TEC-1056)", () => {
+    const steps = orderTimelineSteps(
+      order({
+        timeline: [
+          {
+            action: "updated",
+            at: "2026-11-09T08:00:00Z",
+            user: null,
+            lines: 2,
+            changes: [
+              { product: "Film", before: "2", after: null },
+              { product: "Tabela", before: "3", after: "4" },
+              { product: "Pleksi", before: null, after: "1" },
+            ],
+          },
+        ],
+      }),
+      t,
+      format,
+    );
+    expect(steps[0].detail).toBe(
+      [
+        'orders.activity.lines:{"count":"2"}',
+        'orders.activity.change_removed:{"product":"Film","before":"2"}',
+        'orders.activity.change_changed:{"product":"Tabela","before":"3","after":"4"}',
+        'orders.activity.change_added:{"product":"Pleksi","after":"1"}',
+      ].join(" · "),
+    );
+  });
+
   it("falls back to the status history without a timeline", () => {
     const steps = orderTimelineSteps(
       order({
@@ -437,5 +470,62 @@ describe("order timeline (TEC-1060)", () => {
     expect(steps).toEqual([
       expect.objectContaining({ user: null, label: "orders.status.draft" }),
     ]);
+  });
+});
+
+describe("seller line edit (TEC-1056)", () => {
+  it("follows the server flag on the seller side only", () => {
+    expect(
+      canEditSellerLines(
+        order({ role: "seller", status: "approved", can_edit_items: true }),
+      ),
+    ).toBe(true);
+    expect(
+      canEditSellerLines(
+        order({ role: "seller", status: "ready", can_edit_items: false }),
+      ),
+    ).toBe(false);
+    // The buyer's draft keeps its own edit page.
+    expect(canEditSellerLines(order({ can_edit_items: true }))).toBe(false);
+  });
+
+  it("flags lines below their assigned units", () => {
+    const o = order({
+      role: "seller",
+      status: "preparing",
+      items: [
+        {
+          uuid: "i1",
+          product: { uuid: "p1", sku: "S", name: "N", unit_type: "piece" },
+          quantity: 3,
+          meters: null,
+          unit_price: "1.0000",
+          price_source: "list",
+          price_missing: false,
+          list_unit_price: null,
+          discount_pct: null,
+          is_gift: false,
+          line_total: "3.00",
+          note: null,
+          assigned: "2",
+          units: [],
+          invoiced: false,
+          invoice_no: null,
+          invoice_uuid: null,
+        },
+      ],
+    });
+    const line = (amount: string): OrderFormLine => ({
+      product_uuid: "p1",
+      sku: "S",
+      name: "N",
+      unit_type: "piece",
+      amount,
+    });
+    expect(linesBelowAssigned(o, [line("1")]).size).toBe(1);
+    expect(linesBelowAssigned(o, [line("2")]).size).toBe(0);
+    expect(
+      linesBelowAssigned(o, [{ ...line("1"), product_uuid: "new" }]).size,
+    ).toBe(0);
   });
 });

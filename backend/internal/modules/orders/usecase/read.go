@@ -147,9 +147,12 @@ type OrderView struct {
 	AvailableTransitions []string `json:"available_transitions"`
 	// ReceiveOnBehalf: received in AvailableTransitions is the seller
 	// receiving for a memberless pool recipient (TEC-1062; detail only).
-	ReceiveOnBehalf bool          `json:"receive_on_behalf,omitempty"`
-	Items           []ItemView    `json:"items,omitempty"`
-	History         []HistoryView `json:"history,omitempty"`
+	ReceiveOnBehalf bool `json:"receive_on_behalf,omitempty"`
+	// CanEditItems: the caller may change the lines now (PUT items): the
+	// buyer its draft, the seller before ready (TEC-1056).
+	CanEditItems bool          `json:"can_edit_items"`
+	Items        []ItemView    `json:"items,omitempty"`
+	History      []HistoryView `json:"history,omitempty"`
 	// Timeline: every recorded step with its user (detail only, TEC-1060).
 	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
@@ -258,6 +261,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		HasReceiptDocument:  o.ReceiptDocumentKey.Valid && o.ReceiptDocumentKey.String != "",
 		CreatedAt:           o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
 		AvailableTransitions: availableTransitions(o.Status, party, c.can),
+		CanEditItems:         canEditItems(c, o),
 	}
 	if o.DeliveryMethodID.Valid {
 		m, err := q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)

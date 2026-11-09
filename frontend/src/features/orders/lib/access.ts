@@ -218,6 +218,15 @@ export function canEditDraft(can: Can, order: Order): boolean {
   );
 }
 
+/**
+ * TEC-1056: the seller's sales (orders.write) or warehouse (orders.ship)
+ * staff edit the lines in place before the order is ready; the server
+ * decides (can_edit_items). The buyer's draft keeps its own edit page.
+ */
+export function canEditSellerLines(order: Order): boolean {
+  return order.role === "seller" && order.can_edit_items === true;
+}
+
 /** The seller assigns units (barcode scan) while the order is preparing. */
 export function canAssignUnits(can: Can, order: Order): boolean {
   return (

@@ -20,6 +20,7 @@ const (
 	CodeInvalidTransition         = "ORDER_INVALID_TRANSITION"
 	CodeTransitionUnavailable     = "ORDER_TRANSITION_UNAVAILABLE"
 	CodeNotEditable               = "ORDER_NOT_EDITABLE"
+	CodeBelowAssigned             = "ORDER_LINE_BELOW_ASSIGNED"
 	CodeNoSupplier                = "ORDER_NO_SUPPLIER"
 	CodeNotAssignable             = "ORDER_NOT_ASSIGNABLE"
 	CodeUnitAlreadyAssigned       = "ORDER_UNIT_ALREADY_ASSIGNED"
@@ -100,7 +101,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ord.ErrTransitionUnavailable):
 		response.Conflict(w, r, CodeTransitionUnavailable, "This transition is not available yet")
 	case errors.Is(err, ord.ErrNotEditable):
-		response.Conflict(w, r, CodeNotEditable, "Only draft orders can be edited")
+		response.Conflict(w, r, CodeNotEditable, "The order lines cannot be edited in this status")
+	case errors.Is(err, ord.ErrBelowAssigned):
+		response.Conflict(w, r, CodeBelowAssigned, "Unassign units first: the new amount is below the assigned units")
 	case errors.Is(err, ord.ErrInvoiceNotFound):
 		response.NotFound(w, r, "Invoice record not found")
 	case errors.Is(err, ord.ErrNotInvoiceable):
@@ -262,7 +265,8 @@ type itemsBody struct {
 	Items []itemBody `json:"items"`
 }
 
-// ReplaceItems (PUT /v1/orders/{uuid}/items): draft lines, prices fetched again.
+// ReplaceItems (PUT /v1/orders/{uuid}/items): the buyer's draft lines
+// (prices fetched again) or the seller's edit before ready (TEC-1056).
 func (h *Handler) ReplaceItems(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r)
 	if !ok {

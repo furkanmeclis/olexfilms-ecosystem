@@ -463,6 +463,13 @@ SET status = 'released', released_at = NOW()
 FROM order_items i
 WHERE i.id = r.order_item_id AND i.order_id = sqlc.arg(order_id) AND r.status = 'active';
 
+-- TEC-1056: a line removed before shipping takes its released reservation
+-- history with it (the FK is RESTRICT); active ones are released first and
+-- consumed ones only exist after shipping, when lines are not edited.
+-- name: DeleteReleasedReservationsByItem :execrows
+DELETE FROM stock_reservations
+WHERE order_item_id = sqlc.arg(order_item_id) AND status = 'released';
+
 -- ---------------------------------------------------------------------------
 -- Sibling dealer transfer requests (K13).
 

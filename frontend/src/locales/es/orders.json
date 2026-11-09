@@ -344,5 +344,17 @@
   "discounts.save": "Guardar",
   "discounts.saved": "Descuentos guardados.",
   "discounts.save_failed": "No se pudieron guardar los descuentos.",
-  "discounts.load_failed": "No se pudieron cargar los descuentos."
+  "discounts.load_failed": "No se pudieron cargar los descuentos.",
+  "edit_lines.button": "Editar líneas",
+  "edit_lines.title": "Editar líneas",
+  "edit_lines.hint": "Añada productos, cambie cantidades o quite líneas. Una línea nueva toma el precio de la lista de precios. Quitar una línea con códigos de barras asignados los libera.",
+  "edit_lines.save": "Guardar",
+  "edit_lines.cancel": "Cancelar",
+  "edit_lines.saved": "Líneas actualizadas",
+  "edit_lines.failed": "No se pudieron actualizar las líneas",
+  "edit_lines.assigned": "{{amount}} asignados",
+  "edit_lines.below_assigned": "No puede bajar de la cantidad asignada; quite primero un código de barras.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

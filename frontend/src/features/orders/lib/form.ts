@@ -183,6 +183,26 @@ export function linesFromOrder(order: Order): OrderFormLine[] {
   }));
 }
 
+/**
+ * TEC-1056: product uuids of the edited lines whose amount is below the
+ * units already assigned to them (the API answers 409
+ * ORDER_LINE_BELOW_ASSIGNED; unassign first).
+ */
+export function linesBelowAssigned(
+  order: Order,
+  lines: OrderFormLine[],
+): Set<string> {
+  const out = new Set<string>();
+  for (const line of lines) {
+    const item = order.items?.find((i) => i.product.uuid === line.product_uuid);
+    const assigned = Number(item?.assigned ?? 0);
+    if (!item || !(assigned > 0)) continue;
+    const v = Number(normalizeAmount(line.amount));
+    if (Number.isFinite(v) && v < assigned - 1e-9) out.add(line.product_uuid);
+  }
+  return out;
+}
+
 export type Tone = "default" | "success" | "warning" | "danger";
 
 const STATUS_TONE: Partial<Record<OrderStatus, Tone>> = {

@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Le propriétaire du véhicule a changé ; lancez un nouveau transfert.",
   "codes.ORDER_INVALID_TRANSITION": "Le statut de la commande ne permet pas cette action.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Cette étape n'est pas encore disponible.",
-  "codes.ORDER_NOT_EDITABLE": "Seuls les brouillons de commande peuvent être modifiés.",
+  "codes.ORDER_NOT_EDITABLE": "Les lignes de la commande ne peuvent pas être modifiées dans ce statut.",
   "codes.ORDER_NO_SUPPLIER": "Seul un distributeur (auprès du centre) ou un revendeur (auprès de son distributeur) peut commander des produits.",
   "codes.ORDER_NOT_ASSIGNABLE": "Les unités ne peuvent être attribuées que pendant la préparation.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Cette unité est déjà sur la ligne.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Seule une commande reçue peut être marquée comme facturée.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "L'une des lignes sélectionnées est déjà facturée.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Toutes les lignes de la commande sont déjà facturées.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nouvelle quantité est inférieure aux codes-barres attribués ; retirez d'abord l'attribution."
 }
