@@ -85,6 +85,17 @@ export const stockService = {
       { query: params },
     );
   },
+  /**
+   * TEC-1078: the split family of a barcode (the roll and every part cut
+   * from it, wherever it is now) — `family=<barcode>` on the unit list.
+   */
+  listFamily(orgUuid: string, barcode: string) {
+    return platformRequest<Page<StockUnitRow>>(
+      "GET",
+      `/v1/stock/organizations/${enc(orgUuid)}/units`,
+      { query: { family: barcode, limit: 100, offset: 0 } },
+    );
+  },
   listProducts(orgUuid: string, params: StockProductListQuery) {
     return platformRequest<Page<StockProduct>>(
       "GET",
@@ -127,5 +138,7 @@ export const stockKeys = {
     ["stock", "products", orgUuid, params] as const,
   locationProducts: (locationUuid: string, params: StockProductListQuery) =>
     ["stock", "location-products", locationUuid, params] as const,
+  family: (orgUuid: string, barcode: string) =>
+    ["stock", "family", orgUuid, barcode] as const,
   dealers: ["stock", "dealers"] as const,
 };

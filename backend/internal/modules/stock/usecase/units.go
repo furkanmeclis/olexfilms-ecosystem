@@ -63,6 +63,9 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: organization: %w", err)
 	}
+	if in.Family != "" {
+		return s.familyUnits(ctx, v, o, in)
+	}
 	var product pgtype.Int8
 	if in.ProductUUID != nil {
 		id, err := s.q.GetProductIDByUUID(ctx, *in.ProductUUID)

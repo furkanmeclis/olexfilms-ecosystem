@@ -393,7 +393,7 @@ describe("OrderDetailPage: buttons by role and status", () => {
           source_barcode: "ROLL-1",
           source_remaining_meters: "38.00",
           new_unit_uuid: "n1",
-          new_barcode: "ROLL-1-S1",
+          new_barcode: "ROLL-1-12M",
           replayed: false,
         },
       }),
@@ -406,8 +406,12 @@ describe("OrderDetailPage: buttons by role and status", () => {
     const body = api.assignUnit.mock.calls.at(-1)![2];
     expect(body).toMatchObject({ barcode: "ROLL-1", meters: "12" });
     expect(typeof body.idempotency_key).toBe("string");
+    // TEC-1078: the meter code and a "Print label" action.
     expect(toast.success).toHaveBeenCalledWith(
-      'orders.assign.split_success {"barcode":"ROLL-1-S1","rest":"38.00"}',
+      'orders.assign.split_success {"barcode":"ROLL-1-12M","rest":"38.00"}',
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "orders.assign.print_label" }),
+      }),
     );
   });
 

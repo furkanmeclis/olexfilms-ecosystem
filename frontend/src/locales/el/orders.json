@@ -164,6 +164,7 @@
   "assign.meters": "Μέτρα",
   "assign.meters_placeholder": "Όλο",
   "assign.split_success": "Το ρολό χωρίστηκε: νέο barcode {{barcode}}, απομένουν {{rest}} m στο ρολό.",
+  "assign.print_label": "Εκτύπωση ετικέτας",
   "items.amount": "Ποσότητα",
   "items.unit_price": "Τιμή μονάδας",
   "items.line_total": "Σύνολο γραμμής",

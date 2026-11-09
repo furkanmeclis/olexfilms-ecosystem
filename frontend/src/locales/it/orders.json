@@ -164,6 +164,7 @@
   "assign.meters": "Metri",
   "assign.meters_placeholder": "Tutto",
   "assign.split_success": "Rotolo diviso: nuovo codice a barre {{barcode}}, restano {{rest}} m sul rotolo.",
+  "assign.print_label": "Stampa etichetta",
   "items.amount": "Quantità",
   "items.unit_price": "Prezzo unitario",
   "items.line_total": "Totale riga",

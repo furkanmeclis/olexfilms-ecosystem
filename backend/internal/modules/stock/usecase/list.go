@@ -41,6 +41,8 @@ var ProductStockSort = apiquery.SortSpec{
 const (
 	QueryBarcode      = "barcode"
 	QueryBarcodeMatch = "barcode_match"
+	// QueryFamily lists the split family of a barcode (TEC-1078).
+	QueryFamily = "family"
 	// BarcodeMatchPrefix makes barcode a prefix match (default: exact).
 	BarcodeMatchPrefix = "prefix"
 	BarcodeMatchExact  = "exact"
@@ -67,7 +69,7 @@ func invalidParam(field, msg string) error {
 	return &apiquery.ValidationError{Details: []apiquery.Detail{{Field: field, Message: msg, Code: "invalid"}}}
 }
 
-// ParseUnitFilter reads q, product_uuid, status (CSV), barcode,
+// ParseUnitFilter reads q, product_uuid, status (CSV), barcode, family,
 // barcode_match (exact | prefix), location_uuid (CSV), updated_from /
 // updated_to, sort, limit and offset. Errors are *apiquery.ValidationError.
 func ParseUnitFilter(values url.Values) (model.UnitFilter, error) {
@@ -75,6 +77,9 @@ func ParseUnitFilter(values url.Values) (model.UnitFilter, error) {
 	in := model.UnitFilter{Q: q.Q, Limit: q.Limit, Offset: q.Offset, Barcode: strings.TrimSpace(values.Get(QueryBarcode))}
 	if len(in.Barcode) > 64 {
 		return in, invalidParam(QueryBarcode, "barcode is too long")
+	}
+	if in.Family = strings.TrimSpace(values.Get(QueryFamily)); len(in.Family) > 64 {
+		return in, invalidParam(QueryFamily, "family is too long")
 	}
 	switch strings.TrimSpace(values.Get(QueryBarcodeMatch)) {
 	case "", BarcodeMatchExact:

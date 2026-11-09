@@ -256,5 +256,18 @@
   "trace.no_service": "Δεν χρησιμοποιήθηκε σε υπηρεσία.",
   "trace.source.order": "Με παραγγελία",
   "trace.source.stock": "Σε απόθεμα",
-  "trace.source.unknown": "Άγνωστη προέλευση"
+  "trace.source.unknown": "Άγνωστη προέλευση",
+  "splits.title": "Τμήματα ({{count}})",
+  "splits.source": "Κόπηκε από ρολό",
+  "splits.cut": "Κόπηκαν {{meters}} m",
+  "splits.empty": "Δεν κόπηκαν τμήματα από αυτή τη μονάδα.",
+  "splits.meters": "{{meters}} m (απομένουν {{remaining}} m)",
+  "splits.roll_left": "{{remaining}} m στο ρολό",
+  "family.title": "{{barcode}}: κύριος κωδικός και τμήματα",
+  "family.description": "Όλα τα τμήματα που κόπηκαν από το ρολό, μαζί με τα πωλημένα και τα χρησιμοποιημένα.",
+  "family_status.on_hand": "Σε απόθεμα",
+  "family_status.sold": "Πωλήθηκε",
+  "family_status.used": "Χρησιμοποιήθηκε",
+  "family_status.in_transit": "Σε μεταφορά",
+  "family_status.other": "Άλλο"
 }

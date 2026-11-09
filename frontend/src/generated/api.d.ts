@@ -5776,7 +5776,7 @@ export interface paths {
         };
         /**
          * Current state and movement history of a barcode
-         * @description Needs `stock.read`, filtered on the holding organization (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse, K20) sees every unit and every name. A restricted viewer (managed, subtree, brand) sees a unit only while it is held inside its reach (404 otherwise). It then gets the whole history: rows of its own organizations and of its supplier chain are named; rows of any other organization are masked (`organization_masked`, owner `masked`, no location, reference or reason). Movements are in ledger order (oldest first) and paged with `limit`/`offset`. Fixed barcodes list the quantity per owner in `holdings` instead of `current`.
+         * @description Needs `stock.read`, filtered on the holding organization (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse, K20) sees every unit and every name. A restricted viewer (managed, subtree, brand) sees a unit only while it is held inside its reach (404 otherwise). It then gets the whole history: rows of its own organizations and of its supplier chain are named; rows of any other organization are masked (`organization_masked`, owner `masked`, no location, reference or reason). Movements are in ledger order (oldest first) and paged with `limit`/`offset`. Fixed barcodes list the quantity per owner in `holdings` instead of `current`. TEC-1078: `splits` names the roll the unit was cut from (`source`, only when the viewer reaches its holder) and lists every part cut from it, recursively (`parts`, depth 1 = cut from this unit), each only when the viewer reaches its holder; `family_status` is relative to the active organization.
          */
         get: operations["getStockUnitHistory"];
         put?: never;
@@ -5822,7 +5822,7 @@ export interface paths {
         };
         /**
          * Units held by an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set. TEC-373 (docs/list-contract.md): `status` is a comma separated any-of filter; `barcode_match=prefix` makes `barcode` a prefix match; `location_uuid` (comma separated) keeps units on those locations (fixed barcodes have no single location and drop out); `updated_from` / `updated_to` bound the holding's last change; `sort` is one of product (default; barcode inside a product), barcode, status (flow rank reserved → void), quantity, meters (remaining, pieces last), updated_at, with an id tiebreak. An explicit sort, a barcode, location or date filter makes `q` search Postgres instead of the index. Labels for selected units: GET /v1/stock/labels/units.pdf with one `barcode` per unit.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set. TEC-373 (docs/list-contract.md): `status` is a comma separated any-of filter; `barcode_match=prefix` makes `barcode` a prefix match; `location_uuid` (comma separated) keeps units on those locations (fixed barcodes have no single location and drop out); `updated_from` / `updated_to` bound the holding's last change; `sort` is one of product (default; barcode inside a product), barcode, status (flow rank reserved → void), quantity, meters (remaining, pieces last), updated_at, with an id tiebreak. An explicit sort, a barcode, location or date filter makes `q` search Postgres instead of the index. Labels for selected units: GET /v1/stock/labels/units.pdf with one `barcode` per unit. TEC-1078: `family=<barcode>` lists the split family of that barcode in the organization's brand instead (the unit, depth 0, and every part cut from it recursively, wherever it is now), ignoring the other filters, `q` and `sort` (depth, then cut order); each row only when the viewer's `stock.read` reaches its holder (a dealer sees its own parts, never a sibling's). Rows then carry `holder`, `family_status` (on_hand at this organization, sold to another, used, in_transit, other), `family_depth`, `source_barcode`, `split_meters` and `order`; `quantity` is 1 only for on_hand. An unknown barcode is an empty page.
          */
         get: operations["listStockOrganizationUnits"];
         put?: never;
@@ -6168,7 +6168,7 @@ export interface paths {
         put?: never;
         /**
          * Split a roll (cut meters off as a new unit)
-         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product with the barcode `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
+         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product at the roll's owner. TEC-1078: its barcode is `<roll barcode>-<meters>M` (whole meters without decimals `-3M`, otherwise a dot without trailing zeros `-2.5M`); the same length cut again from that roll gets `-3M-2`, `-3M-3`, ...; when that would pass 64 characters the legacy `<roll barcode>-S<n>` is used. Earlier `-S<n>` barcodes stay as they are. The roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
          */
         post: operations["createStockSplit"];
         delete?: never;
@@ -6616,7 +6616,7 @@ export interface paths {
         put?: never;
         /**
          * Reserve N barcodes for a product (center only)
-         * @description Needs `stock.write` at the center (K14; other organization types answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity` barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the brand's counter under its lock and creates the units in status `reserved`; printing a label PDF advances them to `printed`. They enter stock later through the stock entry flow. Roll products need `meters` (the length of each roll); fixed-barcode products get fixed units. The prefix defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split barcode `<barcode>-S<n>` never collides with this format. The response carries every unit and `labels_url`, the batch's label PDF. An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
+         * @description Needs `stock.write` at the center (K14; other organization types answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity` barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the brand's counter under its lock and creates the units in status `reserved`; printing a label PDF advances them to `printed`. They enter stock later through the stock entry flow. Roll products need `meters` (the length of each roll); fixed-barcode products get fixed units. The prefix defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split barcode `<barcode>-<meters>M[-<k>]` (legacy `<barcode>-S<n>`) never collides with this format. The response carries every unit and `labels_url`, the batch's label PDF. An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
          */
         post: operations["createBarcodeBatch"];
         delete?: never;
@@ -7005,7 +7005,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve one scanned code (location QR, unit barcode, SKU, short code)
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]` (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`, `-<m>M` or `-<m>M-<k>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["resolveWarehouseScan"];
         delete?: never;
@@ -9760,7 +9760,7 @@ export interface paths {
          * Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]` (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`, `-<m>M` or `-<m>M-<k>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["mobileResolveWarehouseScan"];
         delete?: never;
@@ -13206,7 +13206,7 @@ export interface paths {
         put?: never;
         /**
          * Assign a unit to an order line and reserve it (seller, orders.ship)
-         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (<roll barcode>-S<n>), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
+         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (TEC-1078: `<roll barcode>-<meters>M`, `-3M-2` for the same length again, legacy `-S<n>` past 64 characters), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
          */
         post: operations["assignOrderUnit"];
         delete?: never;
@@ -22750,6 +22750,48 @@ export interface components {
                 offset: number;
             };
             trace: null | components["schemas"]["StockUnitTrace"];
+            splits: components["schemas"]["StockUnitSplits"];
+        };
+        /**
+         * @description TEC-1078: a split family member relative to the organization the family is read for: on_hand (available/placed there), sold (available/placed at another organization), used (consumed or used up), in_transit, other (label not in stock yet, void).
+         * @enum {string}
+         */
+        StockSplitFamilyStatus: "on_hand" | "sold" | "used" | "in_transit" | "other";
+        StockOrderRef: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+        };
+        /** @description TEC-1078: the split family around a unit. Parts are coded by their meters (`<roll>-3M`, `<roll>-3M-2`, `<roll>-2.5M`; legacy `-S<n>`). */
+        StockUnitSplits: {
+            /** @description The roll this unit was cut from; null when none or outside the viewer's reach. */
+            source: {
+                /** Format: uuid */
+                uuid: string;
+                barcode: string;
+                /** @description Meters cut off it as this unit */
+                meters: string;
+            } | null;
+            parts: components["schemas"]["StockSplitPart"][];
+        };
+        StockSplitPart: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @description 1: cut from the unit itself; 2: from one of its parts, ... */
+            depth: number;
+            source_barcode: string;
+            /** @description Meters cut (decimal string) */
+            meters: string;
+            remaining_meters: string | null;
+            status: components["schemas"]["StockUnitStatus"];
+            family_status: components["schemas"]["StockSplitFamilyStatus"];
+            owner_type: string | null;
+            holder: components["schemas"]["StockOrgRef"] | null;
+            /** @description Latest order that carried the part; null when none or outside the viewer's reach. */
+            order: components["schemas"]["StockOrderRef"] | null;
+            /** Format: date-time */
+            split_at: string;
         };
         StockProduct: {
             product: {
@@ -22868,6 +22910,18 @@ export interface components {
             } | null;
             /** Format: date-time */
             updated_at: string;
+            /** @description family=<barcode> only (TEC-1078): the current holder. */
+            holder?: components["schemas"]["StockOrgRef"];
+            /** @description family=<barcode> only (TEC-1078). */
+            family_status?: components["schemas"]["StockSplitFamilyStatus"];
+            /** @description family=<barcode> only: 0 for the roll, 1+ for parts. */
+            family_depth?: number;
+            /** @description family=<barcode> only: the roll a part was cut from. */
+            source_barcode?: string;
+            /** @description family=<barcode> only: meters cut as this part. */
+            split_meters?: string;
+            /** @description family=<barcode> only: latest order that carried the part, within the viewer's reach. */
+            order?: components["schemas"]["StockOrderRef"];
         };
         EnvelopeStockUnitPage: {
             /** @enum {boolean} */
@@ -42278,6 +42332,8 @@ export interface operations {
                 updated_from?: components["parameters"]["UpdatedFrom"];
                 /** @description Updated on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `updated_from` after `updated_to` → 400. */
                 updated_to?: components["parameters"]["UpdatedTo"];
+                /** @description TEC-1078: list the split family of this barcode (the roll and every part cut from it) instead of the on-hand units. */
+                family?: string;
             };
             header?: never;
             path: {

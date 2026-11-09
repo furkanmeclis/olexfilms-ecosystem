@@ -154,13 +154,18 @@ func TestIntegrationWarehouseScan(t *testing.T) {
 	// u1: legacy/import barcode in the center bin.
 	u1 := c.unit(center, p, 2031)
 	c.post(ledger.TypeEntry, u1, c.nextRef(), binOwner)
-	// Roll split barcode (TEC-184 format) with remaining meters.
+	// Roll split barcodes with remaining meters: legacy TEC-184 -S<n> and
+	// the TEC-1078 meter code.
 	split := newUnit(roll, fmt.Sprintf("T203R-%s-S1", it.suffix), "12.50")
 	c.post(ledger.TypeEntry, split, c.nextRef(), binOwner)
+	meterSplit := newUnit(roll, fmt.Sprintf("T203R-%s-12.5M", it.suffix), "12.50")
+	c.post(ledger.TypeEntry, meterSplit, c.nextRef(), binOwner)
 	// Generated barcode reachable by its short code.
 	seq := 90_000_000 + time.Now().UnixNano()%9_000_000
 	gen := newUnit(p, stockusecase.Barcode(stockusecase.DefaultPrefix("olex"), seq), "")
 	c.post(ledger.TypeEntry, gen, c.nextRef(), binOwner)
+	genSplit := newUnit(roll, gen.Barcode+"-3M-2", "3")
+	c.post(ledger.TypeEntry, genSplit, c.nextRef(), binOwner)
 	// u4: center -> distributor -> dealer.
 	u4 := c.unit(center, p, 2034)
 	c.post(ledger.TypeEntry, u4, c.nextRef(), c.location(center, "C203"))
@@ -205,6 +210,10 @@ func TestIntegrationWarehouseScan(t *testing.T) {
 	if res.Unit == nil || res.Unit.RemainingMeters == nil || *res.Unit.RemainingMeters != "12.50" {
 		t.Fatalf("split result = %+v", res.Unit)
 	}
+	res = it.mustScan(cTok, meterSplit.Barcode, "unit", "barcode")
+	if res.Unit == nil || res.Unit.UUID != meterSplit.Uuid.String() {
+		t.Fatalf("meter split result = %+v", res.Unit)
+	}
 
 	// 4. SKU -> product.
 	res = it.mustScan(cTok, p.Sku, "product", "sku")
@@ -216,6 +225,10 @@ func TestIntegrationWarehouseScan(t *testing.T) {
 	res = it.mustScan(cTok, fmt.Sprintf("%d", seq), "unit", "short_code")
 	if res.Code != gen.Barcode || res.Unit == nil || res.Unit.UUID != gen.Uuid.String() {
 		t.Fatalf("short code result = %+v", res)
+	}
+	res = it.mustScan(cTok, fmt.Sprintf("%d-3m-2", seq), "unit", "short_code")
+	if res.Code != genSplit.Barcode || res.Unit == nil || res.Unit.UUID != genSplit.Uuid.String() {
+		t.Fatalf("meter split short code result = %+v", res)
 	}
 
 	// 6. Unknown and empty codes.

@@ -63,6 +63,36 @@ func TestSplitBarcode(t *testing.T) {
 	}
 }
 
+func TestMeterBarcode(t *testing.T) {
+	for _, tc := range []struct {
+		cm   int64
+		want string
+	}{{300, "3M"}, {250, "2.5M"}, {1205, "12.05M"}, {1250, "12.5M"}, {5, "0.05M"}, {10000, "100M"}} {
+		if got := MeterLabel(tc.cm); got != tc.want {
+			t.Fatalf("MeterLabel(%d) = %q, want %q", tc.cm, got, tc.want)
+		}
+	}
+	if got, ok := MeterBarcode("2026AUR230-D001", 300, 1); !ok || got != "2026AUR230-D001-3M" {
+		t.Fatalf("first cut = %q %v", got, ok)
+	}
+	if got, ok := MeterBarcode("2026AUR230-D001", 300, 2); !ok || got != "2026AUR230-D001-3M-2" {
+		t.Fatalf("second cut = %q %v", got, ok)
+	}
+	if got, ok := MeterBarcode("2026AUR230-D001", 250, 1); !ok || got != "2026AUR230-D001-2.5M" {
+		t.Fatalf("decimal cut = %q %v", got, ok)
+	}
+	// A code that no longer fits VARCHAR(64) falls back to -S<n>.
+	if got, ok := MeterBarcode(strings.Repeat("A", 62), 300, 1); ok || len(got) <= 64 {
+		t.Fatalf("long meter barcode = %q %v", got, ok)
+	}
+	if got, ok := MeterBarcode(strings.Repeat("A", 60), 300, 1); !ok || len(got) != 63 {
+		t.Fatalf("fitting meter barcode = %q %v", got, ok)
+	}
+	if _, ok := MeterBarcode(strings.Repeat("A", 60), 300, 2); ok {
+		t.Fatal("second cut of a 60-char code must not fit")
+	}
+}
+
 func TestReplaySplit(t *testing.T) {
 	src := db.Unit{ID: 21, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "available",
 		InitialMeters: cmToNumeric(5000), RemainingMeters: cmToNumeric(3800)}

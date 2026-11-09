@@ -164,6 +164,7 @@
   "assign.meters": "Metr",
   "assign.meters_placeholder": "Hamısı",
   "assign.split_success": "Rulon bölündü: yeni barkod {{barcode}}, rulonda {{rest}} m qaldı.",
+  "assign.print_label": "Etiket çap et",
   "items.amount": "Miqdar",
   "items.unit_price": "Vahid qiyməti",
   "items.line_total": "Sətir cəmi",
