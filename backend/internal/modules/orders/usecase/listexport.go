@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
 
 // ResourceListExport is the export_jobs.resource of the order list.
@@ -58,17 +59,19 @@ func NewListExportAdapter(svc *Service) *ListExportAdapter { return &ListExportA
 // Resource implements ioengine.ResourceAdapter.
 func (a *ListExportAdapter) Resource() string { return ResourceListExport }
 
-// ExportColumns implements ioengine.ResourceAdapter.
+// ExportColumns implements ioengine.ResourceAdapter. The money columns
+// need a price grant (TEC-1050): without one the file has no currency,
+// subtotal, tax or total column.
 func (a *ListExportAdapter) ExportColumns() []ioengine.Column {
 	return []ioengine.Column{
 		{Key: "order_no", LabelKey: "orders.export.order_no", Type: ioengine.ColumnTypeString},
 		{Key: "status", LabelKey: "orders.export.status", Type: ioengine.ColumnTypeEnum, Weight: 0.8},
 		{Key: "seller", LabelKey: "orders.export.seller", Type: ioengine.ColumnTypeString, Weight: 1.4},
 		{Key: "buyer", LabelKey: "orders.export.buyer", Type: ioengine.ColumnTypeString, Weight: 1.4},
-		{Key: "currency", LabelKey: "orders.export.currency", Type: ioengine.ColumnTypeString, Weight: 0.5},
-		{Key: "subtotal", LabelKey: "orders.export.subtotal", Type: ioengine.ColumnTypeString, Weight: 0.8},
-		{Key: "tax_total", LabelKey: "orders.export.tax_total", Type: ioengine.ColumnTypeString, Weight: 0.8},
-		{Key: "total", LabelKey: "orders.export.total", Type: ioengine.ColumnTypeString, Weight: 0.8},
+		{Key: "currency", LabelKey: "orders.export.currency", Type: ioengine.ColumnTypeString, Weight: 0.5, Permission: rbac.PriceViewColumnPermission},
+		{Key: "subtotal", LabelKey: "orders.export.subtotal", Type: ioengine.ColumnTypeString, Weight: 0.8, Permission: rbac.PriceViewColumnPermission},
+		{Key: "tax_total", LabelKey: "orders.export.tax_total", Type: ioengine.ColumnTypeString, Weight: 0.8, Permission: rbac.PriceViewColumnPermission},
+		{Key: "total", LabelKey: "orders.export.total", Type: ioengine.ColumnTypeString, Weight: 0.8, Permission: rbac.PriceViewColumnPermission},
 		{Key: "created_at", LabelKey: "orders.export.created_at", Type: ioengine.ColumnTypeString, Weight: 0.8},
 	}
 }
@@ -110,9 +113,9 @@ func (a *ListExportAdapter) Export(ctx context.Context, q ioengine.ExportQuery, 
 				"seller":     o.Seller.Name,
 				"buyer":      o.Buyer.Name,
 				"currency":   o.Currency,
-				"subtotal":   o.Subtotal,
-				"tax_total":  o.TaxTotal,
-				"total":      o.Total,
+				"subtotal":   derefText(o.Subtotal),
+				"tax_total":  derefText(o.TaxTotal),
+				"total":      derefText(o.Total),
 				"created_at": o.CreatedAt.UTC().Format(time.DateOnly),
 			})
 		}
@@ -140,9 +143,18 @@ func (s *Service) jobCaller(ctx context.Context, q ioengine.ExportQuery) (Caller
 		return Caller{}, err
 	}
 	return Caller{
-		Org:    orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, Name: org.Name, OrgType: org.Type, BrandID: org.BrandID},
-		Filter: f,
+		Org:        orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, Name: org.Name, OrgType: org.Type, BrandID: org.BrandID},
+		Filter:     f,
+		PriceGrant: ioengine.GrantedAny(q, rbac.PriceViewColumnPermission),
 	}, nil
+}
+
+// derefText reads a nullable view field (null: empty cell).
+func derefText(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 var _ ioengine.ResourceAdapter = (*ListExportAdapter)(nil)

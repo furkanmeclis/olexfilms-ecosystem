@@ -30,6 +30,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -55,6 +56,8 @@ export function TransferDetailPage({
 }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  // TEC-1050: the total only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const qc = useQueryClient();
   const canRead =
     can(Permission.TransfersRequest) || can(Permission.TransfersApprove);
@@ -187,15 +190,17 @@ export function TransferDetailPage({
             <Field label={t("transfers.detail.role")}>
               {t(`transfers.role.${r.role}`)}
             </Field>
-            <Field label={t("transfers.detail.total")}>
-              {r.total ? (
-                <span dir="ltr">
-                  {r.total} {r.currency}
-                </span>
-              ) : (
-                "—"
-              )}
-            </Field>
+            {canSeePrices ? (
+              <Field label={t("transfers.detail.total")}>
+                {r.total ? (
+                  <span dir="ltr">
+                    {r.total} {r.currency}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </Field>
+            ) : null}
             <Field label={t("transfers.columns.created")}>
               {when(r.created_at)}
             </Field>

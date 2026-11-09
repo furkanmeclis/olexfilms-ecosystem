@@ -259,7 +259,20 @@ describe("OrderDetailPage: buttons by role and status", () => {
       "orders.ship",
       "orders.receive",
       "orders.cancel",
+      "pricing.purchase.read",
     ]);
+  });
+
+  it("warehouse view: no prices, totals, currency or rate (TEC-1050)", async () => {
+    state.grants = new Set(["orders.read", "orders.ship"]);
+    api.get.mockResolvedValue(
+      order({ role: "seller", status: "approved", available_transitions: [] }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    expect($$("[data-testid=order-item]")).toHaveLength(1);
+    expect($("[data-testid=line-total]")).toBeNull();
+    expect($("[data-testid=order-total]")).toBeNull();
+    expect($("[data-testid=order-rate]")).toBeNull();
   });
 
   it("buyer draft: edit, submit, cancel", async () => {
