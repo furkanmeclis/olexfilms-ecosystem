@@ -182,6 +182,20 @@ func (h *Handler) WarehouseUnits(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
 }
 
+// WarehouseSummary serves GET /v1/stock/warehouse-summary (TEC-1066).
+func (h *Handler) WarehouseSummary(w http.ResponseWriter, r *http.Request) {
+	f, ok := filterFrom(w, r)
+	if !ok {
+		return
+	}
+	items, err := h.svc.WarehouseSummary(r.Context(), f, orgctx.MustScope(r.Context()).InternalID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
 // LocationStock serves GET /v1/stock/locations/{uuid}/products.
 func (h *Handler) LocationStock(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, func(f scopefilter.Filter, id uuid.UUID, in model.StockFilter) ([]model.ProductStock, int64, error) {

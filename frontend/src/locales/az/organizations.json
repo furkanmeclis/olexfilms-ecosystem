@@ -221,5 +221,16 @@
   "recipients.convert_description": "Alıcı aktiv diler olur, sifarişləri üzərində qalır. Sahibini daxil etsəniz, telefonla WhatsApp kodu ilə daxil olur; boş saxlaya bilərsiniz.",
   "recipients.converted": "Alıcı dilerə çevrildi.",
   "recipients.keep_retail": "Çatdırılma yeri kimi saxla",
-  "recipients.kept_retail": "Alıcı çatdırılma yeri kimi saxlanıldı."
+  "recipients.kept_retail": "Alıcı çatdırılma yeri kimi saxlanıldı.",
+  "directory.title": "Dilerlər",
+  "directory.description": "Dilerlərin ünvan və əlaqə məlumatları; sifarişlərinə buradan keçin.",
+  "directory.columns.name": "Ad",
+  "directory.columns.type": "Növ",
+  "directory.columns.location": "Şəhər / rayon",
+  "directory.columns.phone": "Telefon",
+  "directory.columns.address": "Ünvan",
+  "directory.columns.orders": "Sifarişlər",
+  "directory.orders": "Sifarişləri",
+  "directory.empty_title": "Diler yoxdur",
+  "directory.empty_description": "Səlahiyyət sahənizdə diler yoxdur."
 }

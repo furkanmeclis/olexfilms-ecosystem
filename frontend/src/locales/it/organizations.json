@@ -221,5 +221,16 @@
   "recipients.convert_description": "Il destinatario diventa un rivenditore attivo e mantiene i suoi ordini. Se inserisci il titolare, accede dal telefono con un codice WhatsApp; puoi lasciarlo vuoto.",
   "recipients.converted": "Il destinatario ora è un rivenditore.",
   "recipients.keep_retail": "Lascia come punto di consegna",
-  "recipients.kept_retail": "Il destinatario è stato lasciato come punto di consegna."
+  "recipients.kept_retail": "Il destinatario è stato lasciato come punto di consegna.",
+  "directory.title": "Rivenditori",
+  "directory.description": "Indirizzi e contatti dei rivenditori; apri i loro ordini da qui.",
+  "directory.columns.name": "Nome",
+  "directory.columns.type": "Tipo",
+  "directory.columns.location": "Città / distretto",
+  "directory.columns.phone": "Telefono",
+  "directory.columns.address": "Indirizzo",
+  "directory.columns.orders": "Ordini",
+  "directory.orders": "I suoi ordini",
+  "directory.empty_title": "Nessun rivenditore",
+  "directory.empty_description": "Non ci sono rivenditori nel tuo ambito."
 }

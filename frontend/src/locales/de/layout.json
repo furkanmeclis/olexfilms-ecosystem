@@ -106,5 +106,6 @@
   "settings_group_accounts": "Konten",
   "nav_team_new": "Mitarbeiter hinzufügen",
   "nav_dealer_new": "Neuer Händler",
-  "nav_dealer_pool": "Wartepool"
+  "nav_dealer_pool": "Wartepool",
+  "nav_dealers": "Händler"
 }

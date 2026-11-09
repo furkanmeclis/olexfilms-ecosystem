@@ -221,5 +221,16 @@
   "recipients.convert_description": "Le destinataire devient un revendeur actif et garde ses commandes. Si vous saisissez le propriétaire, il se connecte sur le téléphone avec un code WhatsApp ; vous pouvez laisser vide.",
   "recipients.converted": "Le destinataire est désormais revendeur.",
   "recipients.keep_retail": "Garder comme point de livraison",
-  "recipients.kept_retail": "Le destinataire est gardé comme point de livraison."
+  "recipients.kept_retail": "Le destinataire est gardé comme point de livraison.",
+  "directory.title": "Revendeurs",
+  "directory.description": "Adresses et coordonnées des revendeurs ; ouvrez leurs commandes d'ici.",
+  "directory.columns.name": "Nom",
+  "directory.columns.type": "Type",
+  "directory.columns.location": "Ville / quartier",
+  "directory.columns.phone": "Téléphone",
+  "directory.columns.address": "Adresse",
+  "directory.columns.orders": "Commandes",
+  "directory.orders": "Ses commandes",
+  "directory.empty_title": "Aucun revendeur",
+  "directory.empty_description": "Aucun revendeur dans votre périmètre."
 }

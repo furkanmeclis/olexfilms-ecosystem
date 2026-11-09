@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   ShieldAlert,
   ShieldCheck,
+  Store,
   Undo2,
   UserRound,
   Users,
@@ -433,6 +434,17 @@ export function tenantNav(slug: string) {
             // TEC-1024: the center opens orders for its dealers.
             orgTypes: ["center", "distributor", "dealer"],
             feature: "orders",
+          },
+          {
+            // TEC-1066: read-only dealer directory (address, phone, their
+            // orders) for the center and distributor; same gate as
+            // GET /v1/tenant/organizations (organizations.read).
+            id: "dealers-list",
+            titleKey: "layout.nav_dealers",
+            href: routes.tenant.dealers.list(slug),
+            icon: Store,
+            permission: permissions.organizations.tenantRead,
+            orgTypes: ["center", "distributor"],
           },
         ],
       },

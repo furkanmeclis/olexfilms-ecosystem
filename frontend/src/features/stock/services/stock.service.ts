@@ -7,6 +7,8 @@ type Schemas = components["schemas"];
 
 export type StockUnitRow = Schemas["StockUnitRow"];
 export type StockUnitStatus = Schemas["StockUnitStatus"];
+/** TEC-1066: in-stock totals of one warehouse (counts only, no prices). */
+export type StockWarehouseSummary = Schemas["StockWarehouseSummary"];
 export type StockProduct = Schemas["StockProduct"];
 
 /**
@@ -78,6 +80,13 @@ const enc = encodeURIComponent;
  * subtree (stock.read at scope subtree, TEC-216) and reads it as is.
  */
 export const stockService = {
+  /** GET /v1/stock/warehouse-summary (TEC-1066): totals per warehouse. */
+  warehouseSummary() {
+    return platformRequest<{ items: StockWarehouseSummary[] }>(
+      "GET",
+      "/v1/stock/warehouse-summary",
+    );
+  },
   listUnits(orgUuid: string, params: StockUnitListQuery) {
     return platformRequest<Page<StockUnitRow>>(
       "GET",
@@ -141,4 +150,5 @@ export const stockKeys = {
   family: (orgUuid: string, barcode: string) =>
     ["stock", "family", orgUuid, barcode] as const,
   dealers: ["stock", "dealers"] as const,
+  warehouseSummary: ["stock", "warehouse-summary"] as const,
 };

@@ -13,6 +13,7 @@ import { CenterOverviewSection } from "@/features/center-overview";
 import { HomeOverviewWidget } from "@/features/services";
 import { StockSummaryWidget } from "@/features/stock";
 import { StockForecastWidget } from "@/features/stock-forecast";
+import { isWarehouseHomeRole, WarehouseDashboard } from "@/features/warehouse";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -25,6 +26,10 @@ export default function TenantHomePage() {
   // TEC-1070: accounting accounts land on the accounting home.
   if (isAccountingHomeRole(can, org?.type)) {
     return <AccountingDashboard slug={params.slug} />;
+  }
+  // TEC-1066: warehouse accounts land on the warehouse home.
+  if (isWarehouseHomeRole(can, org?.type)) {
+    return <WarehouseDashboard slug={params.slug} />;
   }
   return (
     <div className="flex flex-col gap-6">

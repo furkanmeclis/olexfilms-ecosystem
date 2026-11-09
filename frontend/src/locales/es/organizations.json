@@ -221,5 +221,16 @@
   "recipients.convert_description": "El destinatario pasa a ser un distribuidor activo y conserva sus pedidos. Si indica el propietario, accede desde el teléfono con un código de WhatsApp; puede dejarlo vacío.",
   "recipients.converted": "El destinatario ya es distribuidor.",
   "recipients.keep_retail": "Dejar como punto de entrega",
-  "recipients.kept_retail": "El destinatario se dejó como punto de entrega."
+  "recipients.kept_retail": "El destinatario se dejó como punto de entrega.",
+  "directory.title": "Distribuidores autorizados",
+  "directory.description": "Direcciones y contactos de los distribuidores; abra sus pedidos desde aquí.",
+  "directory.columns.name": "Nombre",
+  "directory.columns.type": "Tipo",
+  "directory.columns.location": "Ciudad / distrito",
+  "directory.columns.phone": "Teléfono",
+  "directory.columns.address": "Dirección",
+  "directory.columns.orders": "Pedidos",
+  "directory.orders": "Sus pedidos",
+  "directory.empty_title": "No hay distribuidores",
+  "directory.empty_description": "No hay distribuidores en su ámbito."
 }

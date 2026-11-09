@@ -221,5 +221,16 @@
   "recipients.convert_description": "Получателят става активен дилър и запазва поръчките си. Ако въведете собственика, той влиза с телефона чрез код в WhatsApp; може да оставите празно.",
   "recipients.converted": "Получателят вече е дилър.",
   "recipients.keep_retail": "Остави като място за доставка",
-  "recipients.kept_retail": "Получателят е оставен като място за доставка."
+  "recipients.kept_retail": "Получателят е оставен като място за доставка.",
+  "directory.title": "Дилъри",
+  "directory.description": "Адреси и контакти на дилърите; отворете поръчките им оттук.",
+  "directory.columns.name": "Име",
+  "directory.columns.type": "Тип",
+  "directory.columns.location": "Град / район",
+  "directory.columns.phone": "Телефон",
+  "directory.columns.address": "Адрес",
+  "directory.columns.orders": "Поръчки",
+  "directory.orders": "Поръчките им",
+  "directory.empty_title": "Няма дилъри",
+  "directory.empty_description": "Във вашия обхват няма дилъри."
 }

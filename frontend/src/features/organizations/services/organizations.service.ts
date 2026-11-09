@@ -245,6 +245,19 @@ export const organizationsService = {
     return data.items ?? [];
   },
 
+  /**
+   * TEC-1066: organizations in the caller's organizations.read scope
+   * (GET /v1/tenant/organizations; one page of at most 200, no total).
+   */
+  async listInScope() {
+    const data = await platformRequest<{ items: Organization[] }>(
+      "GET",
+      "/v1/tenant/organizations",
+      { query: { limit: 200 } },
+    );
+    return data.items ?? [];
+  },
+
   async children(uuid: string) {
     return platformRequest<{ items: Organization[] }>(
       "GET",

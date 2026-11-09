@@ -106,5 +106,6 @@
   "settings_group_accounts": "Account",
   "nav_team_new": "Aggiungi dipendente",
   "nav_dealer_new": "Nuovo rivenditore",
-  "nav_dealer_pool": "Lista d'attesa"
+  "nav_dealer_pool": "Lista d'attesa",
+  "nav_dealers": "Rivenditori"
 }

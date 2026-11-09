@@ -409,12 +409,21 @@ export function OrdersListPage({ slug }: { slug: string }) {
   // (total_min/_max), created (created_from/_to).
   // TEC-1024: ?status=a,b (the warehouse preparation queue link) seeds the
   // status filter.
-  const statusParam = useSearchParams()?.get("status") ?? "";
+  // TEC-1066: ?buyer_org_uuid=<uuid> (the dealer list link) seeds the
+  // party filter of the incoming tab.
+  const searchParams = useSearchParams();
+  const statusParam = searchParams?.get("status") ?? "";
+  const buyerParam = searchParams?.get("buyer_org_uuid") ?? "";
   const initialColumnFilters = useMemo(() => {
     const allowed = new Set<string>(ORDER_FILTER_STATUSES);
     const value = statusParam.split(",").filter((v) => allowed.has(v));
-    return value.length ? [{ id: "status", value }] : undefined;
-  }, [statusParam]);
+    const filters: { id: string; value: string[] }[] = [];
+    if (value.length) filters.push({ id: "status", value });
+    if (buyerParam && side === "seller") {
+      filters.push({ id: PARTY_COLUMN, value: [buyerParam] });
+    }
+    return filters.length ? filters : undefined;
+  }, [statusParam, buyerParam, side]);
   const listState = useServerListState({
     columns,
     initialColumnFilters,

@@ -301,3 +301,37 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
     OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
     OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%'
   );
+
+-- name: WarehouseStockSummary :many
+-- TEC-1066: in-stock totals of the organization per warehouse for the
+-- warehouse home (counts only, no prices). Units on a location count for the
+-- location's warehouse; units held by the organization without a location
+-- (legacy, unplaced) form the row with a NULL warehouse. Fixed barcodes add
+-- their quantity on hand; a unit with meters is a roll.
+WITH held AS (
+    SELECT s.unit_id, 1::bigint AS quantity, s.owner_type, s.owner_id
+    FROM unit_current_state s
+    WHERE s.holder_org_id = sqlc.arg(organization_id)
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::bigint AS quantity, h.owner_type, h.owner_id
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = sqlc.arg(organization_id)
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id, h.owner_type, h.owner_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       COALESCE(w.is_primary, false)::bool AS is_primary,
+       COUNT(DISTINCT u.product_id)::bigint AS products,
+       COALESCE(SUM(held.quantity) FILTER (WHERE u.remaining_meters IS NULL), 0)::bigint AS pieces,
+       COUNT(*) FILTER (WHERE u.remaining_meters IS NOT NULL)::bigint AS rolls,
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE u.remaining_meters IS NOT NULL), 0)::text AS meters
+FROM held
+JOIN units u ON u.id = held.unit_id
+LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+LEFT JOIN warehouses w ON w.id = l.warehouse_id
+WHERE u.status IN ('available', 'placed')
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::bigint)
+GROUP BY w.id, w.uuid, w.code, w.name, w.is_primary, w.sort_order
+ORDER BY (w.id IS NULL), COALESCE(w.is_primary, false) DESC, w.sort_order, w.name, w.id;

@@ -221,5 +221,16 @@
   "recipients.convert_description": "Ο παραλήπτης γίνεται ενεργός αντιπρόσωπος και κρατά τις παραγγελίες του. Αν δώσετε τον ιδιοκτήτη, συνδέεται στο τηλέφωνο με κωδικό WhatsApp· μπορείτε να το αφήσετε κενό.",
   "recipients.converted": "Ο παραλήπτης έγινε αντιπρόσωπος.",
   "recipients.keep_retail": "Διατήρηση ως σημείο παράδοσης",
-  "recipients.kept_retail": "Ο παραλήπτης διατηρήθηκε ως σημείο παράδοσης."
+  "recipients.kept_retail": "Ο παραλήπτης διατηρήθηκε ως σημείο παράδοσης.",
+  "directory.title": "Αντιπρόσωποι",
+  "directory.description": "Διευθύνσεις και στοιχεία επικοινωνίας αντιπροσώπων· ανοίξτε τις παραγγελίες τους από εδώ.",
+  "directory.columns.name": "Όνομα",
+  "directory.columns.type": "Τύπος",
+  "directory.columns.location": "Πόλη / περιοχή",
+  "directory.columns.phone": "Τηλέφωνο",
+  "directory.columns.address": "Διεύθυνση",
+  "directory.columns.orders": "Παραγγελίες",
+  "directory.orders": "Οι παραγγελίες τους",
+  "directory.empty_title": "Δεν υπάρχουν αντιπρόσωποι",
+  "directory.empty_description": "Δεν υπάρχουν αντιπρόσωποι στο εύρος σας."
 }
