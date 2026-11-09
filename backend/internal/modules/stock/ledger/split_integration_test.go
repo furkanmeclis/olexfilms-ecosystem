@@ -2,6 +2,8 @@ package ledger_test
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -52,7 +54,7 @@ func TestRollSplit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("split: %v", err)
 	}
-	if res.Replayed || res.New.Barcode != u.Barcode+"-S1" || res.New.ProductID != e.roll.ID {
+	if res.Replayed || res.New.Barcode != u.Barcode+"-12M" || res.New.ProductID != e.roll.ID {
 		t.Fatalf("split result = %+v", res)
 	}
 	src, srcUnit := e.state(t, u)
@@ -112,7 +114,7 @@ func TestRollSplit(t *testing.T) {
 
 	// Cutting the rest uses the roll up; the stock still adds up to 50 m.
 	rest, err := e.split(ledger.SplitCommand{SourceUnitID: u.ID, Centimeters: 3800, HolderOrgID: e.dist.ID, IdempotencyKey: key + "-e"})
-	if err != nil || rest.New.Barcode != u.Barcode+"-S2" {
+	if err != nil || rest.New.Barcode != u.Barcode+"-38M" {
 		t.Fatalf("split the rest: %+v %v", rest, err)
 	}
 	src, srcUnit = e.state(t, u)
@@ -178,5 +180,42 @@ func TestRollSplit(t *testing.T) {
 	}
 	if rep.DiffCount != 0 || len(rep.Anomalies) != 0 {
 		t.Fatalf("rebuild check: diffs %+v anomalies %v", rep.Diffs, rep.Anomalies)
+	}
+}
+
+// TEC-1078: a split is coded by its meters (<roll>-3M); the same length
+// again gets -3M-2, a decimal length -2.5M, and a roll whose meter code no
+// longer fits VARCHAR(64) falls back to the legacy -S<n>.
+func TestRollSplitMeterBarcode(t *testing.T) {
+	e := newEnv(t)
+	u := e.unit(t, e.roll, "50")
+	e.mustPost(t, mv(ledger.TypeEntry, u, nextRef(), ptr(e.cLoc)))
+	key := "t1078-" + e.suffix
+	want := []struct {
+		cm      int64
+		barcode string
+	}{{300, u.Barcode + "-3M"}, {300, u.Barcode + "-3M-2"}, {250, u.Barcode + "-2.5M"}, {300, u.Barcode + "-3M-3"}}
+	for i, w := range want {
+		res, err := e.split(ledger.SplitCommand{SourceUnitID: u.ID, Centimeters: w.cm, HolderOrgID: e.center.ID,
+			IdempotencyKey: fmt.Sprintf("%s-%d", key, i)})
+		if err != nil || res.New.Barcode != w.barcode {
+			t.Fatalf("cut %d: %q %v, want %q", i, res.New.Barcode, err, w.barcode)
+		}
+	}
+
+	// 62 characters: "-3M" would make 65.
+	barcode := e.suffix + "-" + strings.Repeat("L", 62)
+	long, err := e.q.CreateUnit(e.ctx, db.CreateUnitParams{
+		OrganizationID: e.center.ID, BrandID: e.brand, ProductID: e.roll.ID,
+		Barcode: barcode[:62], UnitKind: ledger.KindSerial, Source: "generated",
+		Status: string(ledger.StatusPrinted), InitialMeters: u.InitialMeters, RemainingMeters: u.InitialMeters,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.mustPost(t, mv(ledger.TypeEntry, long, nextRef(), ptr(e.cLoc)))
+	res, err := e.split(ledger.SplitCommand{SourceUnitID: long.ID, Centimeters: 300, HolderOrgID: e.center.ID, IdempotencyKey: key + "-long"})
+	if err != nil || len(res.New.Barcode) > 64 || !strings.HasSuffix(res.New.Barcode, "-S1") {
+		t.Fatalf("long roll split = %q %v", res.New.Barcode, err)
 	}
 }

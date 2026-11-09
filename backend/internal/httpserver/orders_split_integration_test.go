@@ -113,7 +113,7 @@ func TestIntegrationOrdersRollSplit(t *testing.T) {
 	key := "t184-" + it.suffix
 	code, ec, s := split(map[string]any{"barcode": r.Barcode, "meters": "12", "idempotency_key": key})
 	if code != http.StatusCreated || s.Source.RemainingMeters != "38.00" || s.NewUnit.RemainingMeters != "12.00" ||
-		s.NewUnit.Barcode != r.Barcode+"-S1" || s.NewUnit.Status != "placed" && s.NewUnit.Status != "available" || s.Replayed {
+		s.NewUnit.Barcode != r.Barcode+"-12M" || s.NewUnit.Status != "placed" && s.NewUnit.Status != "available" || s.Replayed {
 		t.Fatalf("split = %d %s %+v", code, ec, s)
 	}
 	if q, m := orgStock(center.ID); q != 2 || m != "50.00" {
@@ -127,7 +127,7 @@ func TestIntegrationOrdersRollSplit(t *testing.T) {
 	if err := it.pool.QueryRow(ctx, `SELECT
 		(SELECT COUNT(*) FROM stock_movements m JOIN stock_splits ss ON ss.id = m.reference_id
 		  WHERE m.reference_type = 'stock_split' AND ss.uuid = $1),
-		(SELECT COUNT(*) FROM units WHERE barcode LIKE $2 || '-S%')`, s.UUID, r.Barcode).Scan(&splitMvs, &splitUnits); err != nil {
+		(SELECT COUNT(*) FROM units WHERE barcode LIKE $2 || '-12M%')`, s.UUID, r.Barcode).Scan(&splitMvs, &splitUnits); err != nil {
 		t.Fatal(err)
 	}
 	if splitMvs != 2 || splitUnits != 1 {
@@ -168,7 +168,7 @@ func TestIntegrationOrdersRollSplit(t *testing.T) {
 			t.Fatal(err)
 		}
 		if a.Split == nil || a.Split.Meters != "12.00" || a.Split.SourceRemainingMeters != "26.00" ||
-			a.Split.NewBarcode != r.Barcode+"-S2" {
+			a.Split.NewBarcode != r.Barcode+"-12M-2" {
 			t.Fatalf("split assign = %+v", a.Split)
 		}
 		return a
