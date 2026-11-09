@@ -136,9 +136,11 @@ function QueueOrders({ tab, header, onChanged }: { tab: 'orders' | 'transit'; he
                 <Text variant="headline" numberOfLines={1} className="flex-1 font-mono">
                   {o.order_no}
                 </Text>
-                <Text variant="callout" className="font-semibold tabular-nums">
-                  {formatMoney(o.total, o.currency, i18n.language)}
-                </Text>
+                {o.total != null ? (
+                  <Text variant="callout" className="font-semibold tabular-nums">
+                    {formatMoney(o.total, o.currency, i18n.language)}
+                  </Text>
+                ) : null}
               </View>
               <Text variant="callout" numberOfLines={1}>
                 {o.buyer.name}
