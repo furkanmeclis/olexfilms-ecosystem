@@ -449,6 +449,7 @@ var ruCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "Артикул / Штрихкод",
 	"orders.pdf.unit_price":                   "Цена за единицу",
 	"orders.pdf.discount":                     "Скидка",
+	"orders.pdf.gift":                         "Подарок",
 	"orders.pdf.vat":                          "НДС",
 	"orders.pdf.line_total":                   "Сумма строки",
 	"orders.pdf.subtotal":                     "Промежуточный итог",

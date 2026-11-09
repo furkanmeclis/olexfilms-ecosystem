@@ -449,6 +449,7 @@ var ukCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "Артикул / Штрихкод",
 	"orders.pdf.unit_price":                   "Ціна за одиницю",
 	"orders.pdf.discount":                     "Знижка",
+	"orders.pdf.gift":                         "Подарунок",
 	"orders.pdf.vat":                          "ПДВ",
 	"orders.pdf.line_total":                   "Сума рядка",
 	"orders.pdf.subtotal":                     "Проміжний підсумок",

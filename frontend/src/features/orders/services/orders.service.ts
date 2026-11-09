@@ -27,6 +27,10 @@ export type OrderInvoice = Schemas["OrderInvoice"];
 export type OrderInvoiceInput = Schemas["OrderInvoiceInput"];
 export type OrderInvoiceStatus = Schemas["OrderInvoiceStatus"];
 export type OrderDocumentKind = "shipping" | "receipt";
+export type OrderQuote = Schemas["OrderQuote"];
+export type OrderQuoteItem = Schemas["OrderQuoteItem"];
+export type BuyerDiscount = Schemas["BuyerDiscount"];
+export type BuyerDiscountInput = Schemas["BuyerDiscountInput"];
 
 /** Shipping info sent with the ship transition (TEC-768). */
 export type OrderShippingInput = {
@@ -118,6 +122,51 @@ export const ordersService = {
   },
   create(body: OrderCreateInput) {
     return platformRequest<Order>("POST", "/v1/orders", { body });
+  },
+  /**
+   * TEC-1064: price preview of a new order — list price, the dealer's
+   * default discount and the current rate to TRY (nothing is written).
+   */
+  quote(body: Schemas["OrderQuoteInput"]) {
+    return platformRequest<OrderQuote>("POST", "/v1/orders/quote", { body });
+  },
+  /** TEC-1064: discounts agreed with an organization under the caller. */
+  getDiscount(orgUuid: string) {
+    return platformRequest<BuyerDiscount>(
+      "GET",
+      `/v1/tenant/pricing/discounts/${enc(orgUuid)}`,
+    );
+  },
+  setDiscount(orgUuid: string, body: BuyerDiscountInput) {
+    return platformRequest<BuyerDiscount>(
+      "PUT",
+      `/v1/tenant/pricing/discounts/${enc(orgUuid)}`,
+      { body },
+    );
+  },
+  /**
+   * TEC-1064: organizations directly under the active one (parentUuid) —
+   * the buyers a discount can be agreed with — searched by name / code.
+   */
+  async listChildBuyers(
+    parentUuid: string,
+    q: string,
+  ): Promise<ScopeOrganization[]> {
+    const data = await platformRequest<{
+      items: (ScopeOrganization & {
+        type?: string;
+        parent?: { uuid: string } | null;
+      })[];
+    }>("GET", "/v1/tenant/organizations", {
+      query: { limit: 200, ...(q ? { q } : {}) },
+    });
+    return (data.items ?? [])
+      .filter(
+        (o) =>
+          o.parent?.uuid === parentUuid &&
+          (o.type === "dealer" || o.type === "distributor"),
+      )
+      .map((o) => ({ uuid: o.uuid, name: o.name }));
   },
   replaceItems(uuid: string, items: OrderItemInput[]) {
     return platformRequest<Order>("PUT", `/v1/orders/${enc(uuid)}/items`, {
@@ -265,6 +314,11 @@ export const orderKeys = {
     ["orders", "child-dealers", center, q] as const,
   products: (q: string) => ["orders", "products", q] as const,
   price: (uuid: string) => ["orders", "price", uuid] as const,
+  quote: (buyer: string, products: string[]) =>
+    ["orders", "quote", buyer, products] as const,
+  discount: (org: string) => ["orders", "discount", org] as const,
+  childBuyers: (parent: string, q: string) =>
+    ["orders", "child-buyers", parent, q] as const,
   suggestions: (uuid: string, item: string, unlocated: boolean) =>
     ["orders", "suggestions", uuid, item, unlocated] as const,
   pickLocations: (uuid: string, item: string) =>

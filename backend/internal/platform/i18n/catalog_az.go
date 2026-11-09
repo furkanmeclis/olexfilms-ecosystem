@@ -449,6 +449,7 @@ var azCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Barkod",
 	"orders.pdf.unit_price":                   "Vahid qiyməti",
 	"orders.pdf.discount":                     "Endirim",
+	"orders.pdf.gift":                         "Hədiyyə",
 	"orders.pdf.vat":                          "ƏDV",
 	"orders.pdf.line_total":                   "Sətir cəmi",
 	"orders.pdf.subtotal":                     "Ara cəm",

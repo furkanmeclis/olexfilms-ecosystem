@@ -260,14 +260,18 @@ WHERE o.id = ANY (sqlc.arg(order_ids)::bigint[]);
 -- ---------------------------------------------------------------------------
 -- Order lines.
 
+-- TEC-1064: list_unit_price (before the discount), discount_pct and
+-- is_gift (a line charged 0) are optional; NULL is_gift = false.
 -- name: CreateOrderItem :one
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
-    unit_price, price_source, recommended_price_snapshot, line_total, note
+    unit_price, price_source, recommended_price_snapshot, line_total, note,
+    list_unit_price, discount_pct, is_gift
 )
 SELECT o.id, o.organization_id, o.brand_id, sqlc.arg(product_id), sqlc.narg(quantity), sqlc.narg(meters),
        sqlc.arg(unit_price), sqlc.arg(price_source), sqlc.narg(recommended_price_snapshot),
-       sqlc.arg(line_total), sqlc.narg(note)
+       sqlc.arg(line_total), sqlc.narg(note),
+       sqlc.narg(list_unit_price), sqlc.narg(discount_pct), COALESCE(sqlc.narg(is_gift)::boolean, false)
 FROM orders o
 WHERE o.id = sqlc.arg(order_id)
 RETURNING *;
@@ -304,9 +308,21 @@ SET quantity = sqlc.narg(quantity),
     price_source = sqlc.arg(price_source),
     recommended_price_snapshot = sqlc.narg(recommended_price_snapshot),
     line_total = sqlc.arg(line_total),
-    note = sqlc.narg(note)
+    note = sqlc.narg(note),
+    list_unit_price = sqlc.narg(list_unit_price),
+    discount_pct = sqlc.narg(discount_pct)
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- TEC-1064: orders the buyer has placed with the seller (neither a draft
+-- nor cancelled), the given order left out; 0 = the next one is the
+-- buyer's first order.
+-- name: CountPlacedBuyerOrders :one
+SELECT COUNT(*)::bigint FROM orders
+WHERE buyer_org_id = sqlc.arg(buyer_org_id)
+  AND seller_org_id = sqlc.arg(seller_org_id)
+  AND status NOT IN ('draft', 'cancelled')
+  AND id <> sqlc.arg(exclude_order_id);
 
 -- name: DeleteOrderItem :execrows
 DELETE FROM order_items

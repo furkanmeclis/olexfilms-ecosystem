@@ -57,11 +57,17 @@ type ItemView struct {
 	PriceSource *string    `json:"price_source"`
 	// PriceMissing: the line has no price (0) — a center-opened order
 	// with neither a typed nor a purchase price (TEC-1024).
-	PriceMissing bool               `json:"price_missing"`
-	LineTotal    *string            `json:"line_total"`
-	Note         *string            `json:"note"`
-	Assigned     string             `json:"assigned"`
-	Units        []AssignedUnitView `json:"units"`
+	PriceMissing bool `json:"price_missing"`
+	// TEC-1064: the price before the discount and the applied discount;
+	// shown to the seller side with pricing.sale.read only (the buyer sees
+	// the discounted unit_price). IsGift: the line is charged 0.
+	ListUnitPrice *string            `json:"list_unit_price"`
+	DiscountPct   *string            `json:"discount_pct"`
+	IsGift        bool               `json:"is_gift"`
+	LineTotal     *string            `json:"line_total"`
+	Note          *string            `json:"note"`
+	Assigned      string             `json:"assigned"`
+	Units         []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
 	Invoiced    bool       `json:"invoiced"`
@@ -181,6 +187,7 @@ func (v *OrderView) hidePrices() {
 // hidePrices clears the money of an order line (TEC-1050).
 func (v *ItemView) hidePrices() {
 	v.UnitPrice, v.PriceSource, v.LineTotal, v.PriceMissing = nil, nil, nil, false
+	v.ListUnitPrice, v.DiscountPct = nil, nil // TEC-1064
 }
 
 func textRef(s string) *string { return &s }
@@ -312,6 +319,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		return OrderView{}, err
 	}
 	v.Invoices = invoices
+	showTerms := seesDiscountTerms(c, o)
 	v.Items = make([]ItemView, 0, len(items))
 	products := make(map[int64]string, len(items))
 	for _, it := range items {
@@ -325,9 +333,15 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
 			Meters:    numericTextPtr(it.Meters, 2),
 			UnitPrice: textRef(numericText(it.UnitPrice, 4)), PriceSource: textRef(it.PriceSource),
-			PriceMissing: it.PriceSource == PriceSourceMissing,
+			PriceMissing: it.PriceSource == PriceSourceMissing && !it.IsGift,
+			IsGift:       it.IsGift,
 			LineTotal:    textRef(numericText(it.LineTotal, 2)), Note: textPtr(it.Note),
 		}
+		if showTerms {
+			iv.ListUnitPrice = numericTextPtr(it.ListUnitPrice, 4)
+			iv.DiscountPct = numericTextPtr(it.DiscountPct, 2)
+		}
+		// TEC-1050: no money for a caller without a price grant.
 		if !c.SeesPrices() {
 			iv.hidePrices()
 		}

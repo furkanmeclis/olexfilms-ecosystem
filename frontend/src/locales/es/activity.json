@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Ajustes del rollo actualizados",
   "actions.organizations.member_updated": "Roles del miembro de la organización actualizados",
   "actions.organizations.member_removed": "Miembro quitado de la organización",
-  "resources.organizations": "Organizaciones"
+  "resources.organizations": "Organizaciones",
+  "actions.pricing.discounts_set": "Descuentos del distribuidor actualizados"
 }

@@ -308,6 +308,10 @@ type Querier interface {
 	CountPerformanceMapDealerMissingCoordinates(ctx context.Context, arg CountPerformanceMapDealerMissingCoordinatesParams) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
+	// TEC-1064: orders the buyer has placed with the seller (neither a draft
+	// nor cancelled), the given order left out; 0 = the next one is the
+	// buyer's first order.
+	CountPlacedBuyerOrders(ctx context.Context, arg CountPlacedBuyerOrdersParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
 	CountPortalAppointments(ctx context.Context, arg CountPortalAppointmentsParams) (int64, error)
 	CountPortalContracts(ctx context.Context, arg CountPortalContractsParams) (int64, error)
@@ -501,6 +505,8 @@ type Querier interface {
 	CreateOrderInvoiceItem(ctx context.Context, arg CreateOrderInvoiceItemParams) error
 	// ---------------------------------------------------------------------------
 	// Order lines.
+	// TEC-1064: list_unit_price (before the discount), discount_pct and
+	// is_gift (a line charged 0) are optional; NULL is_gift = false.
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	// ---------------------------------------------------------------------------
 	// Units assigned to order lines.
@@ -3757,6 +3763,9 @@ type Querier interface {
 	// undo. Both columns are written as given; the adapter passes the current
 	// value for the one it does not change.
 	SetOrganizationBulkState(ctx context.Context, arg SetOrganizationBulkStateParams) (Organization, error)
+	// TEC-1064: the discounts the parent agreed with this buyer organization
+	// (NULL = none). The caller checks the parent and the permission.
+	SetOrganizationDiscounts(ctx context.Context, arg SetOrganizationDiscountsParams) (Organization, error)
 	// ---------------------------------------------------------------------------
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)

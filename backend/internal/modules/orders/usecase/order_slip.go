@@ -111,7 +111,12 @@ func orderSlipItemsHTML(d OrderSlipDoc) string {
 	for _, l := range d.Lines {
 		b.WriteString(`<tr>`)
 		// Orders store effective prices and aggregate tax only; do not infer historical discounts or VAT rates.
-		for _, v := range []string{l.Name, ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, slipMoney(l.UnitPrice, d.Currency), "—", "—", slipMoney(l.LineTotal, d.Currency)} {
+		// The slip goes to the buyer: a discount rate is not shown, a gift line is named (TEC-1064).
+		discount := "—"
+		if l.IsGift {
+			discount = i18n.Translate(d.Locale, "orders.pdf.gift")
+		}
+		for _, v := range []string{l.Name, ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, slipMoney(l.UnitPrice, d.Currency), discount, "—", slipMoney(l.LineTotal, d.Currency)} {
 			b.WriteString(`<td>` + esc(v) + `</td>`)
 		}
 		b.WriteString(`</tr>`)

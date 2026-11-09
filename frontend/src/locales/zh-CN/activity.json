@@ -215,5 +215,6 @@
   "actions.services.created_on_behalf": "代经销商创建服务",
   "actions.organizations.member_updated": "组织成员角色已更新",
   "actions.organizations.member_removed": "成员已从组织中移除",
-  "resources.organizations": "组织"
+  "resources.organizations": "组织",
+  "actions.pricing.discounts_set": "经销商折扣已更新"
 }

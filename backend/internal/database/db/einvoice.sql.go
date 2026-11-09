@@ -1217,7 +1217,7 @@ func (q *Queries) ListEinvoiceCounters(ctx context.Context, arg ListEinvoiceCoun
 }
 
 const listEinvoiceOrderLines = `-- name: ListEinvoiceOrderLines :many
-SELECT oi.id, oi.uuid, oi.order_id, oi.organization_id, oi.brand_id, oi.product_id, oi.quantity, oi.meters, oi.unit_price, oi.price_source, oi.recommended_price_snapshot, oi.line_total, oi.note, oi.created_at, oi.updated_at, p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable
+SELECT oi.id, oi.uuid, oi.order_id, oi.organization_id, oi.brand_id, oi.product_id, oi.quantity, oi.meters, oi.unit_price, oi.price_source, oi.recommended_price_snapshot, oi.line_total, oi.note, oi.created_at, oi.updated_at, oi.list_unit_price, oi.discount_pct, oi.is_gift, p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable
 FROM order_items oi
 JOIN products p ON p.id = oi.product_id
 WHERE oi.order_id = $1
@@ -1254,6 +1254,9 @@ func (q *Queries) ListEinvoiceOrderLines(ctx context.Context, orderID int64) ([]
 			&i.OrderItem.Note,
 			&i.OrderItem.CreatedAt,
 			&i.OrderItem.UpdatedAt,
+			&i.OrderItem.ListUnitPrice,
+			&i.OrderItem.DiscountPct,
+			&i.OrderItem.IsGift,
 			&i.Product.ID,
 			&i.Product.Uuid,
 			&i.Product.OrganizationID,
@@ -1603,7 +1606,7 @@ SET invoice_vkn = $1,
 WHERE id = $8
   AND brand_id = $9
   AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type UpdateOrganizationInvoiceProfileParams struct {
@@ -1689,6 +1692,8 @@ func (q *Queries) UpdateOrganizationInvoiceProfile(ctx context.Context, arg Upda
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }

@@ -146,6 +146,10 @@ type itemBody struct {
 	Note        *string      `json:"note"`
 	// UnitPrice is read only on a center order for a dealer (TEC-1024).
 	UnitPrice *json.Number `json:"unit_price"`
+	// DiscountPct and IsGift are read only on a center order for a dealer
+	// (TEC-1064).
+	DiscountPct *json.Number `json:"discount_pct"`
+	IsGift      bool         `json:"is_gift"`
 }
 
 func toItems(in []itemBody) []ord.ItemInput {
@@ -161,8 +165,13 @@ func toItems(in []itemBody) []ord.ItemInput {
 			p := it.UnitPrice.String()
 			price = &p
 		}
+		var discount *string
+		if it.DiscountPct != nil {
+			d := it.DiscountPct.String()
+			discount = &d
+		}
 		out = append(out, ord.ItemInput{ProductUUID: it.ProductUUID, Quantity: it.Quantity, Meters: meters,
-			Note: it.Note, UnitPrice: price})
+			Note: it.Note, UnitPrice: price, DiscountPct: discount, IsGift: it.IsGift})
 	}
 	return out
 }
@@ -225,6 +234,28 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, o)
+}
+
+type quoteBody struct {
+	BuyerOrgUUID *string  `json:"buyer_org_uuid"`
+	ProductUUIDs []string `json:"product_uuids"`
+}
+
+// Quote (POST /v1/orders/quote): the price preview of a new order — list
+// price, the dealer's discount and the current rate to TRY (TEC-1064).
+func (h *Handler) Quote(w http.ResponseWriter, r *http.Request) {
+	var body quoteBody
+	if !decode(w, r, &body) {
+		return
+	}
+	v, err := h.svc.Quote(r.Context(), caller(r), ord.QuoteInput{
+		BuyerOrgUUID: body.BuyerOrgUUID, ProductUUIDs: body.ProductUUIDs,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
 }
 
 type itemsBody struct {

@@ -449,6 +449,7 @@ var itCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Codice a barre",
 	"orders.pdf.unit_price":                   "Prezzo unitario",
 	"orders.pdf.discount":                     "Sconto",
+	"orders.pdf.gift":                         "Omaggio",
 	"orders.pdf.vat":                          "IVA",
 	"orders.pdf.line_total":                   "Totale riga",
 	"orders.pdf.subtotal":                     "Subtotale",

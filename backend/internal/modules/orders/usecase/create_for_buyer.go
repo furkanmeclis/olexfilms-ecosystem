@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"regexp"
 	"strings"
 
@@ -67,8 +68,9 @@ func pendingRecipientOf(ctx context.Context, q *db.Queries, centerID int64, buye
 // directly under it (TEC-1024). The order starts approved, exactly as the
 // seller's approval leaves it (prices locked, rate frozen), so the warehouse
 // flow (preparing, unit assignment, ready, shipped, received) runs
-// unchanged. Prices never block: a typed unit price wins, otherwise the
-// dealer's purchase price, otherwise 0 marked missing. The warehouse staff
+// unchanged. Prices never block: a gift line is 0, a typed unit price wins,
+// otherwise the dealer's purchase price less the typed or default discount
+// (TEC-1064), otherwise 0 marked missing. The warehouse staff
 // get orders.warehouse_new unless the creator prepares it himself
 // (SelfPrepare, TEC-1052).
 func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) (OrderView, error) {
@@ -79,17 +81,9 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 	if err != nil {
 		return OrderView{}, invalid("buyer_org_uuid", "must be a UUID")
 	}
-	manual := make([]*string, len(in.Items))
-	for i, it := range in.Items {
-		if it.UnitPrice == nil || strings.TrimSpace(*it.UnitPrice) == "" {
-			continue
-		}
-		v, ok := normalizeUnitPrice(*it.UnitPrice)
-		if !ok {
-			return OrderView{}, invalid(fmt.Sprintf("items[%d].unit_price", i),
-				"must be a non-negative decimal with at most 4 fractional digits")
-		}
-		manual[i] = &v
+	terms, err := sellerTerms(in.Items)
+	if err != nil {
+		return OrderView{}, err
 	}
 	var created db.Order
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -148,7 +142,7 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return fmt.Errorf("orders: create: %w", err)
 		}
-		if err := s.insertSellerLines(ctx, q, o, buyer, lines, manual); err != nil {
+		if err := s.insertSellerLines(ctx, q, o, buyer, lines, terms); err != nil {
 			return err
 		}
 		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
@@ -195,10 +189,51 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 	return s.view(ctx, s.q, c, created)
 }
 
-// insertSellerLines writes the lines of a center-opened order: the typed
-// price, else the dealer's purchase price, else 0 (missing).
+// lineTerms is what the center typed for one line (TEC-1024, TEC-1064).
+type lineTerms struct {
+	// manual: a typed unit price, charged as is.
+	manual *string
+	// discount: a typed discount replacing the dealer's default one.
+	discount *big.Rat
+	gift     bool
+}
+
+// sellerTerms validates the typed unit prices, discounts and gift flags of
+// a center order for a dealer.
+func sellerTerms(items []ItemInput) ([]lineTerms, error) {
+	out := make([]lineTerms, len(items))
+	for i, it := range items {
+		out[i].gift = it.IsGift
+		if it.UnitPrice != nil && strings.TrimSpace(*it.UnitPrice) != "" {
+			v, ok := normalizeUnitPrice(*it.UnitPrice)
+			if !ok {
+				return nil, invalid(fmt.Sprintf("items[%d].unit_price", i),
+					"must be a non-negative decimal with at most 4 fractional digits")
+			}
+			out[i].manual = &v
+		}
+		if it.DiscountPct != nil && strings.TrimSpace(*it.DiscountPct) != "" {
+			v, ok := pricingusecase.NormalizeDiscount(*it.DiscountPct)
+			if !ok {
+				return nil, invalid(fmt.Sprintf("items[%d].discount_pct", i),
+					"must be a percentage between 0 and 100 with at most 2 fractional digits")
+			}
+			out[i].discount, _ = parseRat(v)
+		}
+	}
+	return out, nil
+}
+
+// insertSellerLines writes the lines of a center-opened order: a gift line
+// is 0, a typed price is charged as is, otherwise the dealer's purchase
+// price less the typed or default discount (TEC-1064), otherwise 0
+// (missing).
 func (s *Service) insertSellerLines(ctx context.Context, q *db.Queries, o db.Order, buyer db.Organization,
-	lines []line, manual []*string) error {
+	lines []line, terms []lineTerms) error {
+	d, err := buyerDiscount(ctx, q, buyer, o.SellerOrgID, o.ID)
+	if err != nil {
+		return err
+	}
 	ids := make([]int64, len(lines))
 	for i, l := range lines {
 		ids[i] = l.product.ID
@@ -208,32 +243,24 @@ func (s *Service) insertSellerLines(ctx context.Context, q *db.Queries, o db.Ord
 		return fmt.Errorf("orders: prices: %w", err)
 	}
 	for i, l := range lines {
-		price, source := "0", PriceSourceMissing
-		switch {
-		case i < len(manual) && manual[i] != nil:
-			price, source = *manual[i], PriceSourceManual
-		default:
-			if p, ok := prices[l.product.ID]; ok {
-				price, source = p.Price, priceSource(p.Source)
+		in := chargeInput{amount: l.amount, discount: d.Pct, source: PriceSourceMissing}
+		if p, ok := prices[l.product.ID]; ok {
+			list := p.Price
+			in.list, in.source = &list, priceSource(p.Source)
+		}
+		if i < len(terms) {
+			t := terms[i]
+			in.manual, in.gift = t.manual, t.gift
+			if t.discount != nil {
+				in.discount = t.discount
 			}
 		}
-		total, err := lineTotal(price, l.amount)
+		c, err := charge(in)
 		if err != nil {
 			return err
 		}
-		up, err := numeric(price)
-		if err != nil {
+		if err := createLine(ctx, q, o, l, c); err != nil {
 			return err
-		}
-		lt, err := numeric(total)
-		if err != nil {
-			return err
-		}
-		if _, err := q.CreateOrderItem(ctx, db.CreateOrderItemParams{
-			OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
-			UnitPrice: up, PriceSource: source, LineTotal: lt, Note: l.note,
-		}); err != nil {
-			return fmt.Errorf("orders: create line: %w", err)
 		}
 	}
 	return nil

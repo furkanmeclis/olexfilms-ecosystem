@@ -387,3 +387,12 @@ UPDATE organizations
 SET service_point_logo_object_key = sqlc.narg(object_key)
 WHERE uuid = sqlc.arg(uuid) AND type = 'center' AND deleted_at IS NULL
 RETURNING *;
+
+-- name: SetOrganizationDiscounts :one
+-- TEC-1064: the discounts the parent agreed with this buyer organization
+-- (NULL = none). The caller checks the parent and the permission.
+UPDATE organizations
+SET standard_discount_pct = sqlc.narg(standard_discount_pct),
+    first_order_discount_pct = sqlc.narg(first_order_discount_pct)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+RETURNING *;

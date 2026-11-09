@@ -215,5 +215,6 @@
   "actions.services.created_on_behalf": "Diler adına xidmət açıldı",
   "actions.organizations.member_updated": "Təşkilat üzvünün rolları yeniləndi",
   "actions.organizations.member_removed": "Üzv təşkilatdan çıxarıldı",
-  "resources.organizations": "Təşkilatlar"
+  "resources.organizations": "Təşkilatlar",
+  "actions.pricing.discounts_set": "Diler endirimləri yeniləndi"
 }

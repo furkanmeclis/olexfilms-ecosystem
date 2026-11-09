@@ -44,6 +44,8 @@ export const routes = {
       dealerNew: (slug: string) => `/t/${slug}/settings/dealers/new`,
       /** TEC-1062: the center's waiting pool of order recipients. */
       dealerPool: (slug: string) => `/t/${slug}/settings/dealers/pool`,
+      /** TEC-1064: discounts agreed with the organizations under it. */
+      dealerDiscounts: (slug: string) => `/t/${slug}/settings/dealer-discounts`,
     },
     features: {
       root: (slug: string) => `/t/${slug}/settings/modules`,

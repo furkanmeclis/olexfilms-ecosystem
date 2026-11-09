@@ -449,6 +449,7 @@ var esCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Código de barras",
 	"orders.pdf.unit_price":                   "Precio unitario",
 	"orders.pdf.discount":                     "Descuento",
+	"orders.pdf.gift":                         "Regalo",
 	"orders.pdf.vat":                          "IVA",
 	"orders.pdf.line_total":                   "Total de línea",
 	"orders.pdf.subtotal":                     "Subtotal",
