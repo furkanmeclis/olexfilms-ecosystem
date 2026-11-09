@@ -27100,7 +27100,7 @@ export interface components {
             barcode?: string;
             /** Format: uuid */
             unit_uuid?: string;
-            /** @description Fixed barcodes only (serial pieces are 1) */
+            /** @description Fixed barcodes only (serial pieces are 1). TEC-1047: optional; without it the rest of the line is taken as far as the stock reaches, and a fixed barcode already on the line grows its assignment */
             quantity?: number;
             /** @description Rolls only; at most the remaining meters (fewer meters split the roll, TEC-184); a JSON number is accepted too */
             meters?: string;

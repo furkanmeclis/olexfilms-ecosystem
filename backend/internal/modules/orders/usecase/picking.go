@@ -10,7 +10,8 @@ package usecase
 // split on assignment); without one, whole rolls are taken in the same order
 // and the last one is cut. Fixed barcodes propose a quantity from the
 // unreserved holding that one owner can ship (located holdings only,
-// unless include_unlocated).
+// unless include_unlocated; TEC-1047: a barcode with no located holding at
+// all is proposed from the organization when placement is not required).
 //
 // ApplySuggestions assigns the units the user confirmed through the same
 // assignment rules as a scan (assignLocked), all in one transaction.
@@ -226,15 +227,21 @@ func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, i
 	if err != nil {
 		return nil, fmt.Errorf("orders: fixed candidates: %w", err)
 	}
+	required, err := q.OrganizationRequiresPlacement(ctx, o.SellerOrgID)
+	if err != nil {
+		return nil, err
+	}
 	out := []SuggestionView{}
 	for _, r := range rows {
 		rest := new(big.Rat).Sub(missing, covered)
 		if rest.Sign() <= 0 {
 			break
 		}
-		// The unit is already on the line: a scan of it is refused too.
-		if _, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: r.ID}); err == nil {
-			continue
+		// TEC-1047: a barcode already on the line grows its assignment, so
+		// it stays a candidate; the whole assignment ships from one owner.
+		already := int64(0)
+		if a, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: r.ID}); err == nil {
+			already = int64(a.Quantity.Int32)
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("orders: assignment: %w", err)
 		}
@@ -249,10 +256,13 @@ func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, i
 		// the quantity is bounded by the largest holding of the pool.
 		free := r.LocatedQuantity + r.UnlocatedQuantity - reserved
 		pool := r.LocatedMax
-		if in.IncludeUnlocated {
+		// TEC-1047: a fixed barcode kept only as a count (no location, e.g.
+		// squeegees) is proposed without include_unlocated when the seller
+		// does not require placement; otherwise the line looked unpickable.
+		if in.IncludeUnlocated || (r.LocatedQuantity == 0 && !required) {
 			pool = max(pool, r.UnlocatedMax)
 		}
-		qty := min(free, pool, rest.Num().Int64()/max(rest.Denom().Int64(), 1))
+		qty := min(free, pool-already, rest.Num().Int64()/max(rest.Denom().Int64(), 1))
 		if qty <= 0 {
 			continue
 		}
