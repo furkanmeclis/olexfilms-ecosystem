@@ -476,7 +476,8 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 			if err != nil {
 				return Envelope{}, fmt.Errorf("reports: overview network: %w", err)
 			}
-			cards.Points = append(cards.Points, q.card("dealers_total", float64(r.DealerCount)), q.card("dealers_active", float64(r.ActiveDealerCount)))
+			cards.Points = append(cards.Points, q.card("dealers_total", float64(r.DealerCount)), q.card("dealers_active", float64(r.ActiveDealerCount)),
+				q.card("distributors_total", float64(r.DistributorCount)))
 		}
 	}
 	env.Series = []Series{cards}

@@ -307,6 +307,18 @@ func TestReportsFollowScope(t *testing.T) {
 	if got := card(env, "dealers_total"); got != 2 {
 		t.Fatalf("distributor dealers_total = %v, want 2", got)
 	}
+	if got := card(env, "distributors_total"); got != 1 {
+		t.Fatalf("distributor distributors_total = %v, want 1 (its subtree: itself)", got)
+	}
+	// TEC-1072: the center counts every dealer and distributor of the brand,
+	// for any period (today included).
+	envC, err := s.Report(f.ctx, callers[2].c, ReportOverview, Input{Period: "today", Fallback: in30.Fallback})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if card(envC, "dealers_total") != 3 || card(envC, "distributors_total") != 2 {
+		t.Fatalf("center network cards = %v / %v, want 3 / 2", card(envC, "dealers_total"), card(envC, "distributors_total"))
+	}
 	env, err = s.Report(f.ctx, callers[0].c, ReportOverview, in30)
 	if err != nil {
 		t.Fatal(err)
@@ -553,6 +565,7 @@ func TestResolveQuery(t *testing.T) {
 		n     int
 	}{
 		{"default 30d day", trend, Input{Fallback: fb}, "", "day", 30},
+		{"today", trend, Input{Period: "today", Fallback: fb}, "", "day", 1},
 		{"7d", trend, Input{Period: "7d", Fallback: fb}, "", "day", 7},
 		{"90d week", trend, Input{Period: "90d", Fallback: fb}, "", "week", 14},
 		{"12m month", trend, Input{Period: "12m", Fallback: fb}, "", "month", 12},

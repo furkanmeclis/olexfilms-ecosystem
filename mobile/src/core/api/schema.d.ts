@@ -17389,7 +17389,7 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
          */
         get: operations["getReport"];
         put?: never;
@@ -26994,11 +26994,11 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /**
-         * @description 30d / 90d days, 12m twelve calendar months, all = all time.
+         * @description today since midnight in the request time zone (TEC-1072), 7d / 30d / 90d days, 12m twelve calendar months, all = all time.
          * @default 30d
          * @enum {string}
          */
-        StatsPeriod: "30d" | "90d" | "12m" | "all";
+        StatsPeriod: "today" | "7d" | "30d" | "90d" | "12m" | "all";
         /**
          * @default model
          * @enum {string}
@@ -32194,7 +32194,7 @@ export interface components {
         };
     };
     parameters: {
-        ReportPeriod: "7d" | "30d" | "90d" | "12m" | "custom";
+        ReportPeriod: "today" | "7d" | "30d" | "90d" | "12m" | "custom";
         ReportRangeFrom: string;
         ReportRangeTo: string;
         /** @description Label locale (default the request locale chain, K10). */

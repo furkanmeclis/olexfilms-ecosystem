@@ -24,12 +24,21 @@ func TestStatsSince(t *testing.T) {
 			t.Fatalf("%s = %v, %v; want %v", period, got, err, want)
 		}
 	}
+	// TEC-1072: today starts at midnight in now's location; 7d is a week.
+	ist := time.FixedZone("TRT", 3*3600)
+	if got, err := StatsSince(StatsPeriodToday, now.In(ist)); err != nil || got == nil ||
+		!got.Equal(time.Date(2026, 3, 31, 0, 0, 0, 0, ist)) {
+		t.Fatalf("today = %v, %v", got, err)
+	}
+	if got, err := StatsSince(StatsPeriod7d, now); err != nil || got == nil || !got.Equal(now.AddDate(0, 0, -7)) {
+		t.Fatalf("7d = %v, %v", got, err)
+	}
 	if got, err := StatsSince(StatsPeriodAll, now); err != nil || got != nil {
 		t.Fatalf("all = %v, %v; want nil", got, err)
 	}
 	var ve *ValidationError
-	if _, err := StatsSince("7d", now); !errors.As(err, &ve) || ve.Field != "period" {
-		t.Fatalf("7d err = %v", err)
+	if _, err := StatsSince("5y", now); !errors.As(err, &ve) || ve.Field != "period" {
+		t.Fatalf("5y err = %v", err)
 	}
 }
 
@@ -115,7 +124,7 @@ func TestOverviewOrg(t *testing.T) {
 func TestHomeOverviewValidation(t *testing.T) {
 	s := &Service{}
 	var ve *ValidationError
-	if _, err := s.HomeOverview(context.Background(), dealerCaller(rbac.ScopeManaged, false), "7d", time.Now()); !errors.As(err, &ve) || ve.Field != "period" {
+	if _, err := s.HomeOverview(context.Background(), dealerCaller(rbac.ScopeManaged, false), "5y", time.Now()); !errors.As(err, &ve) || ve.Field != "period" {
 		t.Fatalf("period err = %v", err)
 	}
 	none := dealerCaller(rbac.ScopeManaged, false)

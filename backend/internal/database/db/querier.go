@@ -3503,6 +3503,7 @@ type Querier interface {
 	ReportMeasurementCounts(ctx context.Context, arg ReportMeasurementCountsParams) (ReportMeasurementCountsRow, error)
 	// Measurements (NexPTG results) by measured_at.
 	ReportMeasurementTrend(ctx context.Context, arg ReportMeasurementTrendParams) ([]ReportMeasurementTrendRow, error)
+	// TEC-1072: distributor counts next to the dealer counts (center home).
 	ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error)
 	ReportOrderOverview(ctx context.Context, arg ReportOrderOverviewParams) (ReportOrderOverviewRow, error)
 	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
