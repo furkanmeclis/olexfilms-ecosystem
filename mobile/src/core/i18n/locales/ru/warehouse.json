@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "Для {{name}} на складе не найден запас с фиксированным штрихкодом.",
   "orders.assign.fixed_qty_auto": "Количество фиксированного штрихкода (без изменений: сколько не хватает в строке)",
   "m.warehouse_all": "Все склады",
-  "m.warehouse_totals_partial": "Суммированы только первые {{count}} единиц этого склада; количества могут быть неполными."
+  "m.warehouse_totals_partial": "Суммированы только первые {{count}} единиц этого склада; количества могут быть неполными.",
+  "orders.actions.receive_on_behalf.button": "Получено от имени покупателя",
+  "orders.actions.receive_on_behalf.title": "Получить от имени покупателя?",
+  "orders.actions.receive_on_behalf.description": "У покупателя нет участников; заказ закрывается как полученный от его имени, проводки по счёту выполняются.",
+  "orders.actions.receive_on_behalf.confirm": "Получено от имени покупателя"
 }

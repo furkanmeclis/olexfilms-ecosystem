@@ -126,5 +126,8 @@
   "home.services_count": "Xidmət: {{count}}",
   "home.rank_partial": "Sıralama dövrün son {{count}} qeydinə əsaslanır.",
   "home.empty_period": "Bu dövrdə qeyd yoxdur.",
-  "home.more_dealers": "+{{count}} diler daha"
+  "home.more_dealers": "+{{count}} diler daha",
+  "orders.action.received_on_behalf": "Alıcı adına təhvil alındı",
+  "orders.confirm.received_on_behalf": "Sifariş alıcı adına təhvil alındı kimi qeyd edilsin?",
+  "orders.on_behalf_note": "alıcı adına"
 }

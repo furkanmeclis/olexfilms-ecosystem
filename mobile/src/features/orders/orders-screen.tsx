@@ -204,11 +204,15 @@ export function OrderDetailScreen() {
   const o = q.data;
   const actions = (o?.available_transitions ?? []).filter((s) => SIMPLE_TRANSITIONS.includes(s));
 
+  // TEC-1062/1063: the seller receives for a pool recipient without members.
+  const onBehalf = (status: OrderStatus) => status === 'received' && !!o?.receive_on_behalf;
+  const actionLabel = (status: OrderStatus) => t(onBehalf(status) ? 'orders.action.received_on_behalf' : `orders.action.${status}`);
+
   const confirm = (status: OrderStatus) =>
-    Alert.alert(t(`orders.confirm.${status}`), o?.order_no, [
+    Alert.alert(t(onBehalf(status) ? 'orders.confirm.received_on_behalf' : `orders.confirm.${status}`), o?.order_no, [
       { text: t('common:cancel'), style: 'cancel' },
       {
-        text: t(`orders.action.${status}`),
+        text: actionLabel(status),
         style: status === 'cancelled' ? 'destructive' : 'default',
         onPress: () => move.mutate(status),
       },
@@ -250,7 +254,7 @@ export function OrderDetailScreen() {
                 {actions.map((s) => (
                   <Button
                     key={s}
-                    title={t(`orders.action.${s}`)}
+                    title={actionLabel(s)}
                     variant={s === 'cancelled' ? 'outline' : 'primary'}
                     loading={move.isPending && move.variables === s}
                     disabled={move.isPending}
@@ -336,7 +340,11 @@ export function OrderDetailScreen() {
                   {o.history.map((h, i, arr) => (
                     <InfoRow
                       key={`${h.created_at}-${i}`}
-                      label={t(`orders.status.${h.to_status}`)}
+                      label={
+                        h.on_behalf_of_buyer
+                          ? `${t(`orders.status.${h.to_status}`)} · ${t('orders.on_behalf_note')}`
+                          : t(`orders.status.${h.to_status}`)
+                      }
                       value={f.dateTime(h.created_at)}
                       last={i === arr.length - 1}
                     />

@@ -700,5 +700,9 @@
   "orders.assign.fixed_none": "No fixed barcode stock of {{name}} was found in the warehouse.",
   "orders.assign.fixed_qty_auto": "Fixed barcode quantity (unchanged: what the line still needs)",
   "m.warehouse_all": "All warehouses",
-  "m.warehouse_totals_partial": "Only the first {{count}} units of this warehouse were added up; amounts may be incomplete."
+  "m.warehouse_totals_partial": "Only the first {{count}} units of this warehouse were added up; amounts may be incomplete.",
+  "orders.actions.receive_on_behalf.button": "Received on behalf of the buyer",
+  "orders.actions.receive_on_behalf.title": "Receive on behalf of the buyer?",
+  "orders.actions.receive_on_behalf.description": "The buyer has no members; the order closes as received on their behalf and the account entries are booked.",
+  "orders.actions.receive_on_behalf.confirm": "Received on behalf of the buyer"
 }

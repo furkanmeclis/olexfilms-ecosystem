@@ -126,5 +126,8 @@
   "home.services_count": "Servizi: {{count}}",
   "home.rank_partial": "Classifica sugli ultimi {{count}} record del periodo.",
   "home.empty_period": "Nessun dato nel periodo.",
-  "home.more_dealers": "+{{count}} altri rivenditori"
+  "home.more_dealers": "+{{count}} altri rivenditori",
+  "orders.action.received_on_behalf": "Ricevuto per conto dell'acquirente",
+  "orders.confirm.received_on_behalf": "Segnare l'ordine come ricevuto per conto dell'acquirente?",
+  "orders.on_behalf_note": "per conto dell'acquirente"
 }

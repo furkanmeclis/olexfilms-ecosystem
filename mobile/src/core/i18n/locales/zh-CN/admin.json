@@ -126,5 +126,8 @@
   "home.services_count": "服务：{{count}}",
   "home.rank_partial": "排名基于本期最近的 {{count}} 条记录。",
   "home.empty_period": "本期暂无记录。",
-  "home.more_dealers": "另有 {{count}} 个经销商"
+  "home.more_dealers": "另有 {{count}} 个经销商",
+  "orders.action.received_on_behalf": "已代买方收货",
+  "orders.confirm.received_on_behalf": "将订单标记为已代买方收货？",
+  "orders.on_behalf_note": "代买方"
 }

@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "Anbarda {{name}} üçün sabit barkod stoku tapılmadı.",
   "orders.assign.fixed_qty_auto": "Sabit barkod sayı (dəyişməsəniz sətirin çatışmayan miqdarı)",
   "m.warehouse_all": "Bütün anbarlar",
-  "m.warehouse_totals_partial": "Bu anbarın yalnız ilk {{count}} vahidi toplandı; miqdarlar natamam ola bilər."
+  "m.warehouse_totals_partial": "Bu anbarın yalnız ilk {{count}} vahidi toplandı; miqdarlar natamam ola bilər.",
+  "orders.actions.receive_on_behalf.button": "Alıcı adına təhvil alındı",
+  "orders.actions.receive_on_behalf.title": "Alıcı adına təhvil alınsın?",
+  "orders.actions.receive_on_behalf.description": "Alıcının üzvü yoxdur; sifariş onun adına təhvil alındı kimi bağlanır və cari qeydlər işlənir.",
+  "orders.actions.receive_on_behalf.confirm": "Alıcı adına təhvil alındı"
 }

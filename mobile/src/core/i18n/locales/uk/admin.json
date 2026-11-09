@@ -126,5 +126,8 @@
   "home.services_count": "Послуги: {{count}}",
   "home.rank_partial": "Рейтинг за останніми {{count}} записами періоду.",
   "home.empty_period": "Немає записів за період.",
-  "home.more_dealers": "Ще {{count}} дилерів"
+  "home.more_dealers": "Ще {{count}} дилерів",
+  "orders.action.received_on_behalf": "Отримано від імені покупця",
+  "orders.confirm.received_on_behalf": "Позначити замовлення як отримане від імені покупця?",
+  "orders.on_behalf_note": "від імені покупця"
 }

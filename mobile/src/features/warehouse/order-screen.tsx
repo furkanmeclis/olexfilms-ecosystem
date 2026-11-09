@@ -331,6 +331,17 @@ export function OrderScreen() {
           />
         ) : null}
 
+        {/* TEC-1062/1063: the seller receives for a waiting pool recipient without members. */}
+        {seller && o.receive_on_behalf && can('received') ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            title={t('orders.actions.receive_on_behalf.button')}
+            loading={busy === 'receive_on_behalf'}
+            onPress={() => transition('received', 'receive_on_behalf')}
+          />
+        ) : null}
+
         {/* Buyer actions */}
         {!seller && canReceive && can('received') ? (
           <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => transition('received', 'receive')} />

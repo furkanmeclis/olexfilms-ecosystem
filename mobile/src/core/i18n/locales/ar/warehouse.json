@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "لم يُعثر على مخزون بباركود ثابت لـ {{name}} في المستودع.",
   "orders.assign.fixed_qty_auto": "كمية الباركود الثابت (دون تغيير: ما ينقص البند)",
   "m.warehouse_all": "كل المستودعات",
-  "m.warehouse_totals_partial": "تم جمع أول {{count}} وحدة فقط في هذا المستودع؛ قد تكون الكميات غير مكتملة."
+  "m.warehouse_totals_partial": "تم جمع أول {{count}} وحدة فقط في هذا المستودع؛ قد تكون الكميات غير مكتملة.",
+  "orders.actions.receive_on_behalf.button": "تم الاستلام نيابة عن المشتري",
+  "orders.actions.receive_on_behalf.title": "الاستلام نيابة عن المشتري؟",
+  "orders.actions.receive_on_behalf.description": "ليس للمشتري أعضاء؛ يُغلق الطلب كمستلم نيابة عنه وتُسجَّل قيود الحساب.",
+  "orders.actions.receive_on_behalf.confirm": "تم الاستلام نيابة عن المشتري"
 }

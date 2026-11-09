@@ -126,5 +126,8 @@
   "home.services_count": "الخدمات: {{count}}",
   "home.rank_partial": "الترتيب حسب آخر {{count}} سجل في الفترة.",
   "home.empty_period": "لا شيء في هذه الفترة.",
-  "home.more_dealers": "+{{count}} وكلاء آخرون"
+  "home.more_dealers": "+{{count}} وكلاء آخرون",
+  "orders.action.received_on_behalf": "تم الاستلام نيابة عن المشتري",
+  "orders.confirm.received_on_behalf": "هل تريد تعليم الطلب كمستلم نيابة عن المشتري؟",
+  "orders.on_behalf_note": "نيابة عن المشتري"
 }

@@ -126,5 +126,8 @@
   "home.services_count": "Services: {{count}}",
   "home.rank_partial": "Rangfolge nach den neuesten {{count}} Einträgen des Zeitraums.",
   "home.empty_period": "Keine Einträge im Zeitraum.",
-  "home.more_dealers": "+{{count}} weitere Händler"
+  "home.more_dealers": "+{{count}} weitere Händler",
+  "orders.action.received_on_behalf": "Im Namen des Käufers empfangen",
+  "orders.confirm.received_on_behalf": "Bestellung als im Namen des Käufers empfangen markieren?",
+  "orders.on_behalf_note": "im Namen des Käufers"
 }
