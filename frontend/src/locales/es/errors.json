@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "El propietario del vehículo cambió; inicie una nueva transferencia.",
   "codes.ORDER_INVALID_TRANSITION": "El estado del pedido no permite esta acción.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Este paso aún no está disponible.",
-  "codes.ORDER_NOT_EDITABLE": "Solo se pueden editar los borradores de pedido.",
+  "codes.ORDER_NOT_EDITABLE": "Las líneas del pedido no se pueden editar en este estado.",
   "codes.ORDER_NO_SUPPLIER": "Solo un distribuidor (al centro) o un concesionario (a su distribuidor) puede pedir productos.",
   "codes.ORDER_NOT_ASSIGNABLE": "Las unidades solo se pueden asignar mientras se prepara el pedido.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Esta unidad ya está en la línea.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Solo un pedido recibido puede marcarse como facturado.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Una de las líneas seleccionadas ya está facturada.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Todas las líneas del pedido ya están facturadas.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nueva cantidad es inferior a los códigos de barras asignados; quite primero la asignación."
 }

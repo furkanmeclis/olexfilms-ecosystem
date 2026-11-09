@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Der Fahrzeugeigentümer hat sich geändert; starten Sie eine neue Übertragung.",
   "codes.ORDER_INVALID_TRANSITION": "Der Bestellstatus erlaubt diese Aktion nicht.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Dieser Schritt ist noch nicht verfügbar.",
-  "codes.ORDER_NOT_EDITABLE": "Nur Bestellentwürfe können bearbeitet werden.",
+  "codes.ORDER_NOT_EDITABLE": "Die Bestellpositionen können in diesem Status nicht bearbeitet werden.",
   "codes.ORDER_NO_SUPPLIER": "Nur ein Distributor (beim Zentrum) oder ein Händler (bei seinem Distributor) kann Produkte bestellen.",
   "codes.ORDER_NOT_ASSIGNABLE": "Einheiten können nur während der Vorbereitung zugewiesen werden.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Diese Einheit ist der Position bereits zugewiesen.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Nur eine empfangene Bestellung kann als fakturiert markiert werden.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Eine der ausgewählten Positionen ist bereits fakturiert.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Alle Positionen der Bestellung sind bereits fakturiert.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Die neue Menge liegt unter den zugewiesenen Barcodes; zuerst die Zuweisung entfernen."
 }

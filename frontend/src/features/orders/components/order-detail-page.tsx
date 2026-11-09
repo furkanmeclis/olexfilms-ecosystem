@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardList,
   History,
+  ListChecks,
   Package,
   Pencil,
   Receipt,
@@ -42,9 +43,11 @@ import {
   LinePickingActions,
   ShippingCard,
 } from "@/features/orders/components/order-picking";
+import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
 import {
   canAssignUnits,
   canEditDraft,
+  canEditSellerLines,
   canOpenPickList,
   lineAmount,
   lineFullyAssigned,
@@ -826,6 +829,7 @@ export function OrderDetailPage({
   const { can } = usePermission();
   const canRead = can(permissions.orders.read);
   const [action, setAction] = useState<OrderAction | null>(null);
+  const [editingLines, setEditingLines] = useState(false);
   const detail = useQuery({
     queryKey: orderKeys.detail(uuid),
     queryFn: () => ordersService.get(uuid),
@@ -905,11 +909,16 @@ export function OrderDetailPage({
   const assign = canAssignUnits(can, order);
   const fully = orderFullyAssigned(order);
   const pickList = canOpenPickList(can, order);
+  const editLines = canEditSellerLines(order);
+  const editing = editLines && editingLines;
 
   return (
     <div className="space-y-6">
       {header}
-      {actions.length > 0 || canEditDraft(can, order) || pickList ? (
+      {actions.length > 0 ||
+      canEditDraft(can, order) ||
+      pickList ||
+      editLines ? (
         <div className="flex flex-wrap gap-2" data-testid="order-actions">
           {canEditDraft(can, order) ? (
             <Button asChild variant="outline">
@@ -920,6 +929,17 @@ export function OrderDetailPage({
                 <Pencil className="size-4" />
                 {t("orders.actions.edit")}
               </Link>
+            </Button>
+          ) : null}
+          {editLines && !editing ? (
+            <Button
+              type="button"
+              variant="outline"
+              data-testid="order-edit-lines"
+              onClick={() => setEditingLines(true)}
+            >
+              <ListChecks className="size-4" />
+              {t("orders.edit_lines.button")}
             </Button>
           ) : null}
           {pickList ? (
@@ -969,7 +989,14 @@ export function OrderDetailPage({
         }
         data-testid="order-detail-layout"
       >
-        <Items order={order} assign={assign} />
+        {editing ? (
+          <OrderLinesEditor
+            order={order}
+            onClose={() => setEditingLines(false)}
+          />
+        ) : (
+          <Items order={order} assign={assign} />
+        )}
         <div
           className={
             assign

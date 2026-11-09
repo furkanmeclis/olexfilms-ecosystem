@@ -305,5 +305,17 @@
   "discounts.save": "Запази",
   "discounts.saved": "Отстъпките са запазени.",
   "discounts.save_failed": "Отстъпките не можаха да бъдат запазени.",
-  "discounts.load_failed": "Отстъпките не можаха да бъдат заредени."
+  "discounts.load_failed": "Отстъпките не можаха да бъдат заредени.",
+  "edit_lines.button": "Редактиране на редовете",
+  "edit_lines.title": "Редактиране на редовете",
+  "edit_lines.hint": "Добавете продукти, променете количества или премахнете редове. Новият ред получава цена от ценовата листа. Премахването на ред с назначени баркодове ги освобождава.",
+  "edit_lines.save": "Запази",
+  "edit_lines.cancel": "Отказ",
+  "edit_lines.saved": "Редовете са обновени",
+  "edit_lines.failed": "Редовете не можаха да бъдат обновени",
+  "edit_lines.assigned": "{{amount}} назначени",
+  "edit_lines.below_assigned": "Не може да е под назначеното количество; първо премахнете баркод.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

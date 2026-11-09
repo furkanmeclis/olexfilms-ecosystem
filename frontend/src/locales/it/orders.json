@@ -344,5 +344,17 @@
   "discounts.save": "Salva",
   "discounts.saved": "Sconti salvati.",
   "discounts.save_failed": "Impossibile salvare gli sconti.",
-  "discounts.load_failed": "Impossibile caricare gli sconti."
+  "discounts.load_failed": "Impossibile caricare gli sconti.",
+  "edit_lines.button": "Modifica righe",
+  "edit_lines.title": "Modifica righe",
+  "edit_lines.hint": "Aggiungi prodotti, modifica le quantità o rimuovi righe. Una nuova riga prende il prezzo dal listino. Rimuovere una riga con codici a barre assegnati li libera.",
+  "edit_lines.save": "Salva",
+  "edit_lines.cancel": "Annulla",
+  "edit_lines.saved": "Righe aggiornate",
+  "edit_lines.failed": "Impossibile aggiornare le righe",
+  "edit_lines.assigned": "{{amount}} assegnati",
+  "edit_lines.below_assigned": "Non può scendere sotto la quantità assegnata; rimuovi prima un codice a barre.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

@@ -774,6 +774,22 @@ func (q *Queries) DeleteOrderItemUnit(ctx context.Context, id int64) (int64, err
 	return result.RowsAffected(), nil
 }
 
+const deleteReleasedReservationsByItem = `-- name: DeleteReleasedReservationsByItem :execrows
+DELETE FROM stock_reservations
+WHERE order_item_id = $1 AND status = 'released'
+`
+
+// TEC-1056: a line removed before shipping takes its released reservation
+// history with it (the FK is RESTRICT); active ones are released first and
+// consumed ones only exist after shipping, when lines are not edited.
+func (q *Queries) DeleteReleasedReservationsByItem(ctx context.Context, orderItemID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteReleasedReservationsByItem, orderItemID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findOpenDraftOrderForBuyerSeller = `-- name: FindOpenDraftOrderForBuyerSeller :one
 SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id FROM orders
 WHERE brand_id = $1

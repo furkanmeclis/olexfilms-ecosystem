@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "The vehicle owner changed; start a new transfer.",
   "codes.ORDER_INVALID_TRANSITION": "The order status does not allow this action.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "This step is not available yet.",
-  "codes.ORDER_NOT_EDITABLE": "Only draft orders can be edited.",
+  "codes.ORDER_NOT_EDITABLE": "The order lines cannot be edited in this status.",
   "codes.ORDER_NO_SUPPLIER": "Only a distributor (from the center) or a dealer (from its distributor) can place product orders.",
   "codes.ORDER_NOT_ASSIGNABLE": "Units can be assigned only while the order is being prepared.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "This unit is already on the line.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Only a received order can be marked invoiced.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "One of the selected lines is already invoiced.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Every line of the order is already invoiced.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "This invoice number is already recorded on the order."
+  "codes.ORDER_INVOICE_NO_TAKEN": "This invoice number is already recorded on the order.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "The new amount is below the assigned barcodes; unassign first."
 }

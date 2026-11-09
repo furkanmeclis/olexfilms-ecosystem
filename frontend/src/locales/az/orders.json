@@ -305,5 +305,17 @@
   "discounts.save": "Yadda saxla",
   "discounts.saved": "Endirimlər yadda saxlanıldı.",
   "discounts.save_failed": "Endirimlər yadda saxlanıla bilmədi.",
-  "discounts.load_failed": "Endirimlər yüklənə bilmədi."
+  "discounts.load_failed": "Endirimlər yüklənə bilmədi.",
+  "edit_lines.button": "Sətirləri redaktə et",
+  "edit_lines.title": "Sətirlərin redaktəsi",
+  "edit_lines.hint": "Məhsul əlavə edin, miqdarı dəyişin və ya sətri silin. Yeni sətrin qiyməti qiymət siyahısından gəlir. Barkod təyin olunmuş sətir silinərsə, barkodlar azad olur.",
+  "edit_lines.save": "Yadda saxla",
+  "edit_lines.cancel": "İmtina",
+  "edit_lines.saved": "Sətirlər yeniləndi",
+  "edit_lines.failed": "Sətirləri yeniləmək mümkün olmadı",
+  "edit_lines.assigned": "{{amount}} təyin olunub",
+  "edit_lines.below_assigned": "Təyin olunmuş miqdardan aşağı ola bilməz; əvvəlcə barkodu çıxarın.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

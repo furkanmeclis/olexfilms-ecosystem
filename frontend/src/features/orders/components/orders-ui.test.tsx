@@ -187,6 +187,7 @@ function order(over: Partial<Order> = {}): Order {
     order_no: "ORD-00000001",
     created_by_seller: false,
     invoice_status: "pending",
+    can_edit_items: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",
@@ -315,6 +316,64 @@ describe("OrderDetailPage: buttons by role and status", () => {
     await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
     expect(actions()).toEqual(["approve", "reject"]);
     expect($("[data-testid=order-edit]")).toBeNull();
+  });
+
+  it("seller approved: edits the lines in place (TEC-1056)", async () => {
+    api.get.mockResolvedValue(
+      order({
+        role: "seller",
+        status: "approved",
+        can_edit_items: true,
+        available_transitions: ["preparing", "cancelled"],
+      }),
+    );
+    catalog.listProducts.mockResolvedValue({
+      items: [
+        { uuid: "p2", sku: "SIGN-1", name: "Tabela seti", unit_type: "piece" },
+      ],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+    api.replaceItems.mockResolvedValue(
+      order({ role: "seller", status: "approved", can_edit_items: true }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    expect($("[data-testid=order-edit]")).toBeNull();
+    await click($("[data-testid=order-edit-lines]"));
+    expect($("[data-testid=order-items]")).toBeNull();
+    expect($$("[data-testid=edit-line]")).toHaveLength(1);
+    await click($("[data-testid=product-add]"));
+    await type($("#edit-line-p1"), "5");
+    await click($("[data-testid=edit-lines-save]"));
+    expect(api.replaceItems).toHaveBeenCalledWith("o1", [
+      { product_uuid: "p1", quantity: 5 },
+      { product_uuid: "p2", quantity: 1 },
+    ]);
+    expect($("[data-testid=order-lines-editor]")).toBeNull();
+  });
+
+  it("seller preparing: a line cannot go below its assigned units (TEC-1056)", async () => {
+    api.get.mockResolvedValue(
+      order({
+        role: "seller",
+        status: "preparing",
+        can_edit_items: true,
+        items: [{ ...order().items![0], assigned: "2" }],
+      }),
+    );
+    catalog.listProducts.mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    });
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    await click($("[data-testid=order-edit-lines]"));
+    await type($("#edit-line-p1"), "1");
+    expect($("[data-testid=line-below-assigned]")).not.toBeNull();
+    await click($("[data-testid=edit-lines-save]"));
+    expect(api.replaceItems).not.toHaveBeenCalled();
   });
 
   it("observer sees no action bar", async () => {

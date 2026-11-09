@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "تغيّر مالك المركبة؛ ابدأ عملية نقل جديدة.",
   "codes.ORDER_INVALID_TRANSITION": "حالة الطلب لا تسمح بهذا الإجراء.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "هذه الخطوة غير متاحة بعد.",
-  "codes.ORDER_NOT_EDITABLE": "يمكن تعديل مسودات الطلبات فقط.",
+  "codes.ORDER_NOT_EDITABLE": "لا يمكن تعديل بنود الطلب في هذه الحالة.",
   "codes.ORDER_NO_SUPPLIER": "لا يطلب المنتجات إلا موزّع (من المركز) أو وكيل (من موزّعه).",
   "codes.ORDER_NOT_ASSIGNABLE": "لا يمكن تعيين الوحدات إلا أثناء تجهيز الطلب.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "هذه الوحدة موجودة بالفعل في البند.",
@@ -173,5 +173,6 @@
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "تخزين المستندات أو خدمة PDF غير متاحة حالياً.",
   "codes.ORDER_RECEIPT_FILE_INVALID": "يجب أن يكون إيصال الاستلام PDF أو JPEG أو PNG أو WebP (حتى 10 ميغابايت).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "ضع هذه الوحدة في موقع بالمستودع قبل تخصيصها.",
-  "page_forbidden_body": "ليست لديك صلاحية لعرض هذه الصفحة."
+  "page_forbidden_body": "ليست لديك صلاحية لعرض هذه الصفحة.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "الكمية الجديدة أقل من الباركودات المعيّنة؛ ألغِ التعيين أولًا."
 }

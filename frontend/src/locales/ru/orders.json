@@ -344,5 +344,17 @@
   "discounts.save": "Сохранить",
   "discounts.saved": "Скидки сохранены.",
   "discounts.save_failed": "Не удалось сохранить скидки.",
-  "discounts.load_failed": "Не удалось загрузить скидки."
+  "discounts.load_failed": "Не удалось загрузить скидки.",
+  "edit_lines.button": "Изменить позиции",
+  "edit_lines.title": "Изменение позиций",
+  "edit_lines.hint": "Добавьте товары, измените количество или удалите позиции. Новая позиция получает цену из прайс-листа. Удаление позиции с назначенными штрихкодами освобождает их.",
+  "edit_lines.save": "Сохранить",
+  "edit_lines.cancel": "Отмена",
+  "edit_lines.saved": "Позиции обновлены",
+  "edit_lines.failed": "Не удалось обновить позиции",
+  "edit_lines.assigned": "{{amount}} назначено",
+  "edit_lines.below_assigned": "Не может быть меньше назначенного количества; сначала снимите штрихкод.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

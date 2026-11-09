@@ -13389,8 +13389,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Replace the lines of a draft order (buyer, orders.write)
-         * @description Prices are fetched again from the pricing module; client prices are ignored. Only drafts are editable (409 ORDER_NOT_EDITABLE).
+         * Edit the lines of an order (buyer draft, or seller before ready)
+         * @description The buyer replaces the lines of its draft (orders.write); prices are fetched again from the pricing module, client prices are ignored. TEC-1056: the seller edits an order before it is ready (submitted, approved, processing or preparing) with orders.write (sales) or orders.ship (warehouse). The body is the full wanted line set, matched by product: a kept line keeps its uuid, its locked unit price and its assigned units (the line total follows the new amount); a new product is priced by the pricing module (unit_price is ignored; 422 PRICE_NOT_FOUND without a purchase price, except on an order the center opened for a dealer, where the line is 0 and price_missing); a missing product removes the line, its assigned units are unassigned and their reservations released. An amount below the assigned units answers 409 ORDER_LINE_BELOW_ASSIGNED (unassign first). A buyer's order past the draft, a ready order (reopen preparation first) and a shipped one answer 409 ORDER_NOT_EDITABLE; can_edit_items on the order tells whether the caller may edit now. Totals are recalculated; the rate frozen at approval stays. Each edit that changes something writes an "updated" timeline step with the line changes.
          */
         put: operations["replaceOrderItems"];
         post?: never;
@@ -27854,6 +27854,8 @@ export interface components {
             available_transitions: components["schemas"]["OrderStatus"][];
             /** @description TEC-1062 (detail responses only). `received` in available_transitions is the seller (orders.ship or orders.write) receiving for a pending or retail pool recipient without active members, so the K9 cari rows are booked; omitted otherwise. */
             receive_on_behalf?: boolean;
+            /** @description TEC-1056: the caller may edit the lines now (PUT items) — the buyer its draft (orders.write), the seller before ready (orders.write or orders.ship) */
+            can_edit_items: boolean;
             /** @description Lines (detail responses only) */
             items?: components["schemas"]["OrderItem"][];
             /** @description Status history (detail responses only) */
@@ -27885,7 +27887,7 @@ export interface components {
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
         };
-        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned or updated (draft edit). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines. */
+        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned or updated (draft edit). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
         OrderTimelineEntry: {
             /** @example unit_assigned */
             action: string;
@@ -27902,6 +27904,17 @@ export interface components {
             meters?: string;
             /** Format: int64 */
             lines?: number;
+            /** @description TEC-1056 — the lines an edit added, changed or removed */
+            changes?: components["schemas"]["OrderLineChange"][];
+        };
+        /** @description TEC-1056: one line of an edit. before is the old amount (null: the line was added), after the new one (null: removed); pieces as a whole number, meters with two decimals. */
+        OrderLineChange: {
+            product: string;
+            sku?: string;
+            /** @example 2 */
+            before: string | null;
+            /** @example 3 */
+            after: string | null;
         };
         OrderUserRef: {
             /** Format: uuid */

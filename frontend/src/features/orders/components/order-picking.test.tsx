@@ -189,6 +189,7 @@ function order(over: Partial<Order> = {}): Order {
     order_no: "ORD-00000001",
     created_by_seller: false,
     invoice_status: "pending",
+    can_edit_items: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",

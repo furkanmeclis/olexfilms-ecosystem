@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Aracın sahibi değişti; yeni bir devir başlatın.",
   "codes.ORDER_INVALID_TRANSITION": "Siparişin durumu bu işleme izin vermiyor.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Bu adım henüz kullanılamıyor.",
-  "codes.ORDER_NOT_EDITABLE": "Yalnızca taslak siparişler düzenlenebilir.",
+  "codes.ORDER_NOT_EDITABLE": "Sipariş kalemleri bu durumda düzenlenemez.",
   "codes.ORDER_NO_SUPPLIER": "Ürün siparişini yalnızca distribütör (merkezden) veya bayi (distribütöründen) verebilir.",
   "codes.ORDER_NOT_ASSIGNABLE": "Birimler yalnızca sipariş hazırlanırken atanabilir.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Bu birim zaten bu kalemde.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Yalnızca teslim alınmış sipariş faturalandı olarak işaretlenebilir.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Seçilen kalemlerden biri zaten faturalandırılmış.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Siparişin tüm kalemleri zaten faturalandırılmış.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Bu fatura numarası bu siparişte zaten kayıtlı."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Bu fatura numarası bu siparişte zaten kayıtlı.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Yeni miktar atanmış barkodların altında; önce barkodu çıkarın."
 }

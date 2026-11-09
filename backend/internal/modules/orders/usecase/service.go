@@ -44,7 +44,8 @@ var (
 	ErrInvalidTransition = errors.New("orders: invalid status transition")
 	// ErrTransitionUnavailable: a status this API does not move to.
 	ErrTransitionUnavailable = errors.New("orders: transition not available yet")
-	// ErrNotEditable: lines change only while the order is a draft.
+	// ErrNotEditable: the lines change only in a draft (buyer) or before
+	// the order is ready (seller, TEC-1056).
 	ErrNotEditable = errors.New("orders: order is not a draft")
 	// ErrRateNotFound: no rate to freeze at approval.
 	ErrRateNotFound = errors.New("orders: exchange rate not found")
@@ -511,6 +512,10 @@ func (s *Service) CreateOrAppendDraft(ctx context.Context, c Caller, in CreateIn
 		if err != nil {
 			return fmt.Errorf("orders: find draft: %w", err)
 		}
+		before, err := snapshotLines(ctx, q, o)
+		if err != nil {
+			return err
+		}
 		merged, err := s.mergeDraftLines(ctx, q, o, lines)
 		if err != nil {
 			return err
@@ -530,7 +535,11 @@ func (s *Service) CreateOrAppendDraft(ctx context.Context, c Caller, in CreateIn
 		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 			return fmt.Errorf("orders: totals: %w", err)
 		}
-		if err := s.recordUpdated(ctx, q, c, o, len(merged)); err != nil {
+		after, err := snapshotLines(ctx, q, o)
+		if err != nil {
+			return err
+		}
+		if err := s.recordUpdated(ctx, q, c, o, len(merged), diffLines(before, after)); err != nil {
 			return err
 		}
 		order = o
@@ -600,7 +609,11 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 	return out, nil
 }
 
-// ReplaceItems swaps the lines of a draft order; prices are fetched again.
+// ReplaceItems edits the lines of an order. The buyer swaps the lines of
+// its draft (orders.write; prices are fetched again). The seller edits an
+// accepted order before it is ready (orders.write or orders.ship, TEC-1056):
+// lines matched by product, see editSellerLines. A buyer's order past the
+// draft and a ready or shipped order are not editable (409).
 func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUID, items []ItemInput) (OrderView, error) {
 	var updated db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -608,40 +621,42 @@ func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUI
 		if err != nil {
 			return err
 		}
-		if partyOf(c, o) != PartyBuyer || !c.can(rbac.PermOrdersWrite) {
+		switch partyOf(c, o) {
+		case PartyBuyer:
+			if !c.can(rbac.PermOrdersWrite) {
+				return ErrForbidden
+			}
+		case PartySeller:
+			if !c.can(rbac.PermOrdersWrite) && !c.can(rbac.PermOrdersShip) {
+				return ErrForbidden
+			}
+		default:
 			return ErrForbidden
 		}
-		if o.Status != StatusDraft {
+		if !canEditItems(c, o) {
 			return ErrNotEditable
 		}
-		buyer, err := q.GetOrganizationByID(ctx, o.BuyerOrgID)
-		if err != nil {
-			return fmt.Errorf("orders: buyer: %w", err)
-		}
-		old, err := q.LockOrderItems(ctx, o.ID)
-		if err != nil {
-			return fmt.Errorf("orders: lines: %w", err)
-		}
-		keep := make(map[int64]bool, len(old))
-		for _, it := range old {
-			keep[it.ProductID] = true
-		}
-		lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{dealerOrder: true, keep: keep})
+		before, err := snapshotLines(ctx, q, o)
 		if err != nil {
 			return err
 		}
-		for _, it := range old {
-			if _, err := q.DeleteOrderItem(ctx, it.ID); err != nil {
-				return fmt.Errorf("orders: delete line: %w", err)
+		updated = o
+		if partyOf(c, o) == PartySeller {
+			changed, err := s.editSellerLines(ctx, q, c, o, items)
+			if err != nil || !changed {
+				return err
 			}
-		}
-		if err := s.insertLines(ctx, q, o, buyer, lines); err != nil {
+		} else if err := s.replaceDraftLines(ctx, q, o, items); err != nil {
 			return err
 		}
 		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 			return fmt.Errorf("orders: totals: %w", err)
 		}
-		if err := s.recordUpdated(ctx, q, c, o, len(lines)); err != nil {
+		after, err := snapshotLines(ctx, q, o)
+		if err != nil {
+			return err
+		}
+		if err := s.recordUpdated(ctx, q, c, o, len(after), diffLines(before, after)); err != nil {
 			return err
 		}
 		updated = o
@@ -651,6 +666,34 @@ func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUI
 		return OrderView{}, err
 	}
 	return s.view(ctx, s.q, c, updated)
+}
+
+// replaceDraftLines swaps every line of a draft; prices are fetched again.
+func (s *Service) replaceDraftLines(ctx context.Context, q *db.Queries, o db.Order, items []ItemInput) error {
+	buyer, err := q.GetOrganizationByID(ctx, o.BuyerOrgID)
+	if err != nil {
+		return fmt.Errorf("orders: buyer: %w", err)
+	}
+	old, err := q.LockOrderItems(ctx, o.ID)
+	if err != nil {
+		return fmt.Errorf("orders: lines: %w", err)
+	}
+	// TEC-1061: the buyer orders for itself; a line already on the draft may
+	// stay after its product was closed.
+	keep := make(map[int64]bool, len(old))
+	for _, it := range old {
+		keep[it.ProductID] = true
+	}
+	lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{dealerOrder: true, keep: keep})
+	if err != nil {
+		return err
+	}
+	for _, it := range old {
+		if _, err := q.DeleteOrderItem(ctx, it.ID); err != nil {
+			return fmt.Errorf("orders: delete line: %w", err)
+		}
+	}
+	return s.insertLines(ctx, q, o, buyer, lines)
 }
 
 // --- Transitions -------------------------------------------------------------------

@@ -305,5 +305,17 @@
   "discounts.save": "حفظ",
   "discounts.saved": "تم حفظ الخصومات.",
   "discounts.save_failed": "تعذّر حفظ الخصومات.",
-  "discounts.load_failed": "تعذّر تحميل الخصومات."
+  "discounts.load_failed": "تعذّر تحميل الخصومات.",
+  "edit_lines.button": "تعديل البنود",
+  "edit_lines.title": "تعديل البنود",
+  "edit_lines.hint": "أضف منتجات أو غيّر الكميات أو احذف بنودًا. يُسعَّر البند الجديد من قائمة الأسعار. حذف بند له باركودات معيّنة يحرّرها.",
+  "edit_lines.save": "حفظ",
+  "edit_lines.cancel": "إلغاء",
+  "edit_lines.saved": "تم تحديث البنود",
+  "edit_lines.failed": "تعذّر تحديث البنود",
+  "edit_lines.assigned": "تم تعيين {{amount}}",
+  "edit_lines.below_assigned": "لا يمكن أن تقل عن الكمية المعيّنة؛ أزل الباركود أولًا.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

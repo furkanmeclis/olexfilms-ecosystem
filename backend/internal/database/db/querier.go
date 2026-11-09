@@ -752,6 +752,10 @@ type Querier interface {
 	DeletePushSubscription(ctx context.Context, arg DeletePushSubscriptionParams) error
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	DeleteQuoteLines(ctx context.Context, quoteID int64) (int64, error)
+	// TEC-1056: a line removed before shipping takes its released reservation
+	// history with it (the FK is RESTRICT); active ones are released first and
+	// consumed ones only exist after shipping, when lines are not edited.
+	DeleteReleasedReservationsByItem(ctx context.Context, orderItemID int64) (int64, error)
 	DeleteReviewQuestionLocale(ctx context.Context, arg DeleteReviewQuestionLocaleParams) error
 	DeleteRole(ctx context.Context, argUuid uuid.UUID) error
 	DeleteRolePermission(ctx context.Context, arg DeleteRolePermissionParams) error

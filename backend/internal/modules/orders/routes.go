@@ -47,7 +47,10 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/orders/quote", route(h.Quote, write))
 	mux.Handle("GET /v1/orders/{uuid}", route(h.Get))
 	mux.Handle("GET /v1/orders/{uuid}/order-slip.pdf", route(h.OrderSlip))
-	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, write))
+	// TEC-1056: the seller's sales (orders.write) and warehouse
+	// (orders.ship) staff edit the lines before the order is ready.
+	editItems := middleware.RequireAnyPermission(rbac.PermOrdersWrite, rbac.PermOrdersShip)
+	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, editItems))
 	mux.Handle("POST /v1/orders/{uuid}/transitions", route(h.Transition, act))
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)
 	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))

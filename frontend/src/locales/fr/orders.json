@@ -344,5 +344,17 @@
   "discounts.save": "Enregistrer",
   "discounts.saved": "Remises enregistrées.",
   "discounts.save_failed": "Impossible d'enregistrer les remises.",
-  "discounts.load_failed": "Impossible de charger les remises."
+  "discounts.load_failed": "Impossible de charger les remises.",
+  "edit_lines.button": "Modifier les lignes",
+  "edit_lines.title": "Modifier les lignes",
+  "edit_lines.hint": "Ajoutez des produits, modifiez les quantités ou retirez des lignes. Une nouvelle ligne prend le prix de la liste de prix. Retirer une ligne avec des codes-barres attribués les libère.",
+  "edit_lines.save": "Enregistrer",
+  "edit_lines.cancel": "Annuler",
+  "edit_lines.saved": "Lignes mises à jour",
+  "edit_lines.failed": "Impossible de mettre à jour les lignes",
+  "edit_lines.assigned": "{{amount}} attribués",
+  "edit_lines.below_assigned": "Impossible de descendre sous la quantité attribuée ; retirez d'abord un code-barres.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }

@@ -105,7 +105,7 @@
   "codes.VEHICLE_TRANSFER_OWNER_CHANGED": "Владелец автомобиля изменился; начните новую передачу.",
   "codes.ORDER_INVALID_TRANSITION": "Статус заказа не позволяет выполнить это действие.",
   "codes.ORDER_TRANSITION_UNAVAILABLE": "Этот шаг пока недоступен.",
-  "codes.ORDER_NOT_EDITABLE": "Изменять можно только черновики заказов.",
+  "codes.ORDER_NOT_EDITABLE": "Позиции заказа нельзя изменять в этом статусе.",
   "codes.ORDER_NO_SUPPLIER": "Заказывать товары может только дистрибьютор (у центра) или дилер (у своего дистрибьютора).",
   "codes.ORDER_NOT_ASSIGNABLE": "Единицы можно назначать только во время комплектации.",
   "codes.ORDER_UNIT_ALREADY_ASSIGNED": "Эта единица уже в позиции.",
@@ -177,5 +177,6 @@
   "codes.ORDER_NOT_INVOICEABLE": "Отметить как выставленный счёт можно только полученный заказ.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Одна из выбранных позиций уже выставлена в счёте.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Все позиции заказа уже выставлены в счёте.",
-  "codes.ORDER_INVOICE_NO_TAKEN": "Этот номер счёта уже записан для заказа."
+  "codes.ORDER_INVOICE_NO_TAKEN": "Этот номер счёта уже записан для заказа.",
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Новое количество меньше назначенных штрихкодов; сначала снимите назначение."
 }

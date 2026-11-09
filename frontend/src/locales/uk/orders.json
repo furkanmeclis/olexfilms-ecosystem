@@ -344,5 +344,17 @@
   "discounts.save": "Зберегти",
   "discounts.saved": "Знижки збережено.",
   "discounts.save_failed": "Не вдалося зберегти знижки.",
-  "discounts.load_failed": "Не вдалося завантажити знижки."
+  "discounts.load_failed": "Не вдалося завантажити знижки.",
+  "edit_lines.button": "Редагувати позиції",
+  "edit_lines.title": "Редагування позицій",
+  "edit_lines.hint": "Додайте товари, змініть кількість або видаліть позиції. Нова позиція отримує ціну з прайс-листа. Видалення позиції з призначеними штрихкодами звільняє їх.",
+  "edit_lines.save": "Зберегти",
+  "edit_lines.cancel": "Скасувати",
+  "edit_lines.saved": "Позиції оновлено",
+  "edit_lines.failed": "Не вдалося оновити позиції",
+  "edit_lines.assigned": "{{amount}} призначено",
+  "edit_lines.below_assigned": "Не може бути менше за призначену кількість; спершу зніміть штрихкод.",
+  "activity.change_added": "+ {{product}} ({{after}})",
+  "activity.change_removed": "− {{product}} ({{before}})",
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
 }
