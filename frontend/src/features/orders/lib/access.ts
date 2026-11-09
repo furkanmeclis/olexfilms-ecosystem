@@ -79,6 +79,7 @@ export type OrderActionKind =
   | "ship"
   | "deliver"
   | "receive"
+  | "receive_on_behalf"
   | "cancel"
   | "request_cancel"
   | "complete_cancel";
@@ -148,8 +149,10 @@ function actionFor(order: Order, target: OrderStatus): OrderAction | null {
         reasonRequired: false,
       };
     case "received":
+      // TEC-1062: the seller receives for a pool recipient without members.
       return {
-        kind: "receive",
+        kind:
+          seller && order.receive_on_behalf ? "receive_on_behalf" : "receive",
         target,
         destructive: false,
         reasonRequired: false,

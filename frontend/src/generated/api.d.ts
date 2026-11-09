@@ -3481,7 +3481,7 @@ export interface paths {
         };
         /**
          * Organizations inside the caller's organizations.read scope
-         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand. `q` (TEC-210) searches the name and the dealer code (slug); when Meilisearch is up the organizations index answers it inside the same scope (hits are reloaded from Postgres), otherwise SQL.
+         * @description managed: the active organization; subtree: a distributor and its dealers; brand: every organization of the brand. Never leaves the request brand. `q` (TEC-210) searches the name and the dealer code (slug); when Meilisearch is up the organizations index answers it inside the same scope (hits are reloaded from Postgres), otherwise SQL. Organizations in status `pending` (TEC-1062: the center's waiting pool recipients) are left out unless `include_pending=true`.
          */
         get: operations["listTenantOrganizations"];
         put?: never;
@@ -27448,6 +27448,8 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description TEC-1062. The seller received the order for a pool recipient without members (received rows only; omitted otherwise). */
+            on_behalf_of_buyer?: boolean;
         };
         /** @description Rate frozen at approval (1 base = rate quote; quote is TRY). */
         OrderRateSnapshot: {
@@ -27540,6 +27542,8 @@ export interface components {
             updated_at: string;
             /** @description Statuses the caller may move the order to */
             available_transitions: components["schemas"]["OrderStatus"][];
+            /** @description TEC-1062 (detail responses only). `received` in available_transitions is the seller (orders.ship or orders.write) receiving for a pending or retail pool recipient without active members, so the K9 cari rows are booked; omitted otherwise. */
+            receive_on_behalf?: boolean;
             /** @description Lines (detail responses only) */
             items?: components["schemas"]["OrderItem"][];
             /** @description Status history (detail responses only) */
@@ -38215,6 +38219,8 @@ export interface operations {
         parameters: {
             query?: {
                 type?: components["schemas"]["OrganizationType"];
+                /** @description TEC-1062. true also lists the pending organizations (the center's order form picks pool recipients as buyers); default false. */
+                include_pending?: boolean;
                 /** @description Part of the organization name or dealer code (slug). */
                 q?: string;
                 limit?: number;

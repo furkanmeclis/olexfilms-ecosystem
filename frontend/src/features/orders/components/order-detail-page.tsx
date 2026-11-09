@@ -810,6 +810,14 @@ function HistoryList({ order }: { order: Order }) {
               <div className="text-muted-foreground text-xs">
                 {format.dateTime(h.created_at)}
               </div>
+              {h.on_behalf_of_buyer ? (
+                <div
+                  className="text-muted-foreground text-xs"
+                  data-testid="history-on-behalf"
+                >
+                  {t("orders.detail.history_on_behalf")}
+                </div>
+              ) : null}
               {h.reason ? <div className="text-sm">{h.reason}</div> : null}
             </li>
           ))}

@@ -96,3 +96,20 @@ WHERE pr.organization_id = sqlc.arg(organization_id)
        OR o.city ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR pr.created_at >= sqlc.narg(created_from))
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR pr.created_at < sqlc.narg(created_before));
+
+-- name: IsMemberlessPoolRecipient :one
+-- TEC-1062 decision: the center may receive an order on behalf of a
+-- recipient of its pool (state pending or retail) that has no active
+-- member to do it, so the K9 cari row is booked.
+SELECT EXISTS (
+    SELECT 1 FROM pending_recipients pr
+    WHERE pr.recipient_org_id = sqlc.arg(recipient_org_id)
+      AND pr.organization_id = sqlc.arg(center_org_id)
+      AND pr.state IN ('pending', 'retail')
+      AND NOT EXISTS (
+          SELECT 1 FROM organization_members om
+          JOIN users u ON u.id = om.user_id
+          WHERE om.organization_id = pr.recipient_org_id
+            AND u.status = 'active' AND u.deleted_at IS NULL
+      )
+)::bool;

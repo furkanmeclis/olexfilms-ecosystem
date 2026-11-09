@@ -681,8 +681,15 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 		if !ok {
 			return ErrInvalidTransition
 		}
+		onBehalf := false
 		if !r.allows(partyOf(c, o), c.can) {
-			return ErrForbidden
+			// TEC-1062: the center receives for a memberless pool recipient.
+			if onBehalf, err = s.receivesOnBehalf(ctx, q, c, o, to); err != nil {
+				return err
+			}
+			if !onBehalf {
+				return ErrForbidden
+			}
 		}
 		from := o.Status
 		var meta map[string]any
@@ -717,6 +724,9 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 		case StatusReceived:
 			if meta, err = s.receive(ctx, q, tx, c, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
+			}
+			if err == nil && onBehalf {
+				meta[MetaOnBehalfOfBuyer] = true
 			}
 			if err == nil {
 				// Accounting hook point (TEC-96 decision 3, TEC-169).

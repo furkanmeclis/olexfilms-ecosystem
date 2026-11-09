@@ -56,6 +56,10 @@ func (h *Handler) TenantListOrganizations(w http.ResponseWriter, r *http.Request
 		return
 	}
 	in := orgusecase.ScopedListInput{Type: r.URL.Query().Get("type"), Q: r.URL.Query().Get("q")}
+	// TEC-1062: pending organizations (the center's waiting pool) only on
+	// include_pending=true (the center's order form); every other picker
+	// gets the default.
+	in.ExcludePending = r.URL.Query().Get("include_pending") != "true"
 	if len(in.Q) > 200 {
 		response.BadRequest(w, r, response.CodeValidationError, "q is too long")
 		return

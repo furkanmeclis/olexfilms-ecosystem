@@ -97,7 +97,13 @@ export const ordersService = {
         parent?: { uuid: string } | null;
       })[];
     }>("GET", "/v1/tenant/organizations", {
-      query: { type: "dealer", limit: 200, ...(q ? { q } : {}) },
+      // TEC-1062: only the order form lists the pending pool recipients.
+      query: {
+        type: "dealer",
+        limit: 200,
+        include_pending: "true",
+        ...(q ? { q } : {}),
+      },
     });
     return (
       (data.items ?? [])

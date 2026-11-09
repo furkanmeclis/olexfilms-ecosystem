@@ -42,7 +42,14 @@ export function NetworkScreen() {
     const data = await unwrap(
       api.GET('/v1/tenant/organizations', {
         params: {
-          query: { type: filter === 'all' ? undefined : filter, q: query || undefined, limit: PAGE_SIZE, offset },
+          // TEC-1062: a network list, not a picker; pending (pool) rows stay with their status.
+          query: {
+            type: filter === 'all' ? undefined : filter,
+            q: query || undefined,
+            limit: PAGE_SIZE,
+            offset,
+            include_pending: true,
+          },
         },
       }),
     );
