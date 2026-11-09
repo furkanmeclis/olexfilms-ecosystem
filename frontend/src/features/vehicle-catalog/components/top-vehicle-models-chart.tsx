@@ -51,6 +51,8 @@ const GROUP_LABELS: Record<StatsGroup, string> = {
   brand: "dashboard.top_vehicles.group.brand",
 };
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
+  today: "dashboard.top_vehicles.period.today",
+  "7d": "dashboard.top_vehicles.period.7d",
   "30d": "dashboard.top_vehicles.period.30d",
   "90d": "dashboard.top_vehicles.period.90d",
   "12m": "dashboard.top_vehicles.period.12m",
@@ -63,6 +65,8 @@ export type TopVehicleModelsChartProps = {
   group: StatsGroup;
   onPeriodChange: (period: StatsPeriod) => void;
   onGroupChange: (group: StatsGroup) => void;
+  /** TEC-1072: the period comes from the page (center home); no toggle. */
+  hidePeriod?: boolean;
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
@@ -88,6 +92,7 @@ export function TopVehicleModelsChart({
   group,
   onPeriodChange,
   onGroupChange,
+  hidePeriod,
   isLoading,
   isError,
   onRetry,
@@ -167,20 +172,22 @@ export function TopVehicleModelsChart({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            value={period}
-            aria-label={t("dashboard.top_vehicles.period_label")}
-            onValueChange={(v) => v && onPeriodChange(v as StatsPeriod)}
-          >
-            {STATS_PERIODS.map((p) => (
-              <ToggleGroupItem key={p} value={p} data-period={p}>
-                {t(PERIOD_LABELS[p])}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          {hidePeriod ? null : (
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              value={period}
+              aria-label={t("dashboard.top_vehicles.period_label")}
+              onValueChange={(v) => v && onPeriodChange(v as StatsPeriod)}
+            >
+              {STATS_PERIODS.map((p) => (
+                <ToggleGroupItem key={p} value={p} data-period={p}>
+                  {t(PERIOD_LABELS[p])}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          )}
         </CardAction>
       </CardHeader>
       <CardContent>

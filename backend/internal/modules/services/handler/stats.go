@@ -5,6 +5,7 @@ import (
 	"time"
 
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
@@ -30,7 +31,7 @@ func (h *Handler) FrequentVehicles(w http.ResponseWriter, r *http.Request) {
 // completed services of the caller's brand. Center / super_admin only.
 func (h *Handler) TopVehicleModels(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
-	out, err := h.svc.TopVehicleModels(r.Context(), caller(r), v.Get("period"), v.Get("group"), time.Now().UTC())
+	out, err := h.svc.TopVehicleModels(r.Context(), caller(r), v.Get("period"), v.Get("group"), requestNow(r))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -42,10 +43,20 @@ func (h *Handler) TopVehicleModels(w http.ResponseWriter, r *http.Request) {
 // active organization's most serviced car models, most used products and
 // latest completed services (dealer home "Analiz").
 func (h *Handler) HomeOverview(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.HomeOverview(r.Context(), caller(r), r.URL.Query().Get("period"), time.Now().UTC())
+	out, err := h.svc.HomeOverview(r.Context(), caller(r), r.URL.Query().Get("period"), requestNow(r))
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, out)
+}
+
+// requestNow is the current time in the request time zone (K10, default
+// Europe/Istanbul), so the today period starts at local midnight.
+func requestNow(r *http.Request) time.Time {
+	now := time.Now()
+	if loc, err := time.LoadLocation(i18n.FromContext(r.Context()).Timezone); err == nil {
+		return now.In(loc)
+	}
+	return now.UTC()
 }

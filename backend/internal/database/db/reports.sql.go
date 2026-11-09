@@ -239,11 +239,12 @@ func (q *Queries) ReportMeasurementTrend(ctx context.Context, arg ReportMeasurem
 
 const reportNetworkCounts = `-- name: ReportNetworkCounts :one
 SELECT
-    COUNT(*)::bigint AS dealer_count,
-    COUNT(*) FILTER (WHERE o.status = 'active')::bigint AS active_dealer_count
+    COUNT(*) FILTER (WHERE o.type = 'dealer')::bigint AS dealer_count,
+    COUNT(*) FILTER (WHERE o.type = 'dealer' AND o.status = 'active')::bigint AS active_dealer_count,
+    COUNT(*) FILTER (WHERE o.type = 'distributor')::bigint AS distributor_count
 FROM organizations o
 WHERE o.brand_id = $1
-  AND o.type = 'dealer'
+  AND o.type IN ('dealer', 'distributor')
   AND o.deleted_at IS NULL
   AND ($2::bigint[] IS NULL OR o.id = ANY ($2::bigint[]))
 `
@@ -256,12 +257,14 @@ type ReportNetworkCountsParams struct {
 type ReportNetworkCountsRow struct {
 	DealerCount       int64 `json:"dealer_count"`
 	ActiveDealerCount int64 `json:"active_dealer_count"`
+	DistributorCount  int64 `json:"distributor_count"`
 }
 
+// TEC-1072: distributor counts next to the dealer counts (center home).
 func (q *Queries) ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error) {
 	row := q.db.QueryRow(ctx, reportNetworkCounts, arg.BrandID, arg.OrgIds)
 	var i ReportNetworkCountsRow
-	err := row.Scan(&i.DealerCount, &i.ActiveDealerCount)
+	err := row.Scan(&i.DealerCount, &i.ActiveDealerCount, &i.DistributorCount)
 	return i, err
 }
 

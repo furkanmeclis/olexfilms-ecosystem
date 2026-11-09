@@ -33046,7 +33046,8 @@ paths:
         warranties.summary, measurements.summary, dealers.performance
         (performance module), dealers.top_by_warranty (subtree / brand
         reach only), activities.recent. Periodic reports take period
-        (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive
+        (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from +
+        range_to (inclusive
         dates, at most 731 days, period=custom); time series take
         granularity (day, week, month; default by range). Rankings and
         tables take limit (1..50, default 10). Parameters a report does
@@ -33585,7 +33586,7 @@ components:
     ReportPeriod:
       name: period
       in: query
-      schema: { type: string, enum: ["7d", "30d", "90d", "12m", custom] }
+      schema: { type: string, enum: [today, "7d", "30d", "90d", "12m", custom] }
     ReportRangeFrom:
       name: range_from
       in: query
@@ -45991,9 +45992,11 @@ components:
 
     StatsPeriod:
       type: string
-      enum: [30d, 90d, 12m, all]
+      enum: [today, 7d, 30d, 90d, 12m, all]
       default: 30d
-      description: 30d / 90d days, 12m twelve calendar months, all = all time.
+      description: >-
+        today since midnight in the request time zone (TEC-1072), 7d / 30d /
+        90d days, 12m twelve calendar months, all = all time.
 
     StatsGroup:
       type: string
