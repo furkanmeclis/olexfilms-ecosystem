@@ -1,7 +1,7 @@
 # Revize 09.11 — durum takibi
 
 Kaynak: [huseyin-revize.md](huseyin-revize.md). Linear etiketi: `revize-0911` (proje "Olexfilms Tek App").
-Koordinatör gece çalışması, 2026-11-09. PR'lar merge EDİLMEDİ; merge sırası en altta.
+Koordinatör gece çalışması, 2026-11-09. Kullanıcı onayıyla tüm PR'lar 09.11 akşamı main'e squash-merge edildi; gerçek merge sırası en altta.
 
 Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · ⏸ sırada · 🟡 karar bekliyor
 
@@ -120,7 +120,15 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 ## Merge sonrası entegrasyon adımları
 
-- #511 (fiyat gizleme) merge olduktan sonra: #514'ün eklediği `live_try_rate`/`live_total_try` alanları `OrderView.hidePrices()`'a eklenmeli, `orders-list-page.tsx`'teki yerel izin kontrolü `useCanSeePrices()`'a geçmeli. **O zamana kadar bu iki alan API'de fiyat izni olmayan kullanıcıya dönüyor.** Aynısı #517/TEC-1064 yeni fiyat alanları için.
+Tamamlandı (merge sırasında yapıldı):
+- `live_try_rate` / `live_total_try`, `list_unit_price` / `discount_pct` alanları `hidePrices()` kapsamında; fiyat izni olmayana dönmüyor. Web sipariş listesi `useCanSeePrices()` kullanıyor.
+- Fiyatı gizlenen siparişte web muhasebe ekranları ve mobil muhasebe kuyruğu tutarı göstermiyor (`total` null).
+- Mobil yeni siparişte plotter işareti hediye kalemlerde de gönderiliyor.
+
+Kalan takipler (ayrı iş):
+- Mobil "Yolda" sekmesinde Faturalandı butonu, mobil "Etiket bas".
+- Mobil ekranların #539 uçlarına (depo ürün toplamları, bayi sipariş/hizmet sıralamaları, sözleşme aynası) bağlanması.
+- Ara sıra kırılan `TestOlexServicePointMerge` (flaky).
 
 ## Kullanıcı yapacak (veri/ayar, sunucuda — ben yapmadım)
 
@@ -135,23 +143,23 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | K0 AFM Florya (TEC-1080) | **1b**: AFM Florya ayrı bayi org'u olarak açılır (merkeze bağlı, kendi carisi); eski hizmet/garanti merkezde tarihçe kalır; sipariş Florya deposundan AFM Florya bayisine açılır. TEC-1003 birleşmesi geri alınmaz. | Kod gerekmez. **Kullanıcı:** panelden yeni bayi aç (Ayarlar > Hesaplar), AFM Florya personelini bayi rollerine ekle. design.md güncellendi. |
 | Metraj biçimi (TEC-1078) | `2.5M`, ikinci kesim `-3M-2` | #520'de olduğu gibi |
 | Modüller (TEC-1088) | Bayi standardında kapatılması önerilen: leads, appointments, dealer_accounting, service_catalog, intake_contracts (mobil sözleşme gelene kadar); açık kalacak: dealer_transfers, announcements, warranty_claims, measurements (sekme rol bazlı gizlendi). Eklentiler kapalı kalsın. | **Sunucuda kapatma yapılmadı** (yasak); kullanıcı panelden Özellikler sayfasından kapatır. |
-| İade (TEC-1085) | (b) uygulanır: merkez bayi adına iade açar, iade siparişe bağlanır, muhasebe kuyruğu İadeler sekmesinde. Faturalı iade ertelendi. | Kodlanıyor (000177) |
+| İade (TEC-1085) | (b) uygulanır: merkez bayi adına iade açar, iade siparişe bağlanır, muhasebe kuyruğu İadeler sekmesinde. Faturalı iade ertelendi. | Merge edildi (000177) |
 | Kredili kod (TEC-1084) | Açılış kapsamı dışı; revize "birlikte karar alacağız" diyor. | Yok |
 | 9.3? mobil sözleşme (TEC-1083) | Seçenek 3: mobil detayda sözleşme durumu + imzalat; `CONTRACT_REQUIRED` anlaşılır mesaj; `intake_required` kapalı kalır. | Mobil paket 3a'ya eklendi |
 | 9.2 ek fotoğraf (TEC-1082) | "Hasar / not fotoğrafları (isteğe bağlı)", katlanır alan + ipucu | TEC-1076 PR'ına eklendi |
 | 5.7 distribütör bazlı (TEC-1081) | Şimdilik yok (TR'de distribütör yok); genel anahtar yeterli. Kapalı ürünler global aramadan da gizlenir. | Arama gizleme kodlanıyor |
 | 7.4 (TEC-1087) | Mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine | Mobil paket 2'ye eklendi |
 | 5.4 staff fiyatı | dealer_staff / center_service fiyat görmez (design.md) | #511 olduğu gibi |
-| 5.3 satış temsilcisi fiyatı | Yeni rol **center_sales**: fiyat okuma/yazma + iskonto; alış fiyatı yok | Kodlanıyor (000176). **Kullanıcı:** Zorbey'i center_sales rolüne ata |
+| 5.3 satış temsilcisi fiyatı | Yeni rol **center_sales**: fiyat okuma/yazma + iskonto; alış fiyatı yok | Merge edildi (000176). **Kullanıcı:** Zorbey'i center_sales rolüne ata |
 | 5.3 K8 liste fiyatı | Merkeze bağlı bayi liste fiyatı = `sale_to_distributor_price`, iskonto bunun üzerine | #522 olduğu gibi |
 | 5.3 ilk sipariş | Legacy siparişler sayılır (mevcut bayi ilk sipariş iskontosu almaz) | #522 olduğu gibi |
-| 3 hizmet listesi | Merkezde varsayılan görünüm **Ağ** (bayi adları görünsün) | Kodlanıyor |
-| KRİTİK cari | Üyesiz alıcıda (havuz/teslim yeri) merkez "teslim alındı"yı alıcı adına yapabilir → cari K9 ile oluşur | Kodlanıyor |
-| KRİTİK seçiciler | Havuzdaki (pending) org'lar sipariş alıcı seçicisi dışındaki seçicilerde gizli | Kodlanıyor |
+| 3 hizmet listesi | Merkezde varsayılan görünüm **Ağ** (bayi adları görünsün) | Merge edildi |
+| KRİTİK cari | Üyesiz alıcıda (havuz/teslim yeri) merkez "teslim alındı"yı alıcı adına yapabilir → cari K9 ile oluşur | Merge edildi |
+| KRİTİK seçiciler | Havuzdaki (pending) org'lar sipariş alıcı seçicisi dışındaki seçicilerde gizli | Merge edildi |
 | 5.4.1 bayi zaman çizelgesi | Bayi depocu adını ve barkodları görebilir (şeffaflık) | #518 olduğu gibi |
 | 5.6 plotter raporu | Tüm işaretli kalemler (ürün kırılımı yeterli) | #524 olduğu gibi |
-| 7.1 dist. depo Bayiler | distributor_warehouse_staff'a organizations.read | Kodlanıyor (000176) |
-| 8 dist. muhasebe | distributor_accounting'e einvoice.manage; "Faturalandı" sevk/teslim edilmiş siparişte de konabilir (legacy gibi); muhasebe ana menüsünde katalog gizli | Kodlanıyor (000176 + muhasebe takip) |
+| 7.1 dist. depo Bayiler | distributor_warehouse_staff'a organizations.read | Merge edildi (000176) |
+| 8 dist. muhasebe | distributor_accounting'e einvoice.manage; "Faturalandı" sevk/teslim edilmiş siparişte de konabilir (legacy gibi); muhasebe ana menüsünde katalog gizli | Merge edildi (000176 + muhasebe takip) |
 | 7.1 test hesabı | Depo hesabının rolü panelden kontrol edilmeli (center_warehouse müşteri görmez) | **Kullanıcı** |
 
 ## Eski soru listesi (yukarıda karara bağlandı)
@@ -177,6 +185,14 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **8 (TEC-1070):** distributor_accounting `einvoice.manage` tutmuyor → "Faturalandı" butonu yok; izin eklensin mi? Muhasebe menüsünde katalog açık (fiyat yönetimi yetkisi); gizlensin mi? Faturalandı yalnız teslim alınmış siparişe (TEC-1030 kuralı) — legacy gibi sevkte de olsun mu?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
-## Önerilen merge sırası
+## Gerçek merge sırası (09.11)
 
-(Sabah raporunda kesinleşecek.)
+Migration'lar artan sırayla girdi: 000169 → 000170 → 000171 → 000172 → 000173 → 000174 → 000176 → 000177 (000166/167/168/175 boş).
+
+1. #511, #512, #513, #508, #509, #516, #510, #520, #515, #532
+2. #514, #518, #517, #530, #523, #519, #522, #521, #524
+3. #527, #528, #529, #531, #534
+4. Mobil: #525, #526, #533, #535, #536, #537, #538, #539
+5. Bu doküman: #507
+
+Yığın PR'lar her merge'den sonra main üstüne yeniden uygulandı; çakışmalar iki tarafın değişikliği korunarak çözüldü ve CI yeşilken merge edildi.
