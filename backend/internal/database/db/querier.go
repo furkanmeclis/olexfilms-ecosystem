@@ -3943,6 +3943,9 @@ type Querier interface {
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftParams) (Order, error)
 	UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (OrderItem, error)
+	// TEC-1047: a fixed barcode scanned again on its line grows the assignment;
+	// the larger quantity moves to a new reservation (the old one is released).
+	UpdateOrderItemUnitQuantity(ctx context.Context, arg UpdateOrderItemUnitQuantityParams) (OrderItemUnit, error)
 	// Records one attempt: the new state, the hold reason (NULL unless held)
 	// and the last error (NULL on success).
 	UpdateOrderOutboundState(ctx context.Context, arg UpdateOrderOutboundStateParams) (OrderOutbound, error)

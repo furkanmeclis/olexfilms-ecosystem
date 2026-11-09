@@ -46311,7 +46311,7 @@ components:
       properties:
         barcode: { type: string, description: Scanned barcode }
         unit_uuid: { type: string, format: uuid }
-        quantity: { type: integer, minimum: 1, maximum: 1000000, description: Fixed barcodes only (serial pieces are 1) }
+        quantity: { type: integer, minimum: 1, maximum: 1000000, description: "Fixed barcodes only (serial pieces are 1). TEC-1047: optional; without it the rest of the line is taken as far as the stock reaches, and a fixed barcode already on the line grows its assignment" }
         meters:
           type: string
           pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
