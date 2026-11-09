@@ -29,6 +29,7 @@
   "names.center_accounting": "Comptabilité du siège",
   "names.center_social": "Réseaux sociaux du siège",
   "names.center_service": "Personnel de service du centre",
+  "names.center_sales": "Commercial",
   "names.distributor_owner": "Gérant distributeur",
   "names.distributor_staff": "Personnel distributeur",
   "names.distributor_warehouse_staff": "Magasinier distributeur",
@@ -59,5 +60,19 @@
   "toast.updated": "Rôle mis à jour",
   "toast.deleted": "Rôle supprimé",
   "labels.custom": "Personnalisé",
-  "fields.created_at": "Créé le"
+  "fields.created_at": "Créé le",
+  "descriptions.center_owner": "Tous les services du centre (personnel, entrepôt, comptabilité, réseaux sociaux, point de service) en un seul rôle.",
+  "descriptions.center_staff": "Services, clients, commandes et réseau de revendeurs ; ne voit pas les prix.",
+  "descriptions.center_warehouse": "Entrepôt, stock et expédition ; ne voit pas les prix.",
+  "descriptions.center_accounting": "Comptabilité, prix (achat et vente) et factures électroniques.",
+  "descriptions.center_social": "Prospects, campagnes et réseaux sociaux.",
+  "descriptions.center_service": "Point de service propre au centre : services, clients, garanties et rendez-vous ; ne voit pas les prix, ni entrepôt ni comptabilité.",
+  "descriptions.center_sales": "Commandes des revendeurs, prix de vente et remises, revendeurs, services et clients (lecture) et rapports ; ni prix d’achat, ni entrepôt, ni comptabilité.",
+  "descriptions.distributor_owner": "Prix, comptabilité, entrepôt et réseau de revendeurs du distributeur.",
+  "descriptions.distributor_staff": "Services et revendeurs du sous-réseau.",
+  "descriptions.distributor_warehouse_staff": "Entrepôt et expédition, consulte les revendeurs en lecture seule ; ne voit pas les prix.",
+  "descriptions.distributor_accounting": "Comptabilité, prix et marque « Facturé » sur les commandes.",
+  "descriptions.dealer_owner": "Prix finaux, comptabilité et stock du revendeur.",
+  "descriptions.dealer_staff": "Services du revendeur et ses propres enregistrements ; ne voit ni prix ni comptabilité.",
+  "descriptions.dealer_accounting": "Comptabilité et prix du revendeur."
 }

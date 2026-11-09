@@ -29,6 +29,7 @@
   "names.center_accounting": "Center accounting",
   "names.center_social": "Center social media",
   "names.center_service": "Center service staff",
+  "names.center_sales": "Sales representative",
   "names.distributor_owner": "Distributor owner",
   "names.distributor_staff": "Distributor staff",
   "names.distributor_warehouse_staff": "Distributor warehouse staff",
@@ -59,5 +60,19 @@
   "toast.updated": "Role updated",
   "toast.deleted": "Role deleted",
   "labels.custom": "Custom",
-  "fields.created_at": "Created"
+  "fields.created_at": "Created",
+  "descriptions.center_owner": "Every center department (staff, warehouse, accounting, social, service point) in one role.",
+  "descriptions.center_staff": "Services, customers, orders and the dealer network; sees no prices.",
+  "descriptions.center_warehouse": "Warehouse, stock and shipping; sees no prices.",
+  "descriptions.center_accounting": "Accounting, prices (purchase and sale) and e-invoices.",
+  "descriptions.center_social": "Leads, campaigns and social media.",
+  "descriptions.center_service": "The center's own service point: services, customers, warranties and appointments; sees no prices, no warehouse or accounting.",
+  "descriptions.center_sales": "Dealer orders, sale prices and discounts, dealers, services and customers (read) and reports; no purchase prices, warehouse or accounting.",
+  "descriptions.distributor_owner": "The distributor's prices, accounting, warehouse and dealer network.",
+  "descriptions.distributor_staff": "Services and dealers of the subtree.",
+  "descriptions.distributor_warehouse_staff": "Warehouse and shipping, reads the dealers; sees no prices.",
+  "descriptions.distributor_accounting": "Accounting, prices and the \"Invoiced\" mark on orders.",
+  "descriptions.dealer_owner": "The dealer's final prices, accounting and stock.",
+  "descriptions.dealer_staff": "The dealer's services and own records; sees no prices or accounting.",
+  "descriptions.dealer_accounting": "Dealer accounting and prices."
 }

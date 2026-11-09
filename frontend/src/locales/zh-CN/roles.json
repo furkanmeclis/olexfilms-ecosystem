@@ -29,6 +29,7 @@
   "names.center_accounting": "总部财务",
   "names.center_social": "总部社交媒体",
   "names.center_service": "中心服务人员",
+  "names.center_sales": "销售代表",
   "names.distributor_owner": "分销商负责人",
   "names.distributor_staff": "分销商员工",
   "names.distributor_warehouse_staff": "分销商仓库员工",
@@ -59,5 +60,19 @@
   "toast.updated": "角色已更新",
   "toast.deleted": "角色已删除",
   "labels.custom": "自定义",
-  "fields.created_at": "创建时间"
+  "fields.created_at": "创建时间",
+  "descriptions.center_owner": "一个角色涵盖中心所有部门（员工、仓库、财务、社交媒体、服务点）。",
+  "descriptions.center_staff": "服务、客户、订单和经销商网络；看不到价格。",
+  "descriptions.center_warehouse": "仓库、库存和发货；看不到价格。",
+  "descriptions.center_accounting": "财务、价格（采购价和销售价）和电子发票。",
+  "descriptions.center_social": "线索、营销活动和社交媒体。",
+  "descriptions.center_service": "中心自有服务点：服务、客户、质保和预约；看不到价格，无仓库和财务。",
+  "descriptions.center_sales": "经销商订单、销售价和折扣、经销商、服务和客户（只读）以及报表；无采购价、仓库和财务。",
+  "descriptions.distributor_owner": "分销商的价格、财务、仓库和经销商网络。",
+  "descriptions.distributor_staff": "下级网络的服务和经销商。",
+  "descriptions.distributor_warehouse_staff": "仓库和发货，只读查看经销商；看不到价格。",
+  "descriptions.distributor_accounting": "财务、价格以及订单的“已开票”标记。",
+  "descriptions.dealer_owner": "经销商的最终价格、财务和库存。",
+  "descriptions.dealer_staff": "经销商的服务和自己的记录；看不到价格和财务。",
+  "descriptions.dealer_accounting": "经销商财务和价格。"
 }

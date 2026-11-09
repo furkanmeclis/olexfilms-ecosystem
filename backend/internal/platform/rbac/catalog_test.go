@@ -946,6 +946,7 @@ func TestPerformanceGrants(t *testing.T) {
 			PermPerformanceRulesManage: ScopeSubtree,
 		},
 		RoleDistributorStaff: {PermPerformanceRead: ScopeSubtree},
+		RoleCenterSales:      {PermPerformanceRead: ScopeBrand}, // TEC-1089: reports read
 		RoleDealerOwner: {
 			PermPerformanceRead: ScopeManaged, PermPerformanceStaffTargetsManage: ScopeManaged,
 			PermPerformanceBonusManage: ScopeManaged,
@@ -990,6 +991,8 @@ func TestEinvoiceGrants(t *testing.T) {
 			PermEinvoiceRead: ScopeAll, PermEinvoiceManage: ScopeAll, PermEinvoiceSettings: ScopeAll,
 		},
 		RoleCenterAccounting: {PermEinvoiceRead: ScopeBrand, PermEinvoiceManage: ScopeBrand, PermEinvoiceSettings: ScopeBrand},
+		// TEC-1089: the manual "invoiced" mark of its own sales (TEC-1030).
+		RoleDistributorAccounting: {PermEinvoiceRead: ScopeManaged, PermEinvoiceManage: ScopeManaged},
 	}
 	for _, r := range Roles {
 		if r.Slug == RoleCenterOwner {
@@ -1021,6 +1024,7 @@ func TestPricingDisciplineGrants(t *testing.T) {
 	want := map[string]Scope{
 		RoleSuperAdmin:       ScopeAll,
 		RoleCenterStaff:      ScopeBrand,
+		RoleCenterSales:      ScopeBrand, // TEC-1089: reports read
 		RoleDistributorOwner: ScopeSubtree,
 	}
 	for _, r := range Roles {
@@ -1164,5 +1168,64 @@ func TestCenterOwnerUnion(t *testing.T) {
 	}
 	if got, _ := CenterRoleFor(RoleCenterOwner); got != RoleCenterOwner {
 		t.Fatalf("center_owner -> %s", got)
+	}
+}
+
+// TEC-1089: the center sales representative sees and writes sale prices
+// (discounts, TEC-1064) but not purchase prices; it writes orders but does
+// not ship, touch the warehouse or write accounting. center_staff is not
+// changed by the new role.
+func TestCenterSalesRole(t *testing.T) {
+	r, ok := RoleBySlug(RoleCenterSales)
+	if !ok || r.OrgType != OrgTypeCenter {
+		t.Fatal("center_sales is not a center role")
+	}
+	want := map[string]Scope{
+		PermPricingSaleRead: ScopeBrand, PermPricingSaleWrite: ScopeBrand,
+		PermOrdersRead: ScopeBrand, PermOrdersWrite: ScopeBrand,
+		PermOrdersApprove: ScopeBrand, PermOrdersCancel: ScopeBrand,
+		PermCatalogRead: ScopeBrand, PermOrganizationsRead: ScopeBrand,
+		PermServicesRead: ScopeBrand, PermCustomersRead: ScopeBrand,
+	}
+	for perm, scope := range want {
+		if got := r.Grants[perm]; got != scope {
+			t.Fatalf("center_sales %s = %q, want %q", perm, got, scope)
+		}
+	}
+	for _, perm := range []string{
+		PermPricingPurchaseRead, PermPricingRecommendedWrite,
+		PermWarehouseRead, PermWarehouseWrite, PermOrdersShip, PermStockWrite,
+		PermAccountingWrite, PermAccountingResolve, PermEinvoiceManage,
+		PermCatalogWrite, PermServicesWrite, PermMembersWrite, PermOrganizationsWrite,
+	} {
+		if _, ok := r.Grants[perm]; ok {
+			t.Fatalf("center_sales must not hold %s", perm)
+		}
+	}
+	staff, _ := RoleBySlug(RoleCenterStaff)
+	for _, perm := range []string{PermPricingSaleRead, PermPricingSaleWrite, PermPricingPurchaseRead} {
+		if _, ok := staff.Grants[perm]; ok {
+			t.Fatalf("center_staff must not hold %s", perm)
+		}
+	}
+	if got, _ := CenterRoleFor(RoleCenterSales); got != RoleCenterSales {
+		t.Fatalf("center_sales -> %s", got)
+	}
+}
+
+// TEC-1089: staff of the service point and the dealer see no prices; the
+// distributor warehouse reads its dealers but no prices.
+func TestStaffSeeNoPrices(t *testing.T) {
+	for _, slug := range []string{RoleDealerStaff, RoleCenterService, RoleDistributorWarehouseStaff, RoleCenterWarehouse} {
+		r, _ := RoleBySlug(slug)
+		for perm := range r.Grants {
+			if strings.HasPrefix(perm, "pricing.") {
+				t.Fatalf("%s holds %s", slug, perm)
+			}
+		}
+	}
+	wh, _ := RoleBySlug(RoleDistributorWarehouseStaff)
+	if wh.Grants[PermOrganizationsRead] != ScopeSubtree || wh.Grants[PermOrganizationsWrite] != "" {
+		t.Fatalf("distributor_warehouse_staff organizations = %q/%q", wh.Grants[PermOrganizationsRead], wh.Grants[PermOrganizationsWrite])
 	}
 }

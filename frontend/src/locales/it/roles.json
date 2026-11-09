@@ -29,6 +29,7 @@
   "names.center_accounting": "Contabilità della sede centrale",
   "names.center_social": "Social media della sede centrale",
   "names.center_service": "Personale di servizio del centro",
+  "names.center_sales": "Rappresentante commerciale",
   "names.distributor_owner": "Titolare distributore",
   "names.distributor_staff": "Personale distributore",
   "names.distributor_warehouse_staff": "Magazziniere distributore",
@@ -59,5 +60,19 @@
   "toast.updated": "Ruolo aggiornato",
   "toast.deleted": "Ruolo eliminato",
   "labels.custom": "Personalizzato",
-  "fields.created_at": "Creato"
+  "fields.created_at": "Creato",
+  "descriptions.center_owner": "Tutti i reparti del centro (personale, magazzino, contabilità, social, punto di assistenza) in un unico ruolo.",
+  "descriptions.center_staff": "Servizi, clienti, ordini e rete dei rivenditori; non vede i prezzi.",
+  "descriptions.center_warehouse": "Magazzino, scorte e spedizioni; non vede i prezzi.",
+  "descriptions.center_accounting": "Contabilità, prezzi (acquisto e vendita) e fatture elettroniche.",
+  "descriptions.center_social": "Lead, campagne e social media.",
+  "descriptions.center_service": "Punto di assistenza del centro: servizi, clienti, garanzie e appuntamenti; non vede i prezzi, niente magazzino né contabilità.",
+  "descriptions.center_sales": "Ordini dei rivenditori, prezzi di vendita e sconti, rivenditori, servizi e clienti (lettura) e report; niente prezzi di acquisto, magazzino né contabilità.",
+  "descriptions.distributor_owner": "Prezzi, contabilità, magazzino e rete dei rivenditori del distributore.",
+  "descriptions.distributor_staff": "Servizi e rivenditori della sottorete.",
+  "descriptions.distributor_warehouse_staff": "Magazzino e spedizioni, vede i rivenditori in sola lettura; non vede i prezzi.",
+  "descriptions.distributor_accounting": "Contabilità, prezzi e il segno «Fatturato» sugli ordini.",
+  "descriptions.dealer_owner": "Prezzi finali, contabilità e scorte del rivenditore.",
+  "descriptions.dealer_staff": "Servizi del rivenditore e propri record; non vede prezzi né contabilità.",
+  "descriptions.dealer_accounting": "Contabilità e prezzi del rivenditore."
 }

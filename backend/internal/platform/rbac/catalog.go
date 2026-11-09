@@ -766,13 +766,16 @@ var Permissions = []PermissionDef{
 	// migration 000124 seeds them. Archive/manage is center accounting;
 	// settings are super_admin-only because they define the seller profile.
 	{
+		// TEC-1089 (000176): managed added for distributor accounting.
 		Slug: PermEinvoiceRead, Name: "Read e-invoices", Module: "einvoice",
-		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Scopes:      []Scope{ScopeManaged, ScopeBrand, ScopeAll},
 		Description: "Read UBL-TR e-invoice settings, counters and archived invoices.",
 	},
 	{
+		// TEC-1089 (000176): managed added for the distributor accounting
+		// "invoiced" mark (POST /v1/orders/{uuid}/invoices).
 		Slug: PermEinvoiceManage, Name: "Manage e-invoices", Module: "einvoice",
-		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Scopes:      []Scope{ScopeManaged, ScopeBrand, ScopeAll},
 		Sensitive:   true,
 		Description: "Archive, void and repair UBL-TR e-invoices. Requires step-up.",
 	},
@@ -1181,9 +1184,44 @@ var Roles = []RoleDef{
 		// former AFM Florya dealer staff). Managed scope = the center's own
 		// records only; no warehouse, prices, accounting or network.
 		Slug: RoleCenterService, Name: "Center service staff", OrgType: OrgTypeCenter,
-		Description: "Center service point staff: the center's own services, customers, warranties and appointments; no warehouse, prices or accounting",
+		Description: "Center service point staff: the center's own services, customers, warranties and appointments; sees no prices (purchase or sale), no warehouse or accounting",
 		// The dealer showcase is a dealer page; the center has none.
 		Grants: without(dealerStaffGrants, PermShowcaseRead),
+	},
+	{
+		// TEC-1089 (000176): the center's sales representative. Orders,
+		// catalog and dealers of center_staff, orders for and edits on behalf
+		// of dealers, approving and cancelling dealer orders, sale prices and discounts (pricing.sale.write, TEC-1064).
+		// No purchase prices (no margin), no warehouse, shipping or
+		// accounting writes. center_staff is left as it is.
+		Slug: RoleCenterSales, Name: "Center sales representative", OrgType: OrgTypeCenter,
+		Description: "Center sales representative: dealer orders, sale prices and discounts, dealers, services and customers (read) and reports; no purchase prices, warehouse or accounting",
+		Grants: grants(baseGrants, map[string]Scope{
+			PermVehicleCatalogRead:     ScopeBrand,
+			PermCatalogRead:            ScopeBrand,
+			PermOrganizationsRead:      ScopeBrand,
+			PermOrdersRead:             ScopeBrand,
+			PermOrdersWrite:            ScopeBrand,
+			PermOrdersApprove:          ScopeBrand,
+			PermOrdersCancel:           ScopeBrand,
+			PermPricingSaleRead:        ScopeBrand,
+			PermPricingSaleWrite:       ScopeBrand,
+			PermPricingRecommendedRead: ScopeBrand,
+			PermServicesRead:           ScopeBrand,
+			PermCustomersRead:          ScopeBrand,
+			PermVehiclesRead:           ScopeBrand,
+			PermWarrantiesRead:         ScopeBrand,
+			// Reports (read only).
+			PermPerformanceRead:       ScopeBrand,
+			PermPricingDisciplineRead: ScopeBrand,
+			PermTasksRead:             ScopeBrand,
+			PermTasksWrite:            ScopeBrand,
+			PermAnnouncementsRead:     ScopeManaged,
+			PermLibraryRead:           ScopeManaged,
+			PermAIUse:                 ScopeOwn,
+			PermAIActionsConfirm:      ScopeOwn,
+			PermMCPConnect:            ScopeOwn,
+		}),
 	},
 	{
 		Slug: RoleDistributorOwner, Name: "Distributor owner", OrgType: OrgTypeDistributor,
@@ -1354,18 +1392,20 @@ var Roles = []RoleDef{
 	},
 	{
 		Slug: RoleDistributorWarehouseStaff, Name: "Distributor warehouse staff", OrgType: OrgTypeDistributor,
-		Description: "Distributor warehouse operator",
+		Description: "Distributor warehouse operator; reads the dealers, sees no prices",
 		Grants: grants(baseGrants, map[string]Scope{
 			PermVehicleCatalogRead: ScopeManaged,
 			PermCatalogRead:        ScopeManaged,
-			PermWarehouseRead:      ScopeManaged,
-			PermWarehouseWrite:     ScopeManaged,
-			PermStockRead:          ScopeSubtree, // TEC-216 (000061)
-			PermStockWrite:         ScopeManaged,
-			PermStockAdjust:        ScopeManaged,
-			PermOrdersRead:         ScopeManaged,
-			PermOrdersShip:         ScopeManaged,
-			PermOrdersReceive:      ScopeManaged,
+			// TEC-1089 (000176): read-only dealers page (TEC-1066).
+			PermOrganizationsRead: ScopeSubtree,
+			PermWarehouseRead:     ScopeManaged,
+			PermWarehouseWrite:    ScopeManaged,
+			PermStockRead:         ScopeSubtree, // TEC-216 (000061)
+			PermStockWrite:        ScopeManaged,
+			PermStockAdjust:       ScopeManaged,
+			PermOrdersRead:        ScopeManaged,
+			PermOrdersShip:        ScopeManaged,
+			PermOrdersReceive:     ScopeManaged,
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
@@ -1399,6 +1439,10 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-1089 (000176): manual "invoiced" mark of the
+			// distributor's own sales (TEC-1030, TEC-1070).
+			PermEinvoiceRead:   ScopeManaged,
+			PermEinvoiceManage: ScopeManaged,
 		}),
 	},
 	{
@@ -1508,7 +1552,7 @@ var Roles = []RoleDef{
 	},
 	{
 		Slug: RoleDealerStaff, Name: "Dealer staff", OrgType: OrgTypeDealer,
-		Description: "Dealer staff: reads the dealer's services, writes own records; no prices or accounting",
+		Description: "Dealer staff: reads the dealer's services, writes own records; sees no prices (purchase or sale) and no accounting",
 		Grants:      dealerStaffGrants,
 	},
 	{
@@ -1579,6 +1623,7 @@ var (
 // (TEC-1026).
 var CenterOwnerMembers = []string{
 	RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService,
+	RoleCenterSales, // TEC-1089: a subset of staff ∪ accounting, the union is unchanged
 }
 
 // CenterOwnerExtras are the grants only the center owner holds on top of

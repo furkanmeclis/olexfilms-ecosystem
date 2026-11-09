@@ -29,6 +29,7 @@
   "names.center_accounting": "Mərkəz mühasibatlığı",
   "names.center_social": "Mərkəz sosial media",
   "names.center_service": "Mərkəz servis personalı",
+  "names.center_sales": "Satış nümayəndəsi",
   "names.distributor_owner": "Distribyutor sahibi",
   "names.distributor_staff": "Distribyutor əməkdaşı",
   "names.distributor_warehouse_staff": "Distribyutor anbar əməkdaşı",
@@ -59,5 +60,19 @@
   "toast.updated": "Rol yeniləndi",
   "toast.deleted": "Rol silindi",
   "labels.custom": "Fərdi",
-  "fields.created_at": "Yaradılıb"
+  "fields.created_at": "Yaradılıb",
+  "descriptions.center_owner": "Mərkəzin bütün şöbələri (işçi, anbar, mühasibat, sosial media, xidmət nöqtəsi) bir rolda.",
+  "descriptions.center_staff": "Xidmətlər, müştərilər, sifarişlər və diler şəbəkəsi; qiymətləri görmür.",
+  "descriptions.center_warehouse": "Anbar, stok və göndərmə; qiymətləri görmür.",
+  "descriptions.center_accounting": "Mühasibat, qiymətlər (alış və satış) və e-qaimələr.",
+  "descriptions.center_social": "Lidlər, kampaniyalar və sosial media.",
+  "descriptions.center_service": "Mərkəzin öz xidmət nöqtəsi: xidmətlər, müştərilər, zəmanətlər və görüşlər; qiymətləri görmür, anbar və mühasibat yoxdur.",
+  "descriptions.center_sales": "Diler sifarişləri, satış qiymətləri və endirimlər, dilerlər, xidmətlər və müştərilər (oxuma) və hesabatlar; alış qiyməti, anbar və mühasibat yoxdur.",
+  "descriptions.distributor_owner": "Distribyutorun qiymətləri, mühasibatı, anbarı və diler şəbəkəsi.",
+  "descriptions.distributor_staff": "Alt şəbəkənin xidmətləri və dilerləri.",
+  "descriptions.distributor_warehouse_staff": "Anbar və göndərmə, dilerləri yalnız oxuma rejimində görür; qiymətləri görmür.",
+  "descriptions.distributor_accounting": "Mühasibat, qiymətlər və sifarişlərdə \"Faktura kəsildi\" işarəsi.",
+  "descriptions.dealer_owner": "Dilerin son qiymətləri, mühasibatı və stoku.",
+  "descriptions.dealer_staff": "Dilerin xidmətləri və öz qeydləri; qiymətləri və mühasibatı görmür.",
+  "descriptions.dealer_accounting": "Diler mühasibatı və qiymətlər."
 }
