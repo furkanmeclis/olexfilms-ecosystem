@@ -369,5 +369,14 @@
   "network_scope.network": "الشبكة كاملة",
   "wizard.performer": "المنفّذ",
   "wizard.performer_own": "{{name}} (نقطة خدمتنا)",
-  "wizard.performer_hint": "إذا اخترت وكيلًا تُفتح الخدمة باسمه ويُسجَّل الإجراء."
+  "wizard.performer_hint": "إذا اخترت وكيلًا تُفتح الخدمة باسمه ويُسجَّل الإجراء.",
+  "list.stats.total": "إجمالي الخدمات",
+  "list.stats.total_hint": "بما فيها {{cancelled}} ملغاة",
+  "list.stats.this_month": "المفتوحة هذا الشهر",
+  "list.stats.this_month_hint": "منذ بداية الشهر",
+  "list.stats.in_progress": "قيد التنفيذ",
+  "list.stats.in_progress_hint": "معلقة، قيد المعالجة، جاهزة · {{draft}} مسودات",
+  "list.stats.completed": "المكتملة",
+  "list.stats.active_warranties": "الضمانات النشطة",
+  "list.stats.warranties_hint": "إجمالي {{total}} ضمانات"
 }

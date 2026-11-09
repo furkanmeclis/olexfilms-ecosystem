@@ -369,5 +369,14 @@
   "network_scope.network": "整个网络",
   "wizard.performer": "执行方",
   "wizard.performer_own": "{{name}}（本店服务点）",
-  "wizard.performer_hint": "选择经销商后，服务以该经销商名义创建，并记录操作。"
+  "wizard.performer_hint": "选择经销商后，服务以该经销商名义创建，并记录操作。",
+  "list.stats.total": "服务总数",
+  "list.stats.total_hint": "含 {{cancelled}} 个已取消",
+  "list.stats.this_month": "本月新开",
+  "list.stats.this_month_hint": "自本月初起",
+  "list.stats.in_progress": "进行中",
+  "list.stats.in_progress_hint": "待处理、处理中、已就绪 · {{draft}} 个草稿",
+  "list.stats.completed": "已完成",
+  "list.stats.active_warranties": "有效质保",
+  "list.stats.warranties_hint": "共 {{total}} 份质保"
 }

@@ -60,3 +60,21 @@ func requestNow(r *http.Request) time.Time {
 	}
 	return now.UTC()
 }
+
+// ListStats (GET /v1/services/stats[?organization_uuid=], TEC-1075): the
+// summary cards above the service list, in the list's scope; this_month in
+// the request's time zone (K10 default Europe/Istanbul).
+func (h *Handler) ListStats(w http.ResponseWriter, r *http.Request) {
+	orgs, err := svcuc.UUIDList(r.URL.Query(), svcuc.QueryOrganizationUUID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	tz := i18n.FromContext(r.Context()).Timezone
+	out, err := h.svc.ListStats(r.Context(), caller(r), orgs, svcuc.MonthStart(time.Now(), tz))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}

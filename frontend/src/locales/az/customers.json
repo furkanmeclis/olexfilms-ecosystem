@@ -1,9 +1,9 @@
 {
-  "nav": "Müştərilər",
+  "nav": "Müştərilər və avtomobillər",
   "nav_list": "Müştəri siyahısı",
   "nav_new": "Yeni müştəri",
   "loading": "Yüklənir…",
-  "list.title": "Müştərilər",
+  "list.title": "Müştərilər və avtomobillər",
   "list.description": "Görə bildiyiniz təşkilatlara bağlı müştərilər.",
   "list.forbidden": "Bu səhifəni açmaq üçün müştəriləri oxuma icazəsi lazımdır.",
   "list.search": "Axtar",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Diler işçisi",
   "actions.upgrade.confirm": "Yüksəlt",
   "actions.upgrade.success": "Müştəri artıq {{dealer}} üzvüdür.",
-  "fields.organization": "Təşkilat"
+  "fields.organization": "Təşkilat",
+  "fields.opened_by": "Açan diler"
 }

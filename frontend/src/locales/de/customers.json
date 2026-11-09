@@ -1,9 +1,9 @@
 {
-  "nav": "Kunden",
+  "nav": "Kunden und Fahrzeuge",
   "nav_list": "Kundenliste",
   "nav_new": "Neuer Kunde",
   "loading": "Wird geladen…",
-  "list.title": "Kunden",
+  "list.title": "Kunden und Fahrzeuge",
   "list.description": "Kunden der Organisationen, die Sie sehen können.",
   "list.forbidden": "Zum Öffnen dieser Seite benötigen Sie die Berechtigung zum Lesen von Kunden.",
   "list.search": "Suchen",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Händler-Mitarbeiter",
   "actions.upgrade.confirm": "Hochstufen",
   "actions.upgrade.success": "Der Kunde ist jetzt Mitglied von {{dealer}}.",
-  "fields.organization": "Organisation"
+  "fields.organization": "Organisation",
+  "fields.opened_by": "Angelegt von Händler"
 }

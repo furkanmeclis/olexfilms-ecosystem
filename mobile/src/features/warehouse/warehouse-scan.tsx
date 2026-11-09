@@ -16,7 +16,7 @@ import { Text } from '@/ui/text';
 import { classifyCode } from '@/features/scan/scan-codes';
 
 import { countApi, resolveScan, type ScanResult, transferApi, useCounts, useTransfers, wk } from './api';
-import { useCurrentWarehouse } from './context';
+import { useCurrentWarehouse, useWarehouseScope } from './context';
 import { BARCODE_TYPES } from './continuous-scanner';
 import { alertError, go, whError } from './format';
 import { ScanResultCard } from './scan-result-card';
@@ -51,8 +51,10 @@ export function WarehouseScan() {
   const last = useRef({ code: '', at: 0 });
 
   // Open documents the scanned unit can go into (cached lists, refreshed in the background).
-  const drafts = useTransfers('draft');
-  const counting = useCounts('in_progress');
+  // Only the current warehouse's documents (TEC-1049): drafts leave from it, counts run in it.
+  const scope = useWarehouseScope();
+  const drafts = useTransfers('draft', scope);
+  const counting = useCounts('in_progress', scope);
   const draftList = drafts.data?.pages.flatMap((p) => p.items) ?? [];
   const countList = counting.data?.pages.flatMap((p) => p.items) ?? [];
 

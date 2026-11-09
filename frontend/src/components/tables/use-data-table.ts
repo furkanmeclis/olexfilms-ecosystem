@@ -223,7 +223,21 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
     }
   }, [controlled?.globalFilter]);
 
-  const effectiveVisibility = controlled?.columnVisibility ?? columnVisibility;
+  // TEC-1075: a column the visibility state does not mention yet (state
+  // persisted before the column existed, or a column added after mount,
+  // e.g. once permissions load) keeps its defaultHidden meta instead of
+  // showing up.
+  const defaultVisibility = useMemo(
+    () => defaultHiddenVisibility(columns),
+    [columns],
+  );
+  const effectiveVisibility = useMemo(
+    () => ({
+      ...defaultVisibility,
+      ...(controlled?.columnVisibility ?? columnVisibility),
+    }),
+    [defaultVisibility, controlled?.columnVisibility, columnVisibility],
+  );
   const effectiveOrder = controlled?.columnOrder ?? columnOrder;
   const effectivePinning = controlled?.columnPinning ?? columnPinning;
   const effectiveSizing = controlled?.columnSizing ?? columnSizing;
@@ -284,7 +298,7 @@ export function useDataTable<TData>(options: UseDataTableOptions<TData>) {
       sorting: controlled?.sorting ?? sorting,
       columnFilters: controlled?.columnFilters ?? columnFilters,
       globalFilter: controlled?.globalFilter ?? globalFilter,
-      columnVisibility: controlled?.columnVisibility ?? columnVisibility,
+      columnVisibility: effectiveVisibility,
       columnOrder: controlled?.columnOrder ?? columnOrder,
       columnPinning: controlled?.columnPinning ?? columnPinning,
       columnSizing: controlled?.columnSizing ?? columnSizing,

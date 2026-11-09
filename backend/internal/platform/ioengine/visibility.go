@@ -21,20 +21,54 @@ import (
 const QueryGrantedPermissions = "_permissions"
 
 // ColumnPermissions lists the distinct permission slugs the columns need,
-// sorted.
+// sorted. A Column.Permission may list alternatives separated by "|"
+// (any-of, TEC-1050 price columns); each alternative is listed.
 func ColumnPermissions(cols []Column) []string {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, c := range cols {
-		slug := strings.TrimSpace(c.Permission)
-		if slug == "" || seen[slug] {
-			continue
+		for _, slug := range permissionAlternatives(c.Permission) {
+			if seen[slug] {
+				continue
+			}
+			seen[slug] = true
+			out = append(out, slug)
 		}
-		seen[slug] = true
-		out = append(out, slug)
 	}
 	sort.Strings(out)
 	return out
+}
+
+// permissionAlternatives splits an any-of column permission.
+func permissionAlternatives(perm string) []string {
+	out := []string{}
+	for _, s := range strings.Split(perm, "|") {
+		if s = strings.TrimSpace(s); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// ColumnAllowed reports whether the granted set unlocks a column
+// permission: empty is always allowed, otherwise any alternative.
+func ColumnAllowed(perm string, granted map[string]bool) bool {
+	alts := permissionAlternatives(perm)
+	if len(alts) == 0 {
+		return true
+	}
+	for _, s := range alts {
+		if granted[s] {
+			return true
+		}
+	}
+	return false
+}
+
+// GrantedAny reports whether the query holds the column permission perm
+// (any-of, see ColumnAllowed).
+func GrantedAny(q ExportQuery, perm string) bool {
+	return ColumnAllowed(perm, GrantedPermissions(q))
 }
 
 // SetGrantedPermissions stores the granted slugs on the query (an empty
@@ -78,7 +112,7 @@ func Granted(q ExportQuery, slug string) bool {
 func VisibleColumns(cols []Column, granted map[string]bool) []Column {
 	out := make([]Column, 0, len(cols))
 	for _, c := range cols {
-		if c.Permission == "" || granted[c.Permission] {
+		if ColumnAllowed(c.Permission, granted) {
 			out = append(out, c)
 		}
 	}
@@ -91,7 +125,7 @@ func VisibleColumns(cols []Column, granted map[string]bool) []Column {
 func ApplyColumnVisibility(ds Dataset, granted map[string]bool) Dataset {
 	hidden := map[string]bool{}
 	for _, c := range ds.Columns {
-		if c.Permission != "" && !granted[c.Permission] {
+		if !ColumnAllowed(c.Permission, granted) {
 			hidden[c.Key] = true
 		}
 	}

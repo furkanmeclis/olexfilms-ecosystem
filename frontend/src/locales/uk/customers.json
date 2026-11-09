@@ -1,9 +1,9 @@
 {
-  "nav": "Клієнти",
+  "nav": "Клієнти та автомобілі",
   "nav_list": "Список клієнтів",
   "nav_new": "Новий клієнт",
   "loading": "Завантаження…",
-  "list.title": "Клієнти",
+  "list.title": "Клієнти та автомобілі",
   "list.description": "Клієнти, пов'язані з доступними вам організаціями.",
   "list.forbidden": "Щоб відкрити цю сторінку, потрібне право на перегляд клієнтів.",
   "list.search": "Пошук",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Працівник дилера",
   "actions.upgrade.confirm": "Підвищити",
   "actions.upgrade.success": "Клієнт тепер учасник {{dealer}}.",
-  "fields.organization": "Організація"
+  "fields.organization": "Організація",
+  "fields.opened_by": "Відкрив дилер"
 }

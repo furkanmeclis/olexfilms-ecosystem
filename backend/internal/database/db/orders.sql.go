@@ -2789,6 +2789,42 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 	return i, err
 }
 
+const updateOrderItemUnitQuantity = `-- name: UpdateOrderItemUnitQuantity :one
+UPDATE order_item_units
+SET quantity = $1, reservation_id = $2
+WHERE id = $3
+RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at
+`
+
+type UpdateOrderItemUnitQuantityParams struct {
+	Quantity      pgtype.Int4 `json:"quantity"`
+	ReservationID pgtype.Int8 `json:"reservation_id"`
+	ID            int64       `json:"id"`
+}
+
+// TEC-1047: a fixed barcode scanned again on its line grows the assignment;
+// the larger quantity moves to a new reservation (the old one is released).
+func (q *Queries) UpdateOrderItemUnitQuantity(ctx context.Context, arg UpdateOrderItemUnitQuantityParams) (OrderItemUnit, error) {
+	row := q.db.QueryRow(ctx, updateOrderItemUnitQuantity, arg.Quantity, arg.ReservationID, arg.ID)
+	var i OrderItemUnit
+	err := row.Scan(
+		&i.ID,
+		&i.OrderItemID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UnitID,
+		&i.Quantity,
+		&i.Meters,
+		&i.ReservationID,
+		&i.MovementID,
+		&i.AssignedByUserID,
+		&i.AssignedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateOrderStatus = `-- name: UpdateOrderStatus :one
 UPDATE orders
 SET status = $1::text,
