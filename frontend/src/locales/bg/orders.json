@@ -163,6 +163,7 @@
   "assign.meters": "Метри",
   "assign.meters_placeholder": "Всичко",
   "assign.split_success": "Ролката е разделена: нов баркод {{barcode}}, на ролката остават {{rest}} м.",
+  "assign.print_label": "Печат на етикет",
   "items.amount": "Количество",
   "items.unit_price": "Единична цена",
   "items.line_total": "Сума на реда",

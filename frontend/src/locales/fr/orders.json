@@ -163,6 +163,7 @@
   "assign.meters": "Mètres",
   "assign.meters_placeholder": "Tout",
   "assign.split_success": "Rouleau découpé : nouveau code-barres {{barcode}}, il reste {{rest}} m sur le rouleau.",
+  "assign.print_label": "Imprimer l'étiquette",
   "items.amount": "Quantité",
   "items.unit_price": "Prix unitaire",
   "items.line_total": "Total de la ligne",

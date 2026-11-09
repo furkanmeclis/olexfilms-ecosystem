@@ -67,7 +67,9 @@ import { OrderPlacementPanel } from "@/features/warehouse/components/order-place
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import { warehouseService } from "@/features/warehouse/services/warehouse.service";
+import { stockService } from "@/features/stock/services/stock.service";
 import { isApiError } from "@/lib/api";
+import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -102,6 +104,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <dd className="text-sm break-words">{children}</dd>
     </div>
   );
+}
+
+/** Label PDF of one new split unit (TEC-1078: "Print label" in the toast). */
+async function printSplitLabel(barcode: string, failed: string) {
+  try {
+    const { blob, filename } = await stockService.unitLabels([barcode]);
+    triggerBrowserDownload(blob, filename ?? `${barcode}.pdf`);
+  } catch {
+    toast.error(failed);
+  }
 }
 
 function newSplitKey(): string {
@@ -140,11 +152,22 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
       setMeters("");
       setSplitKey(newSplitKey());
       if (updated.split) {
+        // TEC-1078: the cut leaves as <roll>-<meters>M; its label is one
+        // click away.
+        const newBarcode = updated.split.new_barcode;
         toast.success(
           t("orders.assign.split_success", {
-            barcode: updated.split.new_barcode,
+            barcode: newBarcode,
             rest: updated.split.source_remaining_meters,
           }),
+          {
+            duration: 10_000,
+            action: {
+              label: t("orders.assign.print_label"),
+              onClick: () =>
+                void printSplitLabel(newBarcode, t("warehouse.labels.failed")),
+            },
+          },
         );
       } else {
         toast.success(t("orders.assign.success"));

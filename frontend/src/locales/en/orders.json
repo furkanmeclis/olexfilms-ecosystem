@@ -163,6 +163,7 @@
   "assign.meters": "Meters",
   "assign.meters_placeholder": "All",
   "assign.split_success": "Roll split: new barcode {{barcode}}, {{rest}} m left on the roll.",
+  "assign.print_label": "Print label",
   "items.amount": "Amount",
   "items.unit_price": "Unit price",
   "items.line_total": "Line total",

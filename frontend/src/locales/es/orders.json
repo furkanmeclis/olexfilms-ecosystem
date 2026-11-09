@@ -163,6 +163,7 @@
   "assign.meters": "Metros",
   "assign.meters_placeholder": "Todo",
   "assign.split_success": "Rollo dividido: nuevo código de barras {{barcode}}, quedan {{rest}} m en el rollo.",
+  "assign.print_label": "Imprimir etiqueta",
   "items.amount": "Cantidad",
   "items.unit_price": "Precio unitario",
   "items.line_total": "Total de la línea",
