@@ -67,9 +67,12 @@ import { OrderPlacementPanel } from "@/features/warehouse/components/order-place
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import { warehouseService } from "@/features/warehouse/services/warehouse.service";
+import { stockService } from "@/features/stock/services/stock.service";
 import { isApiError } from "@/lib/api";
+import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 
 function Section({
   title,
@@ -102,6 +105,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <dd className="text-sm break-words">{children}</dd>
     </div>
   );
+}
+
+/** Label PDF of one new split unit (TEC-1078: "Print label" in the toast). */
+async function printSplitLabel(barcode: string, failed: string) {
+  try {
+    const { blob, filename } = await stockService.unitLabels([barcode]);
+    triggerBrowserDownload(blob, filename ?? `${barcode}.pdf`);
+  } catch {
+    toast.error(failed);
+  }
 }
 
 function newSplitKey(): string {
@@ -140,11 +153,22 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
       setMeters("");
       setSplitKey(newSplitKey());
       if (updated.split) {
+        // TEC-1078: the cut leaves as <roll>-<meters>M; its label is one
+        // click away.
+        const newBarcode = updated.split.new_barcode;
         toast.success(
           t("orders.assign.split_success", {
-            barcode: updated.split.new_barcode,
+            barcode: newBarcode,
             rest: updated.split.source_remaining_meters,
           }),
+          {
+            duration: 10_000,
+            action: {
+              label: t("orders.assign.print_label"),
+              onClick: () =>
+                void printSplitLabel(newBarcode, t("warehouse.labels.failed")),
+            },
+          },
         );
       } else {
         toast.success(t("orders.assign.success"));
@@ -321,6 +345,8 @@ export const ORDER_ITEMS_PERSIST_KEY = "tenant-order-items-v1";
  */
 function Items({ order, assign }: { order: Order; assign: boolean }) {
   const { t, format } = useLocale();
+  // TEC-1050: price columns and totals only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const store = useStoreOrder();
   const items = useMemo(() => order.items ?? [], [order.items]);
   const unassign = useMutation({
@@ -370,6 +396,8 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
             ? `${row.original.meters ?? "0"} ${t("orders.unit.m")}`
             : `${row.original.quantity ?? 0} ${t("orders.unit.pcs")}`,
       }) as ColumnDef<OrderItem, unknown>,
+    ];
+    const priceCols: ColumnDef<OrderItem, unknown>[] = [
       createColumn<OrderItem>({
         id: "unit_price",
         accessorFn: (item) => amountNumber(item.unit_price),
@@ -407,6 +435,7 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
         ),
       }) as ColumnDef<OrderItem, unknown>,
     ];
+    if (canSeePrices) cols.push(...priceCols);
     if (showInvoice) {
       cols.push(
         createColumn<OrderItem>({
@@ -506,6 +535,7 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
     return cols;
   }, [
     assign,
+    canSeePrices,
     format,
     order,
     showAssigned,
@@ -533,28 +563,30 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
           pagination: items.length > 20,
         }}
       />
-      <dl className="mt-4 space-y-1 border-t pt-3 text-sm">
-        <div className="flex justify-between gap-2">
-          <dt className="text-muted-foreground">
-            {t("orders.detail.subtotal")}
-          </dt>
-          <dd>
-            {format.currency(amountNumber(order.subtotal), order.currency)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt className="text-muted-foreground">{t("orders.detail.tax")}</dt>
-          <dd>
-            {format.currency(amountNumber(order.tax_total), order.currency)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2 font-semibold">
-          <dt>{t("orders.detail.total")}</dt>
-          <dd data-testid="order-total">
-            {format.currency(amountNumber(order.total), order.currency)}
-          </dd>
-        </div>
-      </dl>
+      {canSeePrices ? (
+        <dl className="mt-4 space-y-1 border-t pt-3 text-sm">
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">
+              {t("orders.detail.subtotal")}
+            </dt>
+            <dd>
+              {format.currency(amountNumber(order.subtotal), order.currency)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">{t("orders.detail.tax")}</dt>
+            <dd>
+              {format.currency(amountNumber(order.tax_total), order.currency)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2 font-semibold">
+            <dt>{t("orders.detail.total")}</dt>
+            <dd data-testid="order-total">
+              {format.currency(amountNumber(order.total), order.currency)}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
     </Section>
   );
 }
@@ -673,6 +705,8 @@ function InvoicesCard({
 
 function Parties({ order }: { order: Order }) {
   const { t, format } = useLocale();
+  // TEC-1050: currency and the frozen rate only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const rate = order.rate_snapshot;
   return (
     <Section
@@ -693,21 +727,28 @@ function Parties({ order }: { order: Order }) {
         <Field label={t("orders.detail.role")}>
           {t(`orders.role.${order.role}`)}
         </Field>
-        <Field label={t("orders.detail.currency")}>
-          <span dir="ltr">{order.currency}</span>
-        </Field>
-        <Field label={t("orders.detail.rate")}>
-          {rate ? (
-            <span dir="ltr" data-testid="order-rate">
-              1 {rate.base} = {rate.rate} {rate.quote} ({rate.rate_date},{" "}
-              {rate.source.toUpperCase()})
-            </span>
-          ) : (
-            <span className="text-muted-foreground" data-testid="order-rate">
-              {t("orders.detail.rate_pending")}
-            </span>
-          )}
-        </Field>
+        {canSeePrices ? (
+          <>
+            <Field label={t("orders.detail.currency")}>
+              <span dir="ltr">{order.currency}</span>
+            </Field>
+            <Field label={t("orders.detail.rate")}>
+              {rate ? (
+                <span dir="ltr" data-testid="order-rate">
+                  1 {rate.base} = {rate.rate} {rate.quote} ({rate.rate_date},{" "}
+                  {rate.source.toUpperCase()})
+                </span>
+              ) : (
+                <span
+                  className="text-muted-foreground"
+                  data-testid="order-rate"
+                >
+                  {t("orders.detail.rate_pending")}
+                </span>
+              )}
+            </Field>
+          </>
+        ) : null}
         <Field label={t("orders.detail.created_at")}>
           {format.dateTime(order.created_at)}
         </Field>
@@ -929,9 +970,24 @@ export function OrderDetailPage({
       ) : null}
       {assign && !fully ? <OrderScanBar order={order} /> : null}
       <OrderPlacementPanel slug={slug} order={order} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* TEC-1052 (5.10): while preparing, the lines (barcode assignment)
+          take the full width and the side cards move below them. */}
+      <div
+        className={
+          assign
+            ? "grid gap-6"
+            : "grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        }
+        data-testid="order-detail-layout"
+      >
         <Items order={order} assign={assign} />
-        <div className="space-y-6">
+        <div
+          className={
+            assign
+              ? "grid items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3"
+              : "space-y-6"
+          }
+        >
           <Parties order={order} />
           {order.status === "received" && order.role === "seller" ? (
             <InvoicesCard

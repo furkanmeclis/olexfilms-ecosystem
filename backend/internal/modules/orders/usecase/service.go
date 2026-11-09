@@ -93,7 +93,16 @@ type Caller struct {
 	Principal authctx.Principal
 	Org       orgctx.Scope
 	Filter    scopefilter.Filter
+	// PriceGrant is set by a background job (list export) whose request
+	// snapshot already granted the price columns; request callers rely on
+	// the principal (TEC-1050).
+	PriceGrant bool
 }
+
+// SeesPrices reports whether the caller may see prices, totals and rates
+// (TEC-1050): a principal holding a rbac.PriceViewPermissions grant, or a
+// job that snapshotted one. Otherwise the views carry null money fields.
+func (c Caller) SeesPrices() bool { return c.PriceGrant || c.Principal.SeesPrices() }
 
 func (c Caller) actor() pgtype.Int8 {
 	if c.Principal.UserInternal == 0 {
@@ -178,6 +187,9 @@ type CreateInput struct {
 	// SellerWarehouseUUID: the center's warehouse the order falls into
 	// (TEC-1028, with BuyerOrgUUID); empty = the primary warehouse.
 	SellerWarehouseUUID *string
+	// SelfPrepare: the center user prepares the order himself (TEC-1052,
+	// with BuyerOrgUUID, needs orders.ship): no warehouse staff is told.
+	SelfPrepare bool
 }
 
 // DraftResult reports whether a stock-forecast draft reused an existing open
@@ -369,6 +381,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 	}
 	if in.SellerWarehouseUUID != nil && strings.TrimSpace(*in.SellerWarehouseUUID) != "" {
 		return OrderView{}, invalid("seller_warehouse_uuid", "is only accepted with buyer_org_uuid")
+	}
+	if in.SelfPrepare {
+		return OrderView{}, invalid("self_prepare", "is only accepted with buyer_org_uuid")
 	}
 	var created db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {

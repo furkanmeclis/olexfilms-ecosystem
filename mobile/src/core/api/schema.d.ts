@@ -5840,7 +5840,7 @@ export interface paths {
         };
         /**
          * Current state and movement history of a barcode
-         * @description Needs `stock.read`, filtered on the holding organization (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse, K20) sees every unit and every name. A restricted viewer (managed, subtree, brand) sees a unit only while it is held inside its reach (404 otherwise). It then gets the whole history: rows of its own organizations and of its supplier chain are named; rows of any other organization are masked (`organization_masked`, owner `masked`, no location, reference or reason). Movements are in ledger order (oldest first) and paged with `limit`/`offset`. Fixed barcodes list the quantity per owner in `holdings` instead of `current`.
+         * @description Needs `stock.read`, filtered on the holding organization (`holder_org_id`, TEC-94 decision 4). Scope `all` (center warehouse, K20) sees every unit and every name. A restricted viewer (managed, subtree, brand) sees a unit only while it is held inside its reach (404 otherwise). It then gets the whole history: rows of its own organizations and of its supplier chain are named; rows of any other organization are masked (`organization_masked`, owner `masked`, no location, reference or reason). Movements are in ledger order (oldest first) and paged with `limit`/`offset`. Fixed barcodes list the quantity per owner in `holdings` instead of `current`. TEC-1078: `splits` names the roll the unit was cut from (`source`, only when the viewer reaches its holder) and lists every part cut from it, recursively (`parts`, depth 1 = cut from this unit), each only when the viewer reaches its holder; `family_status` is relative to the active organization.
          */
         get: operations["getStockUnitHistory"];
         put?: never;
@@ -5886,7 +5886,7 @@ export interface paths {
         };
         /**
          * Units held by an organization
-         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set. TEC-373 (docs/list-contract.md): `status` is a comma separated any-of filter; `barcode_match=prefix` makes `barcode` a prefix match; `location_uuid` (comma separated) keeps units on those locations (fixed barcodes have no single location and drop out); `updated_from` / `updated_to` bound the holding's last change; `sort` is one of product (default; barcode inside a product), barcode, status (flow rank reserved → void), quantity, meters (remaining, pieces last), updated_at, with an id tiebreak. An explicit sort, a barcode, location or date filter makes `q` search Postgres instead of the index. Labels for selected units: GET /v1/stock/labels/units.pdf with one `barcode` per unit.
+         * @description Needs `stock.read`; the organization must be inside the viewer's reach (404 otherwise). The distributor roles distributor_owner and distributor_warehouse_staff hold `stock.read` at scope `subtree` (TEC-216, migration 000061), so a distributor lists the units of its own dealers; it still cannot write or adjust them. Serial units come from `unit_current_state` (one row, `quantity` 1), fixed barcodes from `fixed_barcode_holdings` (one row per barcode with the quantity on hand). Without `status` the list holds the units counted as stock (available, placed); `status` lists exactly that status. `barcode` is an exact match, `product_uuid` narrows to one product, `q` matches a part of the product name, SKU or barcode (TEC-210: when Meilisearch is up and no `barcode` is given the stock units index answers it, which also matches the bin full_code; hits are reloaded from Postgres with the same filters). `purchase_price` is the price the holding organization pays for the product (K8, in the organization's currency); it is null when the viewer's `pricing.purchase.read` does not reach the organization (a direct parent sees its child's purchase price through its own `pricing.sale.read`), for the center, or when no price is set. TEC-373 (docs/list-contract.md): `status` is a comma separated any-of filter; `barcode_match=prefix` makes `barcode` a prefix match; `location_uuid` (comma separated) keeps units on those locations (fixed barcodes have no single location and drop out); `updated_from` / `updated_to` bound the holding's last change; `sort` is one of product (default; barcode inside a product), barcode, status (flow rank reserved → void), quantity, meters (remaining, pieces last), updated_at, with an id tiebreak. An explicit sort, a barcode, location or date filter makes `q` search Postgres instead of the index. Labels for selected units: GET /v1/stock/labels/units.pdf with one `barcode` per unit. TEC-1078: `family=<barcode>` lists the split family of that barcode in the organization's brand instead (the unit, depth 0, and every part cut from it recursively, wherever it is now), ignoring the other filters, `q` and `sort` (depth, then cut order); each row only when the viewer's `stock.read` reaches its holder (a dealer sees its own parts, never a sibling's). Rows then carry `holder`, `family_status` (on_hand at this organization, sold to another, used, in_transit, other), `family_depth`, `source_barcode`, `split_meters` and `order`; `quantity` is 1 only for on_hand. An unknown barcode is an empty page.
          */
         get: operations["listStockOrganizationUnits"];
         put?: never;
@@ -6232,7 +6232,7 @@ export interface paths {
         put?: never;
         /**
          * Split a roll (cut meters off as a new unit)
-         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product with the barcode `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
+         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product at the roll's owner. TEC-1078: its barcode is `<roll barcode>-<meters>M` (whole meters without decimals `-3M`, otherwise a dot without trailing zeros `-2.5M`); the same length cut again from that roll gets `-3M-2`, `-3M-3`, ...; when that would pass 64 characters the legacy `<roll barcode>-S<n>` is used. Earlier `-S<n>` barcodes stay as they are. The roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
          */
         post: operations["createStockSplit"];
         delete?: never;
@@ -6680,7 +6680,7 @@ export interface paths {
         put?: never;
         /**
          * Reserve N barcodes for a product (center only)
-         * @description Needs `stock.write` at the center (K14; other organization types answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity` barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the brand's counter under its lock and creates the units in status `reserved`; printing a label PDF advances them to `printed`. They enter stock later through the stock entry flow. Roll products need `meters` (the length of each roll); fixed-barcode products get fixed units. The prefix defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split barcode `<barcode>-S<n>` never collides with this format. The response carries every unit and `labels_url`, the batch's label PDF. An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
+         * @description Needs `stock.write` at the center (K14; other organization types answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity` barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the brand's counter under its lock and creates the units in status `reserved`; printing a label PDF advances them to `printed`. They enter stock later through the stock entry flow. Roll products need `meters` (the length of each roll); fixed-barcode products get fixed units. The prefix defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split barcode `<barcode>-<meters>M[-<k>]` (legacy `<barcode>-S<n>`) never collides with this format. The response carries every unit and `labels_url`, the batch's label PDF. An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
          */
         post: operations["createBarcodeBatch"];
         delete?: never;
@@ -7069,7 +7069,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve one scanned code (location QR, unit barcode, SKU, short code)
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]` (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`, `-<m>M` or `-<m>M-<k>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["resolveWarehouseScan"];
         delete?: never;
@@ -8019,7 +8019,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`; default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope). An explicit sort or any of the TEC-371 filters keeps a `q` search on SQL.
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`, `opened_by` (TEC-1074, opening organization name); default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope); TEC-1074 `opened_by_uuid` CSV. An explicit sort or any of these filters keeps a `q` search on SQL.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -9824,7 +9824,7 @@ export interface paths {
          * Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]` (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`, `-<m>M` or `-<m>M-<k>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["mobileResolveWarehouseScan"];
         delete?: never;
@@ -12195,6 +12195,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summary cards of the service list
+         * @description TEC-1075. services.read, same scope as GET /v1/services (organization, subtree, brand, own). Totals per status, the services opened this calendar month (request time zone, K10 default Europe/Istanbul) and the warranty counts of those services (legacy hub ServiceOverviewStatsWidget). `organization_uuid` narrows like the list filter (the center's own / network switch).
+         */
+        get: operations["getServiceListStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/service-no-availability": {
         parameters: {
             query?: never;
@@ -13140,7 +13160,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index.
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index. TEC-1050: a caller without a price permission (any of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; the warehouse roles hold none) gets null money fields, and `total_min` / `total_max` and `sort=total` are ignored for it. The same applies to every order response and to `POST /v1/orders/export` (no currency / subtotal / tax / total columns) and the order slip PDF (prices shown as "—").
          */
         get: operations["listOrders"];
         put?: never;
@@ -13250,7 +13270,7 @@ export interface paths {
         put?: never;
         /**
          * Assign a unit to an order line and reserve it (seller, orders.ship)
-         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (<roll barcode>-S<n>), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
+         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (TEC-1078: `<roll barcode>-<meters>M`, `-3M-2` for the same length again, legacy `-S<n>` past 64 characters), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
          */
         post: operations["assignOrderUnit"];
         delete?: never;
@@ -17433,7 +17453,7 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
          */
         get: operations["getReport"];
         put?: never;
@@ -18565,6 +18585,14 @@ export interface components {
             linked_at: string | null;
             /** Format: date-time */
             first_service_at: string | null;
+            /** @description TEC-1074: the organization that opened the customer (first organization link inside the caller's scope). List rows only. */
+            opened_by?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                /** @enum {string} */
+                type: "center" | "distributor" | "dealer";
+            };
         };
         CustomerDetail: components["schemas"]["CustomerSummary"] & {
             tax_office: string | null;
@@ -22869,6 +22897,48 @@ export interface components {
                 offset: number;
             };
             trace: null | components["schemas"]["StockUnitTrace"];
+            splits: components["schemas"]["StockUnitSplits"];
+        };
+        /**
+         * @description TEC-1078: a split family member relative to the organization the family is read for: on_hand (available/placed there), sold (available/placed at another organization), used (consumed or used up), in_transit, other (label not in stock yet, void).
+         * @enum {string}
+         */
+        StockSplitFamilyStatus: "on_hand" | "sold" | "used" | "in_transit" | "other";
+        StockOrderRef: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+        };
+        /** @description TEC-1078: the split family around a unit. Parts are coded by their meters (`<roll>-3M`, `<roll>-3M-2`, `<roll>-2.5M`; legacy `-S<n>`). */
+        StockUnitSplits: {
+            /** @description The roll this unit was cut from; null when none or outside the viewer's reach. */
+            source: {
+                /** Format: uuid */
+                uuid: string;
+                barcode: string;
+                /** @description Meters cut off it as this unit */
+                meters: string;
+            } | null;
+            parts: components["schemas"]["StockSplitPart"][];
+        };
+        StockSplitPart: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @description 1: cut from the unit itself; 2: from one of its parts, ... */
+            depth: number;
+            source_barcode: string;
+            /** @description Meters cut (decimal string) */
+            meters: string;
+            remaining_meters: string | null;
+            status: components["schemas"]["StockUnitStatus"];
+            family_status: components["schemas"]["StockSplitFamilyStatus"];
+            owner_type: string | null;
+            holder: components["schemas"]["StockOrgRef"] | null;
+            /** @description Latest order that carried the part; null when none or outside the viewer's reach. */
+            order: components["schemas"]["StockOrderRef"] | null;
+            /** Format: date-time */
+            split_at: string;
         };
         StockProduct: {
             product: {
@@ -22987,6 +23057,18 @@ export interface components {
             } | null;
             /** Format: date-time */
             updated_at: string;
+            /** @description family=<barcode> only (TEC-1078): the current holder. */
+            holder?: components["schemas"]["StockOrgRef"];
+            /** @description family=<barcode> only (TEC-1078). */
+            family_status?: components["schemas"]["StockSplitFamilyStatus"];
+            /** @description family=<barcode> only: 0 for the roll, 1+ for parts. */
+            family_depth?: number;
+            /** @description family=<barcode> only: the roll a part was cut from. */
+            source_barcode?: string;
+            /** @description family=<barcode> only: meters cut as this part. */
+            split_meters?: string;
+            /** @description family=<barcode> only: latest order that carried the part, within the viewer's reach. */
+            order?: components["schemas"]["StockOrderRef"];
         };
         EnvelopeStockUnitPage: {
             /** @enum {boolean} */
@@ -26544,6 +26626,8 @@ export interface components {
             status: components["schemas"]["ServiceStatus"];
             status_label: string;
             organization: components["schemas"]["ServiceOrgRef"];
+            /** @description TEC-1075: who applied the service. The center's service point name (e.g. AFM Florya) for the center's own services when its service point is on, else the organization name. */
+            applied_by: string;
             customer: components["schemas"]["ServiceCustomerRef"];
             /** Format: uuid */
             vehicle_uuid: string;
@@ -26627,6 +26711,44 @@ export interface components {
             valid: boolean;
             /** @description Valid and not held by another service, warranty code or alias */
             available: boolean;
+        };
+        ServiceListStats: {
+            /** Format: int64 */
+            total: number;
+            /**
+             * Format: int64
+             * @description Opened since month_start
+             */
+            this_month: number;
+            /** Format: date-time */
+            month_start: string;
+            by_status: {
+                /** Format: int64 */
+                draft: number;
+                /** Format: int64 */
+                pending: number;
+                /** Format: int64 */
+                processing: number;
+                /** Format: int64 */
+                ready: number;
+                /** Format: int64 */
+                completed: number;
+                /** Format: int64 */
+                cancelled: number;
+            };
+            /** Format: int64 */
+            warranties: number;
+            /**
+             * Format: int64
+             * @description Active and not past end_at
+             */
+            active_warranties: number;
+        };
+        EnvelopeServiceListStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceListStats"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServiceNoAvailability: {
             /** @enum {boolean} */
@@ -27073,11 +27195,11 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /**
-         * @description 30d / 90d days, 12m twelve calendar months, all = all time.
+         * @description today since midnight in the request time zone (TEC-1072), 7d / 30d / 90d days, 12m twelve calendar months, all = all time.
          * @default 30d
          * @enum {string}
          */
-        StatsPeriod: "30d" | "90d" | "12m" | "all";
+        StatsPeriod: "today" | "7d" | "30d" | "90d" | "12m" | "all";
         /**
          * @default model
          * @enum {string}
@@ -27247,7 +27369,7 @@ export interface components {
             barcode?: string;
             /** Format: uuid */
             unit_uuid?: string;
-            /** @description Fixed barcodes only (serial pieces are 1) */
+            /** @description Fixed barcodes only (serial pieces are 1). TEC-1047: optional; without it the rest of the line is taken as far as the stock reaches, and a fixed barcode already on the line grows its assignment */
             quantity?: number;
             /** @description Rolls only; at most the remaining meters (fewer meters split the roll, TEC-184); a JSON number is accepted too */
             meters?: string;
@@ -27269,19 +27391,22 @@ export interface components {
             /** @description Meters with two decimals (roll_meter products) */
             meters: string | null;
             /**
-             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval
+             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
              * @example 80.0000
              */
-            unit_price: string;
+            unit_price: string | null;
             /**
-             * @description manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024)
-             * @enum {string}
+             * @description manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @enum {string|null}
              */
-            price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing";
-            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024) */
+            price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing" | null;
+            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false when prices are hidden (TEC-1050) */
             price_missing: boolean;
-            /** @example 240.00 */
-            line_total: string;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            line_total: string | null;
             note: string | null;
             /**
              * @description Amount covered by the assigned units (pieces, or meters with two decimals)
@@ -27373,14 +27498,24 @@ export interface components {
             buyer: components["schemas"]["OrderOrgRef"];
             /** @description Seller brand currency */
             currency: string;
-            /** @example 240.00 */
-            subtotal: string;
-            /** @example 0.00 */
-            tax_total: string;
-            /** @example 240.00 */
-            total: string;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            subtotal: string | null;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 0.00
+             */
+            tax_total: string | null;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            total: string | null;
+            /** @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             rate_snapshot: components["schemas"]["OrderRateSnapshot"] | null;
-            /** @description TRY rate frozen at approval */
+            /** @description TRY rate frozen at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             try_rate: string | null;
             note: string | null;
             cancel_reason: string | null;
@@ -27643,6 +27778,8 @@ export interface components {
              * @description TEC-1028: the center's active warehouse the order falls into (only with buyer_org_uuid, else 400). Omitted: the center's primary warehouse.
              */
             seller_warehouse_uuid?: string;
+            /** @description TEC-1052: the creating center user prepares the order himself (only with buyer_org_uuid, else 400; needs orders.ship, else 400; omitted: false). No orders.warehouse_new is written, so no warehouse staff (of the order's warehouse or another) is notified; the status history keeps self_prepare in its metadata. */
+            self_prepare?: boolean;
             items: components["schemas"]["OrderItemInput"][];
         };
         /** @enum {string} */
@@ -27965,8 +28102,9 @@ export interface components {
             quantity: number | null;
             /** @description Remaining meters of a roll when requested */
             meters: string | null;
-            /** @description Giver's purchase price frozen at approval (K13) */
+            /** @description Giver's purchase price frozen at approval (K13); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             unit_price: string | null;
+            /** @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             line_total: string | null;
             /** @description The transfer_out movement is written */
             shipped: boolean;
@@ -27992,7 +28130,7 @@ export interface components {
             receiver: components["schemas"]["OrderOrgRef"];
             parent: components["schemas"]["OrderOrgRef"];
             currency: string;
-            /** @description Sum of the frozen line totals (null until approval or with an unpriced unit) */
+            /** @description Sum of the frozen line totals (null until approval or with an unpriced unit); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             total: string | null;
             note: string | null;
             decision_note: string | null;
@@ -32259,7 +32397,7 @@ export interface components {
         };
     };
     parameters: {
-        ReportPeriod: "7d" | "30d" | "90d" | "12m" | "custom";
+        ReportPeriod: "today" | "7d" | "30d" | "90d" | "12m" | "custom";
         ReportRangeFrom: string;
         ReportRangeTo: string;
         /** @description Label locale (default the request locale chain, K10). */
@@ -42458,6 +42596,8 @@ export interface operations {
                 updated_from?: components["parameters"]["UpdatedFrom"];
                 /** @description Updated on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `updated_from` after `updated_to` → 400. */
                 updated_to?: components["parameters"]["UpdatedTo"];
+                /** @description TEC-1078: list the split family of this barcode (the roll and every part cut from it) instead of the on-hand units. */
+                family?: string;
             };
             header?: never;
             path: {
@@ -46229,6 +46369,8 @@ export interface operations {
                 linked_to?: string;
                 /** @description CSV of organization UUIDs; customers linked to one of them (inside the scope). */
                 organization_uuid?: string;
+                /** @description TEC-1074: CSV of organization UUIDs; customers whose opening organization (`opened_by`, first link inside the scope) is one of them. */
+                opened_by_uuid?: string;
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
@@ -53856,6 +53998,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getServiceListStats: {
+        parameters: {
+            query?: {
+                /** @description CSV of organization UUIDs (inside the scope). */
+                organization_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceListStats"];
                 };
             };
             400: components["responses"]["BadRequest"];

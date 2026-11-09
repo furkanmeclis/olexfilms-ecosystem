@@ -57,10 +57,12 @@ func New(q *db.Queries) *Service { return &Service{q: q} }
 type viewer struct {
 	f         scopefilter.Filter
 	ancestors map[int64]bool
+	// org is the active organization (split family states, TEC-1078).
+	org int64
 }
 
 func (s *Service) viewer(ctx context.Context, org orgctx.Scope, f scopefilter.Filter) (viewer, error) {
-	v := viewer{f: f, ancestors: map[int64]bool{}}
+	v := viewer{f: f, ancestors: map[int64]bool{}, org: org.InternalID}
 	if f.Scope == rbac.ScopeAll {
 		return v, nil
 	}
@@ -302,6 +304,9 @@ func (s *Service) history(ctx context.Context, v viewer, u db.Unit, st *db.UnitC
 		})
 	}
 	if out.Trace, err = s.Trace(ctx, v.f, u); err != nil {
+		return model.UnitHistory{}, err
+	}
+	if out.Splits, err = s.unitSplits(ctx, v, u); err != nil {
 		return model.UnitHistory{}, err
 	}
 	docs, actors, err := s.movementLinks(ctx, rows)

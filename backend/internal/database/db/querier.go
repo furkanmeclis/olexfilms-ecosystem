@@ -1407,6 +1407,8 @@ type Querier interface {
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
 	GetUnitLotNote(ctx context.Context, id int64) (GetUnitLotNoteRow, error)
+	// The roll a unit was cut from (TEC-1078), with its current holder.
+	GetUnitSplitSource(ctx context.Context, unitID int64) (GetUnitSplitSourceRow, error)
 	// TEC-1006: the warehouse-layer trace of a unit (view unit_traces).
 	GetUnitTrace(ctx context.Context, unitID int64) (GetUnitTraceRow, error)
 	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
@@ -2306,8 +2308,9 @@ type Querier interface {
 	// Customers of the organizations in scope; one row per user.
 	// TEC-371: statuses / customer types are CSV filters, linked_at is a date
 	// range on the first link, organization_uuids narrows the links to those
-	// organizations (inside the scope above). Sort: docs/list-contract.md, keys
-	// from customers usecase customersSortSpec.
+	// organizations (inside the scope above). TEC-1074: opened_by_* is the
+	// first in-scope link (opened_by_uuids filters on it). Sort:
+	// docs/list-contract.md, keys from customers usecase customersSortSpec.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
 	// Every typed location (aisle, shelf, bin) of the organization with its
 	// warehouse and room; callers resolve the parents from the same set.
@@ -2811,6 +2814,13 @@ type Querier interface {
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
+	// TEC-1078: the split family of a roll — the roll (depth 0) and every unit
+	// cut from it, recursively through stock_splits (a part may be cut again).
+	// Each row carries the unit, its product, its current holder and owner (no
+	// state yet: NULL), the location when it sits in a bin, the meters of the
+	// split that made it, its source barcode and the latest order that carried
+	// it. The caller filters the rows by the stock.read reach of the holder.
+	ListUnitSplitFamily(ctx context.Context, unitID int64) ([]ListUnitSplitFamilyRow, error)
 	ListUnitTraceOrders(ctx context.Context, unitID int64) ([]ListUnitTraceOrdersRow, error)
 	ListUnitTraceServices(ctx context.Context, unitID int64) ([]ListUnitTraceServicesRow, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
@@ -3512,6 +3522,7 @@ type Querier interface {
 	ReportMeasurementCounts(ctx context.Context, arg ReportMeasurementCountsParams) (ReportMeasurementCountsRow, error)
 	// Measurements (NexPTG results) by measured_at.
 	ReportMeasurementTrend(ctx context.Context, arg ReportMeasurementTrendParams) ([]ReportMeasurementTrendRow, error)
+	// TEC-1072: distributor counts next to the dealer counts (center home).
 	ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error)
 	ReportOrderOverview(ctx context.Context, arg ReportOrderOverviewParams) (ReportOrderOverviewRow, error)
 	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
@@ -3613,6 +3624,14 @@ type Querier interface {
 	// the breakdowns read completed services only.
 	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
 	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
+	// TEC-1075: summary cards above the service list (legacy hub
+	// ServiceOverviewStatsWidget): totals by status and the services opened
+	// since month_start, in the same scope as ListServicesInScope (org_ids NULL
+	// = whole brand, created_by for scope own) and its organization_uuids
+	// filter (the center's own / network switch).
+	ServiceListStats(ctx context.Context, arg ServiceListStatsParams) (ServiceListStatsRow, error)
+	// TEC-1075: warranty counts of the services ServiceListStats counts.
+	ServiceListWarrantyStats(ctx context.Context, arg ServiceListWarrantyStatsParams) (ServiceListWarrantyStatsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	// TEC-1004: a hand-entered service number must not be another service's
 	// number, nor a warranty public code or alias of another service (the
@@ -3948,6 +3967,9 @@ type Querier interface {
 	UpdateOAuthProviderSettings(ctx context.Context, arg UpdateOAuthProviderSettingsParams) (OauthProviderSetting, error)
 	UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftParams) (Order, error)
 	UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (OrderItem, error)
+	// TEC-1047: a fixed barcode scanned again on its line grows the assignment;
+	// the larger quantity moves to a new reservation (the old one is released).
+	UpdateOrderItemUnitQuantity(ctx context.Context, arg UpdateOrderItemUnitQuantityParams) (OrderItemUnit, error)
 	// Records one attempt: the new state, the hold reason (NULL unless held)
 	// and the last error (NULL on success).
 	UpdateOrderOutboundState(ctx context.Context, arg UpdateOrderOutboundStateParams) (OrderOutbound, error)

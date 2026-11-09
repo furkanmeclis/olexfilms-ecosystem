@@ -369,5 +369,14 @@
   "network_scope.network": "Whole network",
   "wizard.performer": "Performed by",
   "wizard.performer_own": "{{name}} (our service point)",
-  "wizard.performer_hint": "If you pick a dealer, the service is opened for that dealer and the action is logged."
+  "wizard.performer_hint": "If you pick a dealer, the service is opened for that dealer and the action is logged.",
+  "list.stats.total": "Total services",
+  "list.stats.total_hint": "Including {{cancelled}} cancelled",
+  "list.stats.this_month": "Opened this month",
+  "list.stats.this_month_hint": "Since the start of the month",
+  "list.stats.in_progress": "In progress",
+  "list.stats.in_progress_hint": "Pending, processing, ready · {{draft}} drafts",
+  "list.stats.completed": "Completed",
+  "list.stats.active_warranties": "Active warranties",
+  "list.stats.warranties_hint": "{{total}} warranties in total"
 }

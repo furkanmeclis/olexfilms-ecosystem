@@ -256,5 +256,18 @@
   "trace.no_service": "未在服务中使用。",
   "trace.source.order": "随订单",
   "trace.source.stock": "在库",
-  "trace.source.unknown": "来源未知"
+  "trace.source.unknown": "来源未知",
+  "splits.title": "分切件（{{count}}）",
+  "splits.source": "来源卷材",
+  "splits.cut": "已切 {{meters}} m",
+  "splits.empty": "此单元尚未分切。",
+  "splits.meters": "{{meters}} m（剩余 {{remaining}} m）",
+  "splits.roll_left": "卷材剩余 {{remaining}} m",
+  "family.title": "{{barcode}}：主编码及分切件",
+  "family.description": "从卷材切下的所有分切件，包括已售出和已使用的。",
+  "family_status.on_hand": "在库",
+  "family_status.sold": "已售出",
+  "family_status.used": "已使用",
+  "family_status.in_transit": "运输中",
+  "family_status.other": "其他"
 }

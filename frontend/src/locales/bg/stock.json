@@ -256,5 +256,18 @@
   "trace.no_service": "Не е използван в услуга.",
   "trace.source.order": "С поръчка",
   "trace.source.stock": "Наличен",
-  "trace.source.unknown": "Неизвестен източник"
+  "trace.source.unknown": "Неизвестен източник",
+  "splits.title": "Части ({{count}})",
+  "splits.source": "Отрязано от ролка",
+  "splits.cut": "Отрязани {{meters}} m",
+  "splits.empty": "От тази единица не са отрязвани части.",
+  "splits.meters": "{{meters}} m (остават {{remaining}} m)",
+  "splits.roll_left": "{{remaining}} m на ролката",
+  "family.title": "{{barcode}}: основен код и части",
+  "family.description": "Всички части, отрязани от ролката, включително продадените и използваните.",
+  "family_status.on_hand": "В наличност",
+  "family_status.sold": "Продадено",
+  "family_status.used": "Използвано",
+  "family_status.in_transit": "В транзит",
+  "family_status.other": "Друго"
 }

@@ -56,6 +56,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/services/export", route(h.RequestListExport)) // TEC-377
 	mux.Handle("POST /v1/services", create)
 	// TEC-1004: hand-entered number check of the service form.
+	// TEC-1075: summary cards above the service list (same gates as the list).
+	mux.Handle("GET /v1/services/stats", route(h.ListStats))
 	mux.Handle("GET /v1/services/service-no-availability", route(h.ServiceNoAvailability, write))
 	mux.Handle("GET /v1/services/{uuid}", route(h.Get))
 	mux.Handle("GET /v1/services/{uuid}/profit", route(h.Profit))

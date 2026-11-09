@@ -1,9 +1,9 @@
 {
-  "nav": "Clients",
+  "nav": "Clients et véhicules",
   "nav_list": "Liste des clients",
   "nav_new": "Nouveau client",
   "loading": "Chargement…",
-  "list.title": "Clients",
+  "list.title": "Clients et véhicules",
   "list.description": "Clients liés aux organisations que vous pouvez voir.",
   "list.forbidden": "Vous devez disposer de l'autorisation de lecture des clients pour ouvrir cette page.",
   "list.search": "Rechercher",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Employé revendeur",
   "actions.upgrade.confirm": "Promouvoir",
   "actions.upgrade.success": "Le client est désormais membre de {{dealer}}.",
-  "fields.organization": "Organisation"
+  "fields.organization": "Organisation",
+  "fields.opened_by": "Ouvert par le revendeur"
 }

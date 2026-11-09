@@ -143,202 +143,207 @@ export function OrderForm({
       ls.map((l) => (l.product_uuid === uuid ? { ...l, amount } : l)),
     );
 
+  // TEC-1052 (5.10): the product picker and the summary share the top row;
+  // the lines get the full width below.
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <ProductSearch
-              picked={picked}
-              onPick={(p) => setLines((ls) => addLine(ls, p))}
-            />
-          </CardContent>
-        </Card>
-        <Card data-testid="order-lines">
-          <CardHeader>
-            <CardTitle className="text-base">
-              {t("orders.form.lines_title", { count: lines.length })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {lines.length === 0 ? (
-              <p
-                className={
-                  touched && errors.form === "empty"
-                    ? "text-destructive text-sm"
-                    : "text-muted-foreground text-sm"
-                }
-                data-testid="lines-empty"
-              >
-                {t("orders.form.lines_empty")}
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <ProductSearch
+                picked={picked}
+                onPick={(p) => setLines((ls) => addLine(ls, p))}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        <div className="space-y-6">
+          <Card data-testid="order-summary">
+            <CardHeader>
+              <CardTitle className="text-base">
+                {t("orders.form.summary")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {saved ? (
+                <dl className="space-y-1">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">
+                      {t("orders.detail.order_no")}
+                    </dt>
+                    <dd className="font-mono" dir="ltr">
+                      {saved.order_no}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">
+                      {t("orders.detail.total")}
+                    </dt>
+                    <dd className="font-semibold" data-testid="draft-total">
+                      {format.currency(
+                        amountNumber(saved.total),
+                        saved.currency,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+              <p className="text-muted-foreground text-xs">
+                {t("orders.form.price_rule")}
               </p>
-            ) : (
-              lines.map((line) => {
-                const err = errors.lines[line.product_uuid];
-                const server = serverLine(line.product_uuid);
-                const id = `line-${line.product_uuid}`;
-                return (
-                  <div
-                    key={line.product_uuid}
-                    className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
-                    data-testid="order-line"
-                    data-sku={line.sku}
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <div className="font-medium">{line.name}</div>
-                      <div className="text-muted-foreground text-xs" dir="ltr">
-                        {line.sku}
-                      </div>
-                      <div className="text-xs">
-                        <span className="text-muted-foreground me-1">
-                          {server
-                            ? t("orders.form.price_snapshot")
-                            : t("orders.form.price_preview")}
+              {!saved ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="order-note">{t("orders.form.note")}</Label>
+                  <Textarea
+                    id="order-note"
+                    value={note}
+                    rows={3}
+                    maxLength={NOTE_MAX}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  data-testid="save-draft"
+                  onClick={() => run(saveDraft)}
+                >
+                  {t("orders.form.save_draft")}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={busy}
+                  data-testid="submit-order"
+                  onClick={() => run(submit)}
+                >
+                  {t("orders.form.submit")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      <Card data-testid="order-lines">
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("orders.form.lines_title", { count: lines.length })}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {lines.length === 0 ? (
+            <p
+              className={
+                touched && errors.form === "empty"
+                  ? "text-destructive text-sm"
+                  : "text-muted-foreground text-sm"
+              }
+              data-testid="lines-empty"
+            >
+              {t("orders.form.lines_empty")}
+            </p>
+          ) : (
+            lines.map((line) => {
+              const err = errors.lines[line.product_uuid];
+              const server = serverLine(line.product_uuid);
+              const id = `line-${line.product_uuid}`;
+              return (
+                <div
+                  key={line.product_uuid}
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(7rem,1fr)_auto] sm:items-end"
+                  data-testid="order-line"
+                  data-sku={line.sku}
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-medium">{line.name}</div>
+                    <div className="text-muted-foreground text-xs" dir="ltr">
+                      {line.sku}
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-muted-foreground me-1">
+                        {server
+                          ? t("orders.form.price_snapshot")
+                          : t("orders.form.price_preview")}
+                      </span>
+                      {server ? (
+                        <span data-testid="line-price">
+                          {format.currency(
+                            amountNumber(server.unit_price),
+                            saved?.currency ?? "",
+                          )}{" "}
+                          ={" "}
+                          {format.currency(
+                            amountNumber(server.line_total),
+                            saved?.currency ?? "",
+                          )}
                         </span>
-                        {server ? (
-                          <span data-testid="line-price">
-                            {format.currency(
-                              amountNumber(server.unit_price),
-                              saved?.currency ?? "",
-                            )}{" "}
-                            ={" "}
-                            {format.currency(
-                              amountNumber(server.line_total),
-                              saved?.currency ?? "",
-                            )}
-                          </span>
-                        ) : canSeePrices ? (
-                          <LinePrice productUuid={line.product_uuid} />
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {t("orders.form.price_on_save")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={id} className="text-xs">
-                        {isRoll(line.unit_type)
-                          ? t("orders.form.meters")
-                          : t("orders.form.quantity")}
-                      </Label>
-                      <Input
-                        id={id}
-                        name="amount"
-                        inputMode={
-                          isRoll(line.unit_type) ? "decimal" : "numeric"
-                        }
-                        dir="ltr"
-                        value={line.amount}
-                        aria-invalid={(touched && Boolean(err)) || undefined}
-                        onChange={(e) =>
-                          update(line.product_uuid, e.target.value)
-                        }
-                      />
-                      {touched && err ? (
-                        <p
-                          className="text-destructive text-xs"
-                          data-testid="line-error"
-                        >
-                          {t(`orders.form.errors.${err}`)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-start justify-end">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label={t("orders.form.remove")}
-                        data-testid="line-remove"
-                        onClick={() =>
-                          setLines((ls) =>
-                            ls.filter(
-                              (l) => l.product_uuid !== line.product_uuid,
-                            ),
-                          )
-                        }
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      ) : canSeePrices ? (
+                        <LinePrice productUuid={line.product_uuid} />
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {t("orders.form.price_on_save")}
+                        </span>
+                      )}
                     </div>
                   </div>
-                );
-              })
-            )}
-            {touched && errors.form === "too_many" ? (
-              <p className="text-destructive text-sm" data-testid="form-error">
-                {t("orders.form.errors.too_many")}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="space-y-6">
-        <Card data-testid="order-summary">
-          <CardHeader>
-            <CardTitle className="text-base">
-              {t("orders.form.summary")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {saved ? (
-              <dl className="space-y-1">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">
-                    {t("orders.detail.order_no")}
-                  </dt>
-                  <dd className="font-mono" dir="ltr">
-                    {saved.order_no}
-                  </dd>
+                  <div className="space-y-1">
+                    <Label htmlFor={id} className="text-xs">
+                      {isRoll(line.unit_type)
+                        ? t("orders.form.meters")
+                        : t("orders.form.quantity")}
+                    </Label>
+                    <Input
+                      id={id}
+                      name="amount"
+                      inputMode={isRoll(line.unit_type) ? "decimal" : "numeric"}
+                      dir="ltr"
+                      value={line.amount}
+                      aria-invalid={(touched && Boolean(err)) || undefined}
+                      onChange={(e) =>
+                        update(line.product_uuid, e.target.value)
+                      }
+                    />
+                    {touched && err ? (
+                      <p
+                        className="text-destructive text-xs"
+                        data-testid="line-error"
+                      >
+                        {t(`orders.form.errors.${err}`)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-start justify-end">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t("orders.form.remove")}
+                      data-testid="line-remove"
+                      onClick={() =>
+                        setLines((ls) =>
+                          ls.filter(
+                            (l) => l.product_uuid !== line.product_uuid,
+                          ),
+                        )
+                      }
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">
-                    {t("orders.detail.total")}
-                  </dt>
-                  <dd className="font-semibold" data-testid="draft-total">
-                    {format.currency(amountNumber(saved.total), saved.currency)}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-            <p className="text-muted-foreground text-xs">
-              {t("orders.form.price_rule")}
+              );
+            })
+          )}
+          {touched && errors.form === "too_many" ? (
+            <p className="text-destructive text-sm" data-testid="form-error">
+              {t("orders.form.errors.too_many")}
             </p>
-            {!saved ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="order-note">{t("orders.form.note")}</Label>
-                <Textarea
-                  id="order-note"
-                  value={note}
-                  rows={3}
-                  maxLength={NOTE_MAX}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                data-testid="save-draft"
-                onClick={() => run(saveDraft)}
-              >
-                {t("orders.form.save_draft")}
-              </Button>
-              <Button
-                type="button"
-                disabled={busy}
-                data-testid="submit-order"
-                onClick={() => run(submit)}
-              >
-                {t("orders.form.submit")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }

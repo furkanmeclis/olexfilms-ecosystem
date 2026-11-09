@@ -33,3 +33,19 @@ func TestScanStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestShortCodePattern(t *testing.T) {
+	for code, suffix := range map[string]string{
+		"123": "", "123-S2": "-S2", "123-3M": "-3M", "123-2.5M": "-2.5M", "123-3M-2": "-3M-2", "12345678-12.05M-10": "-12.05M-10",
+	} {
+		m := shortCodePattern.FindStringSubmatch(code)
+		if m == nil || m[2] != suffix {
+			t.Fatalf("%s: %v, want suffix %q", code, m, suffix)
+		}
+	}
+	for _, code := range []string{"123-M", "123-3", "123-3M-", "123-2.555M", "123-S", "ABC-3M"} {
+		if shortCodePattern.MatchString(code) {
+			t.Fatalf("%s must not match", code)
+		}
+	}
+}

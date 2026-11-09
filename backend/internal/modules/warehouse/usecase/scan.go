@@ -7,11 +7,13 @@ package usecase
 //     active organization; nothing else is tried.
 //  2. OFW:UNIT:<barcode> (unit QR) -> the unit; nothing else is tried.
 //  3. Unit barcode (generated <PREFIX>-<8 digits>, roll split
-//     <barcode>-S<n> (TEC-184), legacy/import barcodes): exact, then
+//     <barcode>-<m>M[-<k>] (TEC-1078) or legacy <barcode>-S<n> (TEC-184),
+//     legacy/import barcodes): exact, then
 //     upper-cased.
 //  4. Location full_code without prefix (scan.bare_location_code_enabled).
 //  5. Product SKU of the active brand (scan.sku_enabled).
-//  6. Short code: 1-8 digits (optionally -S<n>) expanded to
+//  6. Short code: 1-8 digits (optionally a split suffix -S<n>, -<m>M or
+//     -<m>M-<k>) expanded to
 //     <PREFIX>-<8 digits> (scan.short_code_enabled, prefix from
 //     scan.short_code_prefix or the brand's default prefix).
 //
@@ -70,7 +72,7 @@ const (
 const MaxScanLen = 200
 
 var (
-	shortCodePattern = regexp.MustCompile(`^([0-9]{1,8})(-S[0-9]{1,4})?$`)
+	shortCodePattern = regexp.MustCompile(`^([0-9]{1,8})(-S[0-9]{1,4}|-[0-9]{1,6}(?:\.[0-9]{1,2})?M(?:-[0-9]{1,4})?)?$`)
 	scanPrefixRe     = regexp.MustCompile(`^[A-Z0-9]{2,8}$`)
 )
 

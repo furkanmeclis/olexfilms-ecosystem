@@ -20,10 +20,13 @@ import (
 
 // Statistic periods (query parameter period).
 const (
-	StatsPeriod30d = "30d"
-	StatsPeriod90d = "90d"
-	StatsPeriod12m = "12m"
-	StatsPeriodAll = "all"
+	// TEC-1072: today (since local midnight) and 7d for the center home.
+	StatsPeriodToday = "today"
+	StatsPeriod7d    = "7d"
+	StatsPeriod30d   = "30d"
+	StatsPeriod90d   = "90d"
+	StatsPeriod12m   = "12m"
+	StatsPeriodAll   = "all"
 )
 
 // Statistic groupings (query parameter group).
@@ -66,10 +69,15 @@ type TopVehicles struct {
 }
 
 // StatsSince returns the lower completed_at bound of period at now (nil for
-// all time). 12m is twelve calendar months.
+// all time). 12m is twelve calendar months; today starts at midnight in
+// now's location (callers pass now in the request time zone).
 func StatsSince(period string, now time.Time) (*time.Time, error) {
 	var t time.Time
 	switch period {
+	case StatsPeriodToday:
+		t = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	case StatsPeriod7d:
+		t = now.AddDate(0, 0, -7)
 	case StatsPeriod30d:
 		t = now.AddDate(0, 0, -30)
 	case StatsPeriod90d:
@@ -79,7 +87,7 @@ func StatsSince(period string, now time.Time) (*time.Time, error) {
 	case StatsPeriodAll:
 		return nil, nil
 	default:
-		return nil, invalid("period", "must be one of 30d, 90d, 12m, all")
+		return nil, invalid("period", "must be one of today, 7d, 30d, 90d, 12m, all")
 	}
 	return &t, nil
 }

@@ -104,6 +104,7 @@ var labels = map[string]label{
 	"card.measurements_linked":   {"Hizmete bağlı ölçümler", "Measurements linked to services", "Измервания, свързани с услуги", "Mit Serviceaufträgen verknüpfte Messungen", "Μετρήσεις συνδεδεμένες με υπηρεσίες", "Вимірювання, пов'язані з послугами", "Измерения, привязанные к услугам", "Mesures liées aux prestations", "Mediciones vinculadas a servicios", "Misurazioni collegate ai servizi", "已关联服务的测量", "Xidmətlərə bağlı ölçmələr", "قياسات مرتبطة بالخدمات"},
 	"card.measurements_vehicles": {"Ölçülen araçlar", "Measured vehicles", "Измерени автомобили", "Gemessene Fahrzeuge", "Οχήματα που μετρήθηκαν", "Виміряні автомобілі", "Измеренные автомобили", "Véhicules mesurés", "Vehículos medidos", "Veicoli misurati", "已测量车辆", "Ölçülmüş avtomobillər", "المركبات المقاسة"},
 	"card.dealers_total":         {"Bayi sayısı", "Dealers", "Дилъри", "Händler", "Αντιπρόσωποι", "Дилери", "Дилеры", "Concessionnaires", "Concesionarios", "Concessionari", "经销商", "Dilerlər", "الوكلاء"},
+	"card.distributors_total":    {"Distribütör sayısı", "Distributors", "Дистрибутори", "Distributoren", "Διανομείς", "Дистриб'ютори", "Дистрибьюторы", "Distributeurs", "Distribuidores", "Distributori", "分销商", "Distribyutorlar", "الموزعون"},
 	"card.dealers_active":        {"Aktif bayiler", "Active dealers", "Активни дилъри", "Aktive Händler", "Ενεργοί αντιπρόσωποι", "Активні дилери", "Активные дилеры", "Concessionnaires actifs", "Concesionarios activos", "Concessionari attivi", "活跃经销商", "Aktiv dilerlər", "الوكلاء النشطون"},
 
 	// Table columns.

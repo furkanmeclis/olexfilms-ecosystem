@@ -310,7 +310,7 @@ describe("SplitDialog (TEC-763)", () => {
       },
       new_unit: {
         uuid: "u-2",
-        barcode: "OLX-ROLL-1-S1",
+        barcode: "OLX-ROLL-1-12.5M",
         status: "available",
         remaining_meters: "12.50",
       },
@@ -328,10 +328,10 @@ describe("SplitDialog (TEC-763)", () => {
         idempotency_key: expect.stringMatching(/^split:/),
       }),
     );
-    expect($("split-done")?.textContent).toContain("OLX-ROLL-1-S1");
+    expect($("split-done")?.textContent).toContain("OLX-ROLL-1-12.5M");
     expect($("split-label")).not.toBeNull();
     expect($("split-open-new")?.getAttribute("href")).toBe(
-      "/t/acme/stock/units/OLX-ROLL-1-S1",
+      "/t/acme/stock/units/OLX-ROLL-1-12.5M",
     );
   });
 });

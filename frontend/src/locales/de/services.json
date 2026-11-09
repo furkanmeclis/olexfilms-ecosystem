@@ -369,5 +369,14 @@
   "network_scope.network": "Gesamtes Netz",
   "wizard.performer": "Ausgeführt von",
   "wizard.performer_own": "{{name}} (eigener Servicepunkt)",
-  "wizard.performer_hint": "Wählen Sie einen Händler, wird der Service für ihn eröffnet und protokolliert."
+  "wizard.performer_hint": "Wählen Sie einen Händler, wird der Service für ihn eröffnet und protokolliert.",
+  "list.stats.total": "Services gesamt",
+  "list.stats.total_hint": "Inklusive {{cancelled}} storniert",
+  "list.stats.this_month": "Diesen Monat eröffnet",
+  "list.stats.this_month_hint": "Seit Monatsbeginn",
+  "list.stats.in_progress": "In Bearbeitung",
+  "list.stats.in_progress_hint": "Ausstehend, in Arbeit, fertig · {{draft}} Entwürfe",
+  "list.stats.completed": "Abgeschlossen",
+  "list.stats.active_warranties": "Aktive Garantien",
+  "list.stats.warranties_hint": "Insgesamt {{total}} Garantien"
 }

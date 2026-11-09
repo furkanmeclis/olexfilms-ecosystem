@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { UnitOperations } from "@/features/stock/components/unit-operations";
+import { UnitSplitsCard } from "@/features/stock/components/unit-splits-card";
 import { UnitTraceCard } from "@/features/stock/components/unit-trace-card";
 import { unitStatusTone } from "@/features/stock/lib/stock";
 import { movementDocumentHref } from "@/features/stock/lib/stock-ops";
@@ -142,6 +143,9 @@ export function UnitHistoryPage({
           <UnitSummary slug={slug} data={first} />
           {first.trace ? (
             <UnitTraceCard trace={first.trace} slug={slug} />
+          ) : null}
+          {first.splits ? (
+            <UnitSplitsCard splits={first.splits} slug={slug} />
           ) : null}
           <Card>
             <CardHeader>

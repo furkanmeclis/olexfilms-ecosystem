@@ -93,8 +93,8 @@ type fakeOrders struct{}
 
 func (fakeOrders) order() ordersuc.OrderView {
 	return ordersuc.OrderView{UUID: serviceUUID, OrderNo: "SIP-1", Role: string(ordersuc.PartyBuyer),
-		Currency: "TRY", Subtotal: "100.00", TaxTotal: "20.00", Total: "120.00",
-		Items: []ordersuc.ItemView{{UnitPrice: "100.00", LineTotal: "100.00"}}}
+		Currency: "TRY", Subtotal: ptr("100.00"), TaxTotal: ptr("20.00"), Total: ptr("120.00"),
+		Items: []ordersuc.ItemView{{UnitPrice: ptr("100.00"), LineTotal: ptr("100.00")}}}
 }
 
 func (f fakeOrders) List(context.Context, ordersuc.Caller, ordersuc.ListFilter) ([]ordersuc.OrderView, int64, error) {

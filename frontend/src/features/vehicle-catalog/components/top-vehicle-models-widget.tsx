@@ -18,12 +18,21 @@ import { TopVehicleModelsChart } from "./top-vehicle-models-chart";
 /**
  * TEC-151: top-10 car brands / models widget of the center dashboard.
  * Renders nothing for dealers and distributors (the API answers 403).
+ * TEC-1072: with `period` the page owns the period (center home) and the
+ * chart shows no period switch of its own.
  */
-export function TopVehicleModelsWidget({ slug }: { slug: string }) {
+export function TopVehicleModelsWidget({
+  slug,
+  period: fixedPeriod,
+}: {
+  slug: string;
+  period?: StatsPeriod;
+}) {
   const { scopeFor } = usePermission();
   const org = useActiveOrganization(slug);
   const visible = canSeeTopVehicles(scopeFor, org?.type);
-  const [period, setPeriod] = useState<StatsPeriod>("30d");
+  const [ownPeriod, setPeriod] = useState<StatsPeriod>("30d");
+  const period = fixedPeriod ?? ownPeriod;
   const [group, setGroup] = useState<StatsGroup>("model");
 
   const query = useQuery({
@@ -42,6 +51,7 @@ export function TopVehicleModelsWidget({ slug }: { slug: string }) {
       group={group}
       onPeriodChange={setPeriod}
       onGroupChange={setGroup}
+      hidePeriod={fixedPeriod !== undefined}
       isLoading={query.isPending}
       isError={query.isError}
       onRetry={() => void query.refetch()}
