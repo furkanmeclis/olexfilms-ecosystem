@@ -32,6 +32,8 @@ type Cart = Saved & {
   setPrice: (productUuid: string, price: string) => void;
   /** TEC-1059: the center marks a line "sent plotter cut". */
   setPlotter: (productUuid: string, plotterCut: boolean) => void;
+  setDiscount: (productUuid: string, discount: string) => void;
+  setGift: (productUuid: string, gift: boolean) => void;
   remove: (productUuid: string) => void;
   setNote: (note: string) => void;
   clear: () => void;
@@ -55,6 +57,10 @@ export const useCart = create<Cart>((set, get) => {
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, unit_price } : l)) }),
     setPlotter: (productUuid, plotter_cut) =>
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, plotter_cut } : l)) }),
+    setDiscount: (productUuid, discount_pct) =>
+      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, discount_pct } : l)) }),
+    setGift: (productUuid, is_gift) =>
+      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, is_gift } : l)) }),
     remove: (productUuid) => update({ lines: get().lines.filter((l) => l.product_uuid !== productUuid) }),
     setNote: (note) => update({ note }),
     clear: () => update(EMPTY),

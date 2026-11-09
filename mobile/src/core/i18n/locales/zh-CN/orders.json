@@ -95,5 +95,21 @@
   "recipient.errors.required": "必填项。",
   "recipient.errors.phone_invalid": "请输入有效的电话号码。",
   "recipient.errors.tax_no_invalid": "税号为 10 位，身份证号为 11 位。",
-  "recipient.errors.too_long": "太长。"
+  "recipient.errors.too_long": "太长。",
+  "quote.list_price": "标价（USD）",
+  "quote.discount": "折扣 %",
+  "quote.gift": "赠品",
+  "quote.gift_free": "赠品（0）",
+  "quote.discounted_price": "折后价",
+  "quote.line_total": "行合计",
+  "quote.total": "合计",
+  "quote.total_try": "当前土耳其里拉金额",
+  "quote.rate": "当前汇率：1 {{currency}} = {{rate}} TRY。汇率在订单批准时锁定。",
+  "quote.no_rate": "暂无当前汇率，无法显示土耳其里拉金额。",
+  "quote.incomplete": "部分产品没有价格或数量无效，合计不完整。",
+  "quote.unavailable": "无法加载价格。",
+  "quote.pick_buyer": "请先选择经销商以查看价格。",
+  "quote.default_first_order": "已应用首单折扣：{{pct}}%",
+  "quote.default_standard": "已应用标准经销商折扣：{{pct}}%",
+  "errors.discount_invalid": "折扣必须在 0 到 100 之间，最多 2 位小数。"
 }

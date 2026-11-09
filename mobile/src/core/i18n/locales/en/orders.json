@@ -109,5 +109,21 @@
   "recipient.errors.required": "Required.",
   "recipient.errors.phone_invalid": "Enter a valid phone number.",
   "recipient.errors.tax_no_invalid": "Tax no has 10 digits, national ID 11.",
-  "recipient.errors.too_long": "Too long."
+  "recipient.errors.too_long": "Too long.",
+  "quote.list_price": "List price (USD)",
+  "quote.discount": "Discount %",
+  "quote.gift": "Gift",
+  "quote.gift_free": "Gift (0)",
+  "quote.discounted_price": "Discounted price",
+  "quote.line_total": "Line total",
+  "quote.total": "Total",
+  "quote.total_try": "Current TRY value",
+  "quote.rate": "Current rate: 1 {{currency}} = {{rate}} TRY. The rate is fixed when the order is approved.",
+  "quote.no_rate": "No current rate; the TRY value cannot be shown.",
+  "quote.incomplete": "Some products have no price or an invalid amount; the total is incomplete.",
+  "quote.unavailable": "Prices could not be loaded.",
+  "quote.pick_buyer": "Pick the dealer first to see prices.",
+  "quote.default_first_order": "First order discount applied: {{pct}}%",
+  "quote.default_standard": "Standard dealer discount applied: {{pct}}%",
+  "errors.discount_invalid": "Discount must be between 0 and 100, with up to 2 decimals."
 }

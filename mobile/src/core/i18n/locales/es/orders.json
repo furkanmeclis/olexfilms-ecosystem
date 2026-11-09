@@ -95,5 +95,21 @@
   "recipient.errors.required": "Campo obligatorio.",
   "recipient.errors.phone_invalid": "Introduce un número de teléfono válido.",
   "recipient.errors.tax_no_invalid": "El n.º fiscal tiene 10 dígitos y el documento de identidad 11.",
-  "recipient.errors.too_long": "Demasiado largo."
+  "recipient.errors.too_long": "Demasiado largo.",
+  "quote.list_price": "Precio de lista (USD)",
+  "quote.discount": "Descuento %",
+  "quote.gift": "Regalo",
+  "quote.gift_free": "Regalo (0)",
+  "quote.discounted_price": "Precio con descuento",
+  "quote.line_total": "Total de la línea",
+  "quote.total": "Total",
+  "quote.total_try": "Valor actual en TRY",
+  "quote.rate": "Tipo actual: 1 {{currency}} = {{rate}} TRY. El tipo se fija al aprobar el pedido.",
+  "quote.no_rate": "No hay tipo de cambio actual; no se puede mostrar el valor en TRY.",
+  "quote.incomplete": "Hay productos sin precio o con cantidad no válida; el total está incompleto.",
+  "quote.unavailable": "No se pudieron cargar los precios.",
+  "quote.pick_buyer": "Elige primero el distribuidor para ver los precios.",
+  "quote.default_first_order": "Descuento de primer pedido aplicado: {{pct}} %",
+  "quote.default_standard": "Descuento estándar de distribuidor aplicado: {{pct}} %",
+  "errors.discount_invalid": "El descuento debe estar entre 0 y 100, con 2 decimales como máximo."
 }

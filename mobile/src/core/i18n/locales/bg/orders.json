@@ -95,5 +95,21 @@
   "recipient.errors.required": "Задължително поле.",
   "recipient.errors.phone_invalid": "Въведи валиден телефонен номер.",
   "recipient.errors.tax_no_invalid": "Данъчният № е 10 цифри, ЕГН – 11.",
-  "recipient.errors.too_long": "Твърде дълго."
+  "recipient.errors.too_long": "Твърде дълго.",
+  "quote.list_price": "Цена по списък (USD)",
+  "quote.discount": "Отстъпка %",
+  "quote.gift": "Подарък",
+  "quote.gift_free": "Подарък (0)",
+  "quote.discounted_price": "Цена с отстъпка",
+  "quote.line_total": "Сума на реда",
+  "quote.total": "Общо",
+  "quote.total_try": "Текуща стойност в TRY",
+  "quote.rate": "Текущ курс: 1 {{currency}} = {{rate}} TRY. Курсът се фиксира при одобрение на поръчката.",
+  "quote.no_rate": "Няма текущ курс; стойността в TRY не може да се покаже.",
+  "quote.incomplete": "Има продукти без цена или с невалидно количество; сумата е непълна.",
+  "quote.unavailable": "Цените не можаха да се заредят.",
+  "quote.pick_buyer": "Първо изберете дилъра, за да видите цените.",
+  "quote.default_first_order": "Приложена отстъпка за първа поръчка: {{pct}}%",
+  "quote.default_standard": "Приложена стандартна дилърска отстъпка: {{pct}}%",
+  "errors.discount_invalid": "Отстъпката трябва да е между 0 и 100, с до 2 знака след десетичната запетая."
 }

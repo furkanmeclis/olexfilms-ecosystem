@@ -95,5 +95,21 @@
   "recipient.errors.required": "Champ obligatoire.",
   "recipient.errors.phone_invalid": "Saisis un numéro de téléphone valide.",
   "recipient.errors.tax_no_invalid": "Le n° fiscal a 10 chiffres, le n° d'identité 11.",
-  "recipient.errors.too_long": "Trop long."
+  "recipient.errors.too_long": "Trop long.",
+  "quote.list_price": "Prix catalogue (USD)",
+  "quote.discount": "Remise %",
+  "quote.gift": "Cadeau",
+  "quote.gift_free": "Cadeau (0)",
+  "quote.discounted_price": "Prix remisé",
+  "quote.line_total": "Total de la ligne",
+  "quote.total": "Total",
+  "quote.total_try": "Valeur actuelle en TRY",
+  "quote.rate": "Taux actuel : 1 {{currency}} = {{rate}} TRY. Le taux est figé à l'approbation de la commande.",
+  "quote.no_rate": "Aucun taux actuel ; la valeur en TRY ne peut pas être affichée.",
+  "quote.incomplete": "Certains produits n'ont pas de prix ou une quantité invalide ; le total est incomplet.",
+  "quote.unavailable": "Impossible de charger les prix.",
+  "quote.pick_buyer": "Choisissez d'abord le revendeur pour voir les prix.",
+  "quote.default_first_order": "Remise première commande appliquée : {{pct}} %",
+  "quote.default_standard": "Remise revendeur standard appliquée : {{pct}} %",
+  "errors.discount_invalid": "La remise doit être comprise entre 0 et 100, avec 2 décimales au plus."
 }
