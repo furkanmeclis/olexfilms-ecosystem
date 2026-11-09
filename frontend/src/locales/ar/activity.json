@@ -215,5 +215,6 @@
   "actions.services.created_on_behalf": "فُتحت خدمة نيابة عن وكيل",
   "actions.organizations.member_updated": "تم تحديث أدوار عضو المؤسسة",
   "actions.organizations.member_removed": "تمت إزالة العضو من المؤسسة",
-  "resources.organizations": "المؤسسات"
+  "resources.organizations": "المؤسسات",
+  "actions.pricing.discounts_set": "تم تحديث خصومات الوكيل"
 }

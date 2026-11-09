@@ -179,6 +179,12 @@ type ItemInput struct {
 	// UnitPrice is read only when the center orders for a dealer
 	// (TEC-1024); on the buyer's own order it is ignored (K8).
 	UnitPrice *string
+	// DiscountPct and IsGift are read only when the center orders for a
+	// dealer (TEC-1064): a typed discount replaces the dealer's default
+	// one; a gift line is charged 0. The buyer's own order always gets
+	// its default discount and no gift.
+	DiscountPct *string
+	IsGift      bool
 }
 
 // CreateInput is a new draft order of the active organization.
@@ -306,63 +312,65 @@ func priceSource(src string) string {
 	}
 }
 
-type pricedLine struct {
-	unitPrice pgtype.Numeric
-	lineTotal pgtype.Numeric
-	source    string
-}
-
 // priceLines fetches the buyer's effective purchase price of every product
-// in the order currency. fields names the input field of each product for
-// the error; a missing price is a 422.
+// in the order currency and applies each line's discount (TEC-1064; nil:
+// none). fields names the input field of each product for the error; a
+// missing price is a 422.
 func priceLines(ctx context.Context, q *db.Queries, buyer db.Organization, currency string,
-	products []int64, amounts []*big.Rat, fields []string) ([]pricedLine, error) {
+	products []int64, amounts, discounts []*big.Rat, fields []string) ([]lineCharge, error) {
 	prices, err := pricingusecase.New(q).BuyerPurchasePrices(ctx, buyer.ID, buyer.Type, buyer.BrandID, products, currency)
 	if err != nil {
 		return nil, fmt.Errorf("orders: prices: %w", err)
 	}
-	out := make([]pricedLine, len(products))
+	out := make([]lineCharge, len(products))
 	for i, pid := range products {
 		p, ok := prices[pid]
 		if !ok {
 			return nil, &ValidationError{Field: fields[i], Code: CodePriceNotFound,
 				Message: "no purchase price in " + currency + " for this product"}
 		}
-		total, err := lineTotal(p.Price, amounts[i])
-		if err != nil {
+		list := p.Price
+		if out[i], err = charge(chargeInput{list: &list, source: priceSource(p.Source), amount: amounts[i],
+			discount: discounts[i]}); err != nil {
 			return nil, err
 		}
-		up, err := numeric(p.Price)
-		if err != nil {
-			return nil, err
-		}
-		lt, err := numeric(total)
-		if err != nil {
-			return nil, err
-		}
-		out[i] = pricedLine{unitPrice: up, lineTotal: lt, source: priceSource(p.Source)}
 	}
 	return out, nil
 }
 
+// insertLines writes the buyer's own lines with its default discount to the
+// seller (TEC-1064).
 func (s *Service) insertLines(ctx context.Context, q *db.Queries, o db.Order, buyer db.Organization, lines []line) error {
+	d, err := buyerDiscount(ctx, q, buyer, o.SellerOrgID, o.ID)
+	if err != nil {
+		return err
+	}
 	ids := make([]int64, len(lines))
 	amounts := make([]*big.Rat, len(lines))
+	discounts := make([]*big.Rat, len(lines))
 	fields := make([]string, len(lines))
 	for i, l := range lines {
-		ids[i], amounts[i], fields[i] = l.product.ID, l.amount, fmt.Sprintf("items[%d].product_uuid", i)
+		ids[i], amounts[i], discounts[i], fields[i] = l.product.ID, l.amount, d.Pct, fmt.Sprintf("items[%d].product_uuid", i)
 	}
-	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, fields)
+	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, discounts, fields)
 	if err != nil {
 		return err
 	}
 	for i, l := range lines {
-		if _, err := q.CreateOrderItem(ctx, db.CreateOrderItemParams{
-			OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
-			UnitPrice: priced[i].unitPrice, PriceSource: priced[i].source, LineTotal: priced[i].lineTotal, Note: l.note,
-		}); err != nil {
-			return fmt.Errorf("orders: create line: %w", err)
+		if err := createLine(ctx, q, o, l, priced[i]); err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+func createLine(ctx context.Context, q *db.Queries, o db.Order, l line, c lineCharge) error {
+	if _, err := q.CreateOrderItem(ctx, db.CreateOrderItemParams{
+		OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
+		UnitPrice: c.unitPrice, PriceSource: c.source, LineTotal: c.lineTotal, Note: l.note,
+		ListUnitPrice: c.listPrice, DiscountPct: c.discount, IsGift: pgtype.Bool{Bool: c.gift, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("orders: create line: %w", err)
 	}
 	return nil
 }
@@ -823,26 +831,36 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 	if err != nil {
 		return o, nil, fmt.Errorf("orders: buyer: %w", err)
 	}
-	ids := make([]int64, len(items))
-	amounts := make([]*big.Rat, len(items))
-	fields := make([]string, len(items))
-	for i, it := range items {
-		ids[i], fields[i] = it.ProductID, fmt.Sprintf("items[%d]", i)
+	// A gift line stays 0; every other line keeps the discount it was
+	// written with (TEC-1064) on the price read again.
+	priceable := make([]db.OrderItem, 0, len(items))
+	for _, it := range items {
+		if !it.IsGift {
+			priceable = append(priceable, it)
+		}
+	}
+	ids := make([]int64, len(priceable))
+	amounts := make([]*big.Rat, len(priceable))
+	discounts := make([]*big.Rat, len(priceable))
+	fields := make([]string, len(priceable))
+	for i, it := range priceable {
+		ids[i], discounts[i], fields[i] = it.ProductID, numericRat(it.DiscountPct), fmt.Sprintf("items[%d]", i)
 		if it.Meters.Valid {
 			amounts[i] = numericRat(it.Meters)
 		} else {
 			amounts[i] = new(big.Rat).SetInt64(int64(it.Quantity.Int32))
 		}
 	}
-	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, fields)
+	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, discounts, fields)
 	if err != nil {
 		return o, nil, err
 	}
-	for i, it := range items {
+	for i, it := range priceable {
 		if _, err := q.UpdateOrderItem(ctx, db.UpdateOrderItemParams{
 			ID: it.ID, Quantity: it.Quantity, Meters: it.Meters, UnitPrice: priced[i].unitPrice,
 			PriceSource: priced[i].source, RecommendedPriceSnapshot: it.RecommendedPriceSnapshot,
 			LineTotal: priced[i].lineTotal, Note: it.Note,
+			ListUnitPrice: priced[i].listPrice, DiscountPct: priced[i].discount,
 		}); err != nil {
 			return o, nil, fmt.Errorf("orders: lock line price: %w", err)
 		}

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -22,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -33,6 +39,7 @@ import {
   addLine,
   formIsValid,
   isRoll,
+  previewLine,
   toItemInputs,
   validateOrderForm,
   type OrderFormLine,
@@ -40,6 +47,7 @@ import {
 import {
   orderKeys,
   ordersService,
+  type OrderQuoteItem,
 } from "@/features/orders/services/orders.service";
 import {
   warehouseKeys,
@@ -60,6 +68,13 @@ import { usePermission } from "@/providers/permission-provider";
  *
  * TEC-1052: a user holding orders.ship can mark that he prepares the order
  * himself; then no warehouse staff is told of it.
+ *
+ * TEC-1064: with pricing.sale.read every line shows the list price (order
+ * currency, USD base), the discount (the dealer's first-order discount on
+ * its first order, else its standard one; editable), the discounted unit
+ * price and the line total; the summary shows the total in the order
+ * currency and at the current rate in TRY. A line can be a gift (0). The
+ * server recomputes every amount.
  */
 export function CenterOrderForm({
   slug,
@@ -68,7 +83,7 @@ export function CenterOrderForm({
   slug: string;
   centerUuid: string;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
   const [dealer, setDealer] = useState<ComboboxOption | null>(null);
@@ -80,6 +95,7 @@ export function CenterOrderForm({
   // warehouse staff is notified.
   const { can } = usePermission();
   const canShip = can(permissions.orders.ship);
+  const canSeePrices = can(permissions.pricing.saleRead);
   const [selfPrepare, setSelfPrepare] = useState(false);
   const warehouses = useQuery({
     queryKey: warehouseKeys.warehouses,
@@ -104,6 +120,74 @@ export function CenterOrderForm({
     () => new Set(lines.map((l) => l.product_uuid)),
     [lines],
   );
+
+  // TEC-1064: the dealer's prices, default discount and the TRY rate.
+  const productUuids = useMemo(
+    () => lines.map((l) => l.product_uuid).sort(),
+    [lines],
+  );
+  const quote = useQuery({
+    queryKey: orderKeys.quote(dealer?.value ?? "", productUuids),
+    queryFn: () =>
+      ordersService.quote({
+        buyer_org_uuid: dealer?.value ?? "",
+        product_uuids: productUuids,
+      }),
+    enabled: canSeePrices && dealer !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const quoteData =
+    dealer !== null && canSeePrices && quote.data?.prices_visible
+      ? quote.data
+      : undefined;
+  const pricesVisible = quoteData !== undefined;
+  const quoteBy = useMemo(
+    () =>
+      new Map<string, OrderQuoteItem>(
+        (quoteData?.items ?? []).map((i) => [i.product_uuid, i]),
+      ),
+    [quoteData?.items],
+  );
+  const currency = quoteData?.currency ?? "";
+  const defaultDiscount = quoteData?.discount_pct ?? null;
+
+  const previews = useMemo(
+    () =>
+      new Map(
+        lines.map((line) => {
+          const q = quoteBy.get(line.product_uuid);
+          const list = q ? (q.list_unit_price ?? null) : undefined;
+          const typed = (line.discount_pct ?? "").trim();
+          return [
+            line.product_uuid,
+            {
+              loaded: q !== undefined,
+              list: list ?? null,
+              discount: typed !== "" ? typed : defaultDiscount,
+              ...previewLine({
+                list,
+                discount: typed !== "" ? typed : defaultDiscount,
+                manual: list === null ? line.unit_price : undefined,
+                gift: line.is_gift,
+                amount: line.amount,
+              }),
+            },
+          ];
+        }),
+      ),
+    [lines, quoteBy, defaultDiscount],
+  );
+  const total = useMemo(
+    () =>
+      Math.round(
+        [...previews.values()].reduce((s, p) => s + (p.total ?? 0), 0) * 100,
+      ) / 100,
+    [previews],
+  );
+  const tryRate = quoteData?.try_rate ? Number(quoteData.try_rate) : null;
+  const showTry = pricesVisible && currency !== "TRY" && lines.length > 0;
 
   // Labels of every dealer the search returned, to name the picked one.
   const names = useRef(new Map<string, string>());
@@ -132,6 +216,7 @@ export function CenterOrderForm({
     onSuccess: (order) => {
       qc.setQueryData(orderKeys.detail(order.uuid), order);
       void qc.invalidateQueries({ queryKey: ["orders", "list"] });
+      void qc.invalidateQueries({ queryKey: ["orders", "quote"] });
       toast.success(t("orders.center_form.created", { no: order.order_no }));
       if ((order.items ?? []).some((i) => i.price_missing)) {
         toast.warning(t("orders.center_form.price_missing_warning"));
@@ -146,6 +231,22 @@ export function CenterOrderForm({
     setLines((ls) =>
       ls.map((l) => (l.product_uuid === uuid ? { ...l, ...patch } : l)),
     );
+
+  const money = (v: number | null) =>
+    v === null ? "—" : format.currency(v, currency || "USD");
+  const discountInfo = (() => {
+    if (!quoteData) return null;
+    if (quoteData.discount_pct === null) {
+      return t("orders.center_form.discount_none");
+    }
+    return quoteData.first_order && quoteData.first_order_discount_pct !== null
+      ? t("orders.center_form.discount_first_order", {
+          pct: quoteData.discount_pct,
+        })
+      : t("orders.center_form.discount_standard", {
+          pct: quoteData.discount_pct,
+        });
+  })();
 
   // TEC-1052 (5.10): dealer, warehouse and summary sit beside the product
   // picker; the lines get the full width below.
@@ -197,6 +298,14 @@ export function CenterOrderForm({
                   data-testid="dealer-error"
                 >
                   {t("orders.center_form.dealer_required")}
+                </p>
+              ) : null}
+              {discountInfo ? (
+                <p
+                  className="text-muted-foreground text-xs"
+                  data-testid="center-order-discount-info"
+                >
+                  {discountInfo}
                 </p>
               ) : null}
               {activeWarehouses.length > 0 ? (
@@ -267,6 +376,52 @@ export function CenterOrderForm({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {pricesVisible ? (
+                <div className="space-y-1" data-testid="center-order-totals">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-muted-foreground">
+                      {t("orders.center_form.total", { currency })}
+                    </span>
+                    <span
+                      className="text-base font-semibold tabular-nums"
+                      dir="ltr"
+                      data-testid="center-order-total"
+                    >
+                      {money(total)}
+                    </span>
+                  </div>
+                  {showTry ? (
+                    tryRate !== null ? (
+                      <div
+                        className="text-muted-foreground flex items-baseline justify-between gap-2 text-xs"
+                        data-testid="center-order-total-try"
+                      >
+                        <span>
+                          {t("orders.center_form.total_try", {
+                            currency,
+                            rate: format.number(tryRate, {
+                              maximumFractionDigits: 4,
+                            }),
+                            date: quoteData?.rate_date
+                              ? format.date(quoteData.rate_date)
+                              : "",
+                          })}
+                        </span>
+                        <span className="tabular-nums" dir="ltr">
+                          {format.currency(
+                            Math.round(total * tryRate * 100) / 100,
+                            "TRY",
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        {t("orders.center_form.total_try_unavailable")}
+                      </p>
+                    )
+                  ) : null}
+                </div>
+              ) : null}
               <p className="text-muted-foreground text-xs">
                 {t("orders.center_form.price_rule")}
               </p>
@@ -303,7 +458,7 @@ export function CenterOrderForm({
                 setLines((ls) =>
                   addLine(ls, p).map((l) =>
                     l.product_uuid === p.uuid && l.unit_price === undefined
-                      ? { ...l, unit_price: "" }
+                      ? { ...l, unit_price: "", discount_pct: "" }
                       : l,
                   ),
                 )
@@ -334,14 +489,20 @@ export function CenterOrderForm({
             lines.map((line) => {
               const err = errors.lines[line.product_uuid];
               const id = `line-${line.product_uuid}`;
+              const pv = previews.get(line.product_uuid);
+              const gift = line.is_gift === true;
+              // The typed price is offered when the prices are hidden or
+              // the dealer has no list price for the product.
+              const manualPrice =
+                !pricesVisible || (pv?.loaded === true && pv.list === null);
               return (
                 <div
                   key={line.product_uuid}
-                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_auto] sm:items-end"
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,3fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(8rem,1.2fr)_auto_auto] lg:items-end"
                   data-testid="order-line"
                   data-sku={line.sku}
                 >
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-1">
                     <div className="font-medium">{line.name}</div>
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
@@ -360,7 +521,10 @@ export function CenterOrderForm({
                       dir="ltr"
                       value={line.amount}
                       aria-invalid={
-                        (touched && Boolean(err) && err !== "price_invalid") ||
+                        (touched &&
+                          Boolean(err) &&
+                          err !== "price_invalid" &&
+                          err !== "discount_invalid") ||
                         undefined
                       }
                       onChange={(e) =>
@@ -369,28 +533,110 @@ export function CenterOrderForm({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor={`${id}-price`} className="text-xs">
-                      {t("orders.center_form.unit_price")}
+                    <span className="text-muted-foreground block text-xs">
+                      {t("orders.center_form.list_price", {
+                        currency: currency || "—",
+                      })}
+                    </span>
+                    <div
+                      className="flex h-9 items-center tabular-nums"
+                      dir="ltr"
+                      data-testid="line-list-price"
+                    >
+                      {pricesVisible && pv?.list != null
+                        ? money(Number(pv.list))
+                        : "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`${id}-discount`} className="text-xs">
+                      {t("orders.center_form.discount")}
                     </Label>
                     <Input
-                      id={`${id}-price`}
-                      name="unit_price"
+                      id={`${id}-discount`}
+                      name="discount_pct"
                       inputMode="decimal"
                       dir="ltr"
-                      value={line.unit_price ?? ""}
-                      placeholder={t(
-                        "orders.center_form.unit_price_placeholder",
-                      )}
-                      data-testid="line-unit-price"
+                      disabled={gift || !pricesVisible || manualPrice}
+                      value={line.discount_pct ?? ""}
+                      placeholder={
+                        defaultDiscount !== null ? defaultDiscount : "0"
+                      }
+                      data-testid="line-discount"
                       aria-invalid={
-                        (touched && err === "price_invalid") || undefined
+                        (touched && err === "discount_invalid") || undefined
                       }
                       onChange={(e) =>
                         update(line.product_uuid, {
-                          unit_price: e.target.value,
+                          discount_pct: e.target.value,
                         })
                       }
                     />
+                  </div>
+                  <div className="space-y-1">
+                    {manualPrice ? (
+                      <>
+                        <Label htmlFor={`${id}-price`} className="text-xs">
+                          {t("orders.center_form.unit_price")}
+                        </Label>
+                        <Input
+                          id={`${id}-price`}
+                          name="unit_price"
+                          inputMode="decimal"
+                          dir="ltr"
+                          disabled={gift}
+                          value={line.unit_price ?? ""}
+                          placeholder={t(
+                            "orders.center_form.unit_price_placeholder",
+                          )}
+                          data-testid="line-unit-price"
+                          aria-invalid={
+                            (touched && err === "price_invalid") || undefined
+                          }
+                          onChange={(e) =>
+                            update(line.product_uuid, {
+                              unit_price: e.target.value,
+                            })
+                          }
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground block text-xs">
+                          {t("orders.center_form.discounted_price")}
+                        </span>
+                        <div
+                          className="flex h-9 items-center tabular-nums"
+                          dir="ltr"
+                          data-testid="line-discounted-price"
+                        >
+                          {money(pv?.unit ?? null)}
+                        </div>
+                      </>
+                    )}
+                    {pricesVisible ? (
+                      <div
+                        className="text-muted-foreground text-xs tabular-nums"
+                        data-testid="line-total"
+                      >
+                        {t("orders.center_form.line_total", {
+                          total: money(pv?.total ?? null),
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2 lg:h-9">
+                    <Switch
+                      id={`${id}-gift`}
+                      checked={gift}
+                      data-testid="line-gift"
+                      onCheckedChange={(v) =>
+                        update(line.product_uuid, { is_gift: v === true })
+                      }
+                    />
+                    <Label htmlFor={`${id}-gift`} className="text-xs">
+                      {t("orders.center_form.gift")}
+                    </Label>
                   </div>
                   <div className="flex items-start justify-end">
                     <Button
@@ -412,7 +658,7 @@ export function CenterOrderForm({
                   </div>
                   {touched && err ? (
                     <p
-                      className="text-destructive text-xs sm:col-span-4"
+                      className="text-destructive text-xs sm:col-span-2 lg:col-span-7"
                       data-testid="line-error"
                     >
                       {t(`orders.form.errors.${err}`)}

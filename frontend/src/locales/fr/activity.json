@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Réglages du rouleau mis à jour",
   "actions.organizations.member_updated": "Rôles du membre de l'organisation mis à jour",
   "actions.organizations.member_removed": "Membre retiré de l'organisation",
-  "resources.organizations": "Organisations"
+  "resources.organizations": "Organisations",
+  "actions.pricing.discounts_set": "Remises du revendeur mises à jour"
 }

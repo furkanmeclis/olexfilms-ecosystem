@@ -2178,6 +2178,9 @@ type OrderItem struct {
 	Note                     pgtype.Text        `json:"note"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	ListUnitPrice            pgtype.Numeric     `json:"list_unit_price"`
+	DiscountPct              pgtype.Numeric     `json:"discount_pct"`
+	IsGift                   bool               `json:"is_gift"`
 }
 
 type OrderItemUnit struct {
@@ -2306,6 +2309,8 @@ type Organization struct {
 	Iban                      pgtype.Text        `json:"iban"`
 	BillingUpdatedAt          pgtype.Timestamptz `json:"billing_updated_at"`
 	BillingUpdatedByUserID    pgtype.Int8        `json:"billing_updated_by_user_id"`
+	StandardDiscountPct       pgtype.Numeric     `json:"standard_discount_pct"`
+	FirstOrderDiscountPct     pgtype.Numeric     `json:"first_order_discount_pct"`
 }
 
 type OrganizationMember struct {

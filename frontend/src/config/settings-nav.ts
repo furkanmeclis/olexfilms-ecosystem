@@ -18,6 +18,7 @@ import {
   MapPinned,
   MessageCircle,
   MessageSquareText,
+  Percent,
   Plug,
   RectangleHorizontal,
   Recycle,
@@ -412,6 +413,17 @@ export function tenantSettingsNav(slug: string): NavCatalog {
             icon: Store,
             permission: permissions.organizations.tenantRead,
             orgTypes: ["center"],
+          },
+          {
+            // TEC-1064: the discounts agreed with the organizations under
+            // it (sales / accounting, pricing.sale.write).
+            id: "dealer-discounts",
+            titleKey: "orders.nav_dealer_discounts",
+            href: routes.tenant.settings.dealerDiscounts(slug),
+            icon: Percent,
+            permission: permissions.pricing.saleWrite,
+            orgTypes: ["center", "distributor"],
+            feature: "catalog",
           },
         ],
       },

@@ -78,6 +78,16 @@ func RegisterRoutes(
 	distributor := pricingusecase.OrgDistributor
 	mux.Handle("PUT /v1/tenant/pricing/products/{uuid}/dealer-prices/{currency}", write(h.SetDealerPrice, distributor))
 	mux.Handle("DELETE /v1/tenant/pricing/products/{uuid}/dealer-prices/{currency}", write(h.DeleteDealerPrice, distributor))
+
+	// TEC-1064: the discount the center or a distributor agreed with an
+	// organization directly under it (pricing.sale.write; writes step-up).
+	dh := h.Discounts(pricingusecase.NewDiscounts(q))
+	sellers := requireOrgType(center, distributor)
+	mux.Handle("GET /v1/tenant/pricing/discounts/{org_uuid}", middleware.Chain(http.HandlerFunc(dh.Get),
+		authn, org, module, middleware.RequirePermission(rbac.PermPricingSaleWrite), sellers))
+	mux.Handle("PUT /v1/tenant/pricing/discounts/{org_uuid}", middleware.Chain(http.HandlerFunc(dh.Set),
+		authn, org, module, middleware.RequirePermission(rbac.PermPricingSaleWrite), sellers,
+		middleware.RequireStepUp(stepUp)))
 }
 
 // RegisterRecommendedRoutes mounts the recommended price and price

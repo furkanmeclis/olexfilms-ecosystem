@@ -10592,6 +10592,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pricing/discounts/{org_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Discounts agreed with an organization directly under the caller
+         * @description TEC-1064. Center or distributor with pricing.sale.write (403 otherwise); the organization must be directly under the active organization (404 otherwise). `first_order` is true while it has placed no order (neither a draft nor cancelled) with the caller.
+         */
+        get: operations["getTenantBuyerDiscount"];
+        /**
+         * Set the discounts agreed with an organization directly under the caller
+         * @description TEC-1064. Same access as the GET plus a recent step-up. Both values are replaced; null (or missing) clears one. 0..100 with at most two decimals (400 otherwise). The standard discount applies to every order of the buyer, the first-order discount replaces it on its first order.
+         */
+        put: operations["setTenantBuyerDiscount"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/pricing/distributor-prices": {
         parameters: {
             query?: never;
@@ -13283,9 +13309,31 @@ export interface paths {
          *
          *     TEC-1024: with `buyer_org_uuid` the active organization must be the center (otherwise 403) and the buyer an active dealer directly under it in the same brand (otherwise 400 on `buyer_org_uuid`). The order is opened by the center as seller and starts `approved` (prices locked, rate frozen, `created_by_seller` true), so the warehouse flow (preparing -> unit assignment -> ready -> shipped -> received) continues unchanged; the dealer's members holding orders.read are notified (ORDER_CREATED_BY_SELLER). Prices never block on this path: an item's `unit_price` (>= 0) wins (price_source `manual`), else the dealer's purchase price, else 0 with price_source `missing` and `price_missing` true.
          *
+         *     TEC-1064: every line keeps `list_unit_price` (before the discount), `discount_pct` and the charged `unit_price`. The default discount is the buyer's `first_order_discount_pct` on its first order to the seller (no earlier order that is neither a draft nor cancelled), otherwise its `standard_discount_pct`; on a center order for a dealer an item's `discount_pct` replaces it and `is_gift` charges the line 0. Approval re-reads the list price and keeps each line's discount; a gift stays 0.
+         *
          *     TEC-1028: the order falls into the warehouse `seller_warehouse_uuid` names (an active warehouse of the center, otherwise 400 on `seller_warehouse_uuid`), else the center's primary warehouse. A dealer order the seller approves falls into the seller's primary warehouse. Picking suggestions and pick locations are limited to that warehouse, and its staff (warehouse members holding orders.ship, or holders without any warehouse membership; not the actor) are notified in-app and by push (ORDER_WAREHOUSE_NEW).
          */
         post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Price preview of a new order (list price, discount, current TRY rate)
+         * @description TEC-1064. Writes nothing; needs orders.write. Without `buyer_org_uuid` the active organization is the buyer (its seller as in createOrder; 422 ORDER_NO_SUPPLIER otherwise) and prices are shown with pricing.purchase.read: only the discounted `unit_price`, never the list price or the discount rate. With `buyer_org_uuid` the active organization must be the center (403) and the buyer an active dealer directly under it (400); prices are shown with pricing.sale.read, including `list_unit_price`, the default `discount_pct` and the agreed rates. `try_rate` is the current rate from the order currency to TRY (null without one); the order freezes its own at approval (rate_snapshot).
+         */
+        post: operations["quoteOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -27603,6 +27651,18 @@ export interface components {
             idempotency_key?: string;
         };
         OrderItem: {
+            /**
+             * @description TEC-1064: the buyer's purchase price before the discount (NUMERIC(14,4)). Seller side with pricing.sale.read only; null for the buyer, without a list price or without the permission.
+             * @example 100.0000
+             */
+            list_unit_price: string | null;
+            /**
+             * @description TEC-1064: the applied discount percentage (two decimals; null = none, a typed price or a gift). Seller side with pricing.sale.read only.
+             * @example 20.00
+             */
+            discount_pct: string | null;
+            /** @description TEC-1064 — a gift line (e.g. the plexi set) charged 0 */
+            is_gift: boolean;
             /** @description The line is on a manual invoice record (TEC-1030) */
             invoiced: boolean;
             /** @description Number of that invoice record */
@@ -27626,7 +27686,7 @@ export interface components {
              * @enum {string|null}
              */
             price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing" | null;
-            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false when prices are hidden (TEC-1050) */
+            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false on a gift line and when prices are hidden (TEC-1050) */
             price_missing: boolean;
             /**
              * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
@@ -28034,8 +28094,12 @@ export interface components {
         OrderItemInput: {
             /** Format: uuid */
             product_uuid: string;
-            /** @description TEC-1024: only with buyer_org_uuid (center for a dealer), >= 0; a JSON number is accepted too. Ignored on the buyer's own order. */
+            /** @description TEC-1024: only with buyer_org_uuid (center for a dealer), >= 0; a JSON number is accepted too. Ignored on the buyer's own order. Charged as is (no discount). */
             unit_price?: string;
+            /** @description TEC-1064: only with buyer_org_uuid, 0..100 (a JSON number is accepted too); replaces the dealer's default discount on this line. Ignored on the buyer's own order, which always gets its default discount. */
+            discount_pct?: string;
+            /** @description TEC-1064: only with buyer_org_uuid; the line is a gift charged 0 (no discount). Ignored on the buyer's own order. */
+            is_gift?: boolean;
             /** @description Pieces (piece/fixed products) */
             quantity?: number;
             /** @description Meters (roll_meter products); a JSON number is accepted too */
@@ -28351,6 +28415,82 @@ export interface components {
             delivery_method_uuid?: string;
             /** @description Shipping only (TEC-768) */
             tracking_no?: string;
+        };
+        OrderQuoteInput: {
+            /**
+             * Format: uuid
+             * @description The center quotes for this dealer directly under it
+             */
+            buyer_org_uuid?: string | null;
+            product_uuids: string[];
+        };
+        OrderQuoteItem: {
+            /** Format: uuid */
+            product_uuid: string;
+            /** @description Price before the discount (center quote only) */
+            list_unit_price: string | null;
+            /** @description Price after the default discount (four decimals); null without a price or the permission */
+            unit_price: string | null;
+            /** @enum {string} */
+            price_source: "list" | "override" | "distributor_dealer" | "missing";
+        };
+        OrderQuote: {
+            /**
+             * @description Order currency (the brand currency)
+             * @example USD
+             */
+            currency: string;
+            /** @description The caller may see these prices */
+            prices_visible: boolean;
+            /** @description The buyer has placed no order with the seller yet */
+            first_order: boolean;
+            /** @description Default discount of this order (center quote only) */
+            discount_pct: string | null;
+            /** @description Agreed standard discount (center quote only) */
+            standard_discount_pct: string | null;
+            /** @description Agreed first-order discount (center quote only) */
+            first_order_discount_pct: string | null;
+            /**
+             * @description Current rate from the order currency to TRY (not frozen)
+             * @example 34.25
+             */
+            try_rate: string | null;
+            /** Format: date */
+            rate_date: string | null;
+            items: components["schemas"]["OrderQuoteItem"][];
+        };
+        EnvelopeOrderQuote: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrderQuote"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        BuyerDiscount: {
+            organization: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                /** @enum {string} */
+                type: "dealer" | "distributor";
+            };
+            /** @example 15.00 */
+            standard_discount_pct: string | null;
+            /** @example 20.00 */
+            first_order_discount_pct: string | null;
+            /** @description No order placed with the caller yet */
+            first_order: boolean;
+        };
+        BuyerDiscountInput: {
+            /** @description 0..100; a JSON number is accepted too; null clears it */
+            standard_discount_pct?: string | null;
+            /** @description 0..100; a JSON number is accepted too; null clears it */
+            first_order_discount_pct?: string | null;
+        };
+        EnvelopeBuyerDiscount: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["BuyerDiscount"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeOrder: {
             /** @enum {boolean} */
@@ -51160,6 +51300,61 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getTenantBuyerDiscount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBuyerDiscount"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setTenantBuyerDiscount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuyerDiscountInput"];
+            };
+        };
+        responses: {
+            /** @description Discounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBuyerDiscount"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listTenantDistributorPrices: {
         parameters: {
             query?: {
@@ -56242,6 +56437,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    quoteOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderQuoteInput"];
+            };
+        };
+        responses: {
+            /** @description Price preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderQuote"];
                 };
             };
             400: components["responses"]["BadRequest"];

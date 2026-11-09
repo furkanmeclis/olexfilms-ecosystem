@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Product roll settings updated",
   "actions.organizations.member_updated": "Organization member roles updated",
   "actions.organizations.member_removed": "Member removed from organization",
-  "resources.organizations": "Organizations"
+  "resources.organizations": "Organizations",
+  "actions.pricing.discounts_set": "Dealer discounts updated"
 }

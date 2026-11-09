@@ -234,7 +234,7 @@ func (q *Queries) CreateFleetProfile(ctx context.Context, arg CreateFleetProfile
 }
 
 const findFleetByTaxNumber = `-- name: FindFleetByTaxNumber :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, fp.id, fp.uuid, fp.organization_id, fp.brand_id, fp.tax_number, fp.tax_office, fp.legal_name, fp.contact_name, fp.contact_phone, fp.billing_email, fp.report_frequency, fp.report_locale, fp.primary_user_id, fp.created_by_user_id, fp.created_at, fp.updated_at
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, fp.id, fp.uuid, fp.organization_id, fp.brand_id, fp.tax_number, fp.tax_office, fp.legal_name, fp.contact_name, fp.contact_phone, fp.billing_email, fp.report_frequency, fp.report_locale, fp.primary_user_id, fp.created_by_user_id, fp.created_at, fp.updated_at
 FROM fleet_profiles fp
 JOIN organizations o ON o.id = fp.organization_id AND o.deleted_at IS NULL
 WHERE fp.brand_id = $1 AND fp.tax_number = $2
@@ -313,6 +313,8 @@ func (q *Queries) FindFleetByTaxNumber(ctx context.Context, arg FindFleetByTaxNu
 		&i.Organization.Iban,
 		&i.Organization.BillingUpdatedAt,
 		&i.Organization.BillingUpdatedByUserID,
+		&i.Organization.StandardDiscountPct,
+		&i.Organization.FirstOrderDiscountPct,
 		&i.FleetProfile.ID,
 		&i.FleetProfile.Uuid,
 		&i.FleetProfile.OrganizationID,
@@ -334,7 +336,7 @@ func (q *Queries) FindFleetByTaxNumber(ctx context.Context, arg FindFleetByTaxNu
 }
 
 const getFleetByUUID = `-- name: GetFleetByUUID :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, fp.id, fp.uuid, fp.organization_id, fp.brand_id, fp.tax_number, fp.tax_office, fp.legal_name, fp.contact_name, fp.contact_phone, fp.billing_email, fp.report_frequency, fp.report_locale, fp.primary_user_id, fp.created_by_user_id, fp.created_at, fp.updated_at
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, fp.id, fp.uuid, fp.organization_id, fp.brand_id, fp.tax_number, fp.tax_office, fp.legal_name, fp.contact_name, fp.contact_phone, fp.billing_email, fp.report_frequency, fp.report_locale, fp.primary_user_id, fp.created_by_user_id, fp.created_at, fp.updated_at
 FROM organizations o
 JOIN fleet_profiles fp ON fp.organization_id = o.id
 WHERE o.uuid = $1 AND o.type = 'fleet' AND o.deleted_at IS NULL
@@ -406,6 +408,8 @@ func (q *Queries) GetFleetByUUID(ctx context.Context, argUuid uuid.UUID) (GetFle
 		&i.Organization.Iban,
 		&i.Organization.BillingUpdatedAt,
 		&i.Organization.BillingUpdatedByUserID,
+		&i.Organization.StandardDiscountPct,
+		&i.Organization.FirstOrderDiscountPct,
 		&i.FleetProfile.ID,
 		&i.FleetProfile.Uuid,
 		&i.FleetProfile.OrganizationID,

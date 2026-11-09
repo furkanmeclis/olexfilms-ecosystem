@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Ürün rulo ayarları güncellendi",
   "actions.organizations.member_updated": "İşletme üyesinin rolleri güncellendi",
   "actions.organizations.member_removed": "Üye işletmeden çıkarıldı",
-  "resources.organizations": "İşletmeler"
+  "resources.organizations": "İşletmeler",
+  "actions.pricing.discounts_set": "Bayi iskontoları güncellendi"
 }

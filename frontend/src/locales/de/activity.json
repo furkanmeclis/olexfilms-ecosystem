@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Rolleneinstellungen aktualisiert",
   "actions.organizations.member_updated": "Rollen des Organisationsmitglieds aktualisiert",
   "actions.organizations.member_removed": "Mitglied aus Organisation entfernt",
-  "resources.organizations": "Organisationen"
+  "resources.organizations": "Organisationen",
+  "actions.pricing.discounts_set": "Händlerrabatte aktualisiert"
 }

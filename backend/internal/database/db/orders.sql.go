@@ -359,6 +359,30 @@ func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilter
 	return count, err
 }
 
+const countPlacedBuyerOrders = `-- name: CountPlacedBuyerOrders :one
+SELECT COUNT(*)::bigint FROM orders
+WHERE buyer_org_id = $1
+  AND seller_org_id = $2
+  AND status NOT IN ('draft', 'cancelled')
+  AND id <> $3
+`
+
+type CountPlacedBuyerOrdersParams struct {
+	BuyerOrgID     int64 `json:"buyer_org_id"`
+	SellerOrgID    int64 `json:"seller_org_id"`
+	ExcludeOrderID int64 `json:"exclude_order_id"`
+}
+
+// TEC-1064: orders the buyer has placed with the seller (neither a draft
+// nor cancelled), the given order left out; 0 = the next one is the
+// buyer's first order.
+func (q *Queries) CountPlacedBuyerOrders(ctx context.Context, arg CountPlacedBuyerOrdersParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPlacedBuyerOrders, arg.BuyerOrgID, arg.SellerOrgID, arg.ExcludeOrderID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 
 
@@ -461,14 +485,16 @@ const createOrderItem = `-- name: CreateOrderItem :one
 
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
-    unit_price, price_source, recommended_price_snapshot, line_total, note
+    unit_price, price_source, recommended_price_snapshot, line_total, note,
+    list_unit_price, discount_pct, is_gift
 )
 SELECT o.id, o.organization_id, o.brand_id, $1, $2, $3,
        $4, $5, $6,
-       $7, $8
+       $7, $8,
+       $9, $10, COALESCE($11::boolean, false)
 FROM orders o
-WHERE o.id = $9
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at
+WHERE o.id = $12
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift
 `
 
 type CreateOrderItemParams struct {
@@ -480,11 +506,16 @@ type CreateOrderItemParams struct {
 	RecommendedPriceSnapshot pgtype.Numeric `json:"recommended_price_snapshot"`
 	LineTotal                pgtype.Numeric `json:"line_total"`
 	Note                     pgtype.Text    `json:"note"`
+	ListUnitPrice            pgtype.Numeric `json:"list_unit_price"`
+	DiscountPct              pgtype.Numeric `json:"discount_pct"`
+	IsGift                   pgtype.Bool    `json:"is_gift"`
 	OrderID                  int64          `json:"order_id"`
 }
 
 // ---------------------------------------------------------------------------
 // Order lines.
+// TEC-1064: list_unit_price (before the discount), discount_pct and
+// is_gift (a line charged 0) are optional; NULL is_gift = false.
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
 	row := q.db.QueryRow(ctx, createOrderItem,
 		arg.ProductID,
@@ -495,6 +526,9 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.RecommendedPriceSnapshot,
 		arg.LineTotal,
 		arg.Note,
+		arg.ListUnitPrice,
+		arg.DiscountPct,
+		arg.IsGift,
 		arg.OrderID,
 	)
 	var i OrderItem
@@ -514,6 +548,9 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.Note,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
 	)
 	return i, err
 }
@@ -973,7 +1010,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) 
 }
 
 const getOrderItem = `-- name: GetOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -1001,12 +1038,15 @@ func (q *Queries) GetOrderItem(ctx context.Context, arg GetOrderItemParams) (Ord
 		&i.Note,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
 	)
 	return i, err
 }
 
 const getOrderItemByUUID = `-- name: GetOrderItemByUUID :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1034,6 +1074,9 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUID
 		&i.Note,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
 	)
 	return i, err
 }
@@ -1523,7 +1566,7 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 }
 
 const listOrderItems = `-- name: ListOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
 WHERE order_id = $1
 ORDER BY id
 `
@@ -1553,6 +1596,9 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.Note,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ListUnitPrice,
+			&i.DiscountPct,
+			&i.IsGift,
 		); err != nil {
 			return nil, err
 		}
@@ -2101,7 +2147,7 @@ func (q *Queries) LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams
 }
 
 const lockOrderItem = `-- name: LockOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2130,12 +2176,15 @@ func (q *Queries) LockOrderItem(ctx context.Context, arg LockOrderItemParams) (O
 		&i.Note,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
 	)
 	return i, err
 }
 
 const lockOrderItems = `-- name: LockOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
 WHERE order_id = $1
 ORDER BY id
 FOR UPDATE
@@ -2166,6 +2215,9 @@ func (q *Queries) LockOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.Note,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ListUnitPrice,
+			&i.DiscountPct,
+			&i.IsGift,
 		); err != nil {
 			return nil, err
 		}
@@ -2874,9 +2926,11 @@ SET quantity = $1,
     price_source = $4,
     recommended_price_snapshot = $5,
     line_total = $6,
-    note = $7
-WHERE id = $8
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at
+    note = $7,
+    list_unit_price = $8,
+    discount_pct = $9
+WHERE id = $10
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift
 `
 
 type UpdateOrderItemParams struct {
@@ -2887,6 +2941,8 @@ type UpdateOrderItemParams struct {
 	RecommendedPriceSnapshot pgtype.Numeric `json:"recommended_price_snapshot"`
 	LineTotal                pgtype.Numeric `json:"line_total"`
 	Note                     pgtype.Text    `json:"note"`
+	ListUnitPrice            pgtype.Numeric `json:"list_unit_price"`
+	DiscountPct              pgtype.Numeric `json:"discount_pct"`
 	ID                       int64          `json:"id"`
 }
 
@@ -2899,6 +2955,8 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		arg.RecommendedPriceSnapshot,
 		arg.LineTotal,
 		arg.Note,
+		arg.ListUnitPrice,
+		arg.DiscountPct,
 		arg.ID,
 	)
 	var i OrderItem
@@ -2918,6 +2976,9 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.Note,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
 	)
 	return i, err
 }

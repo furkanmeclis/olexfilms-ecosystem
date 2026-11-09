@@ -34,7 +34,7 @@ const clearOrganizationLogo = `-- name: ClearOrganizationLogo :one
 UPDATE organizations
 SET logo_object_key = NULL
 WHERE uuid = $1 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error) {
@@ -98,6 +98,8 @@ func (q *Queries) ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) 
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -228,7 +230,7 @@ INSERT INTO organizations (
     $11, $12, $13, $14, $15, $16, $17,
     $18, $19, $20
 )
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type CreateOrganizationParams struct {
@@ -336,6 +338,8 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -394,7 +398,7 @@ WITH RECURSIVE tree AS (
     JOIN tree t ON c.parent_id = t.id
     WHERE c.deleted_at IS NULL AND t.depth < 16
 )
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct
 FROM tree
 JOIN organizations o ON o.id = tree.id
 ORDER BY tree.depth ASC, o.name ASC
@@ -468,6 +472,8 @@ func (q *Queries) Descendants(ctx context.Context, id int64) ([]Organization, er
 			&i.Iban,
 			&i.BillingUpdatedAt,
 			&i.BillingUpdatedByUserID,
+			&i.StandardDiscountPct,
+			&i.FirstOrderDiscountPct,
 		); err != nil {
 			return nil, err
 		}
@@ -480,7 +486,7 @@ func (q *Queries) Descendants(ctx context.Context, id int64) ([]Organization, er
 }
 
 const getOrganizationByID = `-- name: GetOrganizationByID :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct FROM organizations
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -545,12 +551,14 @@ func (q *Queries) GetOrganizationByID(ctx context.Context, id int64) (Organizati
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
 
 const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct FROM organizations
 WHERE slug = $1 AND deleted_at IS NULL
 `
 
@@ -615,12 +623,14 @@ func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organ
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
 
 const getOrganizationByUUID = `-- name: GetOrganizationByUUID :one
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct FROM organizations
 WHERE uuid = $1 AND deleted_at IS NULL
 `
 
@@ -685,6 +695,8 @@ func (q *Queries) GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) 
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -879,7 +891,7 @@ func (q *Queries) GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOr
 }
 
 const getOrganizationTreeByUUID = `-- name: GetOrganizationTreeByUUID :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
@@ -954,6 +966,8 @@ func (q *Queries) GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UU
 		&i.Organization.Iban,
 		&i.Organization.BillingUpdatedAt,
 		&i.Organization.BillingUpdatedByUserID,
+		&i.Organization.StandardDiscountPct,
+		&i.Organization.FirstOrderDiscountPct,
 		&i.BrandSlug,
 		&i.ParentUuid,
 		&i.ParentName,
@@ -1038,7 +1052,7 @@ func (q *Queries) ListMemberRolesByOrganization(ctx context.Context, organizatio
 }
 
 const listOrganizationChildren = `-- name: ListOrganizationChildren :many
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
@@ -1120,6 +1134,8 @@ func (q *Queries) ListOrganizationChildren(ctx context.Context, parentID pgtype.
 			&i.Organization.Iban,
 			&i.Organization.BillingUpdatedAt,
 			&i.Organization.BillingUpdatedByUserID,
+			&i.Organization.StandardDiscountPct,
+			&i.Organization.FirstOrderDiscountPct,
 			&i.BrandSlug,
 			&i.ParentUuid,
 			&i.ParentName,
@@ -1303,7 +1319,7 @@ func (q *Queries) ListOrganizationMembersByUserID(ctx context.Context, arg ListO
 }
 
 const listOrganizationsFiltered = `-- name: ListOrganizationsFiltered :many
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
@@ -1473,6 +1489,8 @@ func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganiz
 			&i.Organization.Iban,
 			&i.Organization.BillingUpdatedAt,
 			&i.Organization.BillingUpdatedByUserID,
+			&i.Organization.StandardDiscountPct,
+			&i.Organization.FirstOrderDiscountPct,
 			&i.BrandSlug,
 			&i.ParentUuid,
 			&i.ParentName,
@@ -1488,7 +1506,7 @@ func (q *Queries) ListOrganizationsFiltered(ctx context.Context, arg ListOrganiz
 }
 
 const listOrganizationsInScope = `-- name: ListOrganizationsInScope :many
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS parent_name
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
@@ -1602,6 +1620,8 @@ func (q *Queries) ListOrganizationsInScope(ctx context.Context, arg ListOrganiza
 			&i.Organization.Iban,
 			&i.Organization.BillingUpdatedAt,
 			&i.Organization.BillingUpdatedByUserID,
+			&i.Organization.StandardDiscountPct,
+			&i.Organization.FirstOrderDiscountPct,
 			&i.BrandSlug,
 			&i.ParentUuid,
 			&i.ParentName,
@@ -1621,7 +1641,7 @@ UPDATE organizations
 SET status = $1,
     access_ends_at = $2
 WHERE uuid = $3 AND brand_id = $4 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type SetOrganizationBulkStateParams struct {
@@ -1700,6 +1720,91 @@ func (q *Queries) SetOrganizationBulkState(ctx context.Context, arg SetOrganizat
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
+	)
+	return i, err
+}
+
+const setOrganizationDiscounts = `-- name: SetOrganizationDiscounts :one
+UPDATE organizations
+SET standard_discount_pct = $1,
+    first_order_discount_pct = $2
+WHERE id = $3 AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
+`
+
+type SetOrganizationDiscountsParams struct {
+	StandardDiscountPct   pgtype.Numeric `json:"standard_discount_pct"`
+	FirstOrderDiscountPct pgtype.Numeric `json:"first_order_discount_pct"`
+	ID                    int64          `json:"id"`
+}
+
+// TEC-1064: the discounts the parent agreed with this buyer organization
+// (NULL = none). The caller checks the parent and the permission.
+func (q *Queries) SetOrganizationDiscounts(ctx context.Context, arg SetOrganizationDiscountsParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, setOrganizationDiscounts, arg.StandardDiscountPct, arg.FirstOrderDiscountPct, arg.ID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
+		&i.BillingTitle,
+		&i.TaxOffice,
+		&i.TaxNo,
+		&i.BillingAddress,
+		&i.BillingEmail,
+		&i.Iban,
+		&i.BillingUpdatedAt,
+		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -1708,7 +1813,7 @@ const setOrganizationLogo = `-- name: SetOrganizationLogo :one
 UPDATE organizations
 SET logo_object_key = $2
 WHERE uuid = $1 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type SetOrganizationLogoParams struct {
@@ -1777,6 +1882,8 @@ func (q *Queries) SetOrganizationLogo(ctx context.Context, arg SetOrganizationLo
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -1785,7 +1892,7 @@ const setOrganizationServicePointLogo = `-- name: SetOrganizationServicePointLog
 UPDATE organizations
 SET service_point_logo_object_key = $1
 WHERE uuid = $2 AND type = 'center' AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type SetOrganizationServicePointLogoParams struct {
@@ -1854,6 +1961,8 @@ func (q *Queries) SetOrganizationServicePointLogo(ctx context.Context, arg SetOr
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -1872,7 +1981,7 @@ func (q *Queries) SlugExists(ctx context.Context, slug string) (bool, error) {
 }
 
 const supplierOf = `-- name: SupplierOf :one
-SELECT p.id, p.uuid, p.slug, p.name, p.city, p.district, p.phone, p.address, p.logo_object_key, p.status, p.plan_code, p.access_starts_at, p.access_ends_at, p.created_at, p.updated_at, p.deleted_at, p.email, p.website, p.tagline, p.footer_text, p.paper_size, p.primary_color, p.type, p.parent_id, p.brand_id, p.currency, p.locale, p.timezone, p.country_id, p.contract_pdf_key, p.contract_valid_until, p.settings, p.province_id, p.district_id, p.phone_raw, p.google_business_url, p.latitude, p.longitude, p.invoice_vkn, p.invoice_tckn, p.invoice_tax_office, p.invoice_legal_name, p.einvoice_registered, p.einvoice_alias, p.invoice_email, p.service_point_enabled, p.service_point_name, p.service_point_logo_object_key, p.merged_into_id, p.billing_title, p.tax_office, p.tax_no, p.billing_address, p.billing_email, p.iban, p.billing_updated_at, p.billing_updated_by_user_id
+SELECT p.id, p.uuid, p.slug, p.name, p.city, p.district, p.phone, p.address, p.logo_object_key, p.status, p.plan_code, p.access_starts_at, p.access_ends_at, p.created_at, p.updated_at, p.deleted_at, p.email, p.website, p.tagline, p.footer_text, p.paper_size, p.primary_color, p.type, p.parent_id, p.brand_id, p.currency, p.locale, p.timezone, p.country_id, p.contract_pdf_key, p.contract_valid_until, p.settings, p.province_id, p.district_id, p.phone_raw, p.google_business_url, p.latitude, p.longitude, p.invoice_vkn, p.invoice_tckn, p.invoice_tax_office, p.invoice_legal_name, p.einvoice_registered, p.einvoice_alias, p.invoice_email, p.service_point_enabled, p.service_point_name, p.service_point_logo_object_key, p.merged_into_id, p.billing_title, p.tax_office, p.tax_no, p.billing_address, p.billing_email, p.iban, p.billing_updated_at, p.billing_updated_by_user_id, p.standard_discount_pct, p.first_order_discount_pct
 FROM organizations o
 JOIN organizations p ON p.id = o.parent_id AND p.deleted_at IS NULL
 WHERE o.id = $1 AND o.deleted_at IS NULL
@@ -1941,6 +2050,8 @@ func (q *Queries) SupplierOf(ctx context.Context, id int64) (Organization, error
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -1959,7 +2070,7 @@ SET name = COALESCE($1, name),
     paper_size = COALESCE($10, paper_size),
     primary_color = COALESCE($11, primary_color)
 WHERE id = $12 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type UpdateOrganizationLetterheadParams struct {
@@ -2051,6 +2162,8 @@ func (q *Queries) UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOr
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -2073,7 +2186,7 @@ const updateOrganizationParent = `-- name: UpdateOrganizationParent :one
 UPDATE organizations
 SET parent_id = $2
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type UpdateOrganizationParentParams struct {
@@ -2142,6 +2255,8 @@ func (q *Queries) UpdateOrganizationParent(ctx context.Context, arg UpdateOrgani
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -2164,7 +2279,7 @@ SET name = COALESCE($1, name),
     province_id = CASE WHEN $13::bool THEN $15::bigint ELSE province_id END,
     district_id = CASE WHEN $13::bool THEN $16::bigint ELSE district_id END
 WHERE uuid = $17 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type UpdateOrganizationPlatformParams struct {
@@ -2266,6 +2381,8 @@ func (q *Queries) UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrga
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }
@@ -2275,7 +2392,7 @@ UPDATE organizations
 SET service_point_enabled = COALESCE($1::boolean, service_point_enabled),
     service_point_name = CASE WHEN $2::boolean THEN $3::varchar ELSE service_point_name END
 WHERE id = $4 AND type = 'center' AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
 `
 
 type UpdateOrganizationServicePointParams struct {
@@ -2352,6 +2469,8 @@ func (q *Queries) UpdateOrganizationServicePoint(ctx context.Context, arg Update
 		&i.Iban,
 		&i.BillingUpdatedAt,
 		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
 	)
 	return i, err
 }

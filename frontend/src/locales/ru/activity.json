@@ -216,5 +216,6 @@
   "actions.catalog.product.roll_updated": "Настройки рулона обновлены",
   "actions.organizations.member_updated": "Роли участника организации обновлены",
   "actions.organizations.member_removed": "Участник удалён из организации",
-  "resources.organizations": "Организации"
+  "resources.organizations": "Организации",
+  "actions.pricing.discounts_set": "Скидки дилера обновлены"
 }

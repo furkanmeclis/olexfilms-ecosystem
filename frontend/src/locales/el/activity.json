@@ -215,5 +215,6 @@
   "actions.services.created_on_behalf": "Υπηρεσία ανοίχτηκε για αντιπρόσωπο",
   "actions.organizations.member_updated": "Οι ρόλοι του μέλους του οργανισμού ενημερώθηκαν",
   "actions.organizations.member_removed": "Το μέλος αφαιρέθηκε από τον οργανισμό",
-  "resources.organizations": "Οργανισμοί"
+  "resources.organizations": "Οργανισμοί",
+  "actions.pricing.discounts_set": "Οι εκπτώσεις αντιπροσώπου ενημερώθηκαν"
 }

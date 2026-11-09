@@ -23,9 +23,55 @@ export type OrderFormLine = {
   amount: string;
   /** Center order for a dealer only (TEC-1024): typed unit price, "" = none. */
   unit_price?: string;
+  /**
+   * Center order for a dealer only (TEC-1064): typed discount %, "" = the
+   * dealer's default one.
+   */
+  discount_pct?: string;
+  /** Center order for a dealer only (TEC-1064): gift line charged 0. */
+  is_gift?: boolean;
 };
 
-export type LineError = "quantity_invalid" | "meters_invalid" | "price_invalid";
+export type LineError =
+  "quantity_invalid" | "meters_invalid" | "price_invalid" | "discount_invalid";
+
+/** order_items.discount_pct / organizations.*_discount_pct: 0..100. */
+const DISCOUNT_RE = /^[0-9]{1,3}(\.[0-9]{1,2})?$/;
+
+/** A typed discount: empty (default) or 0..100 with at most 2 decimals. */
+export function discountValid(raw: string | undefined): boolean {
+  const v = normalizeAmount(raw ?? "");
+  return v === "" || (DISCOUNT_RE.test(v) && Number(v) <= 100);
+}
+
+/**
+ * TEC-1064: the preview of one line — the discounted unit price (four
+ * decimals, like order_items.unit_price) and the line total (two). A gift
+ * is 0, a typed unit price is charged as is, no price at all is null. The
+ * server recomputes every amount.
+ */
+export function previewLine(input: {
+  list: string | null | undefined;
+  discount: string | null | undefined;
+  manual?: string;
+  gift?: boolean;
+  amount: string;
+}): { unit: number | null; total: number | null } {
+  const amount = Number(normalizeAmount(input.amount));
+  const qty = Number.isFinite(amount) && amount > 0 ? amount : 0;
+  const round = (n: number, d: number) =>
+    Math.round((n + Number.EPSILON) * 10 ** d) / 10 ** d;
+  if (input.gift) return { unit: 0, total: 0 };
+  const manual = normalizeAmount(input.manual ?? "");
+  let unit: number | null = null;
+  if (manual !== "" && unitPriceValid(manual)) unit = Number(manual);
+  else if (input.list !== null && input.list !== undefined) {
+    const pct = Number(normalizeAmount(input.discount ?? "")) || 0;
+    unit = round((Number(input.list) * (100 - pct)) / 100, 4);
+  }
+  if (unit === null) return { unit: null, total: null };
+  return { unit, total: round(unit * qty, 2) };
+}
 
 export type OrderFormErrors = {
   /** Whole-form problem: no line, or more than the API accepts. */
@@ -49,6 +95,7 @@ export function unitPriceValid(raw: string | undefined): boolean {
 
 function lineError(line: OrderFormLine): LineError | null {
   if (!unitPriceValid(line.unit_price)) return "price_invalid";
+  if (!discountValid(line.discount_pct)) return "discount_invalid";
   const v = normalizeAmount(line.amount);
   if (isRoll(line.unit_type)) {
     return METERS_RE.test(v) && Number(v) > 0 ? null : "meters_invalid";
@@ -91,8 +138,16 @@ export function toItemInputs(
     const base: OrderItemInput = isRoll(line.unit_type)
       ? { product_uuid: line.product_uuid, meters: v }
       : { product_uuid: line.product_uuid, quantity: Number(v) };
+    if (!withPrice) return base;
     const price = normalizeAmount(line.unit_price ?? "");
-    return withPrice && price !== "" ? { ...base, unit_price: price } : base;
+    const discount = normalizeAmount(line.discount_pct ?? "");
+    // TEC-1064: a gift line carries neither a price nor a discount.
+    if (line.is_gift) return { ...base, is_gift: true };
+    return {
+      ...base,
+      ...(price !== "" ? { unit_price: price } : {}),
+      ...(discount !== "" ? { discount_pct: discount } : {}),
+    };
   });
 }
 

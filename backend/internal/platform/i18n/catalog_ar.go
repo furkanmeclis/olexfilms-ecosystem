@@ -449,6 +449,7 @@ var arCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "رمز الصنف / الباركود",
 	"orders.pdf.unit_price":                   "سعر الوحدة",
 	"orders.pdf.discount":                     "الخصم",
+	"orders.pdf.gift":                         "هدية",
 	"orders.pdf.vat":                          "ضريبة القيمة المضافة",
 	"orders.pdf.line_total":                   "إجمالي البند",
 	"orders.pdf.subtotal":                     "المجموع الفرعي",

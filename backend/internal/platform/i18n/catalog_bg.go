@@ -449,6 +449,7 @@ var bgCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Баркод",
 	"orders.pdf.unit_price":                   "Единична цена",
 	"orders.pdf.discount":                     "Отстъпка",
+	"orders.pdf.gift":                         "Подарък",
 	"orders.pdf.vat":                          "ДДС",
 	"orders.pdf.line_total":                   "Сума на реда",
 	"orders.pdf.subtotal":                     "Междинна сума",

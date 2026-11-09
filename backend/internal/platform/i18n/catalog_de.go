@@ -449,6 +449,7 @@ var deCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Strichcode",
 	"orders.pdf.unit_price":                   "Einzelpreis",
 	"orders.pdf.discount":                     "Rabatt",
+	"orders.pdf.gift":                         "Geschenk",
 	"orders.pdf.vat":                          "MwSt.",
 	"orders.pdf.line_total":                   "Zeilensumme",
 	"orders.pdf.subtotal":                     "Zwischensumme",

@@ -449,6 +449,7 @@ var zhCNCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / 条形码",
 	"orders.pdf.unit_price":                   "单价",
 	"orders.pdf.discount":                     "折扣",
+	"orders.pdf.gift":                         "赠品",
 	"orders.pdf.vat":                          "增值税",
 	"orders.pdf.line_total":                   "行合计",
 	"orders.pdf.subtotal":                     "小计",

@@ -215,5 +215,6 @@
   "actions.services.created_on_behalf": "Услуга открита от името на дилър",
   "actions.organizations.member_updated": "Ролите на члена на организацията са обновени",
   "actions.organizations.member_removed": "Членът е премахнат от организацията",
-  "resources.organizations": "Организации"
+  "resources.organizations": "Организации",
+  "actions.pricing.discounts_set": "Отстъпките за дилъра са обновени"
 }

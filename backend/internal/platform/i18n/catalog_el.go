@@ -449,6 +449,7 @@ var elCatalog = map[string]string{
 	"orders.pdf.sku_barcode":                  "SKU / Γραμμωτός κώδικας",
 	"orders.pdf.unit_price":                   "Τιμή μονάδας",
 	"orders.pdf.discount":                     "Έκπτωση",
+	"orders.pdf.gift":                         "Δώρο",
 	"orders.pdf.vat":                          "ΦΠΑ",
 	"orders.pdf.line_total":                   "Σύνολο γραμμής",
 	"orders.pdf.subtotal":                     "Υποσύνολο",
