@@ -196,9 +196,7 @@ describe("DataTable server mode", () => {
     const headers = Array.from(document.querySelectorAll("th")).map(
       (th) => th.textContent,
     );
-    expect(headers.some((h) => h?.includes("users.columns.email"))).toBe(
-      false,
-    );
+    expect(headers.some((h) => h?.includes("users.columns.email"))).toBe(false);
     expect(headers.some((h) => h?.includes("users.columns.status"))).toBe(true);
   });
 
