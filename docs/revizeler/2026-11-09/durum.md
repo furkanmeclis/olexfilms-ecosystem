@@ -49,14 +49,14 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
-| KRİTİK Mobil | TEC-1063 | | | | ⏸ |
+| KRİTİK Mobil | TEC-1063 | | | — | ⏳ mobil paket 4b |
 
 ## 3. Fiyatlandırma
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 5.3 Web+API USD, iskonto, hediye | TEC-1064 | [#522](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/522) | 🟢 | 000173 | #510 üstünde; bayi iskontoları sayfası, quote ucu, hediye kalem; USD geçişi veri/ayar (aşağıda) |
-| 5.3 Mobil | TEC-1065 | | | | ⏸ |
+| 5.3 Mobil | TEC-1065 | | | — | ⏳ mobil paket 4b |
 
 ## 4. Rol ekranları
 
@@ -67,7 +67,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5.8 Mobil satış görevlisi | TEC-1068 | [#525](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/525) | 🟢 | — | alt bar + satış panosu (istemci hesaplı, backend rapor ucu sonraki iş) |
 | 6 Mobil stok depo filtresi | TEC-1069 | [#525](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/525) | 🟢 | — | depo çipleri (1000 birim sınırı; backend toplam ucu sonraki iş) |
 | 8 + 8.1 Web+API muhasebe | TEC-1070 | [#523](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/523) | 🟢 | 000172 | #512 üstünde; muhasebe ana sayfası, kuyruk (faturalanacak/yolda/iadeler), cari fatura bilgileri |
-| 8.1 Mobil muhasebe kuyruğu | TEC-1071 | | | | ⏸ |
+| 8.1 Mobil muhasebe kuyruğu | TEC-1071 | | | — | ⏳ mobil paket 4b |
 
 ## 5. Merkez ekranları
 
@@ -90,7 +90,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | Metraj Web+API `KOD-3M` | TEC-1078 | [#520](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/520) | 🟢 | — | #508 üstünde; `-3M`, `-2.5M`, `-3M-2`; birim geçmişinde parçalar, `family=` filtresi |
-| Metraj Mobil | TEC-1079 | | | | ⏸ |
+| Metraj Mobil | TEC-1079 | | | — | ⏳ mobil paket 4b |
 
 ## Karar uygulamaları
 
@@ -99,7 +99,9 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Rol izinleri (center_sales, dist. depo/muhasebe) | TEC-1089 | [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | 🟢 | 000176 | satış temsilcisi: fiyat+iskonto, onay/iptal; alış fiyatı yok. **Zorbey'i bu role ata** |
 | İade siparişe bağlı + merkez bayi adına iade | TEC-1085 | | | 000177 | ⏳ #523 üstünde |
 | Muhasebe takip (faturalandı sevkte, menüde katalog gizli) | TEC-1070 | | | — | ⏳ |
-| KRİTİK takip, hizmet listesi Ağ, arama gizleme | TEC-1062/1075/1061 | | | — | ⏳ |
+| KRİTİK takip: alıcı adına teslim alındı, pending gizleme | TEC-1062 | [#532](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/532) | 🟢 | — | #515 üstünde |
+| Hizmet listesi varsayılan Ağ | TEC-1075 | [#528](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/528) | 🟢 | — | #513 üstünde |
+| Kapalı ürün global aramada gizli | TEC-1061 | [#530](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/530) | 🟢 | — | #517 üstünde; reindex gerekmez |
 
 ## Karar gerektirenler (kodlama yok)
 
