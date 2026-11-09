@@ -15,7 +15,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000169 | TEC-1062 | bekleme havuzu |
 | 000170 | TEC-1060 | activity_events kısmi indeks |
 | 000171 | TEC-1061 | products.dealer_orderable |
-| 000172 | TEC-1070 | cari muhasebe bilgileri (gerekirse) |
+| 000172 | TEC-1070 | organizations fatura kolonları + iade kuyruğu |
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 | 000174 | TEC-1058 | order_items.plotter_cut |
 | 000175 | TEC-1076 | yalnız gerekirse |
@@ -39,11 +39,11 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
-| 5 + 5.1 Mobil | TEC-1055 | | | | ⏸ |
+| 5 + 5.1 Mobil | TEC-1055 | | | — | ⏳ mobil paket 2 (#518 + #509 üstünde) |
 | 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | | | — | ⏳ #518 üstünde |
 | 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | 000174 | ⏳ TEC-1056 üstünde |
-| 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
+| 5.6 + 5.4.1 Mobil | TEC-1059 | | | — | ⏳ hareket geçmişi mobil paket 2'de; plotter TEC-1058 sonrası |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
@@ -60,11 +60,11 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 7.1 Web depo ana sayfası | TEC-1066 | | | — | ⏳ #512 üstünde |
-| 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | | | | ⏸ |
+| 7.1 Web depo ana sayfası | TEC-1066 | [#519](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/519) | 🟢 | — | #512 üstünde; depo ana sayfası, salt okunur Bayiler sayfası, warehouse-summary ucu |
+| 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | | | — | ⏳ mobil paket 2 (#518 + #509 üstünde) |
 | 5.8 Mobil satış görevlisi | TEC-1068 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
 | 6 Mobil stok depo filtresi | TEC-1069 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
-| 8 + 8.1 Web+API muhasebe | TEC-1070 | | | 000172? | ⏳ #512 üstünde |
+| 8 + 8.1 Web+API muhasebe | TEC-1070 | [#523](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/523) | 🟢 | 000172 | #512 üstünde; muhasebe ana sayfası, kuyruk (faturalanacak/yolda/iadeler), cari fatura bilgileri |
 | 8.1 Mobil muhasebe kuyruğu | TEC-1071 | | | | ⏸ |
 
 ## 5. Merkez ekranları
@@ -132,6 +132,9 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **5.3 (TEC-1064) KRİTİK:** Satış temsilcisi (`center_staff`) rolünde `pricing.sale.read/write` yok → Zorbey fiyat ve iskonto göremiyor. Revize görmesini istiyor: rol paketine fiyat izni eklensin mi (migration)?
 - **5.3 (TEC-1064):** Merkeze doğrudan bağlı bayinin liste fiyatı = `sale_to_distributor_price` varsayıldı, iskonto bunun üzerine (K8 açık sorusu).
 - **5.3 (TEC-1064):** "İlk sipariş" sayımına legacy siparişler dahil → mevcut bayiler ilk sipariş iskontosu almaz. Uygun mu?
+- **7.1 (TEC-1066):** Revizede depo hesabı "Müşteriler"i görüyor; ama center_warehouse rolü müşteri okuyamıyor → test hesabı büyük ihtimalle center_staff/owner rolüyle açılmış, kontrol et.
+- **7.1 (TEC-1066):** distributor_warehouse_staff `organizations.read` tutmuyor → Bayiler sayfasını göremez; izin eklensin mi (migration)?
+- **8 (TEC-1070):** distributor_accounting `einvoice.manage` tutmuyor → "Faturalandı" butonu yok; izin eklensin mi? Muhasebe menüsünde katalog açık (fiyat yönetimi yetkisi); gizlensin mi? Faturalandı yalnız teslim alınmış siparişe (TEC-1030 kuralı) — legacy gibi sevkte de olsun mu?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
