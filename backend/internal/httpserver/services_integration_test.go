@@ -24,7 +24,8 @@ type serviceView struct {
 	Organization struct {
 		UUID string `json:"uuid"`
 	} `json:"organization"`
-	Customer struct {
+	AppliedBy string `json:"applied_by"`
+	Customer  struct {
 		UUID string `json:"uuid"`
 	} `json:"customer"`
 	CarBrand struct {
@@ -263,6 +264,48 @@ func TestIntegrationServicesFlow(t *testing.T) {
 	// A cancelled service frees its units: u1 is still in s1, u2 is free.
 	s3, _ := it.svcCall("POST", "/v1/services", aTok, body, http.StatusCreated)
 	it.svcCall("POST", "/v1/services/"+s3.UUID+"/items", aTok, map[string]any{"barcode": units[1].Barcode}, http.StatusCreated)
+
+	// TEC-1075: list summary cards in the list's scope (s1 ready, s2
+	// cancelled, s3 draft); the center narrows to dealer A with
+	// organization_uuid; applied_by is the dealer's name.
+	type listStats struct {
+		Total     int64 `json:"total"`
+		ThisMonth int64 `json:"this_month"`
+		ByStatus  struct {
+			Draft, Ready, Cancelled, Completed int64
+		} `json:"by_status"`
+		Warranties int64 `json:"warranties"`
+	}
+	stats := func(tok, query string) listStats {
+		t.Helper()
+		code, env := it.do("GET", "/v1/services/stats"+query, hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("stats%s = %d %s", query, code, errCode(env))
+		}
+		var out listStats
+		if err := json.Unmarshal(env.Data, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	want := func(name string, got listStats) {
+		t.Helper()
+		if got.Total != 3 || got.ThisMonth != 3 || got.ByStatus.Draft != 1 || got.ByStatus.Ready != 1 ||
+			got.ByStatus.Cancelled != 1 || got.ByStatus.Completed != 0 || got.Warranties != 0 {
+			t.Fatalf("%s stats = %+v", name, got)
+		}
+	}
+	want("dealer A", stats(aTok, ""))
+	want("center / dealer A", stats(staffTok, "?organization_uuid="+dealerA.Uuid.String()))
+	if got := stats(bTok, ""); got.Total != 0 {
+		t.Fatalf("dealer B stats = %+v", got)
+	}
+	if code, _ := it.do("GET", "/v1/services/stats?organization_uuid=x", hostOlex, aTok, nil); code != http.StatusBadRequest {
+		t.Fatalf("bad organization_uuid = %d", code)
+	}
+	if got, _ := it.svcCall("GET", "/v1/services/"+s1.UUID, staffTok, nil, http.StatusOK); got.AppliedBy != dealerA.Name {
+		t.Fatalf("applied_by = %q, want %q", got.AppliedBy, dealerA.Name)
+	}
 
 	// 7. Search by plate, customer name and number; outbox events written.
 	if !it.svcList(aTok, "?q="+veh.Plate.String).has(s1.UUID) ||

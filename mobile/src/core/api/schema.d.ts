@@ -12131,6 +12131,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summary cards of the service list
+         * @description TEC-1075. services.read, same scope as GET /v1/services (organization, subtree, brand, own). Totals per status, the services opened this calendar month (request time zone, K10 default Europe/Istanbul) and the warranty counts of those services (legacy hub ServiceOverviewStatsWidget). `organization_uuid` narrows like the list filter (the center's own / network switch).
+         */
+        get: operations["getServiceListStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/service-no-availability": {
         parameters: {
             query?: never;
@@ -26397,6 +26417,8 @@ export interface components {
             status: components["schemas"]["ServiceStatus"];
             status_label: string;
             organization: components["schemas"]["ServiceOrgRef"];
+            /** @description TEC-1075: who applied the service. The center's service point name (e.g. AFM Florya) for the center's own services when its service point is on, else the organization name. */
+            applied_by: string;
             customer: components["schemas"]["ServiceCustomerRef"];
             /** Format: uuid */
             vehicle_uuid: string;
@@ -26480,6 +26502,44 @@ export interface components {
             valid: boolean;
             /** @description Valid and not held by another service, warranty code or alias */
             available: boolean;
+        };
+        ServiceListStats: {
+            /** Format: int64 */
+            total: number;
+            /**
+             * Format: int64
+             * @description Opened since month_start
+             */
+            this_month: number;
+            /** Format: date-time */
+            month_start: string;
+            by_status: {
+                /** Format: int64 */
+                draft: number;
+                /** Format: int64 */
+                pending: number;
+                /** Format: int64 */
+                processing: number;
+                /** Format: int64 */
+                ready: number;
+                /** Format: int64 */
+                completed: number;
+                /** Format: int64 */
+                cancelled: number;
+            };
+            /** Format: int64 */
+            warranties: number;
+            /**
+             * Format: int64
+             * @description Active and not past end_at
+             */
+            active_warranties: number;
+        };
+        EnvelopeServiceListStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceListStats"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServiceNoAvailability: {
             /** @enum {boolean} */
@@ -53592,6 +53652,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getServiceListStats: {
+        parameters: {
+            query?: {
+                /** @description CSV of organization UUIDs (inside the scope). */
+                organization_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceListStats"];
                 };
             };
             400: components["responses"]["BadRequest"];

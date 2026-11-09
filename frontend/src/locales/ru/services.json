@@ -369,5 +369,14 @@
   "network_scope.network": "Вся сеть",
   "wizard.performer": "Исполнитель",
   "wizard.performer_own": "{{name}} (наш сервисный пункт)",
-  "wizard.performer_hint": "Если выбрать дилера, услуга открывается от его имени, действие записывается в журнал."
+  "wizard.performer_hint": "Если выбрать дилера, услуга открывается от его имени, действие записывается в журнал.",
+  "list.stats.total": "Всего услуг",
+  "list.stats.total_hint": "Включая {{cancelled}} отменённых",
+  "list.stats.this_month": "Открыто в этом месяце",
+  "list.stats.this_month_hint": "С начала месяца",
+  "list.stats.in_progress": "В работе",
+  "list.stats.in_progress_hint": "Ожидают, в обработке, готовы · {{draft}} черновиков",
+  "list.stats.completed": "Завершённые",
+  "list.stats.active_warranties": "Активные гарантии",
+  "list.stats.warranties_hint": "Всего {{total}} гарантий"
 }

@@ -173,6 +173,35 @@ describe("DataTable server mode", () => {
     expect(saved.columnFilters).toBeUndefined();
   });
 
+  it("keeps a defaultHidden column hidden when the saved layout predates it (TEC-1075)", () => {
+    window.localStorage.setItem(
+      "t-v2",
+      JSON.stringify({ columnVisibility: { status: true } }),
+    );
+    const withSecret = [
+      ...columns,
+      createColumn<Row>({
+        id: "secret",
+        accessorFn: () => "x",
+        labelKey: "users.columns.email",
+        defaultHidden: true,
+      }),
+    ] as ColumnDef<Row, unknown>[];
+    render({
+      ...serverProps,
+      columns: withSecret,
+      rowCount: 95,
+      features: { persistKey: "t-v2" },
+    });
+    const headers = Array.from(document.querySelectorAll("th")).map(
+      (th) => th.textContent,
+    );
+    expect(headers.some((h) => h?.includes("users.columns.email"))).toBe(
+      false,
+    );
+    expect(headers.some((h) => h?.includes("users.columns.status"))).toBe(true);
+  });
+
   it("multiSort is off by default", () => {
     let captured: boolean | undefined;
     render({

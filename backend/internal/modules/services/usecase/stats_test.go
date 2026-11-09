@@ -124,3 +124,24 @@ func TestHomeOverviewValidation(t *testing.T) {
 		t.Fatalf("no grant err = %v", err)
 	}
 }
+
+func TestMonthStart(t *testing.T) {
+	// 31 Oct 22:30 UTC is already November in Istanbul (UTC+3).
+	now := time.Date(2026, 10, 31, 22, 30, 0, 0, time.UTC)
+	ist := MonthStart(now, "Europe/Istanbul")
+	if want := time.Date(2026, 10, 31, 21, 0, 0, 0, time.UTC); !ist.Equal(want) {
+		t.Fatalf("istanbul = %v, want %v", ist.UTC(), want)
+	}
+	if got := MonthStart(now, "Not/AZone"); !got.Equal(time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("fallback = %v", got)
+	}
+}
+
+func TestListStatsForbidden(t *testing.T) {
+	s := &Service{}
+	none := dealerCaller(rbac.ScopeManaged, false)
+	none.Principal.PermissionScopes = map[string]rbac.Scope{}
+	if _, err := s.ListStats(context.Background(), none, nil, time.Now()); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("no grant err = %v", err)
+	}
+}

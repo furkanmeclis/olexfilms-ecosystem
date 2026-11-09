@@ -369,5 +369,14 @@
   "network_scope.network": "Уся мережа",
   "wizard.performer": "Виконавець",
   "wizard.performer_own": "{{name}} (наш сервісний пункт)",
-  "wizard.performer_hint": "Якщо обрати дилера, послугу буде відкрито від його імені, дію записано в журнал."
+  "wizard.performer_hint": "Якщо обрати дилера, послугу буде відкрито від його імені, дію записано в журнал.",
+  "list.stats.total": "Усього послуг",
+  "list.stats.total_hint": "Разом із {{cancelled}} скасованими",
+  "list.stats.this_month": "Відкрито цього місяця",
+  "list.stats.this_month_hint": "З початку місяця",
+  "list.stats.in_progress": "У роботі",
+  "list.stats.in_progress_hint": "Очікують, в обробці, готові · {{draft}} чернеток",
+  "list.stats.completed": "Завершені",
+  "list.stats.active_warranties": "Активні гарантії",
+  "list.stats.warranties_hint": "Усього {{total}} гарантій"
 }

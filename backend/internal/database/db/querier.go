@@ -3602,6 +3602,14 @@ type Querier interface {
 	// the breakdowns read completed services only.
 	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
 	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
+	// TEC-1075: summary cards above the service list (legacy hub
+	// ServiceOverviewStatsWidget): totals by status and the services opened
+	// since month_start, in the same scope as ListServicesInScope (org_ids NULL
+	// = whole brand, created_by for scope own) and its organization_uuids
+	// filter (the center's own / network switch).
+	ServiceListStats(ctx context.Context, arg ServiceListStatsParams) (ServiceListStatsRow, error)
+	// TEC-1075: warranty counts of the services ServiceListStats counts.
+	ServiceListWarrantyStats(ctx context.Context, arg ServiceListWarrantyStatsParams) (ServiceListWarrantyStatsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	// TEC-1004: a hand-entered service number must not be another service's
 	// number, nor a warranty public code or alias of another service (the
