@@ -210,4 +210,89 @@ func TestIntegrationOrdersRollSplit(t *testing.T) {
 	if q, m := orgStock(dist.ID); q != 1 || m != "12.00" {
 		t.Fatalf("distributor roll stock = %d %s, want 1 12.00", q, m)
 	}
+
+	// 4. TEC-1078 split family. The center's barcode history of the roll
+	// lists both parts: the standalone cut on hand, the order cut sold to
+	// the distributor with its order.
+	type part struct {
+		Barcode      string `json:"barcode"`
+		Depth        int    `json:"depth"`
+		Meters       string `json:"meters"`
+		FamilyStatus string `json:"family_status"`
+		Holder       *struct {
+			UUID string `json:"uuid"`
+		} `json:"holder"`
+		Order *struct {
+			OrderNo string `json:"order_no"`
+		} `json:"order"`
+	}
+	type history struct {
+		Splits struct {
+			Source *struct {
+				Barcode string `json:"barcode"`
+				Meters  string `json:"meters"`
+			} `json:"source"`
+			Parts []part `json:"parts"`
+		} `json:"splits"`
+	}
+	readHistory := func(tok, barcode string) history {
+		code, env := it.do("GET", "/v1/stock/units/by-barcode/"+barcode, hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("history %s = %d %s", barcode, code, errCode(env))
+		}
+		var h history
+		if err := json.Unmarshal(env.Data, &h); err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	h := readHistory(staffTok, r.Barcode)
+	if h.Splits.Source != nil || len(h.Splits.Parts) != 2 ||
+		h.Splits.Parts[0].Barcode != r.Barcode+"-12M" || h.Splits.Parts[0].FamilyStatus != "on_hand" ||
+		h.Splits.Parts[0].Depth != 1 || h.Splits.Parts[0].Meters != "12.00" ||
+		h.Splits.Parts[1].Barcode != first.Split.NewBarcode || h.Splits.Parts[1].FamilyStatus != "sold" ||
+		h.Splits.Parts[1].Holder == nil || h.Splits.Parts[1].Holder.UUID != dist.Uuid.String() ||
+		h.Splits.Parts[1].Order == nil || h.Splits.Parts[1].Order.OrderNo == "" {
+		t.Fatalf("center roll splits = %+v", h.Splits)
+	}
+	// The part's history names its roll for the center; the distributor
+	// does not reach the roll (center stock).
+	if h := readHistory(staffTok, first.Split.NewBarcode); h.Splits.Source == nil || h.Splits.Source.Barcode != r.Barcode || h.Splits.Source.Meters != "12.00" {
+		t.Fatalf("part source for the center = %+v", h.Splits.Source)
+	}
+	if h := readHistory(distTok, first.Split.NewBarcode); h.Splits.Source != nil || len(h.Splits.Parts) != 0 {
+		t.Fatalf("part splits for the distributor = %+v", h.Splits)
+	}
+
+	type familyRow struct {
+		Barcode      string `json:"barcode"`
+		FamilyStatus string `json:"family_status"`
+		FamilyDepth  *int   `json:"family_depth"`
+		Quantity     int    `json:"quantity"`
+	}
+	family := func(tok, orgUUID string) ([]familyRow, int) {
+		code, env := it.do("GET", "/v1/stock/organizations/"+orgUUID+"/units?family="+r.Barcode, hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("family list = %d %s", code, errCode(env))
+		}
+		var page struct {
+			Items []familyRow `json:"items"`
+			Total int         `json:"total"`
+		}
+		if err := json.Unmarshal(env.Data, &page); err != nil {
+			t.Fatal(err)
+		}
+		return page.Items, page.Total
+	}
+	// The center searching the roll code sees the roll and both parts.
+	rows, total := family(staffTok, center.Uuid.String())
+	if total != 3 || len(rows) != 3 || rows[0].Barcode != r.Barcode || rows[0].FamilyDepth == nil || *rows[0].FamilyDepth != 0 ||
+		rows[0].FamilyStatus != "on_hand" || rows[2].Barcode != first.Split.NewBarcode || rows[2].FamilyStatus != "sold" || rows[2].Quantity != 0 {
+		t.Fatalf("center family = %d %+v", total, rows)
+	}
+	// The distributor sees only its own part of that family.
+	rows, total = family(distTok, dist.Uuid.String())
+	if total != 1 || len(rows) != 1 || rows[0].Barcode != first.Split.NewBarcode || rows[0].FamilyStatus != "on_hand" {
+		t.Fatalf("distributor family = %d %+v", total, rows)
+	}
 }

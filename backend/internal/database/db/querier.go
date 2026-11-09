@@ -1399,6 +1399,8 @@ type Querier interface {
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
 	GetUnitLotNote(ctx context.Context, id int64) (GetUnitLotNoteRow, error)
+	// The roll a unit was cut from (TEC-1078), with its current holder.
+	GetUnitSplitSource(ctx context.Context, unitID int64) (GetUnitSplitSourceRow, error)
 	// TEC-1006: the warehouse-layer trace of a unit (view unit_traces).
 	GetUnitTrace(ctx context.Context, unitID int64) (GetUnitTraceRow, error)
 	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
@@ -2801,6 +2803,13 @@ type Querier interface {
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
+	// TEC-1078: the split family of a roll — the roll (depth 0) and every unit
+	// cut from it, recursively through stock_splits (a part may be cut again).
+	// Each row carries the unit, its product, its current holder and owner (no
+	// state yet: NULL), the location when it sits in a bin, the meters of the
+	// split that made it, its source barcode and the latest order that carried
+	// it. The caller filters the rows by the stock.read reach of the holder.
+	ListUnitSplitFamily(ctx context.Context, unitID int64) ([]ListUnitSplitFamilyRow, error)
 	ListUnitTraceOrders(ctx context.Context, unitID int64) ([]ListUnitTraceOrdersRow, error)
 	ListUnitTraceServices(ctx context.Context, unitID int64) ([]ListUnitTraceServicesRow, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
