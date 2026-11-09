@@ -14876,12 +14876,13 @@ paths:
         hits are reloaded from Postgres with the same scope) and falls back to
         the SQL search otherwise. Anonymized customers are never indexed, so
         `status=anonymized` always uses the SQL search. TEC-371: sort
-        (`name`, `email`, `status`, `linked_at`, `first_service_at`;
-        default `-linked_at`, `id` tiebreak), `status` / `type` CSV,
+        (`name`, `email`, `status`, `linked_at`, `first_service_at`,
+        `opened_by` (TEC-1074, opening organization name); default
+        `-linked_at`, `id` tiebreak), `status` / `type` CSV,
         `linked_from`/`linked_to` (first organization link) and
         `organization_uuid` CSV (links to those organizations, inside the
-        scope). An explicit sort or any of the TEC-371 filters keeps a `q`
-        search on SQL.
+        scope); TEC-1074 `opened_by_uuid` CSV. An explicit sort or any of
+        these filters keeps a `q` search on SQL.
       security:
         - bearerAuth: []
       parameters:
@@ -14905,6 +14906,13 @@ paths:
         - name: organization_uuid
           in: query
           description: CSV of organization UUIDs; customers linked to one of them (inside the scope).
+          schema: { type: string }
+        - name: opened_by_uuid
+          in: query
+          description: >-
+            TEC-1074: CSV of organization UUIDs; customers whose opening
+            organization (`opened_by`, first link inside the scope) is one of
+            them.
           schema: { type: string }
         - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
@@ -34858,6 +34866,16 @@ components:
         created_at: { type: string, format: date-time }
         linked_at: { type: [string, "null"], format: date-time }
         first_service_at: { type: [string, "null"], format: date-time }
+        opened_by:
+          description: >-
+            TEC-1074: the organization that opened the customer (first
+            organization link inside the caller's scope). List rows only.
+          type: object
+          required: [uuid, name, type]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            type: { type: string, enum: [center, distributor, dealer] }
 
     CustomerDetail:
       allOf:

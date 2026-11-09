@@ -19,6 +19,7 @@ var CustomersSortSpec = apiquery.SortSpec{
 	Columns: apiquery.SortColumns{
 		"name": "name", "email": "email", "status": "status",
 		"linked_at": "linked_at", "first_service_at": "first_service_at",
+		"opened_by": "opened_by",
 	},
 	Default: apiquery.SortField{Field: "linked_at", Desc: true},
 }
@@ -44,14 +45,15 @@ const (
 	QueryLinkedFrom       = "linked_from"
 	QueryLinkedTo         = "linked_to"
 	QueryOrganizationUUID = "organization_uuid"
+	QueryOpenedByUUID     = "opened_by_uuid"
 	QuerySort             = "sort"
 )
 
 // customerListKeys are the list parameters an export carries over.
-var customerListKeys = []string{QueryQ, QueryStatus, QueryType, QueryLinkedFrom, QueryLinkedTo, QueryOrganizationUUID, QuerySort}
+var customerListKeys = []string{QueryQ, QueryStatus, QueryType, QueryLinkedFrom, QueryLinkedTo, QueryOrganizationUUID, QueryOpenedByUUID, QuerySort}
 
 // ParseListFilter reads the GET /v1/customers filters (q, status CSV, type
-// CSV, linked_from/_to, organization_uuid CSV, sort). Limit and offset are
+// CSV, linked_from/_to, organization_uuid CSV, opened_by_uuid CSV, sort). Limit and offset are
 // left to the caller. Bad values are *apiquery.ValidationError (400).
 func ParseListFilter(values url.Values) (ListFilter, error) {
 	f := ListFilter{Q: strings.TrimSpace(values.Get(QueryQ))}
@@ -66,6 +68,9 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 		return f, err
 	}
 	if f.OrganizationUUIDs, err = UUIDList(values, QueryOrganizationUUID); err != nil {
+		return f, err
+	}
+	if f.OpenedByUUIDs, err = UUIDList(values, QueryOpenedByUUID); err != nil {
 		return f, err
 	}
 	sorts := apiquery.ParseSort(values.Get(QuerySort))

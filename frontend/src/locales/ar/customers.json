@@ -1,9 +1,9 @@
 {
-  "nav": "العملاء",
+  "nav": "العملاء والمركبات",
   "nav_list": "قائمة العملاء",
   "nav_new": "عميل جديد",
   "loading": "جارٍ التحميل…",
-  "list.title": "العملاء",
+  "list.title": "العملاء والمركبات",
   "list.description": "العملاء المرتبطون بالمؤسسات التي يمكنك رؤيتها.",
   "list.forbidden": "تحتاج إلى صلاحية قراءة العملاء لفتح هذه الصفحة.",
   "list.search": "بحث",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "موظف الوكالة",
   "actions.upgrade.confirm": "ترقية",
   "actions.upgrade.success": "أصبح العميل عضواً في {{dealer}}.",
-  "fields.organization": "المؤسسة"
+  "fields.organization": "المؤسسة",
+  "fields.opened_by": "الوكيل الذي فتح السجل"
 }

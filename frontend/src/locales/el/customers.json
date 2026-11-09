@@ -1,9 +1,9 @@
 {
-  "nav": "Πελάτες",
+  "nav": "Πελάτες και οχήματα",
   "nav_list": "Λίστα πελατών",
   "nav_new": "Νέος πελάτης",
   "loading": "Φόρτωση…",
-  "list.title": "Πελάτες",
+  "list.title": "Πελάτες και οχήματα",
   "list.description": "Πελάτες συνδεδεμένοι με τους οργανισμούς που βλέπετε.",
   "list.forbidden": "Χρειάζεστε δικαίωμα ανάγνωσης πελατών για να ανοίξετε αυτή τη σελίδα.",
   "list.search": "Αναζήτηση",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Προσωπικό αντιπροσώπου",
   "actions.upgrade.confirm": "Αναβάθμιση",
   "actions.upgrade.success": "Ο πελάτης είναι πλέον μέλος του {{dealer}}.",
-  "fields.organization": "Οργανισμός"
+  "fields.organization": "Οργανισμός",
+  "fields.opened_by": "Άνοιξε από αντιπρόσωπο"
 }

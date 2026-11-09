@@ -2298,8 +2298,9 @@ type Querier interface {
 	// Customers of the organizations in scope; one row per user.
 	// TEC-371: statuses / customer types are CSV filters, linked_at is a date
 	// range on the first link, organization_uuids narrows the links to those
-	// organizations (inside the scope above). Sort: docs/list-contract.md, keys
-	// from customers usecase customersSortSpec.
+	// organizations (inside the scope above). TEC-1074: opened_by_* is the
+	// first in-scope link (opened_by_uuids filters on it). Sort:
+	// docs/list-contract.md, keys from customers usecase customersSortSpec.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
 	// Every typed location (aisle, shelf, bin) of the organization with its
 	// warehouse and room; callers resolve the parents from the same set.

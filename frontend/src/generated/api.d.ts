@@ -7955,7 +7955,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`; default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope). An explicit sort or any of the TEC-371 filters keeps a `q` search on SQL.
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`, `opened_by` (TEC-1074, opening organization name); default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope); TEC-1074 `opened_by_uuid` CSV. An explicit sort or any of these filters keeps a `q` search on SQL.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -18501,6 +18501,14 @@ export interface components {
             linked_at: string | null;
             /** Format: date-time */
             first_service_at: string | null;
+            /** @description TEC-1074: the organization that opened the customer (first organization link inside the caller's scope). List rows only. */
+            opened_by?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                /** @enum {string} */
+                type: "center" | "distributor" | "dealer";
+            };
         };
         CustomerDetail: components["schemas"]["CustomerSummary"] & {
             tax_office: string | null;
@@ -45965,6 +45973,8 @@ export interface operations {
                 linked_to?: string;
                 /** @description CSV of organization UUIDs; customers linked to one of them (inside the scope). */
                 organization_uuid?: string;
+                /** @description TEC-1074: CSV of organization UUIDs; customers whose opening organization (`opened_by`, first link inside the scope) is one of them. */
+                opened_by_uuid?: string;
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];

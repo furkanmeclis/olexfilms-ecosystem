@@ -38,6 +38,7 @@ type custView struct {
 	Editable         bool          `json:"editable"`
 	IdentityEditable bool          `json:"identity_editable"`
 	Organizations    []custOrgLink `json:"organizations"`
+	OpenedBy         *custOrgLink  `json:"opened_by"`
 }
 
 type custPage struct {
@@ -250,6 +251,29 @@ func TestIntegrationCustomersOnePhoneAndScope(t *testing.T) {
 	if !hasUUID(pageD.Items, c1.UUID) || !hasUUID(pageD.Items, c2.UUID) {
 		t.Fatalf("distributor list: %+v", pageD.Items)
 	}
+	// TEC-1074: opened_by is the first link inside the caller's scope:
+	// dealer A opened c1 (dealer B only sees its own link), and the filter
+	// keeps the customers a given organization opened.
+	openedBy := func(items []custView, id string) string {
+		for _, c := range items {
+			if c.UUID == id && c.OpenedBy != nil {
+				return c.OpenedBy.UUID
+			}
+		}
+		return ""
+	}
+	if openedBy(pageD.Items, c1.UUID) != dealerA.Uuid.String() || openedBy(pageD.Items, c2.UUID) != dealerB.Uuid.String() {
+		t.Fatalf("distributor opened_by: %+v", pageD.Items)
+	}
+	pageBOpen := decodeData[custPage](t, it.custDo("GET", "/v1/customers?limit=100", tokB, nil, http.StatusOK))
+	if openedBy(pageBOpen.Items, c1.UUID) != dealerB.Uuid.String() {
+		t.Fatalf("dealer B must see only its own link as opener: %+v", pageBOpen.Items)
+	}
+	pageDB := decodeData[custPage](t, it.custDo("GET", "/v1/customers?limit=100&sort=opened_by&opened_by_uuid="+dealerB.Uuid.String(), tokD, nil, http.StatusOK))
+	if hasUUID(pageDB.Items, c1.UUID) || !hasUUID(pageDB.Items, c2.UUID) || pageDB.Total != int64(len(pageDB.Items)) {
+		t.Fatalf("opened_by_uuid filter: %+v", pageDB)
+	}
+	it.custDo("GET", "/v1/customers?opened_by_uuid=nope", tokD, nil, http.StatusBadRequest)
 
 	// 5. Anonymized customers are masked and read-only.
 	if _, err := it.pool.Exec(ctx, `UPDATE users SET status = 'anonymized' WHERE uuid = $1`, c2.UUID); err != nil {
