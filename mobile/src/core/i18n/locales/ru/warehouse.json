@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Получено от имени покупателя",
   "orders.actions.receive_on_behalf.title": "Получить от имени покупателя?",
   "orders.actions.receive_on_behalf.description": "У покупателя нет участников; заказ закрывается как полученный от его имени, проводки по счёту выполняются.",
-  "orders.actions.receive_on_behalf.confirm": "Получено от имени покупателя"
+  "orders.actions.receive_on_behalf.confirm": "Получено от имени покупателя",
+  "stock.family.title": "Основной код и части",
+  "stock.family.roll": "Основной рулон",
+  "stock.family.order": "Заказ {{no}}",
+  "stock.family_status.on_hand": "На складе",
+  "stock.family_status.sold": "Продано",
+  "stock.family_status.used": "Использовано",
+  "stock.family_status.in_transit": "В пути",
+  "stock.family_status.other": "Другое",
+  "stock.unit.parts": "Части",
+  "stock.unit.source": "Отрезано от рулона",
+  "stock.unit.cut_meters": "Отрезанная длина",
+  "m.split_new_code": "Новый код части: {{barcode}} · {{meters}} м",
+  "orders.assign.cuts_title": "Отрезанные части",
+  "orders.assign.cut_from": "{{meters}} м · {{source}} (остаток {{remaining}} м)"
 }

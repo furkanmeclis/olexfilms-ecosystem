@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Im Namen des Käufers empfangen",
   "orders.actions.receive_on_behalf.title": "Im Namen des Käufers empfangen?",
   "orders.actions.receive_on_behalf.description": "Der Käufer hat keine Mitglieder; die Bestellung wird in seinem Namen als empfangen abgeschlossen und die Kontobuchungen werden erfasst.",
-  "orders.actions.receive_on_behalf.confirm": "Im Namen des Käufers empfangen"
+  "orders.actions.receive_on_behalf.confirm": "Im Namen des Käufers empfangen",
+  "stock.family.title": "Hauptcode und Teile",
+  "stock.family.roll": "Hauptrolle",
+  "stock.family.order": "Bestellung {{no}}",
+  "stock.family_status.on_hand": "Auf Lager",
+  "stock.family_status.sold": "Verkauft",
+  "stock.family_status.used": "Verbraucht",
+  "stock.family_status.in_transit": "Unterwegs",
+  "stock.family_status.other": "Sonstiges",
+  "stock.unit.parts": "Teile",
+  "stock.unit.source": "Abgeschnitten von Rolle",
+  "stock.unit.cut_meters": "Geschnittene Länge",
+  "m.split_new_code": "Neuer Teilecode: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Geschnittene Teile",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} ({{remaining}} m übrig)"
 }

@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Reçu au nom de l'acheteur",
   "orders.actions.receive_on_behalf.title": "Réceptionner au nom de l'acheteur ?",
   "orders.actions.receive_on_behalf.description": "L'acheteur n'a aucun membre ; la commande est clôturée comme reçue en son nom et les écritures de compte sont passées.",
-  "orders.actions.receive_on_behalf.confirm": "Reçu au nom de l'acheteur"
+  "orders.actions.receive_on_behalf.confirm": "Reçu au nom de l'acheteur",
+  "stock.family.title": "Code principal et parties",
+  "stock.family.roll": "Rouleau principal",
+  "stock.family.order": "Commande {{no}}",
+  "stock.family_status.on_hand": "En stock",
+  "stock.family_status.sold": "Vendu",
+  "stock.family_status.used": "Utilisé",
+  "stock.family_status.in_transit": "En transit",
+  "stock.family_status.other": "Autre",
+  "stock.unit.parts": "Parties",
+  "stock.unit.source": "Coupé du rouleau",
+  "stock.unit.cut_meters": "Longueur coupée",
+  "m.split_new_code": "Nouveau code de partie : {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Parties coupées",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (reste {{remaining}} m)"
 }

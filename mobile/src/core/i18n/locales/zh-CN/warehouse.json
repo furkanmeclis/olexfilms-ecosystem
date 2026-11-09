@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "已代买方收货",
   "orders.actions.receive_on_behalf.title": "代买方收货？",
   "orders.actions.receive_on_behalf.description": "买方没有成员；订单将以代其收货的方式关闭，并记入往来账。",
-  "orders.actions.receive_on_behalf.confirm": "已代买方收货"
+  "orders.actions.receive_on_behalf.confirm": "已代买方收货",
+  "stock.family.title": "主编码及分段",
+  "stock.family.roll": "主卷",
+  "stock.family.order": "订单 {{no}}",
+  "stock.family_status.on_hand": "有库存",
+  "stock.family_status.sold": "已售出",
+  "stock.family_status.used": "已使用",
+  "stock.family_status.in_transit": "运输中",
+  "stock.family_status.other": "其他",
+  "stock.unit.parts": "分段",
+  "stock.unit.source": "切自卷",
+  "stock.unit.cut_meters": "切割长度",
+  "m.split_new_code": "新分段编码：{{barcode}} · {{meters}} 米",
+  "orders.assign.cuts_title": "已切分段",
+  "orders.assign.cut_from": "{{meters}} 米 · {{source}}（剩余 {{remaining}} 米）"
 }

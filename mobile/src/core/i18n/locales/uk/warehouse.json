@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Отримано від імені покупця",
   "orders.actions.receive_on_behalf.title": "Отримати від імені покупця?",
   "orders.actions.receive_on_behalf.description": "Покупець не має учасників; замовлення закривається як отримане від його імені, а записи рахунку проводяться.",
-  "orders.actions.receive_on_behalf.confirm": "Отримано від імені покупця"
+  "orders.actions.receive_on_behalf.confirm": "Отримано від імені покупця",
+  "stock.family.title": "Основний код і частини",
+  "stock.family.roll": "Основний рулон",
+  "stock.family.order": "Замовлення {{no}}",
+  "stock.family_status.on_hand": "На складі",
+  "stock.family_status.sold": "Продано",
+  "stock.family_status.used": "Використано",
+  "stock.family_status.in_transit": "У дорозі",
+  "stock.family_status.other": "Інше",
+  "stock.unit.parts": "Частини",
+  "stock.unit.source": "Відрізано від рулону",
+  "stock.unit.cut_meters": "Відрізана довжина",
+  "m.split_new_code": "Новий код частини: {{barcode}} · {{meters}} м",
+  "orders.assign.cuts_title": "Відрізані частини",
+  "orders.assign.cut_from": "{{meters}} м · {{source}} (залишок {{remaining}} м)"
 }

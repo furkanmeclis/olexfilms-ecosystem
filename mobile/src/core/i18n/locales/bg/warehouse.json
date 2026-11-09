@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Получено от името на купувача",
   "orders.actions.receive_on_behalf.title": "Да се получи ли от името на купувача?",
   "orders.actions.receive_on_behalf.description": "Купувачът няма членове; поръчката се затваря като получена от негово име и счетоводните записи се осчетоводяват.",
-  "orders.actions.receive_on_behalf.confirm": "Получено от името на купувача"
+  "orders.actions.receive_on_behalf.confirm": "Получено от името на купувача",
+  "stock.family.title": "Основен код и части",
+  "stock.family.roll": "Основна ролка",
+  "stock.family.order": "Поръчка {{no}}",
+  "stock.family_status.on_hand": "В наличност",
+  "stock.family_status.sold": "Продадено",
+  "stock.family_status.used": "Използвано",
+  "stock.family_status.in_transit": "В транзит",
+  "stock.family_status.other": "Друго",
+  "stock.unit.parts": "Части",
+  "stock.unit.source": "Отрязано от ролка",
+  "stock.unit.cut_meters": "Отрязана дължина",
+  "m.split_new_code": "Нов код на част: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Отрязани части",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (остават {{remaining}} m)"
 }

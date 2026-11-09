@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Recibido en nombre del comprador",
   "orders.actions.receive_on_behalf.title": "¿Recibir en nombre del comprador?",
   "orders.actions.receive_on_behalf.description": "El comprador no tiene miembros; el pedido se cierra como recibido en su nombre y se registran los asientos de la cuenta.",
-  "orders.actions.receive_on_behalf.confirm": "Recibido en nombre del comprador"
+  "orders.actions.receive_on_behalf.confirm": "Recibido en nombre del comprador",
+  "stock.family.title": "Código principal y partes",
+  "stock.family.roll": "Rollo principal",
+  "stock.family.order": "Pedido {{no}}",
+  "stock.family_status.on_hand": "En stock",
+  "stock.family_status.sold": "Vendido",
+  "stock.family_status.used": "Usado",
+  "stock.family_status.in_transit": "En tránsito",
+  "stock.family_status.other": "Otro",
+  "stock.unit.parts": "Partes",
+  "stock.unit.source": "Cortado del rollo",
+  "stock.unit.cut_meters": "Longitud cortada",
+  "m.split_new_code": "Nuevo código de parte: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Partes cortadas",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (quedan {{remaining}} m)"
 }

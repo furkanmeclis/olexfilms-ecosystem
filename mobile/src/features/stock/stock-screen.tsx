@@ -25,6 +25,7 @@ import {
   type WarehouseProductTotal,
   warehouseProductTotals,
 } from './warehouse-totals';
+import { FamilySection } from './family-section';
 
 type Filter = '' | 'in_stock' | 'out_of_stock';
 /** A picked warehouse: its product totals, or (depo space) its units one by one. */
@@ -113,6 +114,8 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
         />
       ) : null}
       {depo && warehouse ? <Segmented value={view} onChange={setView} options={viewOptions(t)} /> : null}
+      {/* TEC-1079: a main code lists the roll and its parts first. */}
+      <FamilySection q={q} base={base} />
     </View>
   );
 
