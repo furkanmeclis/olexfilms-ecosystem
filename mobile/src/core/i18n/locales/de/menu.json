@@ -26,5 +26,6 @@
   "group.business": "Unternehmen",
   "group.assistant": "KI",
   "group.other": "Weiteres",
-  "group.account": "Konto und Einstellungen"
+  "group.account": "Konto und Einstellungen",
+  "measure": "Messen"
 }

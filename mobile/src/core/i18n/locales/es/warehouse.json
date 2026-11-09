@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "Unidades en este almacén",
   "m.product_totals": "Totales por producto",
   "orders.assign.fixed_none": "No se encontró stock con código de barras fijo de {{name}} en el almacén.",
-  "orders.assign.fixed_qty_auto": "Cantidad de código fijo (sin cambiar: lo que falta en la línea)"
+  "orders.assign.fixed_qty_auto": "Cantidad de código fijo (sin cambiar: lo que falta en la línea)",
+  "m.warehouse_all": "Todos los almacenes",
+  "m.warehouse_totals_partial": "Solo se sumaron las primeras {{count}} unidades de este almacén; las cantidades pueden estar incompletas."
 }

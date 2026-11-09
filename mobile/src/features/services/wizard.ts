@@ -287,3 +287,47 @@ export function summaryFromService(s: Editable): SummaryForm {
     measure: s.has_measurement,
   };
 }
+
+/**
+ * How the add-item form asks for parts (TEC-1077). The parts step already
+ * picked the regions on the body, so a product coming from the wizard is
+ * assigned to those regions without drawing the body again:
+ * - `none`: the product's category carries no parts;
+ * - `assign`: the chosen regions this product may carry, as toggles;
+ * - `picker`: the body diagram, outside the wizard (no preset) or when none
+ *   of the chosen regions fits the product.
+ */
+export type ItemPartsMode = 'none' | 'assign' | 'picker';
+
+export function itemPartsMode(preset: readonly string[], available: readonly string[] | null | undefined): ItemPartsMode {
+  if (!available?.length) return 'none';
+  return partsForProduct(preset, available).length ? 'assign' : 'picker';
+}
+
+/** Toggles one part in a selection, keeping the order of `order` (the chosen regions). */
+export function togglePart(selected: readonly string[], key: string, order: readonly string[]): string[] {
+  const next = new Set(selected);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  return order.filter((k) => next.has(k));
+}
+
+type PartItem = { uuid: string; product: { name: string }; applied_parts?: readonly string[] | null };
+
+/** Product → regions rows of the summary, each part once (TEC-1077). */
+export function itemPartRows(items: readonly PartItem[] | null | undefined): { uuid: string; name: string; parts: string[] }[] {
+  return (items ?? []).map((it) => ({
+    uuid: it.uuid,
+    name: it.product.name,
+    parts: [...new Set(it.applied_parts ?? [])],
+  }));
+}
+
+/** Parts the summary diagram highlights: the focused item's, else every item's. */
+export function highlightedParts(rows: readonly { uuid: string; parts: readonly string[] }[], focus: string | null): string[] {
+  const row = focus ? rows.find((r) => r.uuid === focus) : undefined;
+  if (row) return [...row.parts];
+  const out: string[] = [];
+  for (const r of rows) for (const p of r.parts) if (!out.includes(p)) out.push(p);
+  return out;
+}

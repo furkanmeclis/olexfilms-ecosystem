@@ -51,8 +51,17 @@ function useNetworkScope() {
   };
 }
 
+/**
+ * Service card (TEC-1073): the plate is the title, the second line is the
+ * service number and the organization that opened the service (shown when it
+ * is not the viewer's own organization, i.e. a dealer seen by the center).
+ */
 export function ServiceRow({ s, onPress }: { s: Service; onPress: () => void }) {
   const { t, i18n } = useTranslation('dealer');
+  const own = useSession((x) => x.me?.active_organization_uuid);
+  const opener = s.organization && s.organization.uuid !== own ? s.organization.name : null;
+  // Without a plate the number is already the title.
+  const second = [s.plate ? s.service_no : null, opener].filter(Boolean).join(' · ');
   return (
     <Pressable
       accessibilityRole="button"
@@ -64,13 +73,15 @@ export function ServiceRow({ s, onPress }: { s: Service; onPress: () => void }) 
         </Text>
         <StatusPill label={t(`service_status.${s.status}`)} tone={serviceTone(s.status)} />
       </View>
-      <Text variant="callout" numberOfLines={1}>
-        {[vehicleLabel(s.car_brand?.name, s.car_model?.name, s.model_year), fullName(s.customer)]
+      {second ? (
+        <Text variant="callout" numberOfLines={1}>
+          {second}
+        </Text>
+      ) : null}
+      <Text variant="footnote" tone="muted" numberOfLines={1}>
+        {[vehicleLabel(s.car_brand?.name, s.car_model?.name, s.model_year), fullName(s.customer), formatDate(s.created_at, i18n.language)]
           .filter(Boolean)
           .join(' · ')}
-      </Text>
-      <Text variant="footnote" tone="muted" numberOfLines={1}>
-        {s.service_no} · {formatDate(s.created_at, i18n.language)}
       </Text>
     </Pressable>
   );

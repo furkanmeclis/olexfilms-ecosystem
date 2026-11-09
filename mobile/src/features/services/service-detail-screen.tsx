@@ -16,6 +16,7 @@ import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { ServiceContractCard, useContractRequiredAlert } from './contract-card';
 import { IntakePhotos, intakeKey } from './intake-photos';
 import {
   formatDate,
@@ -96,9 +97,16 @@ export function ServiceDetailScreen() {
         Alert.alert(t('action_failed'), t('complete_needs_items'));
         return;
       }
+      // TEC-1083: the move needs a signed intake contract; the card below shows how to sign.
+      if (isApiError(e, 'CONTRACT_REQUIRED')) {
+        void svc.refetch();
+        contractRequired();
+        return;
+      }
       Alert.alert(t('action_failed'), errorText(e));
     },
   });
+  const contractRequired = useContractRequiredAlert(uuid);
 
   const removeItem = useMutation({
     mutationFn: (item: string) =>
@@ -232,6 +240,8 @@ export function ServiceDetailScreen() {
                 ) : null}
               </View>
             ) : null}
+
+            <ServiceContractCard s={s} onChanged={onWrite} />
 
             <Section title={t('customer')}>
               <InfoRow

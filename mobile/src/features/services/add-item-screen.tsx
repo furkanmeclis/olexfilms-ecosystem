@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { VehiclePartPicker } from '@/features/vehicle-parts';
+import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
@@ -17,7 +17,7 @@ import { Text } from '@/ui/text';
 import { type ServiceStockUnit, useDebounced } from './lib';
 import { useServiceWrite } from './service-detail-screen';
 import { Chips, errorText, ListBody, SearchField } from './ui';
-import { parseParts, partsForProduct } from './wizard';
+import { itemPartsMode, parseParts, partsForProduct, togglePart } from './wizard';
 
 type Kind = 'full' | 'partial';
 
@@ -202,6 +202,9 @@ function UnitForm({
   const [notes, setNotes] = useState('');
   const [parts, setParts] = useState<string[]>(() => partsForProduct(preset, unit.product.available_parts));
   const [error, setError] = useState<string | null>(null);
+  const partLabel = usePartLabel();
+  const mode = itemPartsMode(preset, unit.product.available_parts);
+  const assignable = partsForProduct(preset, unit.product.available_parts);
 
   const submit = () => {
     setError(null);
@@ -266,11 +269,48 @@ function UnitForm({
         </View>
       ) : null}
 
-      {unit.product.available_parts.length > 0 ? (
+      {mode === 'assign' ? (
+        // TEC-1077: the regions were picked on the parts step; the product is
+        // assigned to them here, the body is not drawn again.
+        <View className="gap-2">
+          <Text variant="footnote" tone="muted" className="font-medium">
+            {t('wizard.assign_parts')}
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {assignable.map((key) => {
+              const on = parts.includes(key);
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  onPress={() => setParts(togglePart(parts, key, assignable))}
+                  className={cn(
+                    'min-h-9 flex-row items-center gap-1.5 rounded-full border px-3',
+                    on ? 'border-primary bg-primary' : 'border-border bg-card',
+                  )}>
+                  {on ? <Icon name="check" size={14} tone="primary-foreground" /> : null}
+                  <Text variant="footnote" className={cn('font-semibold', on ? 'text-primary-foreground' : 'text-foreground')}>
+                    {partLabel(key)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text variant="footnote" tone="muted">
+            {t('wizard.assign_parts_hint')}
+          </Text>
+        </View>
+      ) : mode === 'picker' ? (
         <View className="gap-2">
           <Text variant="footnote" tone="muted" className="font-medium">
             {t('applied_parts')}
           </Text>
+          {preset.length ? (
+            <Text variant="footnote" tone="muted">
+              {t('wizard.assign_parts_none_fit')}
+            </Text>
+          ) : null}
           {/* Only the product category's parts are selectable (backend rule). */}
           <VehiclePartPicker value={parts} onChange={setParts} allowedKeys={unit.product.available_parts} />
         </View>

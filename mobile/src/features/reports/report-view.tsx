@@ -93,14 +93,16 @@ export function TimeChart({ series, compact }: { series: ReportSeries; compact?:
 }
 
 /** Horizontal bars for distributions and rankings. */
-export function BarList({ series }: { series: ReportSeries }) {
+export function BarList({ series, hideLabel }: { series: ReportSeries; hideLabel?: boolean }) {
   const f = useFormat();
   const max = Math.max(1, ...series.points.map((p) => p.value));
   return (
     <View className="gap-3 rounded-lg border border-border bg-card p-3.5">
-      <Text variant="callout" className="font-semibold">
-        {series.label}
-      </Text>
+      {hideLabel ? null : (
+        <Text variant="callout" className="font-semibold">
+          {series.label}
+        </Text>
+      )}
       {series.points.map((p) => (
         <View key={p.key} className="gap-1">
           <View className="flex-row justify-between gap-2">

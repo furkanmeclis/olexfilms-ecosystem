@@ -26,5 +26,6 @@
   "group.business": "الأعمال",
   "group.assistant": "الذكاء الاصطناعي",
   "group.other": "أخرى",
-  "group.account": "الحساب والإعدادات"
+  "group.account": "الحساب والإعدادات",
+  "measure": "القياس"
 }

@@ -107,9 +107,17 @@ describe('menu group definition', () => {
     }
   });
 
+  it('lists measuring only for center sales staff (TEC-1068)', () => {
+    const center = { workplace: true, orgType: 'center', permissions: ['services.write', 'orders.write', 'organizations.read'] };
+    assert.equal(keysOf(menuGroups(viewer({ ...center, measureInMenu: true }))).includes('measure'), true);
+    assert.equal(keysOf(menuGroups(viewer(center))).includes('measure'), false);
+  });
+
   it('shows each item once when everything is visible', () => {
     // A super admin in the center workplace sees every row (bayi + admin + center-only).
-    const gs = menuGroups(viewer({ isSuperAdmin: true, workplace: true, orgType: 'center', warehouse: true, multiOrg: true }));
+    const gs = menuGroups(
+      viewer({ isSuperAdmin: true, workplace: true, orgType: 'center', warehouse: true, multiOrg: true, measureInMenu: true }),
+    );
     const keys = keysOf(gs);
     assert.equal(new Set(keys).size, keys.length);
     assert.deepEqual(
@@ -117,7 +125,7 @@ describe('menu group definition', () => {
       ITEMS.map((i) => i.key).sort(),
     );
     assert.deepEqual(layout(gs), {
-      operations: ['approvals', 'appointments', 'occupancy', 'tasks', 'warranty_claims', 'measurements', 'certificates'],
+      operations: ['approvals', 'measure', 'appointments', 'occupancy', 'tasks', 'warranty_claims', 'measurements', 'certificates'],
       customers: ['customers', 'leads', 'fleets', 'service_subscriptions'],
       stock: ['orders', 'stock', 'quick_sale', 'transfers', 'purchases', 'catalog'],
       finance: ['accounting', 'disputes', 'sale_prices', 'pricing', 'einvoices'],

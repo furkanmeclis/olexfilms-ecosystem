@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { useSession } from '@/core/auth/session';
 import { useModule, useModuleFilter } from '@/core/modules';
 import { switchSpace } from '@/core/space-memory';
-import { activeMembership, isCenterWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
+import { activeMembership, isCenterWorkplace, isSalesWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
@@ -29,6 +29,7 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
     // Warehouse screens open over this space; swiping back returns here (no space switcher).
     warehouse: space !== 'depo' && kindsOf(me).includes('depo') && warehouseOn,
     multiOrg: (me?.organizations?.length ?? 0) > 1,
+    measureInMenu: space === 'bayi' && isSalesWorkplace(me),
   };
   const groups = menuGroups(viewer);
 

@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "الوحدات في هذا المستودع",
   "m.product_totals": "إجماليات المنتجات",
   "orders.assign.fixed_none": "لم يُعثر على مخزون بباركود ثابت لـ {{name}} في المستودع.",
-  "orders.assign.fixed_qty_auto": "كمية الباركود الثابت (دون تغيير: ما ينقص البند)"
+  "orders.assign.fixed_qty_auto": "كمية الباركود الثابت (دون تغيير: ما ينقص البند)",
+  "m.warehouse_all": "كل المستودعات",
+  "m.warehouse_totals_partial": "تم جمع أول {{count}} وحدة فقط في هذا المستودع؛ قد تكون الكميات غير مكتملة."
 }

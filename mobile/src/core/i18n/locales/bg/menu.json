@@ -26,5 +26,6 @@
   "group.business": "Бизнес",
   "group.assistant": "ИИ",
   "group.other": "Други",
-  "group.account": "Профил и настройки"
+  "group.account": "Профил и настройки",
+  "measure": "Измерване"
 }

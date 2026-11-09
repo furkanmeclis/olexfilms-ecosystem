@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "Einheiten in diesem Lager",
   "m.product_totals": "Produktsummen",
   "orders.assign.fixed_none": "Für {{name}} wurde kein Bestand mit festem Barcode im Lager gefunden.",
-  "orders.assign.fixed_qty_auto": "Menge fester Barcode (unverändert: was der Position noch fehlt)"
+  "orders.assign.fixed_qty_auto": "Menge fester Barcode (unverändert: was der Position noch fehlt)",
+  "m.warehouse_all": "Alle Lager",
+  "m.warehouse_totals_partial": "Nur die ersten {{count}} Einheiten dieses Lagers wurden summiert; Mengen können unvollständig sein."
 }

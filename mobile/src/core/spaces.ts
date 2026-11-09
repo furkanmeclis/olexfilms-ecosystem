@@ -2,6 +2,7 @@ import { useSegments } from 'expo-router';
 
 import type { MobileMe } from '@/core/auth/api';
 import { useSession } from '@/core/auth/session';
+import { isSalesProfile } from '@/core/sales-profile';
 import { readJSON } from '@/core/storage';
 
 /**
@@ -58,6 +59,18 @@ export function kindsOf(me: MobileMe | null): SpaceKind[] {
 /** True when the center works in the dealer workplace with the admin screens in its menu. */
 export function isCenterWorkplace(me: MobileMe | null): boolean {
   return activeMembership(me)?.type === 'center' && kindsOf(me).includes('bayi');
+}
+
+/**
+ * Center sales staff in the workplace (TEC-1068, `isSalesProfile`): their tab
+ * bar is Home, Orders, Services, Scan, Menu and their home is the sales board.
+ */
+export function isSalesWorkplace(me: MobileMe | null): boolean {
+  return isCenterWorkplace(me) && isSalesProfile({ orgType: activeMembership(me)?.type, permissions: me?.permissions ?? [] });
+}
+
+export function useSalesWorkplace(): boolean {
+  return useSession((s) => isSalesWorkplace(s.me));
 }
 
 /** Organizations the user can switch to; only listed when there is more than one. */
