@@ -78,6 +78,8 @@ type TransferView struct {
 	// AvailableTransitions are the statuses the caller may move the request to.
 	AvailableTransitions []string   `json:"available_transitions"`
 	Items                []ItemView `json:"items,omitempty"`
+	// Timeline: the steps with their users (detail only, TEC-1060).
+	Timeline []TimelineStep `json:"timeline,omitempty"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {
@@ -178,6 +180,9 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, r db.StockT
 			iv.UnitPrice, iv.LineTotal = nil, nil
 		}
 		v.Items = append(v.Items, iv)
+	}
+	if v.Timeline, err = timeline(ctx, q, r); err != nil {
+		return TransferView{}, err
 	}
 	return v, nil
 }

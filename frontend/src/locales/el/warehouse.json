@@ -688,5 +688,10 @@
   "entry_import.save": "Αποθήκευση",
   "entry_import.template_saved": "Το πρότυπο αντιστοίχισης αποθηκεύτηκε.",
   "sections.orders.title": "Παραγγελίες προς προετοιμασία",
-  "sections.orders.description": "Εγκεκριμένες, υπό προετοιμασία και έτοιμες παραγγελίες αντιπροσώπων: συλλογή, σάρωση barcode και αποστολή."
+  "sections.orders.description": "Εγκεκριμένες, υπό προετοιμασία και έτοιμες παραγγελίες αντιπροσώπων: συλλογή, σάρωση barcode και αποστολή.",
+  "entry.timeline": "Ιστορικό ενεργειών",
+  "entry.activity.created": "Δημιούργησε",
+  "entry.activity.header_updated": "Επεξεργάστηκε τα στοιχεία παράδοσης",
+  "entry.activity.confirmed": "Επιβεβαίωσε",
+  "entry.activity.cancelled": "Ακύρωσε"
 }

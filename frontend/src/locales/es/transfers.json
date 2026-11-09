@@ -95,6 +95,7 @@
   "detail.not_found": "Solicitud de transferencia no encontrada.",
   "detail.error": "No se pudo completar la acción.",
   "detail.summary": "Resumen",
+  "detail.timeline": "Historial",
   "detail.parent": "Organización matriz",
   "detail.role": "Su rol",
   "detail.total": "Total",

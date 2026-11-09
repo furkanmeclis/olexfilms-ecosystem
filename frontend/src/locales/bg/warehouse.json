@@ -688,5 +688,10 @@
   "entry_import.save": "Запази",
   "entry_import.template_saved": "Шаблонът за съпоставяне е запазен.",
   "sections.orders.title": "Поръчки за подготовка",
-  "sections.orders.description": "Одобрени, в подготовка и готови поръчки на дилъри: събиране, сканиране на баркодове и изпращане."
+  "sections.orders.description": "Одобрени, в подготовка и готови поръчки на дилъри: събиране, сканиране на баркодове и изпращане.",
+  "entry.timeline": "История на действията",
+  "entry.activity.created": "Създаде",
+  "entry.activity.header_updated": "Редактира данните за доставка",
+  "entry.activity.confirmed": "Потвърди",
+  "entry.activity.cancelled": "Отмени"
 }

@@ -95,6 +95,7 @@
   "detail.not_found": "Umlagerungsanfrage nicht gefunden.",
   "detail.error": "Die Aktion konnte nicht abgeschlossen werden.",
   "detail.summary": "Übersicht",
+  "detail.timeline": "Verlauf",
   "detail.parent": "Übergeordnete Organisation",
   "detail.role": "Ihre Rolle",
   "detail.total": "Summe",

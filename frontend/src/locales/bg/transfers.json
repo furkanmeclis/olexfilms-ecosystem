@@ -95,6 +95,7 @@
   "detail.not_found": "Заявката за трансфер не е намерена.",
   "detail.error": "Действието не можа да бъде изпълнено.",
   "detail.summary": "Обобщение",
+  "detail.timeline": "История на действията",
   "detail.parent": "Основна организация",
   "detail.role": "Вашата роля",
   "detail.total": "Общо",

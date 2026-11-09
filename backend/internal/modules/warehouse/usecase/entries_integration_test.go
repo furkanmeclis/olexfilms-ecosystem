@@ -272,6 +272,10 @@ func TestStockEntryGenerateNewConfirm(t *testing.T) {
 	if entry.Status != wh.EntryStatusConfirmed || entry.ConfirmedAt == nil {
 		t.Fatalf("confirmed = %+v", entry)
 	}
+	// TEC-1060: the detail lists the recorded steps.
+	if n := len(entry.Timeline); n < 2 || entry.Timeline[0].Action != "created" || entry.Timeline[n-1].Action != "confirmed" {
+		t.Fatalf("timeline = %+v", entry.Timeline)
+	}
 	lines, err := e.pool.Query(e.ctx, `SELECT l.id, u.id, u.barcode, u.status FROM stock_entry_lines l JOIN units u ON u.id = l.unit_id
 		JOIN stock_entries e ON e.id = l.entry_id WHERE e.uuid = $1 ORDER BY l.id`, entry.UUID)
 	if err != nil {

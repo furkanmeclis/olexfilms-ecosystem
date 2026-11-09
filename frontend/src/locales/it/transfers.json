@@ -95,6 +95,7 @@
   "detail.not_found": "Richiesta di trasferimento non trovata.",
   "detail.error": "Impossibile completare l'azione.",
   "detail.summary": "Riepilogo",
+  "detail.timeline": "Cronologia",
   "detail.parent": "Organizzazione madre",
   "detail.role": "Il tuo ruolo",
   "detail.total": "Totale",

@@ -15,6 +15,10 @@ import {
   validateOrderForm,
   type OrderFormLine,
 } from "@/features/orders/lib/form";
+import {
+  orderActivityLabel,
+  orderTimelineSteps,
+} from "@/features/orders/lib/activity";
 import type { Order } from "@/features/orders/services/orders.service";
 
 const grants =
@@ -366,6 +370,69 @@ describe("center order for a dealer (TEC-1024)", () => {
     expect(toItemInputs(lines)).toEqual([
       { product_uuid: "p1", quantity: 2 },
       { product_uuid: "p2", quantity: 2 },
+    ]);
+  });
+});
+
+describe("order timeline (TEC-1060)", () => {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    vars ? `${key}:${JSON.stringify(vars)}` : key;
+  const format = { number: (v: number) => String(v) };
+
+  it("labels activities and status moves", () => {
+    expect(orderActivityLabel(t, "unit_assigned")).toBe(
+      "orders.activity.unit_assigned",
+    );
+    expect(orderActivityLabel(t, "preparing")).toBe("orders.status.preparing");
+  });
+
+  it("maps timeline entries with user and details", () => {
+    const steps = orderTimelineSteps(
+      order({
+        timeline: [
+          {
+            action: "unit_assigned",
+            at: "2026-11-09T08:00:00Z",
+            user: { uuid: "u1", name: "Melike Murat" },
+            product: "Film",
+            barcode: "B-1",
+            quantity: 2,
+          },
+          { action: "created", at: "2026-11-09T07:00:00Z", user: null },
+        ],
+      }),
+      t,
+      format,
+    );
+    expect(steps[0]).toMatchObject({
+      user: "Melike Murat",
+      label: "orders.activity.unit_assigned",
+      detail: 'Film · B-1 · orders.activity.quantity:{"count":"2"}',
+    });
+    expect(steps[1]).toMatchObject({
+      user: null,
+      label: "orders.activity.created",
+    });
+  });
+
+  it("falls back to the status history without a timeline", () => {
+    const steps = orderTimelineSteps(
+      order({
+        timeline: undefined,
+        history: [
+          {
+            from_status: null,
+            to_status: "draft",
+            reason: null,
+            created_at: "2026-11-09T07:00:00Z",
+          },
+        ],
+      }),
+      t,
+      format,
+    );
+    expect(steps).toEqual([
+      expect.objectContaining({ user: null, label: "orders.status.draft" }),
     ]);
   });
 });

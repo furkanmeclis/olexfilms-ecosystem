@@ -59,3 +59,15 @@ WHERE (
     OR action ILIKE '%' || sqlc.narg(q) || '%'
     OR resource ILIKE '%' || sqlc.narg(q) || '%'
   );
+
+-- TEC-1060: the activity events of one record (an order, a stock entry)
+-- with their users, oldest first; the timeline of a detail page
+-- (activity_events_resource_uuid_idx).
+-- name: ListResourceActivityEvents :many
+SELECT e.id, e.action, e.payload, e.created_at,
+       u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM activity_events e
+LEFT JOIN users u ON u.id = e.actor_user_id
+WHERE e.resource = sqlc.arg(resource)::text AND e.resource_uuid = sqlc.arg(resource_uuid)::uuid
+ORDER BY e.created_at, e.id
+LIMIT 1000;

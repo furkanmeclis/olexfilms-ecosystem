@@ -207,9 +207,11 @@ type StockEntry struct {
 	ScannedCount    *int64            `json:"scanned_count,omitempty"`
 	Lines           []EntryLine       `json:"lines,omitempty"`
 	LabelBatches    []EntryLabelBatch `json:"label_batches,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	ConfirmedAt     *time.Time        `json:"confirmed_at"`
-	CancelledAt     *time.Time        `json:"cancelled_at"`
+	// Timeline: the recorded steps with their users (detail, TEC-1060).
+	Timeline    []EntryStep `json:"timeline,omitempty"`
+	CreatedAt   time.Time   `json:"created_at"`
+	ConfirmedAt *time.Time  `json:"confirmed_at"`
+	CancelledAt *time.Time  `json:"cancelled_at"`
 }
 
 // --- inputs ------------------------------------------------------------------
@@ -987,6 +989,11 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		out.LineCount = n
 		return out, nil
 	}
+	timeline, err := entryTimeline(ctx, q, e)
+	if err != nil {
+		return out, err
+	}
+	out.Timeline = timeline
 	lines, err := q.ListStockEntryLines(ctx, e.ID)
 	if err != nil {
 		return out, err

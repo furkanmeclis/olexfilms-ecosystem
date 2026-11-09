@@ -95,6 +95,7 @@
   "detail.not_found": "Το αίτημα μεταφοράς δεν βρέθηκε.",
   "detail.error": "Δεν ήταν δυνατή η ολοκλήρωση της ενέργειας.",
   "detail.summary": "Σύνοψη",
+  "detail.timeline": "Ιστορικό ενεργειών",
   "detail.parent": "Μητρικός οργανισμός",
   "detail.role": "Ο ρόλος σας",
   "detail.total": "Σύνολο",

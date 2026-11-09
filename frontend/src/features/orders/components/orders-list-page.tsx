@@ -30,6 +30,7 @@ import {
   resolveOrderListAccess,
   type OrderAction,
 } from "@/features/orders/lib/access";
+import { orderActivityLabel } from "@/features/orders/lib/activity";
 import {
   amountNumber,
   invoiceStatusTone,
@@ -92,9 +93,7 @@ function OrderHandler({ order }: { order: Order }) {
     <span className="flex flex-col">
       <span className="whitespace-nowrap">{last.user.name}</span>
       <span className="text-muted-foreground text-xs">
-        {last.action === "created"
-          ? t("orders.activity.created")
-          : t(`orders.status.${last.action}`)}
+        {orderActivityLabel(t, last.action)}
       </span>
     </span>
   );

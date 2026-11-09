@@ -95,6 +95,7 @@
   "detail.not_found": "Demande de transfert introuvable.",
   "detail.error": "L'action n'a pas pu être effectuée.",
   "detail.summary": "Résumé",
+  "detail.timeline": "Historique",
   "detail.parent": "Organisation mère",
   "detail.role": "Votre rôle",
   "detail.total": "Total",

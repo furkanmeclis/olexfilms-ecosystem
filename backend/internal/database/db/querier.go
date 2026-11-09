@@ -2266,10 +2266,12 @@ type Querier interface {
 	// Assigned (not yet shipped) serial units of an order with their location.
 	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
 	// TEC-1054: list facts of a page of orders: the line amounts (pieces and
-	// roll meters apart), the seller warehouse and the last actor. The last
-	// actor is the user of the latest status change with an actor, else the
-	// creator; last_action is that change's new status, or "created" for the
-	// first row (no from status) and for an order without an actor row.
+	// roll meters apart), the seller warehouse and the last actor. TEC-1060:
+	// the last actor is the user of the latest step with a user — a status
+	// change, an order activity event (assignment, unassignment, edit; the
+	// "order." prefix dropped) or a unit assignment written before those
+	// events — else the creator. last_action is "created" for the first status
+	// row and for an order without any step with a user.
 	ListOrderFacts(ctx context.Context, orderIds []int64) ([]ListOrderFactsRow, error)
 	ListOrderInvoiceItemsByOrder(ctx context.Context, orderID int64) ([]ListOrderInvoiceItemsByOrderRow, error)
 	ListOrderInvoices(ctx context.Context, orderID int64) ([]ListOrderInvoicesRow, error)
@@ -2565,6 +2567,10 @@ type Querier interface {
 	ListRequiredCertificateTypesForService(ctx context.Context, arg ListRequiredCertificateTypesForServiceParams) ([]CertificateType, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
 	ListResolvedPhotoAngles(ctx context.Context, arg ListResolvedPhotoAnglesParams) ([]ListResolvedPhotoAnglesRow, error)
+	// TEC-1060: the activity events of one record (an order, a stock entry)
+	// with their users, oldest first; the timeline of a detail page
+	// (activity_events_resource_uuid_idx).
+	ListResourceActivityEvents(ctx context.Context, arg ListResourceActivityEventsParams) ([]ListResourceActivityEventsRow, error)
 	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
 	// Batch load for a question list (avoids N+1).
 	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)

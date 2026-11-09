@@ -501,6 +501,9 @@ func (s *Service) CreateOrAppendDraft(ctx context.Context, c Caller, in CreateIn
 		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 			return fmt.Errorf("orders: totals: %w", err)
 		}
+		if err := s.recordUpdated(ctx, q, c, o, len(merged)); err != nil {
+			return err
+		}
 		order = o
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
 	})
@@ -604,6 +607,9 @@ func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUI
 		}
 		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 			return fmt.Errorf("orders: totals: %w", err)
+		}
+		if err := s.recordUpdated(ctx, q, c, o, len(lines)); err != nil {
+			return err
 		}
 		updated = o
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)

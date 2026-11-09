@@ -153,6 +153,34 @@ func TestIntegrationStockTransferAccounting(t *testing.T) {
 	if got := recipients(r1.UUID, "transfers.received"); !slices.Equal(got, []int64{ua.ID}) {
 		t.Fatalf("received recipients = %v", got)
 	}
+	// TEC-1060: the detail names who took each step.
+	if code, env := it.do("GET", "/v1/stock-transfers/"+r1.UUID, hostOlex, aTok, nil); code != http.StatusOK {
+		t.Fatalf("get = %d", code)
+	} else {
+		var d struct {
+			Timeline []struct {
+				Action string `json:"action"`
+				User   *struct {
+					UUID string `json:"uuid"`
+				} `json:"user"`
+			} `json:"timeline"`
+		}
+		if err := json.Unmarshal(env.Data, &d); err != nil {
+			t.Fatal(err)
+		}
+		want := []struct{ action, user string }{
+			{"requested", ua.Uuid.String()}, {"approved", ub.Uuid.String()},
+			{"shipped", ua.Uuid.String()}, {"received", ub.Uuid.String()},
+		}
+		if len(d.Timeline) != len(want) {
+			t.Fatalf("timeline = %+v", d.Timeline)
+		}
+		for i, w := range want {
+			if d.Timeline[i].Action != w.action || d.Timeline[i].User == nil || d.Timeline[i].User.UUID != w.user {
+				t.Fatalf("timeline[%d] = %+v, want %+v", i, d.Timeline[i], w)
+			}
+		}
+	}
 	rows := finance(r1.UUID)
 	if len(rows) != 2 ||
 		rows[0].OrgID != dealerA.ID || rows[0].Counterparty != dealerB.ID || rows[0].Direction != "income" || rows[0].Category != "sale" ||

@@ -209,7 +209,14 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 		if err != nil {
 			return err
 		}
+		before, err := lineUnits(ctx, q, o, it)
+		if err != nil {
+			return err
+		}
 		if split, err = s.assignLocked(ctx, q, tx, c, o, it, in); err != nil {
+			return err
+		}
+		if err := s.recordAssigned(ctx, q, c, o, it, before); err != nil {
 			return err
 		}
 		result = o
@@ -635,6 +642,9 @@ func (s *Service) UnassignUnit(ctx context.Context, c Caller, orderUUID, itemUUI
 		// so the unit can be assigned to the line again.
 		if _, err := q.DeleteOrderItemUnit(ctx, a.ID); err != nil {
 			return fmt.Errorf("orders: unassign: %w", err)
+		}
+		if err := s.recordUnassigned(ctx, q, c, o, it, u, a); err != nil {
+			return err
 		}
 		result = o
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)

@@ -688,5 +688,10 @@
   "entry_import.save": "حفظ",
   "entry_import.template_saved": "تم حفظ قالب المطابقة.",
   "sections.orders.title": "طلبات للتجهيز",
-  "sections.orders.description": "طلبات الوكلاء المعتمدة وقيد التجهيز والجاهزة: الالتقاط ومسح الباركود والشحن."
+  "sections.orders.description": "طلبات الوكلاء المعتمدة وقيد التجهيز والجاهزة: الالتقاط ومسح الباركود والشحن.",
+  "entry.timeline": "سجل العمليات",
+  "entry.activity.created": "أنشأ",
+  "entry.activity.header_updated": "عدّل بيانات التسليم",
+  "entry.activity.confirmed": "أكّد",
+  "entry.activity.cancelled": "ألغى"
 }

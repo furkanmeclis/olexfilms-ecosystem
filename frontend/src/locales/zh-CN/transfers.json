@@ -95,6 +95,7 @@
   "detail.not_found": "未找到调拨申请。",
   "detail.error": "操作未能完成。",
   "detail.summary": "概要",
+  "detail.timeline": "操作记录",
   "detail.parent": "上级组织",
   "detail.role": "您的角色",
   "detail.total": "合计",
