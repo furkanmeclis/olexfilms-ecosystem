@@ -1217,7 +1217,7 @@ func (q *Queries) ListEinvoiceCounters(ctx context.Context, arg ListEinvoiceCoun
 }
 
 const listEinvoiceOrderLines = `-- name: ListEinvoiceOrderLines :many
-SELECT oi.id, oi.uuid, oi.order_id, oi.organization_id, oi.brand_id, oi.product_id, oi.quantity, oi.meters, oi.unit_price, oi.price_source, oi.recommended_price_snapshot, oi.line_total, oi.note, oi.created_at, oi.updated_at, oi.list_unit_price, oi.discount_pct, oi.is_gift, p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable
+SELECT oi.id, oi.uuid, oi.order_id, oi.organization_id, oi.brand_id, oi.product_id, oi.quantity, oi.meters, oi.unit_price, oi.price_source, oi.recommended_price_snapshot, oi.line_total, oi.note, oi.created_at, oi.updated_at, oi.list_unit_price, oi.discount_pct, oi.is_gift, oi.plotter_cut, p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable
 FROM order_items oi
 JOIN products p ON p.id = oi.product_id
 WHERE oi.order_id = $1
@@ -1257,6 +1257,7 @@ func (q *Queries) ListEinvoiceOrderLines(ctx context.Context, orderID int64) ([]
 			&i.OrderItem.ListUnitPrice,
 			&i.OrderItem.DiscountPct,
 			&i.OrderItem.IsGift,
+			&i.OrderItem.PlotterCut,
 			&i.Product.ID,
 			&i.Product.Uuid,
 			&i.Product.OrganizationID,

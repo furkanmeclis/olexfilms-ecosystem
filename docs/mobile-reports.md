@@ -29,6 +29,7 @@ organizasyon bağlamı (`RequireOrganization`). Rapor anahtarları:
 | `services.top_products` | ranking | services | services.read | ✓ | – | ✓ |
 | `orders.trend` | timeseries | orders | orders.read | ✓ | ✓ | – |
 | `orders.status_distribution` | distribution | orders | orders.read | ✓ | – | – |
+| `orders.plotter_cut` | table | orders | orders.read | ✓ (aylık kırılım) | – | – |
 | `customers.trend` | timeseries | customers | customers.read | ✓ | ✓ | – |
 | `stock.summary` | summary | stock | stock.read | – (anlık) | – | – |
 | `warranties.summary` | summary | services | warranties.read | ✓ | ✓ | – |

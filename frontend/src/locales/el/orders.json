@@ -317,5 +317,14 @@
   "edit_lines.below_assigned": "Δεν μπορεί να είναι κάτω από την ανατεθειμένη ποσότητα· αφαιρέστε πρώτα ένα barcode.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Στάλθηκε με κοπή plotter",
+  "plotter.column": "Κοπή plotter",
+  "plotter.badge": "Κοπή plotter",
+  "plotter.failed": "Δεν ήταν δυνατή η αποθήκευση της σήμανσης plotter",
+  "plotter.marked_on": "Σημάνθηκε κοπή plotter",
+  "plotter.marked_off": "Η σήμανση κοπής plotter αφαιρέθηκε",
+  "plotter.change_on": "{{product}}: κοπή plotter",
+  "plotter.change_off": "{{product}}: η κοπή plotter αφαιρέθηκε",
+  "activity.plotter_marked": "Άλλαξε τη σήμανση plotter"
 }

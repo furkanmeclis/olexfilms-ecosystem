@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Non può scendere sotto la quantità assegnata; rimuovi prima un codice a barre.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Spedito con taglio plotter",
+  "plotter.column": "Taglio plotter",
+  "plotter.badge": "Taglio plotter",
+  "plotter.failed": "Impossibile salvare il contrassegno plotter",
+  "plotter.marked_on": "Segnato taglio plotter",
+  "plotter.marked_off": "Contrassegno taglio plotter rimosso",
+  "plotter.change_on": "{{product}}: taglio plotter",
+  "plotter.change_off": "{{product}}: taglio plotter rimosso",
+  "activity.plotter_marked": "Ha modificato il contrassegno plotter"
 }

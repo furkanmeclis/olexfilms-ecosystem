@@ -227,6 +227,20 @@ export function canEditSellerLines(order: Order): boolean {
   return order.role === "seller" && order.can_edit_items === true;
 }
 
+/**
+ * TEC-1058: the seller's sales or warehouse staff switch a line's "sent
+ * plotter cut" mark on any order that is not a draft or cancelled, also
+ * after shipping (the buyer marks its draft lines in the form).
+ */
+export function canMarkPlotter(can: Can, order: Order): boolean {
+  return (
+    order.role === "seller" &&
+    order.status !== "draft" &&
+    order.status !== "cancelled" &&
+    (can(permissions.orders.write) || can(permissions.orders.ship))
+  );
+}
+
 /** The seller assigns units (barcode scan) while the order is preparing. */
 export function canAssignUnits(can: Can, order: Order): boolean {
   return (

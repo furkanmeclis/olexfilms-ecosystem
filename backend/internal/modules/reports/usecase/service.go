@@ -67,13 +67,15 @@ const (
 	ReportServicesTopProducts        = "services.top_products"
 	ReportOrdersTrend                = "orders.trend"
 	ReportOrdersStatusDistribution   = "orders.status_distribution"
-	ReportCustomersTrend             = "customers.trend"
-	ReportStockSummary               = "stock.summary"
-	ReportWarrantiesSummary          = "warranties.summary"
-	ReportMeasurementsSummary        = "measurements.summary"
-	ReportDealersPerformance         = "dealers.performance"
-	ReportDealersTopByWarranty       = "dealers.top_by_warranty"
-	ReportActivitiesRecent           = "activities.recent"
+	// ReportOrdersPlotterCut: monthly plotter-cut shipments (TEC-1058).
+	ReportOrdersPlotterCut     = "orders.plotter_cut"
+	ReportCustomersTrend       = "customers.trend"
+	ReportStockSummary         = "stock.summary"
+	ReportWarrantiesSummary    = "warranties.summary"
+	ReportMeasurementsSummary  = "measurements.summary"
+	ReportDealersPerformance   = "dealers.performance"
+	ReportDealersTopByWarranty = "dealers.top_by_warranty"
+	ReportActivitiesRecent     = "activities.recent"
 )
 
 // Definition is one catalog entry.
@@ -108,6 +110,7 @@ var Definitions = []Definition{
 	{Key: ReportServicesTopProducts, Kind: KindRanking, Module: features.ModuleServices, Permission: rbac.PermServicesRead, Periodic: true, Limited: true, UserScoped: true},
 	{Key: ReportOrdersTrend, Kind: KindTimeseries, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true, Granular: true, UserScoped: true},
 	{Key: ReportOrdersStatusDistribution, Kind: KindDistribution, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true, UserScoped: true},
+	{Key: ReportOrdersPlotterCut, Kind: KindTable, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true},
 	{Key: ReportCustomersTrend, Kind: KindTimeseries, Module: features.ModuleCustomers, Permission: rbac.PermCustomersRead, Periodic: true, Granular: true},
 	{Key: ReportStockSummary, Kind: KindSummary, Module: features.ModuleStock, Permission: rbac.PermStockRead},
 	{Key: ReportWarrantiesSummary, Kind: KindSummary, Module: features.ModuleServices, Permission: rbac.PermWarrantiesRead, Periodic: true, Granular: true, UserScoped: true},

@@ -241,6 +241,7 @@ function order(over: Partial<Order> = {}): Order {
         list_unit_price: null,
         discount_pct: null,
         is_gift: false,
+        plotter_cut: false,
         line_total: "240.00",
         note: null,
         assigned: "0",

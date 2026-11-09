@@ -277,3 +277,28 @@ VALUES (sqlc.arg(user_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.a
 ON CONFLICT (user_id, organization_id) DO UPDATE
 SET version = EXCLUDED.version, widgets = EXCLUDED.widgets, brand_id = EXCLUDED.brand_id, updated_at = NOW()
 RETURNING *;
+
+-- TEC-1058 (RV-5.6): plotter-cut lines shipped per month and product. A
+-- line counts in the month its order shipped (in the report zone); orders
+-- cancelled after shipping (goods back) are left out. Scope like the other
+-- order reports: the seller or the buyer is in reach.
+-- name: ReportOrderPlotterCut :many
+SELECT date_trunc('month', o.shipped_at AT TIME ZONE sqlc.arg(tz)::text)::date AS month,
+       p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COUNT(*)::bigint AS line_count,
+       COALESCE(SUM(oi.quantity), 0)::bigint AS quantity,
+       COALESCE(SUM(oi.meters), 0)::float8 AS meters
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+JOIN products p ON p.id = oi.product_id
+WHERE oi.plotter_cut
+  AND o.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL
+       OR o.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
+       OR o.buyer_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND o.shipped_at IS NOT NULL
+  AND o.status NOT IN ('cancelling', 'cancelled')
+  AND o.shipped_at >= sqlc.arg(range_from)::timestamptz
+  AND o.shipped_at < sqlc.arg(range_to)::timestamptz
+GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type
+ORDER BY 1, p.name, p.uuid;

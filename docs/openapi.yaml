@@ -25869,6 +25869,43 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/orders/{uuid}/items/{item_uuid}:
+    patch:
+      tags: [Orders]
+      operationId: patchOrderItem
+      summary: Set the plotter mark of one line (TEC-1058)
+      description: >-
+        "Sent plotter cut" is information only: no stock, price or flow rule
+        reads it; the monthly orders.plotter_cut report counts it. The seller
+        (orders.write or orders.ship) sets it on any order that is not a
+        draft or cancelled, also after shipping; the buyer (orders.write)
+        only on its draft (else 409 ORDER_NOT_EDITABLE). The same value is a
+        no-op; a change writes a plotter_marked timeline step.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: item_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderItemPatchInput"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/orders/{uuid}/items/{item_uuid}/units:
     post:
       tags: [Orders]
@@ -33648,12 +33685,18 @@ paths:
         TEC-495. report is a catalog key: overview, services.trend,
         services.status_distribution, services.top_brands,
         services.top_models, services.top_products, orders.trend,
-        orders.status_distribution, customers.trend, stock.summary,
-        warranties.summary, measurements.summary, dealers.performance
-        (performance module), dealers.top_by_warranty (subtree / brand
-        reach only), activities.recent. Periodic reports take period
-        (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from +
-        range_to (inclusive
+        orders.status_distribution, orders.plotter_cut, customers.trend,
+        stock.summary, warranties.summary, measurements.summary,
+        dealers.performance (performance module), dealers.top_by_warranty
+        (subtree / brand reach only), activities.recent. orders.plotter_cut
+        (TEC-1058, table): the order lines marked "sent plotter cut" of the
+        orders shipped in the period (orders cancelled after shipping left
+        out), seller or buyer in reach; series plotter_lines /
+        plotter_quantity / plotter_meters are the monthly totals (point key
+        = first day of the month), rows the month (YYYY-MM) x product
+        breakdown (product_uuid, product, sku, unit_type, line_count,
+        quantity, meters). Periodic reports take period
+        (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive
         dates, at most 731 days, period=custom); time series take
         granularity (day, week, month; default by range). Rankings and
         tables take limit (1..50, default 10). Parameters a report does
@@ -47187,7 +47230,7 @@ components:
 
     OrderItem:
       type: object
-      required: [uuid, product, quantity, meters, unit_price, price_source, price_missing, list_unit_price, discount_pct, is_gift, line_total, note, assigned, units, invoiced, invoice_no, invoice_uuid]
+      required: [uuid, product, quantity, meters, unit_price, price_source, price_missing, list_unit_price, discount_pct, is_gift, line_total, note, plotter_cut, assigned, units, invoiced, invoice_no, invoice_uuid]
       properties:
         list_unit_price:
           type: [string, "null"]
@@ -47206,6 +47249,7 @@ components:
         is_gift:
           type: boolean
           description: TEC-1064 — a gift line (e.g. the plexi set) charged 0
+        plotter_cut: { type: boolean, description: '"Sent plotter cut" (TEC-1058, information only)' }
         invoiced: { type: boolean, description: The line is on a manual invoice record (TEC-1030) }
         invoice_no: { type: [string, "null"], description: Number of that invoice record }
         invoice_uuid: { type: [string, "null"], format: uuid }
@@ -47502,7 +47546,8 @@ components:
       type: object
       description: >-
         TEC-1060: one step of an order. action is created, a status the order
-        moved to, unit_assigned, unit_unassigned or updated (draft edit). The
+        moved to, unit_assigned, unit_unassigned, updated (line edit) or
+        plotter_marked (TEC-1058: product and plotter_cut). The
         unit steps carry product, barcode and the amount of that step
         (quantity or meters; a fixed barcode scanned again counts the
         growth); a status step may carry from_status and reason; an edit
@@ -47526,6 +47571,9 @@ components:
           type: array
           description: TEC-1056 — the lines an edit added, changed or removed
           items: { $ref: "#/components/schemas/OrderLineChange" }
+        plotter_cut:
+          type: boolean
+          description: TEC-1058 — the new mark of a plotter_marked step
 
     OrderLineChange:
       type: object
@@ -47539,6 +47587,9 @@ components:
         sku: { type: string }
         before: { type: [string, "null"], example: "2" }
         after: { type: [string, "null"], example: "3" }
+        plotter_cut:
+          type: boolean
+          description: TEC-1058 — the line's plotter mark after the edit, set when it changed (or on an added marked line)
 
     OrderUserRef:
       type: object
@@ -47783,6 +47834,18 @@ components:
           pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
           description: Meters (roll_meter products); a JSON number is accepted too
         note: { type: string }
+        plotter_cut:
+          type: boolean
+          description: >-
+            TEC-1058: "sent plotter cut" (information only). A new line
+            without it is off; on a kept line of a seller edit, absent keeps
+            the mark.
+
+    OrderItemPatchInput:
+      type: object
+      required: [plotter_cut]
+      properties:
+        plotter_cut: { type: boolean }
 
     OrderItemsInput:
       type: object

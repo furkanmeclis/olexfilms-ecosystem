@@ -56,12 +56,16 @@ type LineChange struct {
 	SKU     string  `json:"sku,omitempty"`
 	Before  *string `json:"before"`
 	After   *string `json:"after"`
+	// PlotterCut: the line's plotter mark after the edit, set when it
+	// changed (TEC-1058).
+	PlotterCut *bool `json:"plotter_cut,omitempty"`
 }
 
 type lineSnap struct {
 	name, sku string
 	amount    string
 	order     int64
+	plotter   bool
 }
 
 // snapshotLines keeps the amount of every line by product.
@@ -76,7 +80,7 @@ func snapshotLines(ctx context.Context, q *db.Queries, o db.Order) (map[int64]li
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
 		}
-		out[it.ProductID] = lineSnap{name: p.Name, sku: p.Sku, amount: amountText(it), order: it.ID}
+		out[it.ProductID] = lineSnap{name: p.Name, sku: p.Sku, amount: amountText(it), order: it.ID, plotter: it.PlotterCut}
 	}
 	return out, nil
 }
@@ -102,15 +106,25 @@ func diffLines(before, after map[int64]lineSnap) []LineChange {
 		case !ok:
 			v := b.amount
 			all = append(all, keyed{LineChange{Product: b.name, SKU: b.sku, Before: &v}, b.order})
-		case a.amount != b.amount:
+		case a.amount != b.amount || a.plotter != b.plotter:
 			bv, av := b.amount, a.amount
-			all = append(all, keyed{LineChange{Product: b.name, SKU: b.sku, Before: &bv, After: &av}, b.order})
+			c := LineChange{Product: b.name, SKU: b.sku, Before: &bv, After: &av}
+			if a.plotter != b.plotter {
+				pc := a.plotter
+				c.PlotterCut = &pc
+			}
+			all = append(all, keyed{c, b.order})
 		}
 	}
 	for id, a := range after {
 		if _, ok := before[id]; !ok {
 			v := a.amount
-			all = append(all, keyed{LineChange{Product: a.name, SKU: a.sku, After: &v}, a.order})
+			c := LineChange{Product: a.name, SKU: a.sku, After: &v}
+			if a.plotter {
+				pc := true
+				c.PlotterCut = &pc
+			}
+			all = append(all, keyed{c, a.order})
 		}
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].seq < all[j].seq })
@@ -154,6 +168,12 @@ func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, 
 			note = l.note
 		}
 		same := ratEq(lineAmount(it), l.amount)
+		if p := items[i].PlotterCut; p != nil && *p != it.PlotterCut {
+			if _, err := q.SetOrderItemPlotterCut(ctx, db.SetOrderItemPlotterCutParams{ID: it.ID, PlotterCut: *p}); err != nil {
+				return false, fmt.Errorf("orders: plotter mark: %w", err)
+			}
+			changed = true
+		}
 		if same && note == it.Note {
 			continue
 		}

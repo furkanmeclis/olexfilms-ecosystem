@@ -2181,6 +2181,7 @@ type OrderItem struct {
 	ListUnitPrice            pgtype.Numeric     `json:"list_unit_price"`
 	DiscountPct              pgtype.Numeric     `json:"discount_pct"`
 	IsGift                   bool               `json:"is_gift"`
+	PlotterCut               bool               `json:"plotter_cut"`
 }
 
 type OrderItemUnit struct {

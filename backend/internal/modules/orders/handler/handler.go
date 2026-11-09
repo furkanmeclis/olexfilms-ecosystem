@@ -153,6 +153,8 @@ type itemBody struct {
 	// (TEC-1064).
 	DiscountPct *json.Number `json:"discount_pct"`
 	IsGift      bool         `json:"is_gift"`
+	// PlotterCut: the "sent plotter cut" mark (TEC-1058).
+	PlotterCut *bool `json:"plotter_cut"`
 }
 
 func toItems(in []itemBody) []ord.ItemInput {
@@ -174,7 +176,7 @@ func toItems(in []itemBody) []ord.ItemInput {
 			discount = &d
 		}
 		out = append(out, ord.ItemInput{ProductUUID: it.ProductUUID, Quantity: it.Quantity, Meters: meters,
-			Note: it.Note, UnitPrice: price, DiscountPct: discount, IsGift: it.IsGift})
+			Note: it.Note, UnitPrice: price, DiscountPct: discount, IsGift: it.IsGift, PlotterCut: it.PlotterCut})
 	}
 	return out
 }
@@ -423,6 +425,33 @@ func (h *Handler) UnassignUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o, err := h.svc.UnassignUnit(r.Context(), caller(r), id, item, unit)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, o)
+}
+
+type itemPatchBody struct {
+	PlotterCut *bool `json:"plotter_cut"`
+}
+
+// PatchItem (PATCH /v1/orders/{uuid}/items/{item_uuid}): the plotter mark
+// of one line (TEC-1058).
+func (h *Handler) PatchItem(w http.ResponseWriter, r *http.Request) {
+	id, item, ok := pathItem(w, r)
+	if !ok {
+		return
+	}
+	var body itemPatchBody
+	if !decode(w, r, &body) {
+		return
+	}
+	if body.PlotterCut == nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "plotter_cut", Message: "is required"}})
+		return
+	}
+	o, err := h.svc.SetPlotterCut(r.Context(), caller(r), id, item, *body.PlotterCut)
 	if err != nil {
 		writeError(w, r, err)
 		return

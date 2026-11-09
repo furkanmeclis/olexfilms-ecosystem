@@ -317,5 +317,14 @@
   "edit_lines.below_assigned": "لا يمكن أن تقل عن الكمية المعيّنة؛ أزل الباركود أولًا.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "أُرسل مقصوصًا بالبلوتر",
+  "plotter.column": "قص بالبلوتر",
+  "plotter.badge": "قص بالبلوتر",
+  "plotter.failed": "تعذّر حفظ علامة البلوتر",
+  "plotter.marked_on": "تم وضع علامة القص بالبلوتر",
+  "plotter.marked_off": "أُزيلت علامة القص بالبلوتر",
+  "plotter.change_on": "{{product}}: قص بالبلوتر",
+  "plotter.change_off": "{{product}}: أُزيل القص بالبلوتر",
+  "activity.plotter_marked": "غيّر علامة البلوتر"
 }

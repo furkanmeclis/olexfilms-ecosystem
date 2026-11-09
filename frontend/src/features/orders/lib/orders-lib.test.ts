@@ -259,6 +259,7 @@ describe("orderActions (role and status)", () => {
       list_unit_price: null,
       discount_pct: null,
       is_gift: false,
+      plotter_cut: false,
       line_total: "1.00",
       note: null,
       assigned,
@@ -505,6 +506,7 @@ describe("seller line edit (TEC-1056)", () => {
           list_unit_price: null,
           discount_pct: null,
           is_gift: false,
+          plotter_cut: false,
           line_total: "3.00",
           note: null,
           assigned: "2",
@@ -527,5 +529,56 @@ describe("seller line edit (TEC-1056)", () => {
     expect(
       linesBelowAssigned(o, [{ ...line("1"), product_uuid: "new" }]).size,
     ).toBe(0);
+  });
+});
+
+describe("plotter mark (TEC-1058)", () => {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    vars ? `${key}:${JSON.stringify(vars)}` : key;
+  const format = { number: (v: number) => String(v) };
+
+  it("sends the mark only when the line has one", () => {
+    const base: OrderFormLine = {
+      product_uuid: "p1",
+      sku: "S",
+      name: "N",
+      unit_type: "piece",
+      amount: "2",
+    };
+    expect(toItemInputs([base])).toEqual([{ product_uuid: "p1", quantity: 2 }]);
+    expect(toItemInputs([{ ...base, plotter_cut: true }])).toEqual([
+      { product_uuid: "p1", quantity: 2, plotter_cut: true },
+    ]);
+  });
+
+  it("shows the plotter steps and edit marks on the timeline", () => {
+    const steps = orderTimelineSteps(
+      order({
+        timeline: [
+          {
+            action: "plotter_marked",
+            at: "2026-11-09T08:00:00Z",
+            user: null,
+            product: "Film",
+            plotter_cut: true,
+          },
+          {
+            action: "updated",
+            at: "2026-11-09T09:00:00Z",
+            user: null,
+            changes: [
+              { product: "Kit", before: "1", after: "1", plotter_cut: false },
+            ],
+          },
+        ],
+      }),
+      t,
+      format,
+    );
+    expect(steps[0]).toMatchObject({
+      label: "orders.activity.plotter_marked",
+      detail: "Film · orders.plotter.marked_on",
+    });
+    expect(steps[1].detail).toBe('orders.plotter.change_off:{"product":"Kit"}');
   });
 });

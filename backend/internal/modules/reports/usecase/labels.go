@@ -124,6 +124,16 @@ var labels = map[string]label{
 	"column.measurement_rate":    {"Ölçüm oranı", "Measurement rate", "Дял измервания", "Messquote", "Ποσοστό μετρήσεων", "Частка вимірювань", "Доля измерений", "Taux de mesure", "Tasa de medición", "Tasso di misurazione", "测量率", "Ölçmə nisbəti", "معدل القياس"},
 	"column.review_avg":          {"Ortalama puan", "Average rating", "Среден рейтинг", "Durchschnittsbewertung", "Μέση βαθμολογία", "Середня оцінка", "Средняя оценка", "Note moyenne", "Valoración media", "Valutazione media", "平均评分", "Orta qiymət", "متوسط التقييم"},
 	"column.order_volume":        {"Sipariş hacmi", "Order volume", "Обем на поръчките", "Bestellvolumen", "Όγκος παραγγελιών", "Обсяг замовлень", "Объём заказов", "Volume de commandes", "Volumen de pedidos", "Volume ordini", "订单量", "Sifariş həcmi", "حجم الطلبات"},
+	"title.orders.plotter_cut":   {"Aylık plotter kesimli gönderimler", "Monthly plotter-cut shipments", "Месечни пратки с плотерно рязане", "Monatliche Plotterschnitt-Sendungen", "Μηνιαίες αποστολές με κοπή plotter", "Щомісячні відправлення з плотерним різанням", "Ежемесячные отправки с плоттерной резкой", "Envois mensuels découpés au plotter", "Envíos mensuales con corte plotter", "Spedizioni mensili con taglio plotter", "每月绘图机切割发货", "Aylıq plotter kəsimli göndərişlər", "الشحنات الشهرية المقصوصة بالبلوتر"},
+	"series.plotter_lines":       {"Kalem sayısı", "Lines", "Редове", "Positionen", "Γραμμές", "Позиції", "Позиции", "Lignes", "Líneas", "Righe", "明细数", "Sətir sayı", "البنود"},
+	"series.plotter_quantity":    {"Adet", "Pieces", "Брой", "Stück", "Τεμάχια", "Штуки", "Штуки", "Pièces", "Unidades", "Pezzi", "件数", "Ədəd", "القطع"},
+	"series.plotter_meters":      {"Metre", "Meters", "Метри", "Meter", "Μέτρα", "Метри", "Метры", "Mètres", "Metros", "Metri", "米数", "Metr", "الأمتار"},
+	"column.month":               {"Ay", "Month", "Месец", "Monat", "Μήνας", "Місяць", "Месяц", "Mois", "Mes", "Mese", "月份", "Ay", "الشهر"},
+	"column.product":             {"Ürün", "Product", "Продукт", "Produkt", "Προϊόν", "Продукт", "Товар", "Produit", "Producto", "Prodotto", "产品", "Məhsul", "المنتج"},
+	"column.sku":                 {"Stok kodu", "SKU", "Артикул", "Artikelnummer", "Κωδικός", "Артикул", "Артикул", "Référence", "Referencia", "Codice articolo", "货号", "Stok kodu", "رمز المنتج"},
+	"column.line_count":          {"Kalem sayısı", "Lines", "Редове", "Positionen", "Γραμμές", "Позиції", "Позиции", "Lignes", "Líneas", "Righe", "明细数", "Sətir sayı", "البنود"},
+	"column.quantity":            {"Adet", "Pieces", "Брой", "Stück", "Τεμάχια", "Штуки", "Штуки", "Pièces", "Unidades", "Pezzi", "件数", "Ədəd", "القطع"},
+	"column.meters":              {"Metre", "Meters", "Метри", "Meter", "Μέτρα", "Метри", "Метры", "Mètres", "Metros", "Metri", "米数", "Metr", "الأمتار"},
 }
 
 // translate resolves key for locale; an unknown locale falls back to en and

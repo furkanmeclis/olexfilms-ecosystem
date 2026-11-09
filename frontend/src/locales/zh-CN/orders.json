@@ -317,5 +317,14 @@
   "edit_lines.below_assigned": "不能低于已分配数量;请先移除条码。",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "已按绘图机切割发货",
+  "plotter.column": "绘图机切割",
+  "plotter.badge": "绘图机切割",
+  "plotter.failed": "无法保存绘图机标记",
+  "plotter.marked_on": "已标记绘图机切割",
+  "plotter.marked_off": "已取消绘图机切割标记",
+  "plotter.change_on": "{{product}}:绘图机切割",
+  "plotter.change_off": "{{product}}:已取消绘图机切割",
+  "activity.plotter_marked": "更改了绘图机标记"
 }

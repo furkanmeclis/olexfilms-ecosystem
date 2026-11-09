@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Не може бути менше за призначену кількість; спершу зніміть штрихкод.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Відправлено з плотерним різанням",
+  "plotter.column": "Плотерне різання",
+  "plotter.badge": "Плотерне різання",
+  "plotter.failed": "Не вдалося зберегти позначку плотера",
+  "plotter.marked_on": "Позначено плотерне різання",
+  "plotter.marked_off": "Позначку плотерного різання знято",
+  "plotter.change_on": "{{product}}: плотерне різання",
+  "plotter.change_off": "{{product}}: плотерне різання знято",
+  "activity.plotter_marked": "Змінив позначку плотера"
 }

@@ -307,6 +307,86 @@ func (q *Queries) ReportOrderOverview(ctx context.Context, arg ReportOrderOvervi
 	return i, err
 }
 
+const reportOrderPlotterCut = `-- name: ReportOrderPlotterCut :many
+SELECT date_trunc('month', o.shipped_at AT TIME ZONE $1::text)::date AS month,
+       p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COUNT(*)::bigint AS line_count,
+       COALESCE(SUM(oi.quantity), 0)::bigint AS quantity,
+       COALESCE(SUM(oi.meters), 0)::float8 AS meters
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+JOIN products p ON p.id = oi.product_id
+WHERE oi.plotter_cut
+  AND o.brand_id = $2
+  AND ($3::bigint[] IS NULL
+       OR o.organization_id = ANY ($3::bigint[])
+       OR o.buyer_org_id = ANY ($3::bigint[]))
+  AND o.shipped_at IS NOT NULL
+  AND o.status NOT IN ('cancelling', 'cancelled')
+  AND o.shipped_at >= $4::timestamptz
+  AND o.shipped_at < $5::timestamptz
+GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type
+ORDER BY 1, p.name, p.uuid
+`
+
+type ReportOrderPlotterCutParams struct {
+	Tz        string             `json:"tz"`
+	BrandID   int64              `json:"brand_id"`
+	OrgIds    []int64            `json:"org_ids"`
+	RangeFrom pgtype.Timestamptz `json:"range_from"`
+	RangeTo   pgtype.Timestamptz `json:"range_to"`
+}
+
+type ReportOrderPlotterCutRow struct {
+	Month       pgtype.Date `json:"month"`
+	ProductUuid uuid.UUID   `json:"product_uuid"`
+	Sku         string      `json:"sku"`
+	ProductName string      `json:"product_name"`
+	UnitType    string      `json:"unit_type"`
+	LineCount   int64       `json:"line_count"`
+	Quantity    int64       `json:"quantity"`
+	Meters      float64     `json:"meters"`
+}
+
+// TEC-1058 (RV-5.6): plotter-cut lines shipped per month and product. A
+// line counts in the month its order shipped (in the report zone); orders
+// cancelled after shipping (goods back) are left out. Scope like the other
+// order reports: the seller or the buyer is in reach.
+func (q *Queries) ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlotterCutParams) ([]ReportOrderPlotterCutRow, error) {
+	rows, err := q.db.Query(ctx, reportOrderPlotterCut,
+		arg.Tz,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.RangeFrom,
+		arg.RangeTo,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReportOrderPlotterCutRow{}
+	for rows.Next() {
+		var i ReportOrderPlotterCutRow
+		if err := rows.Scan(
+			&i.Month,
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.UnitType,
+			&i.LineCount,
+			&i.Quantity,
+			&i.Meters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reportOrderStatuses = `-- name: ReportOrderStatuses :many
 SELECT o.status, COUNT(*)::bigint AS value
 FROM orders o
