@@ -21829,6 +21829,182 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/accounting/cari/{uuid}/billing:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Accounting]
+      operationId: getAccountingCariBilling
+      summary: Billing details of a cari organization (TEC-1070)
+      description: >-
+        Needs `accounting.read`. Legal title, tax office and number, invoice
+        address and e-mail and IBAN of the cari's counterparty organization
+        (they belong to that organization). `editable` is true when the
+        counterparty sits below the active book (the accounting above fills
+        them). A customer (user) cari answers 422 BILLING_NOT_EDITABLE.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AccountingOrganizationUUID"
+      responses:
+        "200":
+          description: Billing details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariBilling"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    put:
+      tags: [Accounting]
+      operationId: updateAccountingCariBilling
+      summary: Replace the billing details of a cari organization (TEC-1070)
+      description: >-
+        Needs `accounting.write` on the active book; the counterparty must be
+        an organization below it (422 BILLING_NOT_EDITABLE otherwise). An
+        empty field clears it. The IBAN is normalized (spaces dropped,
+        upper case) and checked (ISO 13616 mod 97, country length); the
+        e-mail must be an address; the tax number takes letters, digits and
+        dashes.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CariBillingInput"
+      responses:
+        "200":
+          description: Saved billing details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCariBilling"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/accounting/queue/summary:
+    get:
+      tags: [Accounting]
+      operationId: getAccountingQueueSummary
+      summary: Accounting queue counters of the active book (TEC-1070)
+      description: >-
+        Needs `accounting.read`. Legacy olexfilms-warehouse "Muhasebe
+        kuyruğu": `orders_to_invoice` are received sales not fully invoiced
+        (mark them with POST /v1/orders/{uuid}/invoices, TEC-1030);
+        `orders_in_transit` are shipped or delivered sales not invoiced yet
+        (they become invoiceable when the buyer receives them);
+        `returns_pending` are received returns (stock-transfers kind=return)
+        not marked processed. The order lists themselves are GET /v1/orders
+        with side=seller, status and invoice_status.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Queue counters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingQueueSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/accounting/queue/returns:
+    get:
+      tags: [Accounting]
+      operationId: listAccountingQueueReturns
+      summary: Received returns of the active book's accounting queue (TEC-1070)
+      description: >-
+        Needs `accounting.read`. Returns (kind=return) the active
+        organization received. `processed=false` the waiting ones,
+        `processed=true` the processed ones, none both. Sort keys
+        received_at (default -received_at), transfer_no, processed_at; `q`
+        matches a transfer number prefix or the sender name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: processed
+          in: query
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Queue returns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAccountingQueueReturnPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/accounting/queue/returns/{uuid}/processed:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Accounting]
+      operationId: markAccountingQueueReturnProcessed
+      summary: Mark a received return processed (TEC-1070)
+      description: >-
+        Needs `accounting.write` on the active book; the return must be a
+        received return to it (404 otherwise). An optional note (credit note
+        number, max 1000 characters) is kept; marking again replaces it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountingQueueProcessInput"
+      responses:
+        "204": { description: Marked }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Accounting]
+      operationId: unmarkAccountingQueueReturnProcessed
+      summary: Put a processed return back in the queue (TEC-1070)
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Cleared }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/accounting/cari/{uuid}/statement:
     get:
       tags: [Accounting]
@@ -44472,6 +44648,94 @@ components:
         entry_count: { type: integer, format: int64 }
         last_entry_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
+
+    CariBilling:
+      type: object
+      required: [title, tax_office, tax_no, address, email, iban, editable, updated_at, updated_by]
+      properties:
+        title: { type: [string, "null"], description: Legal title (ünvan) }
+        tax_office: { type: [string, "null"] }
+        tax_no: { type: [string, "null"] }
+        address: { type: [string, "null"], description: Invoice address }
+        email: { type: [string, "null"], description: Invoice e-mail }
+        iban: { type: [string, "null"], description: Normalized IBAN }
+        editable: { type: boolean, description: The active book may change them }
+        updated_at: { type: [string, "null"], format: date-time }
+        updated_by: { type: [string, "null"] }
+
+    CariBillingInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, maxLength: 255 }
+        tax_office: { type: string, maxLength: 120 }
+        tax_no: { type: string, maxLength: 32 }
+        address: { type: string, maxLength: 2000 }
+        email: { type: string, maxLength: 255 }
+        iban: { type: string, maxLength: 64 }
+
+    EnvelopeCariBilling:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CariBilling" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AccountingQueueSummary:
+      type: object
+      required: [orders_to_invoice, orders_in_transit, returns_pending]
+      properties:
+        orders_to_invoice: { type: integer, format: int64 }
+        orders_in_transit: { type: integer, format: int64 }
+        returns_pending: { type: integer, format: int64 }
+
+    EnvelopeAccountingQueueSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AccountingQueueSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AccountingQueueReturn:
+      type: object
+      required: [uuid, transfer_no, sender, item_count, currency, total, received_at, created_at, processed_at, processed_by, note]
+      properties:
+        uuid: { type: string, format: uuid }
+        transfer_no: { type: string }
+        sender: { $ref: "#/components/schemas/CariCounterparty" }
+        item_count: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        total: { type: [string, "null"], example: "50.00" }
+        received_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        processed_at: { type: [string, "null"], format: date-time }
+        processed_by: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+
+    AccountingQueueProcessInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: string, maxLength: 1000 }
+
+    EnvelopeAccountingQueueReturnPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AccountingQueueReturn" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     CariOpenInput:
       type: object

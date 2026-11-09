@@ -132,6 +132,8 @@ export const routes = {
       disputes: (slug: string) => `/t/${slug}/accounting/disputes`,
       disputeDetail: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/disputes/${uuid}`,
+      /** TEC-1070: accounting queue (orders to invoice, returns). */
+      queue: (slug: string) => `/t/${slug}/accounting/queue`,
     },
     /** TEC-348 dealer sale prices, quick sale, suppliers, purchases. */
     dealerSales: {

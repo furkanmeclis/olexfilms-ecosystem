@@ -67,6 +67,14 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/accounting/cari", read(h.ListCari))
 	mux.Handle("GET /v1/accounting/cari/{uuid}", read(h.GetCari))
+	// TEC-1070: billing details of a cari organization (filled by the
+	// accounting above it) and the accounting queue of the active book.
+	mux.Handle("GET /v1/accounting/cari/{uuid}/billing", read(h.GetCariBilling))
+	mux.Handle("PUT /v1/accounting/cari/{uuid}/billing", write(h.UpdateCariBilling))
+	mux.Handle("GET /v1/accounting/queue/summary", read(h.QueueSummary))
+	mux.Handle("GET /v1/accounting/queue/returns", read(h.ListQueueReturns))
+	mux.Handle("POST /v1/accounting/queue/returns/{uuid}/processed", write(h.MarkReturnProcessed))
+	mux.Handle("DELETE /v1/accounting/queue/returns/{uuid}/processed", write(h.UnmarkReturnProcessed))
 	// TEC-175: statement, balance report and their export jobs (read scope).
 	mux.Handle("GET /v1/accounting/cari/{uuid}/statement", read(h.GetStatement))
 	mux.Handle("POST /v1/accounting/cari/{uuid}/statement/export", read(h.ExportStatement))

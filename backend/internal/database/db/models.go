@@ -2298,6 +2298,14 @@ type Organization struct {
 	ServicePointName          pgtype.Text        `json:"service_point_name"`
 	ServicePointLogoObjectKey pgtype.Text        `json:"service_point_logo_object_key"`
 	MergedIntoID              pgtype.Int8        `json:"merged_into_id"`
+	BillingTitle              pgtype.Text        `json:"billing_title"`
+	TaxOffice                 pgtype.Text        `json:"tax_office"`
+	TaxNo                     pgtype.Text        `json:"tax_no"`
+	BillingAddress            pgtype.Text        `json:"billing_address"`
+	BillingEmail              pgtype.Text        `json:"billing_email"`
+	Iban                      pgtype.Text        `json:"iban"`
+	BillingUpdatedAt          pgtype.Timestamptz `json:"billing_updated_at"`
+	BillingUpdatedByUserID    pgtype.Int8        `json:"billing_updated_by_user_id"`
 }
 
 type OrganizationMember struct {
@@ -3526,40 +3534,43 @@ type StockSplit struct {
 }
 
 type StockTransferRequest struct {
-	ID                int64              `json:"id"`
-	Uuid              uuid.UUID          `json:"uuid"`
-	OrganizationID    int64              `json:"organization_id"`
-	BrandID           int64              `json:"brand_id"`
-	FromOrgID         int64              `json:"from_org_id"`
-	ToOrgID           int64              `json:"to_org_id"`
-	ApproverOrgID     int64              `json:"approver_org_id"`
-	ProductID         pgtype.Int8        `json:"product_id"`
-	UnitID            pgtype.Int8        `json:"unit_id"`
-	Quantity          pgtype.Int4        `json:"quantity"`
-	Meters            pgtype.Numeric     `json:"meters"`
-	Currency          string             `json:"currency"`
-	UnitPrice         pgtype.Numeric     `json:"unit_price"`
-	LineTotal         pgtype.Numeric     `json:"line_total"`
-	RateSnapshot      []byte             `json:"rate_snapshot"`
-	Status            string             `json:"status"`
-	Reason            pgtype.Text        `json:"reason"`
-	RequestedByUserID pgtype.Int8        `json:"requested_by_user_id"`
-	DecidedByUserID   pgtype.Int8        `json:"decided_by_user_id"`
-	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
-	DecisionNote      pgtype.Text        `json:"decision_note"`
-	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
-	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	TransferNo        string             `json:"transfer_no"`
-	Total             pgtype.Numeric     `json:"total"`
-	CancelReason      pgtype.Text        `json:"cancel_reason"`
-	ShippedByUserID   pgtype.Int8        `json:"shipped_by_user_id"`
-	ReceivedByUserID  pgtype.Int8        `json:"received_by_user_id"`
-	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
-	ShippedAt         pgtype.Timestamptz `json:"shipped_at"`
-	ReceivedAt        pgtype.Timestamptz `json:"received_at"`
-	Kind              string             `json:"kind"`
+	ID                          int64              `json:"id"`
+	Uuid                        uuid.UUID          `json:"uuid"`
+	OrganizationID              int64              `json:"organization_id"`
+	BrandID                     int64              `json:"brand_id"`
+	FromOrgID                   int64              `json:"from_org_id"`
+	ToOrgID                     int64              `json:"to_org_id"`
+	ApproverOrgID               int64              `json:"approver_org_id"`
+	ProductID                   pgtype.Int8        `json:"product_id"`
+	UnitID                      pgtype.Int8        `json:"unit_id"`
+	Quantity                    pgtype.Int4        `json:"quantity"`
+	Meters                      pgtype.Numeric     `json:"meters"`
+	Currency                    string             `json:"currency"`
+	UnitPrice                   pgtype.Numeric     `json:"unit_price"`
+	LineTotal                   pgtype.Numeric     `json:"line_total"`
+	RateSnapshot                []byte             `json:"rate_snapshot"`
+	Status                      string             `json:"status"`
+	Reason                      pgtype.Text        `json:"reason"`
+	RequestedByUserID           pgtype.Int8        `json:"requested_by_user_id"`
+	DecidedByUserID             pgtype.Int8        `json:"decided_by_user_id"`
+	DecidedAt                   pgtype.Timestamptz `json:"decided_at"`
+	DecisionNote                pgtype.Text        `json:"decision_note"`
+	CompletedAt                 pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt                 pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
+	TransferNo                  string             `json:"transfer_no"`
+	Total                       pgtype.Numeric     `json:"total"`
+	CancelReason                pgtype.Text        `json:"cancel_reason"`
+	ShippedByUserID             pgtype.Int8        `json:"shipped_by_user_id"`
+	ReceivedByUserID            pgtype.Int8        `json:"received_by_user_id"`
+	CancelledByUserID           pgtype.Int8        `json:"cancelled_by_user_id"`
+	ShippedAt                   pgtype.Timestamptz `json:"shipped_at"`
+	ReceivedAt                  pgtype.Timestamptz `json:"received_at"`
+	Kind                        string             `json:"kind"`
+	AccountingProcessedAt       pgtype.Timestamptz `json:"accounting_processed_at"`
+	AccountingProcessedByUserID pgtype.Int8        `json:"accounting_processed_by_user_id"`
+	AccountingNote              pgtype.Text        `json:"accounting_note"`
 }
 
 type StockTransferRequestItem struct {

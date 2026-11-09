@@ -29,6 +29,9 @@ describe("tenant nav: accounting (TEC-176, TEC-195)", () => {
     const items = tenantNav("acme").groups.find((g) => g.id === "accounting");
     expect(items?.feature).toBe("accounting");
     expect(items?.items.map((i) => i.href)).toEqual([
+      // TEC-1070: accounting queue and its returns tab first.
+      routes.tenant.accounting.queue("acme"),
+      `${routes.tenant.accounting.queue("acme")}?tab=returns`,
       routes.tenant.accounting.accounts("acme"),
       routes.tenant.accounting.cari("acme"),
       routes.tenant.accounting.entries("acme"),

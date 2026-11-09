@@ -11342,6 +11342,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounting/cari/{uuid}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Billing details of a cari organization (TEC-1070)
+         * @description Needs `accounting.read`. Legal title, tax office and number, invoice address and e-mail and IBAN of the cari's counterparty organization (they belong to that organization). `editable` is true when the counterparty sits below the active book (the accounting above fills them). A customer (user) cari answers 422 BILLING_NOT_EDITABLE.
+         */
+        get: operations["getAccountingCariBilling"];
+        /**
+         * Replace the billing details of a cari organization (TEC-1070)
+         * @description Needs `accounting.write` on the active book; the counterparty must be an organization below it (422 BILLING_NOT_EDITABLE otherwise). An empty field clears it. The IBAN is normalized (spaces dropped, upper case) and checked (ISO 13616 mod 97, country length); the e-mail must be an address; the tax number takes letters, digits and dashes.
+         */
+        put: operations["updateAccountingCariBilling"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/queue/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accounting queue counters of the active book (TEC-1070)
+         * @description Needs `accounting.read`. Legacy olexfilms-warehouse "Muhasebe kuyruğu": `orders_to_invoice` are received sales not fully invoiced (mark them with POST /v1/orders/{uuid}/invoices, TEC-1030); `orders_in_transit` are shipped or delivered sales not invoiced yet (they become invoiceable when the buyer receives them); `returns_pending` are received returns (stock-transfers kind=return) not marked processed. The order lists themselves are GET /v1/orders with side=seller, status and invoice_status.
+         */
+        get: operations["getAccountingQueueSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/queue/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Received returns of the active book's accounting queue (TEC-1070)
+         * @description Needs `accounting.read`. Returns (kind=return) the active organization received. `processed=false` the waiting ones, `processed=true` the processed ones, none both. Sort keys received_at (default -received_at), transfer_no, processed_at; `q` matches a transfer number prefix or the sender name.
+         */
+        get: operations["listAccountingQueueReturns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounting/queue/returns/{uuid}/processed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a received return processed (TEC-1070)
+         * @description Needs `accounting.write` on the active book; the return must be a received return to it (404 otherwise). An optional note (credit note number, max 1000 characters) is kept; marking again replaces it.
+         */
+        post: operations["markAccountingQueueReturnProcessed"];
+        /** Put a processed return back in the queue (TEC-1070) */
+        delete: operations["unmarkAccountingQueueReturnProcessed"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounting/cari/{uuid}/statement": {
         parameters: {
             query?: never;
@@ -25613,6 +25704,85 @@ export interface components {
             last_entry_at: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        CariBilling: {
+            /** @description Legal title (ünvan) */
+            title: string | null;
+            tax_office: string | null;
+            tax_no: string | null;
+            /** @description Invoice address */
+            address: string | null;
+            /** @description Invoice e-mail */
+            email: string | null;
+            /** @description Normalized IBAN */
+            iban: string | null;
+            /** @description The active book may change them */
+            editable: boolean;
+            /** Format: date-time */
+            updated_at: string | null;
+            updated_by: string | null;
+        };
+        CariBillingInput: {
+            title?: string;
+            tax_office?: string;
+            tax_no?: string;
+            address?: string;
+            email?: string;
+            iban?: string;
+        };
+        EnvelopeCariBilling: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CariBilling"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AccountingQueueSummary: {
+            /** Format: int64 */
+            orders_to_invoice: number;
+            /** Format: int64 */
+            orders_in_transit: number;
+            /** Format: int64 */
+            returns_pending: number;
+        };
+        EnvelopeAccountingQueueSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AccountingQueueSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AccountingQueueReturn: {
+            /** Format: uuid */
+            uuid: string;
+            transfer_no: string;
+            sender: components["schemas"]["CariCounterparty"];
+            /** Format: int64 */
+            item_count: number;
+            currency: string;
+            /** @example 50.00 */
+            total: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            processed_at: string | null;
+            processed_by: string | null;
+            note: string | null;
+        };
+        AccountingQueueProcessInput: {
+            note?: string;
+        };
+        EnvelopeAccountingQueueReturnPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AccountingQueueReturn"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         CariOpenInput: {
             /**
@@ -52659,6 +52829,173 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getAccountingCariBilling: {
+        parameters: {
+            query?: {
+                /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
+                organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Billing details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariBilling"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    updateAccountingCariBilling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CariBillingInput"];
+            };
+        };
+        responses: {
+            /** @description Saved billing details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCariBilling"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getAccountingQueueSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queue counters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingQueueSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAccountingQueueReturns: {
+        parameters: {
+            query?: {
+                processed?: boolean;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queue returns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAccountingQueueReturnPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    markAccountingQueueReturnProcessed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AccountingQueueProcessInput"];
+            };
+        };
+        responses: {
+            /** @description Marked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unmarkAccountingQueueReturnProcessed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getAccountingCariStatement: {

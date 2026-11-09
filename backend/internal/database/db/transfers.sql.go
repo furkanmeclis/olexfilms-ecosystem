@@ -17,7 +17,7 @@ UPDATE stock_transfer_requests
 SET status = 'cancelled', cancelled_by_user_id = $1, cancelled_at = NOW(),
     cancel_reason = $2
 WHERE id = $3 AND status IN ('requested', 'approved', 'shipped')
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
 `
 
 type CancelTransferRequestParams struct {
@@ -64,6 +64,9 @@ func (q *Queries) CancelTransferRequest(ctx context.Context, arg CancelTransferR
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
@@ -164,7 +167,7 @@ SET status = $1::text,
     decided_at = NOW(),
     decision_note = $4
 WHERE id = $5 AND status = 'requested'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
 `
 
 type DecideTransferRequestParams struct {
@@ -219,12 +222,15 @@ func (q *Queries) DecideTransferRequest(ctx context.Context, arg DecideTransferR
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
 
 const getTransferRequestByUUID = `-- name: GetTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -271,6 +277,9 @@ func (q *Queries) GetTransferRequestByUUID(ctx context.Context, arg GetTransferR
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
@@ -326,7 +335,7 @@ VALUES (
     $4, $5, $6, $7,
     COALESCE(NULLIF($8::text, ''), 'sibling')
 )
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
 `
 
 type InsertTransferRequestParams struct {
@@ -390,6 +399,9 @@ func (q *Queries) InsertTransferRequest(ctx context.Context, arg InsertTransferR
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
@@ -616,7 +628,7 @@ func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64)
 }
 
 const listTransferRequestsFiltered = `-- name: ListTransferRequestsFiltered :many
-SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.from_org_id, r.to_org_id, r.approver_org_id, r.product_id, r.unit_id, r.quantity, r.meters, r.currency, r.unit_price, r.line_total, r.rate_snapshot, r.status, r.reason, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.completed_at, r.cancelled_at, r.created_at, r.updated_at, r.transfer_no, r.total, r.cancel_reason, r.shipped_by_user_id, r.received_by_user_id, r.cancelled_by_user_id, r.shipped_at, r.received_at, r.kind FROM stock_transfer_requests r
+SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.from_org_id, r.to_org_id, r.approver_org_id, r.product_id, r.unit_id, r.quantity, r.meters, r.currency, r.unit_price, r.line_total, r.rate_snapshot, r.status, r.reason, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.completed_at, r.cancelled_at, r.created_at, r.updated_at, r.transfer_no, r.total, r.cancel_reason, r.shipped_by_user_id, r.received_by_user_id, r.cancelled_by_user_id, r.shipped_at, r.received_at, r.kind, r.accounting_processed_at, r.accounting_processed_by_user_id, r.accounting_note FROM stock_transfer_requests r
 WHERE r.brand_id = $1
   AND (
       ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'outgoing' = ANY ($2::text[]))
@@ -735,6 +747,9 @@ func (q *Queries) ListTransferRequestsFiltered(ctx context.Context, arg ListTran
 			&i.ShippedAt,
 			&i.ReceivedAt,
 			&i.Kind,
+			&i.AccountingProcessedAt,
+			&i.AccountingProcessedByUserID,
+			&i.AccountingNote,
 		); err != nil {
 			return nil, err
 		}
@@ -747,7 +762,7 @@ func (q *Queries) ListTransferRequestsFiltered(ctx context.Context, arg ListTran
 }
 
 const listTransferSiblings = `-- name: ListTransferSiblings :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id FROM organizations
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id FROM organizations
 WHERE brand_id = $1
   AND parent_id = $2
   AND type = $3
@@ -828,6 +843,14 @@ func (q *Queries) ListTransferSiblings(ctx context.Context, arg ListTransferSibl
 			&i.ServicePointName,
 			&i.ServicePointLogoObjectKey,
 			&i.MergedIntoID,
+			&i.BillingTitle,
+			&i.TaxOffice,
+			&i.TaxNo,
+			&i.BillingAddress,
+			&i.BillingEmail,
+			&i.Iban,
+			&i.BillingUpdatedAt,
+			&i.BillingUpdatedByUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -876,7 +899,7 @@ func (q *Queries) LockOrdersOfTransferRequest(ctx context.Context, requestID int
 }
 
 const lockTransferRequestByUUID = `-- name: LockTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -924,6 +947,9 @@ func (q *Queries) LockTransferRequestByUUID(ctx context.Context, arg LockTransfe
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
@@ -932,7 +958,7 @@ const receiveTransferRequest = `-- name: ReceiveTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'received', received_by_user_id = $1, received_at = NOW()
 WHERE id = $2 AND status = 'shipped'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
 `
 
 type ReceiveTransferRequestParams struct {
@@ -978,6 +1004,9 @@ func (q *Queries) ReceiveTransferRequest(ctx context.Context, arg ReceiveTransfe
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }
@@ -1072,7 +1101,7 @@ const shipTransferRequest = `-- name: ShipTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'shipped', shipped_by_user_id = $1, shipped_at = NOW()
 WHERE id = $2 AND status = 'approved'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
 `
 
 type ShipTransferRequestParams struct {
@@ -1118,6 +1147,9 @@ func (q *Queries) ShipTransferRequest(ctx context.Context, arg ShipTransferReque
 		&i.ShippedAt,
 		&i.ReceivedAt,
 		&i.Kind,
+		&i.AccountingProcessedAt,
+		&i.AccountingProcessedByUserID,
+		&i.AccountingNote,
 	)
 	return i, err
 }

@@ -12,6 +12,14 @@ import (
 )
 
 type Querier interface {
+	// TEC-1070: accounting queue (legacy olexfilms-warehouse "Muhasebe
+	// kuyruğu") of one book: orders it sold that wait for an invoice mark
+	// (TEC-1030) and returns it accepted that wait to be processed.
+	// to_invoice: received seller orders not fully invoiced (the invoice mark
+	// needs a received order); in_transit: shipped or delivered seller orders
+	// not invoiced yet (they enter to_invoice when the buyer receives them);
+	// returns: received returns to the book not processed yet.
+	AccountingQueueCounts(ctx context.Context, organizationID int64) (AccountingQueueCountsRow, error)
 	ActivateScheduledServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error)
 	// Catalog rows of the ids the engine ranked, for GET
 	// /v1/stats/frequent-vehicles (active rows only, like the catalog pickers).
@@ -171,6 +179,7 @@ type Querier interface {
 	CountAIPendingActionsPage(ctx context.Context, arg CountAIPendingActionsPageParams) (int64, error)
 	CountAIUsage(ctx context.Context, arg CountAIUsageParams) (int64, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
+	CountAccountingQueueReturns(ctx context.Context, arg CountAccountingQueueReturnsParams) (int64, error)
 	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
 	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
 	CountActiveRefreshTokensForUser(ctx context.Context, userID int64) (int64, error)
@@ -1190,6 +1199,7 @@ type Querier interface {
 	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
 	// The manual value (admin / distributor / dealer standard), never a grant.
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
+	GetOrganizationBilling(ctx context.Context, id int64) (GetOrganizationBillingRow, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
@@ -1706,6 +1716,9 @@ type Querier interface {
 	// disputing book's currency; resolved_at keeps open disputes last; id is the
 	// tiebreak. q matches the reason or either organization name.
 	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
+	// processed: NULL every received return, true processed ones, false waiting.
+	// sort_key received_at (default), transfer_no, processed_at; id tiebreak.
+	ListAccountingQueueReturns(ctx context.Context, arg ListAccountingQueueReturnsParams) ([]ListAccountingQueueReturnsRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	// The active links of a fleet to the organizations in scope (org_ids NULL:
 	// every organization of the brand). A dealer reaches a fleet only through
@@ -3773,6 +3786,9 @@ type Querier interface {
 	// The tax identity typed with the recipient (10 digits: VKN, 11: TCKN).
 	SetRecipientInvoiceTax(ctx context.Context, arg SetRecipientInvoiceTaxParams) error
 	SetRecipientOrganizationStatus(ctx context.Context, arg SetRecipientOrganizationStatusParams) (Organization, error)
+	// Marks (processed = true) or clears the accounting mark of a received
+	// return to the book. No row: not found, not a received return of the book.
+	SetReturnAccountingProcessed(ctx context.Context, arg SetReturnAccountingProcessedParams) (uuid.UUID, error)
 	SetReviewQuestionActive(ctx context.Context, arg SetReviewQuestionActiveParams) (ReviewQuestion, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
@@ -3999,6 +4015,7 @@ type Querier interface {
 	// caller has locked the row and validated the transition.
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsParams) (Order, error)
+	UpdateOrganizationBilling(ctx context.Context, arg UpdateOrganizationBillingParams) error
 	// TEC-240: dealer coordinates and the public "nearby dealers" lookup.
 	// Sets or clears (both NULL) the map position of an organization.
 	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)

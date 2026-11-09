@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { CariBillingCard } from "@/features/accounting/components/cari-billing-card";
 import { counterpartyKind } from "@/features/accounting/components/cari-page";
 import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
@@ -177,6 +178,13 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
               </CardContent>
             </Card>
           </div>
+          {c.counterparty.type === "organization" ? (
+            <CariBillingCard
+              orgUuid={access.orgUuid}
+              cariUuid={uuid}
+              canWrite={access.canWrite}
+            />
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle>{t("accounting.cari.recent")}</CardTitle>
