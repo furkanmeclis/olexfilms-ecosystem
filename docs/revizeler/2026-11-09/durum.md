@@ -18,6 +18,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000172 | TEC-1070 | cari muhasebe bilgileri (gerekirse) |
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 | 000174 | TEC-1058 | order_items.plotter_cut |
+| 000175 | TEC-1076 | yalnız gerekirse |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -52,7 +53,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 5.3 Web+API USD, iskonto, hediye | TEC-1064 | | | 000173 | ⏳ #510 üstünde |
+| 5.3 Web+API USD, iskonto, hediye | TEC-1064 | [#522](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/522) | 🟢 | 000173 | #510 üstünde; bayi iskontoları sayfası, quote ucu, hediye kalem; USD geçişi veri/ayar (aşağıda) |
 | 5.3 Mobil | TEC-1065 | | | | ⏸ |
 
 ## 4. Rol ekranları
@@ -79,7 +80,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 9 + 9.1 + 9.2 Web sihirbaz | TEC-1076 | | | | ⏸ |
+| 9 + 9.1 + 9.2 Web sihirbaz | TEC-1076 | | | 000175? | ⏳ |
 | 9.3 Mobil gövde tekrar seçimi | TEC-1077 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
 
 ## 7. Metrajlı çıkış
@@ -107,6 +108,12 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 - #511 (fiyat gizleme) merge olduktan sonra: #514'ün eklediği `live_try_rate`/`live_total_try` alanları `OrderView.hidePrices()`'a eklenmeli, `orders-list-page.tsx`'teki yerel izin kontrolü `useCanSeePrices()`'a geçmeli. **O zamana kadar bu iki alan API'de fiyat izni olmayan kullanıcıya dönüyor.** Aynısı #517/TEC-1064 yeni fiyat alanları için.
 
+## Kullanıcı yapacak (veri/ayar, sunucuda — ben yapmadım)
+
+- USD baz fiyat (TEC-1064): `brands.currency` = USD (API ucu yok, DB güncellemesi); merkez fiyat listesine USD satırları; USD→TRY kuru tabloda olmalı (yoksa onay `RATE_NOT_FOUND`).
+- AFM Florya kararı (TEC-1080) seçilirse 1b: yeni bayi org'u açılması.
+- Modül kapatma (TEC-1088) kararı.
+
 ## Açık sorular
 
 - **K0 (TEC-1080):** AFM Florya ayrı bayi mi olsun? Öneri 1b (yeni bayi org'u aç, eski veri merkezde kalsın) veya 1a (org-merge undo). Kök neden: AFM Florya TEC-1003 ile merkeze birleşti; sipariş alıcısı olarak seçilebilecek org yok, alıcı=satıcı=merkez olunca cari oluşmuyor.
@@ -122,6 +129,9 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **KRİTİK (TEC-1062):** pending alıcılar diğer org seçicilerinde (görev, transfer) de görünüyor; filtrelensin mi?
 - **5.7 (TEC-1061):** Siparişe kapalı ürünler global aramada (Meilisearch) hâlâ görünüyor; aramadan da gizlensin mi?
 - **5.4.1 (TEC-1060):** Bayi kendi siparişinin zaman çizelgesinde depocunun adını ve okuttuğu barkodları görüyor; uygun mu?
+- **5.3 (TEC-1064) KRİTİK:** Satış temsilcisi (`center_staff`) rolünde `pricing.sale.read/write` yok → Zorbey fiyat ve iskonto göremiyor. Revize görmesini istiyor: rol paketine fiyat izni eklensin mi (migration)?
+- **5.3 (TEC-1064):** Merkeze doğrudan bağlı bayinin liste fiyatı = `sale_to_distributor_price` varsayıldı, iskonto bunun üzerine (K8 açık sorusu).
+- **5.3 (TEC-1064):** "İlk sipariş" sayımına legacy siparişler dahil → mevcut bayiler ilk sipariş iskontosu almaz. Uygun mu?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
