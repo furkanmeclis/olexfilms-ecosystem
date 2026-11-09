@@ -10,6 +10,7 @@ type S = components['schemas'];
 export type Order = S['Order'];
 export type OrderItem = S['OrderItem'];
 export type OrderStatus = S['OrderStatus'];
+export type OrderRollSplit = S['OrderRollSplit'];
 export type OrderSuggestions = S['OrderSuggestions'];
 export type OrderPickList = S['OrderPickList'];
 export type OrderPlacement = S['WarehouseOrderPlacement'];

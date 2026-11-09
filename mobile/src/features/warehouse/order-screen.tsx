@@ -9,6 +9,7 @@ import { usePricesVisible } from '@/core/use-prices-visible';
 import { LinePlotter, OrderLinesEditor } from '@/features/orders/order-edit';
 import { creatorOf } from '@/features/orders/order-summary';
 import { OrderTimeline, useAmountText } from '@/features/orders/order-timeline';
+import { mergeCuts } from '@/features/stock/family';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -25,6 +26,7 @@ import {
   orderApi,
   type OrderItem,
   orderKeys,
+  type OrderRollSplit,
   type OrderStatus,
   useDeliveryMethods,
   useOrder,
@@ -102,7 +104,12 @@ export function OrderScreen() {
   const locations = usePickLocations(uuid, locationsFor);
   const unplaced = useUnplaced(uuid, !!received);
 
-  const store = (next: Order) => qc.setQueryData(orderKeys.order(uuid), next);
+  // TEC-1079: parts cut by this session's assignments (`<roll>-3M`), to label and scan.
+  const [cuts, setCuts] = useState<OrderRollSplit[]>([]);
+  const store = (next: Order) => {
+    qc.setQueryData(orderKeys.order(uuid), next);
+    setCuts((c) => mergeCuts(c, next));
+  };
   const can = (s: OrderStatus) => !!o?.available_transitions.includes(s);
 
   const transition = (status: OrderStatus, key: string, extra?: { delivery_method_uuid?: string; tracking_no?: string }) =>
@@ -170,14 +177,19 @@ export function OrderScreen() {
         body.meters = meters.trim().replace(',', '.');
         body.idempotency_key = splitKey.for(`${item.uuid}:${r.unit.barcode}:${body.meters}`);
       }
-      store(await orderApi.assign(uuid, item.uuid, body));
+      const next = await orderApi.assign(uuid, item.uuid, body);
+      store(next);
       splitKey.done();
       if (body.quantity) resetQty();
       if (body.meters) setMeters('');
       return {
         ok: true,
         title: r.product?.name ?? r.unit.barcode,
-        detail: body.meters ? `${body.meters} m` : body.quantity ? `× ${body.quantity}` : r.unit.location?.full_code,
+        detail: next.split
+          ? t('m.split_new_code', { barcode: next.split.new_barcode, meters: formatNumber(next.split.meters, 2) })
+          : body.meters
+            ? `${body.meters} m`
+            : body.quantity ? `× ${body.quantity}` : r.unit.location?.full_code,
       };
     } catch (e) {
       return { ok: false, title: whError(e) };
@@ -317,6 +329,26 @@ export function OrderScreen() {
               <Button size="lg" title={t('orders.actions.ship.button')} icon={<Icon name="truck" tone="primary-foreground" />} onPress={() => setShipping(true)} />
             ) : null}
           </View>
+        ) : null}
+
+        {cuts.length ? (
+          <>
+            <SectionHeader title={t('orders.assign.cuts_title')} />
+            <Card>
+              {cuts.map((c) => (
+                <Field
+                  key={c.uuid}
+                  label={t('orders.assign.cut_from', {
+                    meters: formatNumber(c.meters, 2),
+                    source: c.source_barcode,
+                    remaining: formatNumber(c.source_remaining_meters, 2),
+                  })}
+                  value={c.new_barcode}
+                  mono
+                />
+              ))}
+            </Card>
+          </>
         ) : null}
 
         {/* Seller: hand delivery or pickup at the warehouse closes the trip (TEC-1025); by courier the buyer receives directly. */}

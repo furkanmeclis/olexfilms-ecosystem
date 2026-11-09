@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Παραλήφθηκε εκ μέρους του αγοραστή",
   "orders.actions.receive_on_behalf.title": "Παραλαβή εκ μέρους του αγοραστή;",
   "orders.actions.receive_on_behalf.description": "Ο αγοραστής δεν έχει μέλη· η παραγγελία κλείνει ως παραληφθείσα εκ μέρους του και καταχωρούνται οι λογιστικές εγγραφές.",
-  "orders.actions.receive_on_behalf.confirm": "Παραλήφθηκε εκ μέρους του αγοραστή"
+  "orders.actions.receive_on_behalf.confirm": "Παραλήφθηκε εκ μέρους του αγοραστή",
+  "stock.family.title": "Κύριος κωδικός και τμήματα",
+  "stock.family.roll": "Κύριο ρολό",
+  "stock.family.order": "Παραγγελία {{no}}",
+  "stock.family_status.on_hand": "Σε απόθεμα",
+  "stock.family_status.sold": "Πωλήθηκε",
+  "stock.family_status.used": "Χρησιμοποιήθηκε",
+  "stock.family_status.in_transit": "Σε μεταφορά",
+  "stock.family_status.other": "Άλλο",
+  "stock.unit.parts": "Τμήματα",
+  "stock.unit.source": "Κόπηκε από ρολό",
+  "stock.unit.cut_meters": "Μήκος κοπής",
+  "m.split_new_code": "Νέος κωδικός τμήματος: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Κομμένα τμήματα",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (απομένουν {{remaining}} m)"
 }

@@ -101,6 +101,25 @@ export function useLocationProducts(location: string) {
   });
 }
 
+/**
+ * Split family of a barcode (TEC-1079, API TEC-1078): the roll (depth 0) and
+ * every part cut from it, wherever each is now, within the viewer's reach.
+ * GET /v1/stock/organizations/{uuid}/units?family=<barcode>; an unknown
+ * barcode is an empty page. One page is enough for a roll's parts.
+ */
+export function useUnitFamily(org: string, barcode: string) {
+  return useQuery({
+    queryKey: ['stock', 'family', org, barcode],
+    enabled: !!org && !!barcode,
+    queryFn: () =>
+      unwrap(
+        api.GET('/v1/stock/organizations/{uuid}/units', {
+          params: { path: { uuid: org }, query: { family: barcode, limit: 100 } },
+        }),
+      ),
+  });
+}
+
 /** Barcode history: unit, current holder and movements. */
 export function useUnitHistory(barcode: string) {
   return useQuery({

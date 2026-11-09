@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "تم الاستلام نيابة عن المشتري",
   "orders.actions.receive_on_behalf.title": "الاستلام نيابة عن المشتري؟",
   "orders.actions.receive_on_behalf.description": "ليس للمشتري أعضاء؛ يُغلق الطلب كمستلم نيابة عنه وتُسجَّل قيود الحساب.",
-  "orders.actions.receive_on_behalf.confirm": "تم الاستلام نيابة عن المشتري"
+  "orders.actions.receive_on_behalf.confirm": "تم الاستلام نيابة عن المشتري",
+  "stock.family.title": "الرمز الرئيسي والأجزاء",
+  "stock.family.roll": "اللفة الرئيسية",
+  "stock.family.order": "الطلب {{no}}",
+  "stock.family_status.on_hand": "في المخزون",
+  "stock.family_status.sold": "مُباع",
+  "stock.family_status.used": "مُستخدم",
+  "stock.family_status.in_transit": "قيد النقل",
+  "stock.family_status.other": "أخرى",
+  "stock.unit.parts": "الأجزاء",
+  "stock.unit.source": "مقطوع من اللفة",
+  "stock.unit.cut_meters": "الطول المقطوع",
+  "m.split_new_code": "رمز جزء جديد: {{barcode}} · {{meters}} م",
+  "orders.assign.cuts_title": "الأجزاء المقطوعة",
+  "orders.assign.cut_from": "{{meters}} م · {{source}} (المتبقي {{remaining}} م)"
 }

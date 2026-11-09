@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { EmptyState } from '@/ui/empty-state';
@@ -8,11 +8,13 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
-import { formatDate, formatNumber } from '@/features/warehouse/format';
+import { formatDate, formatNumber, go } from '@/features/warehouse/format';
 import { Card, ErrorState, Field, ListSkeleton } from '@/features/warehouse/parts';
 import { unitStatusTone } from '@/features/warehouse/scan-result-card';
 
 import { useUnitHistory } from './api';
+import { siblingUnitPath } from './family';
+import { FamilyRowView } from './family-section';
 
 /** One barcode: product, state, holder and its movement history. */
 export function UnitScreen() {
@@ -20,6 +22,9 @@ export function UnitScreen() {
   const { barcode } = useLocalSearchParams<{ barcode: string }>();
   const q = useUnitHistory(barcode);
   const h = q.data;
+  const pathname = usePathname();
+  const open = (code: string) => go(siblingUnitPath(pathname, code));
+  const source = h?.splits.source ?? null;
 
   return (
     <>
@@ -81,6 +86,37 @@ export function UnitScreen() {
                     />
                   ))}
                 </Card>
+              </>
+            ) : null}
+
+            {/* TEC-1079: the roll this unit was cut from and the parts cut from it (-3M, -3M-2, ...). */}
+            {source ? (
+              <Card>
+                <Pressable accessibilityRole="button" onPress={() => open(source.barcode)} className="active:opacity-80">
+                  <Field label={t('stock.unit.source')} value={source.barcode} mono />
+                  <Field label={t('stock.unit.cut_meters')} value={`${formatNumber(source.meters, 2)} m`} />
+                </Pressable>
+              </Card>
+            ) : null}
+            {h.splits.parts.length ? (
+              <>
+                <SectionHeader title={t('stock.unit.parts')} />
+                <View className="gap-2">
+                  {h.splits.parts.map((p) => (
+                    <FamilyRowView
+                      key={p.uuid}
+                      row={{
+                        barcode: p.barcode,
+                        depth: p.depth - 1,
+                        meters: p.meters,
+                        status: p.family_status,
+                        holder: p.holder?.name,
+                        orderNo: p.order?.order_no,
+                      }}
+                      onPress={() => open(p.barcode)}
+                    />
+                  ))}
+                </View>
               </>
             ) : null}
 

@@ -704,5 +704,19 @@
   "orders.actions.receive_on_behalf.button": "Received on behalf of the buyer",
   "orders.actions.receive_on_behalf.title": "Receive on behalf of the buyer?",
   "orders.actions.receive_on_behalf.description": "The buyer has no members; the order closes as received on their behalf and the account entries are booked.",
-  "orders.actions.receive_on_behalf.confirm": "Received on behalf of the buyer"
+  "orders.actions.receive_on_behalf.confirm": "Received on behalf of the buyer",
+  "stock.family.title": "Main code and parts",
+  "stock.family.roll": "Main roll",
+  "stock.family.order": "Order {{no}}",
+  "stock.family_status.on_hand": "In stock",
+  "stock.family_status.sold": "Sold",
+  "stock.family_status.used": "Used",
+  "stock.family_status.in_transit": "In transit",
+  "stock.family_status.other": "Other",
+  "stock.unit.parts": "Parts",
+  "stock.unit.source": "Cut from roll",
+  "stock.unit.cut_meters": "Length cut",
+  "m.split_new_code": "New part code: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Parts cut",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} ({{remaining}} m left)"
 }

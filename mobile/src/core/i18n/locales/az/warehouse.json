@@ -571,5 +571,19 @@
   "orders.actions.receive_on_behalf.button": "Alıcı adına təhvil alındı",
   "orders.actions.receive_on_behalf.title": "Alıcı adına təhvil alınsın?",
   "orders.actions.receive_on_behalf.description": "Alıcının üzvü yoxdur; sifariş onun adına təhvil alındı kimi bağlanır və cari qeydlər işlənir.",
-  "orders.actions.receive_on_behalf.confirm": "Alıcı adına təhvil alındı"
+  "orders.actions.receive_on_behalf.confirm": "Alıcı adına təhvil alındı",
+  "stock.family.title": "Əsas kod və hissələr",
+  "stock.family.roll": "Əsas rulon",
+  "stock.family.order": "Sifariş {{no}}",
+  "stock.family_status.on_hand": "Anbarda",
+  "stock.family_status.sold": "Satılıb",
+  "stock.family_status.used": "İstifadə olunub",
+  "stock.family_status.in_transit": "Yolda",
+  "stock.family_status.other": "Digər",
+  "stock.unit.parts": "Hissələr",
+  "stock.unit.source": "Kəsildiyi rulon",
+  "stock.unit.cut_meters": "Kəsilən uzunluq",
+  "m.split_new_code": "Yeni hissə kodu: {{barcode}} · {{meters}} m",
+  "orders.assign.cuts_title": "Kəsilən hissələr",
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (qalan {{remaining}} m)"
 }
