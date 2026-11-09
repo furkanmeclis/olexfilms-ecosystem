@@ -12,6 +12,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000166 | TEC-1047 / TEC-1052 | yalnız gerekirse |
 | 000167 | TEC-1050 | yalnız gerekirse |
 | 000168 | TEC-1052 | 000166'yı TEC-1047 kullanırsa |
+| 000169 | TEC-1062 | bekleme havuzu |
 
 ## 1. Hata ve kritikler
 
@@ -20,10 +21,10 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 7.5 Web+API sabit barkodlu ürün siparişe eklenemiyor | TEC-1047 | | | | ⏳ |
 | 5.2 + 5.10 Web+API depo seçimi, bildirim, aramasız ürün listesi, KALEMLER | TEC-1052 | | | | ⏳ (TEC-1047 dalı üzerine) |
 | 5.4 Web+API depo fiyat görmesin | TEC-1050 | | | | ⏳ |
-| 7 Mobil depo değişince birimler | TEC-1049 | | | — | ⏳ mobil paket 1 |
-| 7.5 Mobil | TEC-1048 | | | — | ⏳ mobil paket 1 |
-| 5.2.1 Mobil depo seçimi | TEC-1053 | | | — | ⏳ mobil paket 1 |
-| 5.4 Mobil fiyat gizleme | TEC-1051 | | | — | ⏳ mobil paket 1 |
+| 7 Mobil depo değişince birimler | TEC-1049 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 kök neden: depo seçimi hiçbir listeye gitmiyordu; sipariş listesi depo filtresi backend'de yok → TEC-1054 |
+| 7.5 Mobil | TEC-1048 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 mobil UI engeli yok; depo hazırlamada adet/SKU okutma düzeltildi |
+| 5.2.1 Mobil depo seçimi | TEC-1053 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 depo seçimi eklendi; "kendim hazırlayacağım" API'si TEC-1052'den sonra |
+| 5.4 Mobil fiyat gizleme | TEC-1051 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 depo alanı/rolünde fiyat gizli |
 
 ## 2. Sipariş akışı
 
@@ -37,7 +38,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | | ⏸ |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | | | | ⏸ |
-| KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | | | | ⏸ |
+| KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | | | 000169 | ⏳ |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
 
 ## 3. Fiyatlandırma
