@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Cannot go below the assigned amount; unassign a barcode first.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Sent plotter cut",
+  "plotter.column": "Plotter cut",
+  "plotter.badge": "Plotter cut",
+  "plotter.failed": "The plotter mark could not be saved",
+  "plotter.marked_on": "Marked plotter cut",
+  "plotter.marked_off": "Plotter cut mark removed",
+  "plotter.change_on": "{{product}}: plotter cut",
+  "plotter.change_off": "{{product}}: plotter cut removed",
+  "activity.plotter_marked": "Changed the plotter mark"
 }

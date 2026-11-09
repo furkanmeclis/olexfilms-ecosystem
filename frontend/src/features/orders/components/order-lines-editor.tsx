@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStoreOrder } from "@/features/orders/components/order-action-dialog";
+import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
@@ -121,6 +122,19 @@ export function OrderLinesEditor({
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="font-medium">{line.name}</div>
+                    <PlotterToggle
+                      id={`${id}-plotter`}
+                      checked={line.plotter_cut === true}
+                      onChange={(v) =>
+                        setLines((ls) =>
+                          ls.map((l) =>
+                            l.product_uuid === line.product_uuid
+                              ? { ...l, plotter_cut: v }
+                              : l,
+                          ),
+                        )
+                      }
+                    />
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>

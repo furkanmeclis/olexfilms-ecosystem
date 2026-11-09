@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Не может быть меньше назначенного количества; сначала снимите штрихкод.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Отправлено с плоттерной резкой",
+  "plotter.column": "Плоттерная резка",
+  "plotter.badge": "Плоттерная резка",
+  "plotter.failed": "Не удалось сохранить отметку плоттера",
+  "plotter.marked_on": "Отмечена плоттерная резка",
+  "plotter.marked_off": "Отметка плоттерной резки снята",
+  "plotter.change_on": "{{product}}: плоттерная резка",
+  "plotter.change_off": "{{product}}: плоттерная резка снята",
+  "activity.plotter_marked": "Изменил отметку плоттера"
 }

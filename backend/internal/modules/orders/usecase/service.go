@@ -186,6 +186,9 @@ type ItemInput struct {
 	// its default discount and no gift.
 	DiscountPct *string
 	IsGift      bool
+	// PlotterCut marks the line "sent plotter cut" (TEC-1058, information
+	// only); nil = off on a new line, unchanged on a kept one.
+	PlotterCut *bool
 }
 
 // CreateInput is a new draft order of the active organization.
@@ -216,6 +219,8 @@ type line struct {
 	meters  pgtype.Numeric
 	amount  *big.Rat
 	note    pgtype.Text
+	// plotterCut: the line's plotter mark (TEC-1058).
+	plotterCut bool
 }
 
 func textOrNull(p *string) pgtype.Text {
@@ -273,7 +278,7 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 			return nil, invalid(field+".product_uuid", "each product may appear once")
 		}
 		seen[p.ID] = true
-		l := line{product: p, note: textOrNull(it.Note)}
+		l := line{product: p, note: textOrNull(it.Note), plotterCut: it.PlotterCut != nil && *it.PlotterCut}
 		if p.UnitType == "roll_meter" {
 			if it.Quantity != nil || it.Meters == nil {
 				return nil, invalid(field+".meters", "roll products are ordered in meters")
@@ -370,6 +375,7 @@ func createLine(ctx context.Context, q *db.Queries, o db.Order, l line, c lineCh
 		OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
 		UnitPrice: c.unitPrice, PriceSource: c.source, LineTotal: c.lineTotal, Note: l.note,
 		ListUnitPrice: c.listPrice, DiscountPct: c.discount, IsGift: pgtype.Bool{Bool: c.gift, Valid: true},
+		PlotterCut: l.plotterCut,
 	}); err != nil {
 		return fmt.Errorf("orders: create line: %w", err)
 	}
@@ -567,7 +573,7 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
 		}
-		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note}
+		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note, plotterCut: it.PlotterCut}
 		if p.UnitType == "roll_meter" {
 			m, err := parseRat(numericText(it.Meters, 2))
 			if err != nil {
@@ -590,6 +596,7 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 			out = append(out, l)
 			continue
 		}
+		out[i].plotterCut = out[i].plotterCut || l.plotterCut
 		if l.product.UnitType == "roll_meter" {
 			total := new(big.Rat).Add(out[i].amount, l.amount)
 			m, err := numeric(total.FloatString(2))

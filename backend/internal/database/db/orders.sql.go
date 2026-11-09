@@ -486,15 +486,16 @@ const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
     unit_price, price_source, recommended_price_snapshot, line_total, note,
-    list_unit_price, discount_pct, is_gift
+    list_unit_price, discount_pct, is_gift, plotter_cut
 )
 SELECT o.id, o.organization_id, o.brand_id, $1, $2, $3,
        $4, $5, $6,
        $7, $8,
-       $9, $10, COALESCE($11::boolean, false)
+       $9, $10, COALESCE($11::boolean, false),
+       $12
 FROM orders o
-WHERE o.id = $12
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift
+WHERE o.id = $13
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut
 `
 
 type CreateOrderItemParams struct {
@@ -509,6 +510,7 @@ type CreateOrderItemParams struct {
 	ListUnitPrice            pgtype.Numeric `json:"list_unit_price"`
 	DiscountPct              pgtype.Numeric `json:"discount_pct"`
 	IsGift                   pgtype.Bool    `json:"is_gift"`
+	PlotterCut               bool           `json:"plotter_cut"`
 	OrderID                  int64          `json:"order_id"`
 }
 
@@ -529,6 +531,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.ListUnitPrice,
 		arg.DiscountPct,
 		arg.IsGift,
+		arg.PlotterCut,
 		arg.OrderID,
 	)
 	var i OrderItem
@@ -551,6 +554,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.ListUnitPrice,
 		&i.DiscountPct,
 		&i.IsGift,
+		&i.PlotterCut,
 	)
 	return i, err
 }
@@ -1026,7 +1030,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) 
 }
 
 const getOrderItem = `-- name: GetOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut FROM order_items
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -1057,12 +1061,13 @@ func (q *Queries) GetOrderItem(ctx context.Context, arg GetOrderItemParams) (Ord
 		&i.ListUnitPrice,
 		&i.DiscountPct,
 		&i.IsGift,
+		&i.PlotterCut,
 	)
 	return i, err
 }
 
 const getOrderItemByUUID = `-- name: GetOrderItemByUUID :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut FROM order_items
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1093,6 +1098,7 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUID
 		&i.ListUnitPrice,
 		&i.DiscountPct,
 		&i.IsGift,
+		&i.PlotterCut,
 	)
 	return i, err
 }
@@ -1582,7 +1588,7 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 }
 
 const listOrderItems = `-- name: ListOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut FROM order_items
 WHERE order_id = $1
 ORDER BY id
 `
@@ -1615,6 +1621,7 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.ListUnitPrice,
 			&i.DiscountPct,
 			&i.IsGift,
+			&i.PlotterCut,
 		); err != nil {
 			return nil, err
 		}
@@ -2163,7 +2170,7 @@ func (q *Queries) LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams
 }
 
 const lockOrderItem = `-- name: LockOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut FROM order_items
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2195,12 +2202,13 @@ func (q *Queries) LockOrderItem(ctx context.Context, arg LockOrderItemParams) (O
 		&i.ListUnitPrice,
 		&i.DiscountPct,
 		&i.IsGift,
+		&i.PlotterCut,
 	)
 	return i, err
 }
 
 const lockOrderItems = `-- name: LockOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut FROM order_items
 WHERE order_id = $1
 ORDER BY id
 FOR UPDATE
@@ -2234,6 +2242,7 @@ func (q *Queries) LockOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.ListUnitPrice,
 			&i.DiscountPct,
 			&i.IsGift,
+			&i.PlotterCut,
 		); err != nil {
 			return nil, err
 		}
@@ -2614,6 +2623,46 @@ func (q *Queries) SetOrderExternalReference(ctx context.Context, arg SetOrderExt
 	return i, err
 }
 
+const setOrderItemPlotterCut = `-- name: SetOrderItemPlotterCut :one
+UPDATE order_items
+SET plotter_cut = $1
+WHERE id = $2
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut
+`
+
+type SetOrderItemPlotterCutParams struct {
+	PlotterCut bool  `json:"plotter_cut"`
+	ID         int64 `json:"id"`
+}
+
+// TEC-1058: the information-only "sent plotter cut" mark of a line.
+func (q *Queries) SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPlotterCutParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, setOrderItemPlotterCut, arg.PlotterCut, arg.ID)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.Meters,
+		&i.UnitPrice,
+		&i.PriceSource,
+		&i.RecommendedPriceSnapshot,
+		&i.LineTotal,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
+		&i.PlotterCut,
+	)
+	return i, err
+}
+
 const setOrderItemUnitMovement = `-- name: SetOrderItemUnitMovement :one
 UPDATE order_item_units
 SET movement_id = $1
@@ -2946,7 +2995,7 @@ SET quantity = $1,
     list_unit_price = $8,
     discount_pct = $9
 WHERE id = $10
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut
 `
 
 type UpdateOrderItemParams struct {
@@ -2995,6 +3044,7 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.ListUnitPrice,
 		&i.DiscountPct,
 		&i.IsGift,
+		&i.PlotterCut,
 	)
 	return i, err
 }

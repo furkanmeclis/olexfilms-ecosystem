@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Darf nicht unter der zugewiesenen Menge liegen; zuerst einen Barcode entfernen.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Mit Plotterschnitt versendet",
+  "plotter.column": "Plotterschnitt",
+  "plotter.badge": "Plotterschnitt",
+  "plotter.failed": "Die Plotter-Markierung konnte nicht gespeichert werden",
+  "plotter.marked_on": "Als Plotterschnitt markiert",
+  "plotter.marked_off": "Plotterschnitt-Markierung entfernt",
+  "plotter.change_on": "{{product}}: Plotterschnitt",
+  "plotter.change_off": "{{product}}: Plotterschnitt entfernt",
+  "activity.plotter_marked": "Plotter-Markierung geändert"
 }

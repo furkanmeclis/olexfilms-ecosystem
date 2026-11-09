@@ -44,10 +44,12 @@ import {
   ShippingCard,
 } from "@/features/orders/components/order-picking";
 import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
+import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import {
   canAssignUnits,
   canEditDraft,
   canEditSellerLines,
+  canMarkPlotter,
   canOpenPickList,
   lineAmount,
   lineFullyAssigned,
@@ -348,7 +350,15 @@ export const ORDER_ITEMS_PERSIST_KEY = "tenant-order-items-v1";
  * Lines of the order as a nested client-side table (TEC-374): sort, search
  * and the assigned units with the barcode form while the seller prepares.
  */
-function Items({ order, assign }: { order: Order; assign: boolean }) {
+function Items({
+  order,
+  assign,
+  markPlotter,
+}: {
+  order: Order;
+  assign: boolean;
+  markPlotter: boolean;
+}) {
   const { t, format } = useLocale();
   // TEC-1050: price columns and totals only with a price grant.
   const canSeePrices = useCanSeePrices();
@@ -363,6 +373,16 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
   });
   const unassignUnit = unassign.mutate;
   const unassignPending = unassign.isPending;
+  // TEC-1058: the plotter mark of one line.
+  const plotter = useMutation({
+    mutationFn: (v: { item: string; on: boolean }) =>
+      ordersService.setPlotterCut(order.uuid, v.item, v.on),
+    onSuccess: (updated) => store(updated),
+    onError: (err) =>
+      toast.error(orderErrorMessage(err, t, t("orders.plotter.failed"))),
+  });
+  const setPlotter = plotter.mutate;
+  const plotterPending = plotter.isPending;
   const showAssigned = ![
     "draft",
     "submitted",
@@ -438,6 +458,26 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
             )}
           </span>
         ),
+      }) as ColumnDef<OrderItem, unknown>,
+      createColumn<OrderItem>({
+        id: "plotter_cut",
+        accessorFn: (item) => (item.plotter_cut ? 1 : 0),
+        labelKey: "orders.plotter.column",
+        cell: ({ row }) =>
+          markPlotter ? (
+            <PlotterToggle
+              id={`plotter-${row.original.uuid}`}
+              checked={row.original.plotter_cut === true}
+              disabled={plotterPending}
+              onChange={(on) => setPlotter({ item: row.original.uuid, on })}
+            />
+          ) : row.original.plotter_cut ? (
+            <Badge variant="secondary" data-testid="line-plotter-badge">
+              {t("orders.plotter.badge")}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
       }) as ColumnDef<OrderItem, unknown>,
     ];
     if (canSeePrices) cols.push(...priceCols);
@@ -542,7 +582,10 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
     assign,
     canSeePrices,
     format,
+    markPlotter,
     order,
+    plotterPending,
+    setPlotter,
     showAssigned,
     showInvoice,
     t,
@@ -995,7 +1038,11 @@ export function OrderDetailPage({
             onClose={() => setEditingLines(false)}
           />
         ) : (
-          <Items order={order} assign={assign} />
+          <Items
+            order={order}
+            assign={assign}
+            markPlotter={canMarkPlotter(can, order)}
+          />
         )}
         <div
           className={

@@ -266,12 +266,13 @@ WHERE o.id = ANY (sqlc.arg(order_ids)::bigint[]);
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
     unit_price, price_source, recommended_price_snapshot, line_total, note,
-    list_unit_price, discount_pct, is_gift
+    list_unit_price, discount_pct, is_gift, plotter_cut
 )
 SELECT o.id, o.organization_id, o.brand_id, sqlc.arg(product_id), sqlc.narg(quantity), sqlc.narg(meters),
        sqlc.arg(unit_price), sqlc.arg(price_source), sqlc.narg(recommended_price_snapshot),
        sqlc.arg(line_total), sqlc.narg(note),
-       sqlc.narg(list_unit_price), sqlc.narg(discount_pct), COALESCE(sqlc.narg(is_gift)::boolean, false)
+       sqlc.narg(list_unit_price), sqlc.narg(discount_pct), COALESCE(sqlc.narg(is_gift)::boolean, false),
+       sqlc.arg(plotter_cut)
 FROM orders o
 WHERE o.id = sqlc.arg(order_id)
 RETURNING *;
@@ -323,6 +324,13 @@ WHERE buyer_org_id = sqlc.arg(buyer_org_id)
   AND seller_org_id = sqlc.arg(seller_org_id)
   AND status NOT IN ('draft', 'cancelled')
   AND id <> sqlc.arg(exclude_order_id);
+
+-- TEC-1058: the information-only "sent plotter cut" mark of a line.
+-- name: SetOrderItemPlotterCut :one
+UPDATE order_items
+SET plotter_cut = sqlc.arg(plotter_cut)
+WHERE id = sqlc.arg(id)
+RETURNING *;
 
 -- name: DeleteOrderItem :execrows
 DELETE FROM order_items

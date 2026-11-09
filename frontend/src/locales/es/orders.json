@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "No puede bajar de la cantidad asignada; quite primero un código de barras.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Enviado con corte plotter",
+  "plotter.column": "Corte plotter",
+  "plotter.badge": "Corte plotter",
+  "plotter.failed": "No se pudo guardar la marca de plotter",
+  "plotter.marked_on": "Marcado corte plotter",
+  "plotter.marked_off": "Marca de corte plotter quitada",
+  "plotter.change_on": "{{product}}: corte plotter",
+  "plotter.change_off": "{{product}}: corte plotter quitado",
+  "activity.plotter_marked": "Cambió la marca de plotter"
 }

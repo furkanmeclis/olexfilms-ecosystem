@@ -121,6 +121,8 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 			counts[r.Status] = r.Value
 		}
 		env.Series = []Series{q.distribution("status", "orders.status.", orderStatuses, counts)}
+	case ReportOrdersPlotterCut:
+		return s.plotterCut(ctx, q, a, env)
 	case ReportCustomersTrend:
 		rows, err := s.q.ReportCustomerTrend(ctx, db.ReportCustomerTrendParams{
 			Granularity: q.granularity, Tz: q.tz.String(), BrandID: a.brandID, OrgIds: a.orgIDs, RangeFrom: from, RangeTo: to,

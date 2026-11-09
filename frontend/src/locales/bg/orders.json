@@ -317,5 +317,14 @@
   "edit_lines.below_assigned": "Не може да е под назначеното количество; първо премахнете баркод.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Изпратено с плотерно рязане",
+  "plotter.column": "Плотерно рязане",
+  "plotter.badge": "Плотерно рязане",
+  "plotter.failed": "Отметката за плотер не можа да бъде запазена",
+  "plotter.marked_on": "Отбелязано плотерно рязане",
+  "plotter.marked_off": "Отметката за плотерно рязане е премахната",
+  "plotter.change_on": "{{product}}: плотерно рязане",
+  "plotter.change_off": "{{product}}: плотерното рязане е премахнато",
+  "activity.plotter_marked": "Промени отметката за плотер"
 }

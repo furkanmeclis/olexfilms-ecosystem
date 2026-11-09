@@ -162,9 +162,15 @@ VALUES ($1, $2, $3, $4, $5, $6, 'full', $7, $8, $9, $10)`, org.ID, f.brandID, sv
 	if org.ParentID.Int64 == f.distB.ID {
 		parent = f.distB
 	}
-	f.exec(t, `INSERT INTO orders (organization_id, brand_id, seller_org_id, buyer_org_id, status, currency,
+	order := f.id(t, `INSERT INTO orders (organization_id, brand_id, seller_org_id, buyer_org_id, status, currency,
  rate_snapshot, try_rate, subtotal, total, created_at, approved_at)
-VALUES ($1, $2, $1, $3, 'approved', 'TRY', '{}', 1, 100, 100, $4, $4)`, parent.ID, f.brandID, org.ID, at)
+VALUES ($1, $2, $1, $3, 'approved', 'TRY', '{}', 1, 100, 100, $4, $4) RETURNING id`, parent.ID, f.brandID, org.ID, at)
+	// TEC-1058: one plotter-cut line (2 pieces) and one unmarked line on
+	// every order; the shipped time feeds orders.plotter_cut.
+	f.exec(t, `INSERT INTO order_items (order_id, organization_id, brand_id, product_id, quantity, unit_price, price_source,
+ line_total, plotter_cut)
+SELECT o.id, o.organization_id, o.brand_id, $2, 2, 50, 'list', 100, TRUE FROM orders o WHERE o.id = $1`, order, f.product)
+	f.exec(t, `UPDATE orders SET shipped_at = $2 WHERE id = $1`, order, at)
 	f.exec(t, `INSERT INTO measurement_results (organization_id, brand_id, vin, status, raw, measured_at, created_at, created_by)
 VALUES ($1, $2, $3, 'accepted', '{}', $4, $4, $5)`, org.ID, f.brandID, fmt.Sprintf("M495ABCDEFG%06d", f.seq), at, customer)
 	f.exec(t, `INSERT INTO organization_product_stocks (organization_id, brand_id, product_id, quantity, meters)
@@ -261,6 +267,7 @@ func TestReportsFollowScope(t *testing.T) {
 		ReportServicesTopProducts:        func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportOrdersTrend:                func(e Envelope) float64 { return sumSeries(e, "created") },
 		ReportOrdersStatusDistribution:   func(e Envelope) float64 { return sumSeries(e, "") },
+		ReportOrdersPlotterCut:           func(e Envelope) float64 { return sumSeries(e, "plotter_lines") },
 		ReportCustomersTrend:             func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportStockSummary:               func(e Envelope) float64 { return card(e, "stock_quantity") },
 		ReportWarrantiesSummary:          func(e Envelope) float64 { return card(e, "warranties_active") },
@@ -632,3 +639,34 @@ func TestLabelsCompleteInEveryLocale(t *testing.T) {
 }
 
 func bigInt(n int64) *big.Int { return big.NewInt(n) }
+
+// TestPlotterCutReport (TEC-1058): the plotter-cut lines of the shipped
+// orders by month and product; an order cancelled after shipping and an
+// unmarked line are left out.
+func TestPlotterCutReport(t *testing.T) {
+	f := newFixture(t)
+	s := f.svc(featureMap{})
+	center := f.caller(t, f.center, rbac.RoleCenterStaff)
+	// One more shipped order of dealer3 cancelled after shipping, and an
+	// unmarked line: neither counts.
+	f.exec(t, `UPDATE order_items SET plotter_cut = FALSE WHERE id = (
+SELECT oi.id FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.buyer_org_id = $1 ORDER BY oi.id LIMIT 1)`, f.dealer3.ID)
+	f.exec(t, `UPDATE orders SET status = 'cancelled', cancelled_at = shipped_at WHERE id = (
+SELECT o.id FROM orders o WHERE o.buyer_org_id = $1 ORDER BY o.id DESC LIMIT 1)`, f.dealer3.ID)
+	env, err := s.Report(f.ctx, center, ReportOrdersPlotterCut, in30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := sumSeries(env, "plotter_lines"); got != 4 {
+		t.Fatalf("lines = %v, want 4", got)
+	}
+	if got := sumSeries(env, "plotter_quantity"); got != 8 {
+		t.Fatalf("pieces = %v, want 8", got)
+	}
+	if len(env.Rows) != 1 || env.Rows[0]["line_count"] != int64(4) || env.Rows[0]["month"] != testNow.AddDate(0, 0, -2).Format("2006-01") {
+		t.Fatalf("rows = %+v", env.Rows)
+	}
+	if len(env.Series[0].Points) < 1 || len(env.Columns) != 6 {
+		t.Fatalf("shape = %+v", env)
+	}
+}

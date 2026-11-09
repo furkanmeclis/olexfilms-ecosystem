@@ -317,5 +317,14 @@
   "edit_lines.below_assigned": "Təyin olunmuş miqdardan aşağı ola bilməz; əvvəlcə barkodu çıxarın.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Plotter kəsimi ilə göndərildi",
+  "plotter.column": "Plotter kəsimi",
+  "plotter.badge": "Plotter kəsimi",
+  "plotter.failed": "Plotter işarəsini saxlamaq mümkün olmadı",
+  "plotter.marked_on": "Plotter kəsimi işarələndi",
+  "plotter.marked_off": "Plotter kəsimi işarəsi götürüldü",
+  "plotter.change_on": "{{product}}: plotter kəsimi",
+  "plotter.change_off": "{{product}}: plotter kəsimi götürüldü",
+  "activity.plotter_marked": "Plotter işarəsini dəyişdi"
 }

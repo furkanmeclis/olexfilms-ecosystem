@@ -13420,6 +13420,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/items/{item_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set the plotter mark of one line (TEC-1058)
+         * @description "Sent plotter cut" is information only: no stock, price or flow rule reads it; the monthly orders.plotter_cut report counts it. The seller (orders.write or orders.ship) sets it on any order that is not a draft or cancelled, also after shipping; the buyer (orders.write) only on its draft (else 409 ORDER_NOT_EDITABLE). The same value is a no-op; a change writes a plotter_marked timeline step.
+         */
+        patch: operations["patchOrderItem"];
+        trace?: never;
+    };
     "/v1/orders/{uuid}/items/{item_uuid}/units": {
         parameters: {
             query?: never;
@@ -17614,7 +17634,7 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
          */
         get: operations["getReport"];
         put?: never;
@@ -27663,6 +27683,8 @@ export interface components {
             discount_pct: string | null;
             /** @description TEC-1064 — a gift line (e.g. the plexi set) charged 0 */
             is_gift: boolean;
+            /** @description "Sent plotter cut" (TEC-1058, information only) */
+            plotter_cut: boolean;
             /** @description The line is on a manual invoice record (TEC-1030) */
             invoiced: boolean;
             /** @description Number of that invoice record */
@@ -27887,7 +27909,7 @@ export interface components {
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
         };
-        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned or updated (draft edit). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
+        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned, updated (line edit) or plotter_marked (TEC-1058: product and plotter_cut). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
         OrderTimelineEntry: {
             /** @example unit_assigned */
             action: string;
@@ -27906,6 +27928,8 @@ export interface components {
             lines?: number;
             /** @description TEC-1056 — the lines an edit added, changed or removed */
             changes?: components["schemas"]["OrderLineChange"][];
+            /** @description TEC-1058 — the new mark of a plotter_marked step */
+            plotter_cut?: boolean;
         };
         /** @description TEC-1056: one line of an edit. before is the old amount (null: the line was added), after the new one (null: removed); pieces as a whole number, meters with two decimals. */
         OrderLineChange: {
@@ -27915,6 +27939,8 @@ export interface components {
             before: string | null;
             /** @example 3 */
             after: string | null;
+            /** @description TEC-1058 — the line's plotter mark after the edit, set when it changed (or on an added marked line) */
+            plotter_cut?: boolean;
         };
         OrderUserRef: {
             /** Format: uuid */
@@ -28118,6 +28144,11 @@ export interface components {
             /** @description Meters (roll_meter products); a JSON number is accepted too */
             meters?: string;
             note?: string;
+            /** @description TEC-1058: "sent plotter cut" (information only). A new line without it is off; on a kept line of a seller edit, absent keeps the mark. */
+            plotter_cut?: boolean;
+        };
+        OrderItemPatchInput: {
+            plotter_cut: boolean;
         };
         OrderItemsInput: {
             items: components["schemas"]["OrderItemInput"][];
@@ -56585,6 +56616,39 @@ export interface operations {
         };
         responses: {
             /** @description Order after the transition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    patchOrderItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderItemPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Updated order */
             200: {
                 headers: {
                     [name: string]: unknown;

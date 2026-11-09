@@ -7,6 +7,7 @@ export const ORDER_ACTIVITY_ACTIONS = [
   "unit_assigned",
   "unit_unassigned",
   "updated",
+  "plotter_marked",
 ] as const;
 
 type Translate = (
@@ -64,6 +65,16 @@ export function orderTimelineSteps(
     if (e.lines != null) {
       parts.push(t("orders.activity.lines", { count: format.number(e.lines) }));
     }
+    // TEC-1058: the plotter mark of a plotter_marked step.
+    if (e.action === "plotter_marked" && e.plotter_cut != null) {
+      parts.push(
+        t(
+          e.plotter_cut
+            ? "orders.plotter.marked_on"
+            : "orders.plotter.marked_off",
+        ),
+      );
+    }
     // TEC-1056: the lines an edit added, changed or removed.
     for (const c of e.changes ?? []) {
       if (c.before == null && c.after != null) {
@@ -80,13 +91,23 @@ export function orderTimelineSteps(
             before: c.before,
           }),
         );
-      } else {
+      } else if (c.before !== c.after) {
         parts.push(
           t("orders.activity.change_changed", {
             product: c.product,
             before: c.before ?? "",
             after: c.after ?? "",
           }),
+        );
+      }
+      if (c.plotter_cut != null) {
+        parts.push(
+          t(
+            c.plotter_cut
+              ? "orders.plotter.change_on"
+              : "orders.plotter.change_off",
+            { product: c.product },
+          ),
         );
       }
     }

@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { NewRecipientDialog } from "@/features/accounts/components/new-recipient-dialog";
+import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
@@ -507,6 +508,13 @@ export function CenterOrderForm({
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>
+                    <PlotterToggle
+                      id={`${id}-plotter`}
+                      checked={line.plotter_cut === true}
+                      onChange={(v) =>
+                        update(line.product_uuid, { plotter_cut: v })
+                      }
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={id} className="text-xs">

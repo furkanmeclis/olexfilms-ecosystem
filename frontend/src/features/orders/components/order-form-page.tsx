@@ -40,6 +40,7 @@ import {
   type Order,
 } from "@/features/orders/services/orders.service";
 import { CenterOrderForm } from "@/features/orders/components/center-order-form";
+import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
@@ -262,6 +263,19 @@ export function OrderForm({
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>
+                    <PlotterToggle
+                      id={`${id}-plotter`}
+                      checked={line.plotter_cut === true}
+                      onChange={(v) =>
+                        setLines((ls) =>
+                          ls.map((l) =>
+                            l.product_uuid === line.product_uuid
+                              ? { ...l, plotter_cut: v }
+                              : l,
+                          ),
+                        )
+                      }
+                    />
                     <div className="text-xs">
                       <span className="text-muted-foreground me-1">
                         {server

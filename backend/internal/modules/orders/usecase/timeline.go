@@ -51,6 +51,8 @@ type TimelineEntry struct {
 	Lines      *int64    `json:"lines,omitempty"`
 	// Changes: the lines an edit added, changed or removed (TEC-1056).
 	Changes []LineChange `json:"changes,omitempty"`
+	// PlotterCut: the new mark of a plotter_marked step (TEC-1058).
+	PlotterCut *bool `json:"plotter_cut,omitempty"`
 }
 
 // activityPayload is the payload of the order activity events.
@@ -64,6 +66,8 @@ type activityPayload struct {
 	Lines    *int64  `json:"lines,omitempty"`
 	// Changes of an edit (TEC-1056): before/after amount by product.
 	Changes []LineChange `json:"changes,omitempty"`
+	// PlotterCut: the mark set by a plotter_marked step (TEC-1058).
+	PlotterCut *bool `json:"plotter_cut,omitempty"`
 }
 
 func (p activityPayload) mapped() map[string]any {
@@ -264,7 +268,7 @@ func (s *Service) timeline(ctx context.Context, q *db.Queries, o db.Order, hist 
 			Action: strings.TrimPrefix(ev.Action, activityActionPrefix), At: ev.CreatedAt.Time,
 			User:    userRef(ev.ActorUuid, ev.ActorName, ev.ActorSurname),
 			Product: strRef(p.Product), Barcode: strRef(p.Barcode), Quantity: p.Quantity, Meters: p.Meters, Lines: p.Lines,
-			Changes: p.Changes,
+			Changes: p.Changes, PlotterCut: p.PlotterCut,
 		}
 		if ev.Action == ActionUnitAssigned {
 			recorded[p.ItemUUID+"/"+p.UnitUUID] = struct{}{}

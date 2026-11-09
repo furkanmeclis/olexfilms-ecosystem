@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Atanmış miktarın altına inemez; önce barkodu çıkarın.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Plotter kesim ile gönderildi",
+  "plotter.column": "Plotter kesim",
+  "plotter.badge": "Plotter kesim",
+  "plotter.failed": "Plotter işareti kaydedilemedi",
+  "plotter.marked_on": "Plotter kesim işaretlendi",
+  "plotter.marked_off": "Plotter kesim işareti kaldırıldı",
+  "plotter.change_on": "{{product}}: plotter kesim",
+  "plotter.change_off": "{{product}}: plotter kesim kaldırıldı",
+  "activity.plotter_marked": "Plotter işaretini değiştirdi"
 }

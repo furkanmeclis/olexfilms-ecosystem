@@ -3568,6 +3568,11 @@ type Querier interface {
 	// TEC-1072: distributor counts next to the dealer counts (center home).
 	ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error)
 	ReportOrderOverview(ctx context.Context, arg ReportOrderOverviewParams) (ReportOrderOverviewRow, error)
+	// TEC-1058 (RV-5.6): plotter-cut lines shipped per month and product. A
+	// line counts in the month its order shipped (in the report zone); orders
+	// cancelled after shipping (goods back) are left out. Scope like the other
+	// order reports: the seller or the buyer is in reach.
+	ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlotterCutParams) ([]ReportOrderPlotterCutRow, error)
 	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
 	// Orders: the caller reaches an order as its owner (organization_id) or
 	// its buyer, like ListOrders side=all.
@@ -3755,6 +3760,8 @@ type Querier interface {
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
 	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
+	// TEC-1058: the information-only "sent plotter cut" mark of a line.
+	SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPlotterCutParams) (OrderItem, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
 	// ---------------------------------------------------------------------------

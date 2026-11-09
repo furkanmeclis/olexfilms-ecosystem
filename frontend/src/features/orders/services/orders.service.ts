@@ -168,6 +168,14 @@ export const ordersService = {
       )
       .map((o) => ({ uuid: o.uuid, name: o.name }));
   },
+  /** TEC-1058: the plotter mark of one line (also after shipping). */
+  setPlotterCut(uuid: string, itemUuid: string, plotterCut: boolean) {
+    return platformRequest<Order>(
+      "PATCH",
+      `/v1/orders/${enc(uuid)}/items/${enc(itemUuid)}`,
+      { body: { plotter_cut: plotterCut } },
+    );
+  },
   replaceItems(uuid: string, items: OrderItemInput[]) {
     return platformRequest<Order>("PUT", `/v1/orders/${enc(uuid)}/items`, {
       body: { items },

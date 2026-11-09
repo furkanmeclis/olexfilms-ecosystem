@@ -356,5 +356,14 @@
   "edit_lines.below_assigned": "Impossible de descendre sous la quantité attribuée ; retirez d'abord un code-barres.",
   "activity.change_added": "+ {{product}} ({{after}})",
   "activity.change_removed": "− {{product}} ({{before}})",
-  "activity.change_changed": "{{product}}: {{before}} → {{after}}"
+  "activity.change_changed": "{{product}}: {{before}} → {{after}}",
+  "plotter.label": "Envoyé découpé au plotter",
+  "plotter.column": "Découpe plotter",
+  "plotter.badge": "Découpe plotter",
+  "plotter.failed": "Impossible d'enregistrer la marque plotter",
+  "plotter.marked_on": "Marqué découpe plotter",
+  "plotter.marked_off": "Marque découpe plotter retirée",
+  "plotter.change_on": "{{product}} : découpe plotter",
+  "plotter.change_off": "{{product}} : découpe plotter retirée",
+  "activity.plotter_marked": "A modifié la marque plotter"
 }

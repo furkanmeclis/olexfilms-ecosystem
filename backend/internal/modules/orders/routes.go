@@ -51,6 +51,8 @@ func RegisterRoutes(
 	// (orders.ship) staff edit the lines before the order is ready.
 	editItems := middleware.RequireAnyPermission(rbac.PermOrdersWrite, rbac.PermOrdersShip)
 	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, editItems))
+	// TEC-1058: the plotter mark of one line, also after shipping.
+	mux.Handle("PATCH /v1/orders/{uuid}/items/{item_uuid}", route(h.PatchItem, editItems))
 	mux.Handle("POST /v1/orders/{uuid}/transitions", route(h.Transition, act))
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)
 	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))

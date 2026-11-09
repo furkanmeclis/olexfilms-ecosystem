@@ -30,6 +30,8 @@ export type OrderFormLine = {
   discount_pct?: string;
   /** Center order for a dealer only (TEC-1064): gift line charged 0. */
   is_gift?: boolean;
+  /** TEC-1058: "sent plotter cut" (information only); undefined = off. */
+  plotter_cut?: boolean;
 };
 
 export type LineError =
@@ -138,13 +140,18 @@ export function toItemInputs(
     const base: OrderItemInput = isRoll(line.unit_type)
       ? { product_uuid: line.product_uuid, meters: v }
       : { product_uuid: line.product_uuid, quantity: Number(v) };
-    if (!withPrice) return base;
+    // TEC-1058: the plotter mark rides on every kind of line.
+    const marked: OrderItemInput =
+      line.plotter_cut === undefined
+        ? base
+        : { ...base, plotter_cut: line.plotter_cut };
+    if (!withPrice) return marked;
     const price = normalizeAmount(line.unit_price ?? "");
     const discount = normalizeAmount(line.discount_pct ?? "");
     // TEC-1064: a gift line carries neither a price nor a discount.
-    if (line.is_gift) return { ...base, is_gift: true };
+    if (line.is_gift) return { ...marked, is_gift: true };
     return {
-      ...base,
+      ...marked,
       ...(price !== "" ? { unit_price: price } : {}),
       ...(discount !== "" ? { discount_pct: discount } : {}),
     };
@@ -180,6 +187,7 @@ export function linesFromOrder(order: Order): OrderFormLine[] {
       item.meters !== null && item.meters !== undefined
         ? item.meters
         : String(item.quantity ?? ""),
+    plotter_cut: item.plotter_cut ?? false,
   }));
 }
 

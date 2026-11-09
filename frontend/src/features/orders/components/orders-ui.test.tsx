@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   transition: vi.fn(),
   assignUnit: vi.fn(),
   unassignUnit: vi.fn(),
+  setPlotterCut: vi.fn(),
 }));
 const catalog = vi.hoisted(() => ({ listProducts: vi.fn() }));
 const pricing = vi.hoisted(() => ({ getProduct: vi.fn() }));
@@ -239,6 +240,7 @@ function order(over: Partial<Order> = {}): Order {
         list_unit_price: null,
         discount_pct: null,
         is_gift: false,
+        plotter_cut: false,
         line_total: "240.00",
         note: null,
         assigned: "0",
@@ -345,10 +347,12 @@ describe("OrderDetailPage: buttons by role and status", () => {
     expect($$("[data-testid=edit-line]")).toHaveLength(1);
     await click($("[data-testid=product-add]"));
     await type($("#edit-line-p1"), "5");
+    // TEC-1058: the new sign set is marked plotter cut.
+    await click($("#edit-line-p2-plotter"));
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).toHaveBeenCalledWith("o1", [
-      { product_uuid: "p1", quantity: 5 },
-      { product_uuid: "p2", quantity: 1 },
+      { product_uuid: "p1", quantity: 5, plotter_cut: false },
+      { product_uuid: "p2", quantity: 1, plotter_cut: true },
     ]);
     expect($("[data-testid=order-lines-editor]")).toBeNull();
   });
@@ -374,6 +378,33 @@ describe("OrderDetailPage: buttons by role and status", () => {
     expect($("[data-testid=line-below-assigned]")).not.toBeNull();
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).not.toHaveBeenCalled();
+  });
+
+  it("seller shipped: switches a line's plotter mark (TEC-1058)", async () => {
+    api.get.mockResolvedValue(order({ role: "seller", status: "shipped" }));
+    api.setPlotterCut.mockResolvedValue(
+      order({
+        role: "seller",
+        status: "shipped",
+        items: [{ ...order().items![0], plotter_cut: true }],
+      }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    await click($("#plotter-i1"));
+    expect(api.setPlotterCut).toHaveBeenCalledWith("o1", "i1", true);
+    expect($("#plotter-i1")?.getAttribute("data-state")).toBe("checked");
+  });
+
+  it("buyer sees the plotter mark as a badge", async () => {
+    api.get.mockResolvedValue(
+      order({
+        status: "shipped",
+        items: [{ ...order().items![0], plotter_cut: true }],
+      }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    expect($("[data-testid=line-plotter-badge]")).not.toBeNull();
+    expect($("#plotter-i1")).toBeNull();
   });
 
   it("observer sees no action bar", async () => {
