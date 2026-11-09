@@ -21,6 +21,12 @@ type OrgRef struct {
 	Type string    `json:"type"`
 }
 
+// OrderRef names the order a return refers to (TEC-1085).
+type OrderRef struct {
+	UUID    uuid.UUID `json:"uuid"`
+	OrderNo string    `json:"order_no"`
+}
+
 // ProductRef names a line's product.
 type ProductRef struct {
 	UUID     uuid.UUID `json:"uuid"`
@@ -76,8 +82,12 @@ type TransferView struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	// AvailableTransitions are the statuses the caller may move the request to.
-	AvailableTransitions []string   `json:"available_transitions"`
-	Items                []ItemView `json:"items,omitempty"`
+	AvailableTransitions []string `json:"available_transitions"`
+	// OpenedByParent (TEC-1085): the parent opened the return for the child.
+	OpenedByParent bool `json:"opened_by_parent"`
+	// Order (TEC-1085): the order the return refers to, or null.
+	Order *OrderRef  `json:"order"`
+	Items []ItemView `json:"items,omitempty"`
 	// Timeline: the steps with their users (detail only, TEC-1060).
 	Timeline []TimelineStep `json:"timeline,omitempty"`
 }
@@ -134,6 +144,14 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, r db.Sto
 	if err != nil {
 		return TransferView{}, fmt.Errorf("transfers: item count: %w", err)
 	}
+	var order *OrderRef
+	if r.OrderID.Valid {
+		o, err := q.GetOrderRefByID(ctx, r.OrderID.Int64)
+		if err != nil {
+			return TransferView{}, fmt.Errorf("transfers: order: %w", err)
+		}
+		order = &OrderRef{UUID: o.Uuid, OrderNo: o.OrderNo}
+	}
 	party := partyOf(c, r)
 	v := TransferView{
 		UUID: r.Uuid, TransferNo: r.TransferNo, Kind: r.Kind, Status: r.Status, Role: string(party),
@@ -143,7 +161,9 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, r db.Sto
 		ItemCount: n, DecidedAt: tsPtr(r.DecidedAt), ShippedAt: tsPtr(r.ShippedAt),
 		ReceivedAt: tsPtr(r.ReceivedAt), CancelledAt: tsPtr(r.CancelledAt),
 		CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,
-		AvailableTransitions: availableKindTransitions(r.Kind, r.Status, party, c.can),
+		AvailableTransitions: availableRequestTransitions(r.Kind, r.OpenedByParent, r.Status, party, c.can),
+		OpenedByParent:       r.OpenedByParent,
+		Order:                order,
 	}
 	if !c.Principal.SeesPrices() {
 		v.Total = nil
@@ -220,6 +240,8 @@ type ListFilter struct {
 	CreatedFrom       *time.Time
 	CreatedBefore     *time.Time
 	OrganizationUUIDs []uuid.UUID
+	// OrderUUID (TEC-1085) keeps the returns linked to that order.
+	OrderUUID *uuid.UUID
 	// Q matches the transfer number and the sender / receiver names.
 	Q      string
 	Sort   apiquery.ResolvedSort
@@ -259,7 +281,8 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]TransferV
 	p := db.ListTransferRequestsFilteredParams{
 		BrandID: c.Org.BrandID, Directions: f.Directions, OrgID: c.Org.InternalID, Statuses: f.Statuses, Kinds: f.Kinds,
 		CreatedFrom: tsArg(f.CreatedFrom), CreatedBefore: tsArg(f.CreatedBefore), Q: q, OrgUuids: f.OrganizationUUIDs,
-		SortKey: key, SortDesc: desc, RowLimit: f.Limit, RowOffset: f.Offset,
+		OrderUuid: uuidArg(f.OrderUUID),
+		SortKey:   key, SortDesc: desc, RowLimit: f.Limit, RowOffset: f.Offset,
 	}
 	rows, err := s.q.ListTransferRequestsFiltered(ctx, p)
 	if err != nil {
@@ -268,6 +291,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]TransferV
 	total, err := s.q.CountTransferRequestsFiltered(ctx, db.CountTransferRequestsFilteredParams{
 		BrandID: p.BrandID, Directions: p.Directions, OrgID: p.OrgID, Statuses: p.Statuses, Kinds: p.Kinds,
 		CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q, OrgUuids: p.OrgUuids,
+		OrderUuid: p.OrderUuid,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("transfers: count: %w", err)

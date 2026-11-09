@@ -366,9 +366,17 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 			// TEC-223: a return is priced at what the parent sold the unit
 			// for to the child (its order line), else the child's
 			// purchase price below.
-			op, err := q.GetUnitLastOrderPrice(ctx, db.GetUnitLastOrderPriceParams{
+			// TEC-1085: a return linked to an order takes that order's
+			// line first.
+			arg := db.GetUnitLastOrderPriceParams{
 				UnitID: it.UnitID, SellerOrgID: r.ToOrgID, BuyerOrgID: r.FromOrgID, Currency: strings.TrimSpace(r.Currency),
-			})
+				OrderID: r.OrderID,
+			}
+			op, err := q.GetUnitLastOrderPrice(ctx, arg)
+			if errors.Is(err, pgx.ErrNoRows) && arg.OrderID.Valid {
+				arg.OrderID = pgtype.Int8{}
+				op, err = q.GetUnitLastOrderPrice(ctx, arg)
+			}
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return pgtype.Numeric{}, fmt.Errorf("transfers: order price: %w", err)
 			}

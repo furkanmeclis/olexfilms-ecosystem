@@ -175,18 +175,27 @@ export function validQuantity(raw: string): boolean {
 
 /**
  * Request body of the form; null while the form is incomplete. A return
- * (TEC-223) carries kind=return and its parent as to_org_uuid.
+ * (TEC-223) carries kind=return and its parent as to_org_uuid; TEC-1085
+ * adds the child it is opened for and the order it refers to.
  */
 export function buildCreateBody(
   toOrgUuid: string,
   lines: TransferLine[],
   note: string,
   kind: StockTransferKind = "sibling",
+  link: { fromOrgUuid?: string; orderUuid?: string } = {},
 ): StockTransferCreateInput | null {
   if (toOrgUuid === "" || lines.length === 0) return null;
   if (!lines.every(lineQuantityValid)) return null;
   const body: StockTransferCreateInput = {
     ...(kind === "return" ? { kind } : {}),
+    // TEC-1085: a return opened for a child and / or linked to an order.
+    ...(kind === "return" && link.fromOrgUuid
+      ? { from_org_uuid: link.fromOrgUuid }
+      : {}),
+    ...(kind === "return" && link.orderUuid
+      ? { order_uuid: link.orderUuid }
+      : {}),
     to_org_uuid: toOrgUuid,
     items: lines.map((l) =>
       l.quantity.trim() === ""

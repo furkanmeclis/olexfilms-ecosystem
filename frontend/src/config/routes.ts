@@ -195,6 +195,14 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/transfers`,
       create: (slug: string) => `/t/${slug}/transfers/new`,
       createReturn: (slug: string) => `/t/${slug}/transfers/returns/new`,
+      /** TEC-1085: a return opened for a child, linked to an order. */
+      createReturnFor: (
+        slug: string,
+        fromOrgUuid: string,
+        orderUuid?: string,
+      ) =>
+        `/t/${slug}/transfers/returns/new?from=${encodeURIComponent(fromOrgUuid)}` +
+        (orderUuid ? `&order=${encodeURIComponent(orderUuid)}` : ""),
       detail: (slug: string, uuid: string) => `/t/${slug}/transfers/${uuid}`,
     },
     /**

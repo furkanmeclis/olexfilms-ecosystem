@@ -26587,6 +26587,10 @@ paths:
           in: query
           description: Comma separated sender / receiver organization uuids (any of).
           schema: { type: string }
+        - name: order_uuid
+          in: query
+          description: TEC-1085 — keeps the returns linked to this order.
+          schema: { type: string, format: uuid }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -26624,6 +26628,16 @@ paths:
         organization's direct parent: to_org_uuid may be omitted, and when
         set it must name that parent, else 422 TRANSFER_NOT_PARENT (also for
         an organization without a parent, such as the center).
+        TEC-1085: with from_org_uuid the active organization (the parent,
+        transfers.approve) opens a return in the name of a direct dealer /
+        distributor child (else 422 TRANSFER_NOT_CHILD): the units leave the
+        child's stock, the return starts approved with its prices frozen
+        (transfers.approved is written) and opened_by_parent is true.
+        order_uuid links a return to the order the parent sold to the giver
+        (else 400 with detail code TRANSFER_ORDER_MISMATCH; draft and
+        cancelled orders are refused); the order's line price is frozen
+        first. from_org_uuid or order_uuid imply kind=return. An own request
+        needs transfers.request.
       security:
         - bearerAuth: []
       requestBody:
@@ -26674,6 +26688,100 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/stock-transfers/return-sources:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockReturnSources
+      summary: Children the active organization may open a return for
+      description: >-
+        TEC-1085: the live direct dealer / distributor children of the
+        active organization in its brand. Needs transfers.approve.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Child organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockTransferTargets"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/stock-transfers/return-orders:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockReturnOrders
+      summary: Orders a return may refer to
+      description: >-
+        TEC-1085: orders the receiver of the return sold to the giver (not
+        draft or cancelled), newest first, at most 50. Without from_org_uuid
+        the giver is the active organization and the receiver its parent
+        (transfers.request; 422 TRANSFER_NOT_PARENT without a parent); with
+        from_org_uuid the giver is that direct child and the receiver the
+        active organization (transfers.approve; 422 TRANSFER_NOT_CHILD).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from_org_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Q"
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReturnOrders"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock-transfers/return-orders/{uuid}/units:
+    get:
+      tags: [StockTransfers]
+      operationId: listStockReturnOrderUnits
+      summary: Units of an order offered for a return
+      description: >-
+        TEC-1085: the units assigned to the order with what the giver may
+        still return of each (returnable: 1 for a serial unit it holds in
+        stock, for a fixed barcode the smaller of the order quantity and
+        what it holds, else 0). from_org_uuid and the permissions as in
+        return-orders; an order not sold by the receiver to the giver is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from_org_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order units
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockReturnOrderUnits"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/stock-transfers/{uuid}:
     get:
@@ -26735,7 +26843,11 @@ paths:
         giver (else the giver's purchase price), and the receipt books the
         reversal of the parent's sale (the giver income on the parent's cari,
         the parent a purchase expense on the giver's cari, source
-        stock_return).
+        stock_return). A return the parent opened (opened_by_parent,
+        TEC-1085) starts approved: the giver or the parent ships it, the
+        parent receives it after shipping or straight from approved (ship
+        and receive in one step, the same movements and accounting), the
+        giver or the parent cancels it.
       security:
         - bearerAuth: []
       parameters:
@@ -44928,11 +45040,16 @@ components:
 
     AccountingQueueReturn:
       type: object
-      required: [uuid, transfer_no, sender, item_count, currency, total, received_at, created_at, processed_at, processed_by, note]
+      required: [uuid, transfer_no, sender, item_count, currency, total, received_at, created_at, processed_at, processed_by, note, order]
       properties:
         uuid: { type: string, format: uuid }
         transfer_no: { type: string }
         sender: { $ref: "#/components/schemas/CariCounterparty" }
+        order:
+          description: TEC-1085 — the order the return refers to
+          oneOf:
+            - { $ref: "#/components/schemas/StockTransferOrderRef" }
+            - { type: "null" }
         item_count: { type: integer, format: int64 }
         currency: { type: string, minLength: 3, maxLength: 3 }
         total: { type: [string, "null"], example: "50.00" }
@@ -48417,7 +48534,7 @@ components:
 
     StockTransfer:
       type: object
-      required: [uuid, transfer_no, kind, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions]
+      required: [uuid, transfer_no, kind, status, role, sender, receiver, parent, currency, total, note, decision_note, cancel_reason, item_count, decided_at, shipped_at, received_at, cancelled_at, created_at, updated_at, available_transitions, opened_by_parent, order]
       properties:
         uuid: { type: string, format: uuid }
         transfer_no: { type: string }
@@ -48442,6 +48559,12 @@ components:
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/StockTransferStatus" }
+        opened_by_parent: { type: boolean, description: "TEC-1085: the parent opened the return in the giver's name" }
+        order:
+          description: TEC-1085 — the order the return refers to
+          oneOf:
+            - { $ref: "#/components/schemas/StockTransferOrderRef" }
+            - { type: "null" }
         items:
           type: array
           description: Detail only
@@ -48462,6 +48585,64 @@ components:
             - $ref: "#/components/schemas/OrderUserRef"
             - type: "null"
 
+    StockTransferOrderRef:
+      type: object
+      required: [uuid, order_no]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string }
+
+    StockReturnOrder:
+      type: object
+      required: [uuid, order_no, status, currency, unit_count, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        unit_count: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    StockReturnOrderUnit:
+      type: object
+      required: [unit_uuid, barcode, unit_kind, product, quantity, meters, returnable]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        product: { $ref: "#/components/schemas/OrderProductRef" }
+        quantity: { type: [integer, "null"], description: Fixed barcode quantity on the order }
+        meters: { type: [string, "null"] }
+        returnable: { type: integer, format: int64, description: What the giver may still return (0 when it does not hold the unit) }
+
+    EnvelopeStockReturnOrders:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockReturnOrder" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockReturnOrderUnits:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockReturnOrderUnit" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     StockTransferItemInput:
       type: object
       required: [barcode]
@@ -48475,6 +48656,8 @@ components:
       properties:
         kind: { $ref: "#/components/schemas/StockTransferKind" }
         to_org_uuid: { type: string, format: uuid, description: Required for a sibling transfer; optional for a return (must be the direct parent) }
+        from_org_uuid: { type: string, format: uuid, description: "TEC-1085: a direct child the parent opens the return for (transfers.approve)" }
+        order_uuid: { type: string, format: uuid, description: "TEC-1085: the order the return refers to (sold by the parent to the giver)" }
         note: { type: string }
         items:
           type: array

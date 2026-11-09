@@ -95,3 +95,40 @@ func TestAccountingSourceByKind(t *testing.T) {
 		t.Fatalf("sibling source = %+v", s)
 	}
 }
+
+// TEC-1085: a return the parent opened starts approved; the parent may ship
+// it, receive it in one step or after shipping, and cancel it; the giver
+// may still ship or cancel.
+func TestParentReturnTransitions(t *testing.T) {
+	req, appr := holds(rbac.PermTransfersRequest), holds(rbac.PermTransfersApprove)
+	cases := []struct {
+		from  string
+		party Party
+		can   func(string) bool
+		want  []string
+	}{
+		{StatusApproved, PartyParent, appr, []string{StatusShipped, StatusReceived, StatusCancelled}},
+		{StatusApproved, PartyParent, req, []string{}},
+		{StatusApproved, PartySender, req, []string{StatusShipped, StatusCancelled}},
+		{StatusShipped, PartyParent, appr, []string{StatusReceived, StatusCancelled}},
+		{StatusShipped, PartySender, req, []string{StatusCancelled}},
+		{StatusReceived, PartyParent, appr, []string{}},
+		{StatusRequested, PartyParent, appr, []string{}},
+	}
+	for _, c := range cases {
+		if got := availableRequestTransitions(KindReturn, true, c.from, c.party, c.can); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s as %s = %v, want %v", c.from, c.party, got, c.want)
+		}
+	}
+	// A return the child opened keeps the TEC-223 machine.
+	if got := availableRequestTransitions(KindReturn, false, StatusApproved, PartyParent, appr); !reflect.DeepEqual(got, []string{StatusCancelled}) {
+		t.Fatalf("child return, parent = %v", got)
+	}
+	for from, tos := range parentReturnTransitions {
+		for to := range tos {
+			if eventFor(to) == "" {
+				t.Errorf("%s -> %s has no event", from, to)
+			}
+		}
+	}
+}

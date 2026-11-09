@@ -39,6 +39,7 @@ import {
 } from "@/features/orders/components/order-action-dialog";
 import { OrderInvoiceDialog } from "@/features/orders/components/order-invoice-dialog";
 import { orderTimelineSteps } from "@/features/orders/lib/activity";
+import { OrderReturnsCard } from "@/features/transfers/components/order-returns-card";
 import {
   LinePickingActions,
   ShippingCard,
@@ -1063,6 +1064,7 @@ export function OrderDetailPage({
             canShip={can(permissions.orders.ship)}
             canReceive={can(permissions.orders.receive)}
           />
+          <OrderReturnsCard slug={slug} order={order} />
           <HistoryList order={order} />
         </div>
       </div>

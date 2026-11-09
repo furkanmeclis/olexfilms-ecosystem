@@ -1200,6 +1200,7 @@ type Querier interface {
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
 	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
+	GetOrderByUUIDInBrand(ctx context.Context, arg GetOrderByUUIDInBrandParams) (Order, error)
 	GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrderForIndexRow, error)
 	GetOrderInvoiceByUUID(ctx context.Context, arg GetOrderInvoiceByUUIDParams) (OrderInvoice, error)
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
@@ -1207,6 +1208,7 @@ type Querier interface {
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
 	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
 	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
+	GetOrderRefByID(ctx context.Context, id int64) (GetOrderRefByIDRow, error)
 	// The manual value (admin / distributor / dealer standard), never a grant.
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationBilling(ctx context.Context, id int64) (GetOrganizationBillingRow, error)
@@ -1728,6 +1730,7 @@ type Querier interface {
 	ListAccountingDisputes(ctx context.Context, arg ListAccountingDisputesParams) ([]ListAccountingDisputesRow, error)
 	// processed: NULL every received return, true processed ones, false waiting.
 	// sort_key received_at (default), transfer_no, processed_at; id tiebreak.
+	// TEC-1085: the order the return refers to.
 	ListAccountingQueueReturns(ctx context.Context, arg ListAccountingQueueReturnsParams) ([]ListAccountingQueueReturnsRow, error)
 	ListActiveDevicePushTokens(ctx context.Context, userID int64) ([]DevicePushToken, error)
 	// The active links of a fleet to the organizations in scope (org_ids NULL:
@@ -2315,6 +2318,11 @@ type Querier interface {
 	// The units of an order with whether each is still on hand unplaced in the
 	// organization (available, owned by the organization itself, TEC-765).
 	ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlacementUnitsParams) ([]ListOrderPlacementUnitsRow, error)
+	// TEC-1085: the units assigned to an order with what the buyer still holds
+	// of each: a serial unit is returnable when the buyer holds it in stock, a
+	// fixed barcode up to the smaller of the order quantity and the buyer's
+	// quantity on hand.
+	ListOrderReturnUnits(ctx context.Context, arg ListOrderReturnUnitsParams) ([]ListOrderReturnUnitsRow, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Fixed barcodes of a product the seller holds: the quantity at warehouse
 	// locations and without one, and the largest single holding of each (one
@@ -2603,6 +2611,12 @@ type Querier interface {
 	// with their users, oldest first; the timeline of a detail page
 	// (activity_events_resource_uuid_idx).
 	ListResourceActivityEvents(ctx context.Context, arg ListResourceActivityEventsParams) ([]ListResourceActivityEventsRow, error)
+	// TEC-1085: orders a return of buyer to seller may refer to (seller sold
+	// them to buyer, not draft or cancelled), newest first; q matches order_no.
+	ListReturnOrders(ctx context.Context, arg ListReturnOrdersParams) ([]ListReturnOrdersRow, error)
+	// TEC-1085: organizations a parent may open a return for (its direct
+	// dealer / distributor children in the brand).
+	ListReturnSourceOrgs(ctx context.Context, arg ListReturnSourceOrgsParams) ([]Organization, error)
 	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
 	// Batch load for a question list (avoids N+1).
 	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)

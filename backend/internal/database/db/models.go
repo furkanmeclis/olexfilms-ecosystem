@@ -3577,6 +3577,8 @@ type StockTransferRequest struct {
 	AccountingProcessedAt       pgtype.Timestamptz `json:"accounting_processed_at"`
 	AccountingProcessedByUserID pgtype.Int8        `json:"accounting_processed_by_user_id"`
 	AccountingNote              pgtype.Text        `json:"accounting_note"`
+	OrderID                     pgtype.Int8        `json:"order_id"`
+	OpenedByParent              bool               `json:"opened_by_parent"`
 }
 
 type StockTransferRequestItem struct {

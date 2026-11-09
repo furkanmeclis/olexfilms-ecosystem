@@ -26,16 +26,20 @@ SELECT t.uuid, t.transfer_no, t.currency, COALESCE(t.total::text, '')::text AS t
        t.accounting_processed_at, t.accounting_note,
        btrim(COALESCE(pu.name, '') || ' ' || COALESCE(pu.surname, ''))::text AS processed_by_name,
        f.uuid AS sender_uuid, f.name AS sender_name, f.type AS sender_type,
-       (SELECT COUNT(*) FROM stock_transfer_request_items i WHERE i.request_id = t.id)::bigint AS item_count
+       (SELECT COUNT(*) FROM stock_transfer_request_items i WHERE i.request_id = t.id)::bigint AS item_count,
+       ro.uuid AS order_uuid, ro.order_no AS order_no
 FROM stock_transfer_requests t
 JOIN organizations f ON f.id = t.from_org_id
 LEFT JOIN users pu ON pu.id = t.accounting_processed_by_user_id
+-- TEC-1085: the order the return refers to.
+LEFT JOIN orders ro ON ro.id = t.order_id
 WHERE t.to_org_id = sqlc.arg(organization_id)::bigint
   AND t.kind = 'return' AND t.status = 'received'
   AND (sqlc.narg(processed)::bool IS NULL
        OR (t.accounting_processed_at IS NOT NULL) = sqlc.narg(processed)::bool)
   AND (sqlc.narg(q)::text IS NULL
        OR t.transfer_no ILIKE sqlc.narg(q)::text || '%'
+       OR ro.order_no ILIKE sqlc.narg(q)::text || '%'
        OR f.name ILIKE '%' || sqlc.narg(q)::text || '%')
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'transfer_no' THEN t.transfer_no END END ASC,
@@ -50,12 +54,14 @@ LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 SELECT COUNT(*)::bigint
 FROM stock_transfer_requests t
 JOIN organizations f ON f.id = t.from_org_id
+LEFT JOIN orders ro ON ro.id = t.order_id
 WHERE t.to_org_id = sqlc.arg(organization_id)::bigint
   AND t.kind = 'return' AND t.status = 'received'
   AND (sqlc.narg(processed)::bool IS NULL
        OR (t.accounting_processed_at IS NOT NULL) = sqlc.narg(processed)::bool)
   AND (sqlc.narg(q)::text IS NULL
        OR t.transfer_no ILIKE sqlc.narg(q)::text || '%'
+       OR ro.order_no ILIKE sqlc.narg(q)::text || '%'
        OR f.name ILIKE '%' || sqlc.narg(q)::text || '%');
 
 -- name: SetReturnAccountingProcessed :one

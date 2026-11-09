@@ -17,7 +17,7 @@ UPDATE stock_transfer_requests
 SET status = 'cancelled', cancelled_by_user_id = $1, cancelled_at = NOW(),
     cancel_reason = $2
 WHERE id = $3 AND status IN ('requested', 'approved', 'shipped')
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent
 `
 
 type CancelTransferRequestParams struct {
@@ -67,6 +67,8 @@ func (q *Queries) CancelTransferRequest(ctx context.Context, arg CancelTransferR
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
@@ -117,16 +119,18 @@ WHERE r.brand_id = $1
   )
   AND (COALESCE(cardinality($4::text[]), 0) = 0 OR r.status = ANY ($4::text[]))
   AND (COALESCE(cardinality($5::text[]), 0) = 0 OR r.kind = ANY ($5::text[]))
-  AND ($6::timestamptz IS NULL OR r.created_at >= $6::timestamptz)
-  AND ($7::timestamptz IS NULL OR r.created_at < $7::timestamptz)
-  AND ($8::text IS NULL
-       OR r.transfer_no ILIKE '%' || $8::text || '%'
+  AND ($6::uuid IS NULL
+       OR r.order_id = (SELECT so.id FROM orders so WHERE so.uuid = $6::uuid))
+  AND ($7::timestamptz IS NULL OR r.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR r.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR r.transfer_no ILIKE '%' || $9::text || '%'
        OR EXISTS (SELECT 1 FROM organizations qo
                   WHERE qo.id IN (r.from_org_id, r.to_org_id)
-                    AND qo.name ILIKE '%' || $8::text || '%'))
-  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+                    AND qo.name ILIKE '%' || $9::text || '%'))
+  AND (COALESCE(cardinality($10::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM organizations fo
-                  WHERE fo.uuid = ANY ($9::uuid[])
+                  WHERE fo.uuid = ANY ($10::uuid[])
                     AND fo.id IN (r.from_org_id, r.to_org_id)))
 `
 
@@ -136,6 +140,7 @@ type CountTransferRequestsFilteredParams struct {
 	OrgID         int64              `json:"org_id"`
 	Statuses      []string           `json:"statuses"`
 	Kinds         []string           `json:"kinds"`
+	OrderUuid     pgtype.UUID        `json:"order_uuid"`
 	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore pgtype.Timestamptz `json:"created_before"`
 	Q             pgtype.Text        `json:"q"`
@@ -149,6 +154,7 @@ func (q *Queries) CountTransferRequestsFiltered(ctx context.Context, arg CountTr
 		arg.OrgID,
 		arg.Statuses,
 		arg.Kinds,
+		arg.OrderUuid,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,
@@ -167,7 +173,7 @@ SET status = $1::text,
     decided_at = NOW(),
     decision_note = $4
 WHERE id = $5 AND status = 'requested'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent
 `
 
 type DecideTransferRequestParams struct {
@@ -225,12 +231,87 @@ func (q *Queries) DecideTransferRequest(ctx context.Context, arg DecideTransferR
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
 
+const getOrderByUUIDInBrand = `-- name: GetOrderByUUIDInBrand :one
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id FROM orders WHERE uuid = $1 AND brand_id = $2
+`
+
+type GetOrderByUUIDInBrandParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetOrderByUUIDInBrand(ctx context.Context, arg GetOrderByUUIDInBrandParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getOrderByUUIDInBrand, arg.Uuid, arg.BrandID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.BuyerOrgID,
+		&i.SellerWarehouseLocationID,
+		&i.BuyerWarehouseLocationID,
+		&i.Status,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.TryRate,
+		&i.Subtotal,
+		&i.TaxTotal,
+		&i.Total,
+		&i.DeliveryMode,
+		&i.TrackingNo,
+		&i.ShippingDocumentKey,
+		&i.ReceiptDocumentKey,
+		&i.ExternalReference,
+		&i.Note,
+		&i.CancelReason,
+		&i.CreatedByUserID,
+		&i.ApprovedByUserID,
+		&i.SubmittedAt,
+		&i.ApprovedAt,
+		&i.ReadyAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.ReceivedAt,
+		&i.CancelRequestedAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeliveryMethodID,
+		&i.CreatedBySeller,
+		&i.InvoiceStatus,
+		&i.SellerWarehouseID,
+	)
+	return i, err
+}
+
+const getOrderRefByID = `-- name: GetOrderRefByID :one
+SELECT id, uuid, order_no FROM orders WHERE id = $1
+`
+
+type GetOrderRefByIDRow struct {
+	ID      int64     `json:"id"`
+	Uuid    uuid.UUID `json:"uuid"`
+	OrderNo string    `json:"order_no"`
+}
+
+func (q *Queries) GetOrderRefByID(ctx context.Context, id int64) (GetOrderRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, getOrderRefByID, id)
+	var i GetOrderRefByIDRow
+	err := row.Scan(&i.ID, &i.Uuid, &i.OrderNo)
+	return i, err
+}
+
 const getTransferRequestByUUID = `-- name: GetTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -280,6 +361,8 @@ func (q *Queries) GetTransferRequestByUUID(ctx context.Context, arg GetTransferR
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
@@ -294,15 +377,18 @@ WHERE oiu.unit_id = $1
   AND o.buyer_org_id = $3
   AND o.currency = $4::text
   AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+  -- TEC-1085: a return linked to an order takes that order's line.
+  AND ($5::bigint IS NULL OR o.id = $5::bigint)
 ORDER BY oiu.assigned_at DESC, oiu.id DESC
 LIMIT 1
 `
 
 type GetUnitLastOrderPriceParams struct {
-	UnitID      int64  `json:"unit_id"`
-	SellerOrgID int64  `json:"seller_org_id"`
-	BuyerOrgID  int64  `json:"buyer_org_id"`
-	Currency    string `json:"currency"`
+	UnitID      int64       `json:"unit_id"`
+	SellerOrgID int64       `json:"seller_org_id"`
+	BuyerOrgID  int64       `json:"buyer_org_id"`
+	Currency    string      `json:"currency"`
+	OrderID     pgtype.Int8 `json:"order_id"`
 }
 
 type GetUnitLastOrderPriceRow struct {
@@ -318,6 +404,7 @@ func (q *Queries) GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrde
 		arg.SellerOrgID,
 		arg.BuyerOrgID,
 		arg.Currency,
+		arg.OrderID,
 	)
 	var i GetUnitLastOrderPriceRow
 	err := row.Scan(&i.OrderItemID, &i.UnitPrice)
@@ -328,14 +415,15 @@ const insertTransferRequest = `-- name: InsertTransferRequest :one
 
 INSERT INTO stock_transfer_requests (
     organization_id, brand_id, from_org_id, to_org_id, approver_org_id,
-    currency, reason, requested_by_user_id, kind
+    currency, reason, requested_by_user_id, kind, order_id, opened_by_parent
 )
 VALUES (
     $1, $2, $1, $3,
     $4, $5, $6, $7,
-    COALESCE(NULLIF($8::text, ''), 'sibling')
+    COALESCE(NULLIF($8::text, ''), 'sibling'), $9,
+    $10::bool
 )
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent
 `
 
 type InsertTransferRequestParams struct {
@@ -347,6 +435,8 @@ type InsertTransferRequestParams struct {
 	Reason            pgtype.Text `json:"reason"`
 	RequestedByUserID pgtype.Int8 `json:"requested_by_user_id"`
 	Kind              string      `json:"kind"`
+	OrderID           pgtype.Int8 `json:"order_id"`
+	OpenedByParent    bool        `json:"opened_by_parent"`
 }
 
 // Stock transfer requests between siblings (TEC-197, K13). The giver
@@ -362,6 +452,8 @@ func (q *Queries) InsertTransferRequest(ctx context.Context, arg InsertTransferR
 		arg.Reason,
 		arg.RequestedByUserID,
 		arg.Kind,
+		arg.OrderID,
+		arg.OpenedByParent,
 	)
 	var i StockTransferRequest
 	err := row.Scan(
@@ -402,6 +494,8 @@ func (q *Queries) InsertTransferRequest(ctx context.Context, arg InsertTransferR
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
@@ -459,6 +553,242 @@ func (q *Queries) InsertTransferRequestItem(ctx context.Context, arg InsertTrans
 		&i.AccountingExcluded,
 	)
 	return i, err
+}
+
+const listOrderReturnUnits = `-- name: ListOrderReturnUnits :many
+SELECT u.uuid AS unit_uuid, u.barcode, u.unit_kind,
+       p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type,
+       oiu.quantity, oiu.meters,
+       COALESCE(ucs.holder_org_id = $1::bigint AND ucs.status IN ('available', 'placed'), FALSE)::bool AS held,
+       COALESCE((SELECT SUM(h.quantity_on_hand) FROM fixed_barcode_holdings h
+                  WHERE h.unit_id = u.id AND h.holder_org_id = $1::bigint), 0)::bigint AS held_quantity
+FROM order_item_units oiu
+JOIN order_items oi ON oi.id = oiu.order_item_id
+JOIN units u ON u.id = oiu.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN unit_current_state ucs ON ucs.unit_id = u.id
+WHERE oi.order_id = $2::bigint
+ORDER BY p.name, u.barcode, oiu.id
+`
+
+type ListOrderReturnUnitsParams struct {
+	BuyerOrgID int64 `json:"buyer_org_id"`
+	OrderID    int64 `json:"order_id"`
+}
+
+type ListOrderReturnUnitsRow struct {
+	UnitUuid        uuid.UUID      `json:"unit_uuid"`
+	Barcode         string         `json:"barcode"`
+	UnitKind        string         `json:"unit_kind"`
+	ProductUuid     uuid.UUID      `json:"product_uuid"`
+	ProductSku      string         `json:"product_sku"`
+	ProductName     string         `json:"product_name"`
+	ProductUnitType string         `json:"product_unit_type"`
+	Quantity        pgtype.Int4    `json:"quantity"`
+	Meters          pgtype.Numeric `json:"meters"`
+	Held            bool           `json:"held"`
+	HeldQuantity    int64          `json:"held_quantity"`
+}
+
+// TEC-1085: the units assigned to an order with what the buyer still holds
+// of each: a serial unit is returnable when the buyer holds it in stock, a
+// fixed barcode up to the smaller of the order quantity and the buyer's
+// quantity on hand.
+func (q *Queries) ListOrderReturnUnits(ctx context.Context, arg ListOrderReturnUnitsParams) ([]ListOrderReturnUnitsRow, error) {
+	rows, err := q.db.Query(ctx, listOrderReturnUnits, arg.BuyerOrgID, arg.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrderReturnUnitsRow{}
+	for rows.Next() {
+		var i ListOrderReturnUnitsRow
+		if err := rows.Scan(
+			&i.UnitUuid,
+			&i.Barcode,
+			&i.UnitKind,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.ProductUnitType,
+			&i.Quantity,
+			&i.Meters,
+			&i.Held,
+			&i.HeldQuantity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReturnOrders = `-- name: ListReturnOrders :many
+SELECT o.id, o.uuid, o.order_no, o.status, o.currency, o.created_at,
+       (SELECT COUNT(*) FROM order_item_units oiu
+          JOIN order_items oi ON oi.id = oiu.order_item_id
+         WHERE oi.order_id = o.id)::bigint AS unit_count
+FROM orders o
+WHERE o.brand_id = $1
+  AND o.seller_org_id = $2::bigint
+  AND o.buyer_org_id = $3::bigint
+  AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+  AND ($4::text IS NULL OR o.order_no ILIKE '%' || $4::text || '%')
+ORDER BY o.created_at DESC, o.id DESC
+LIMIT $5
+`
+
+type ListReturnOrdersParams struct {
+	BrandID     int64       `json:"brand_id"`
+	SellerOrgID int64       `json:"seller_org_id"`
+	BuyerOrgID  int64       `json:"buyer_org_id"`
+	Q           pgtype.Text `json:"q"`
+	RowLimit    int32       `json:"row_limit"`
+}
+
+type ListReturnOrdersRow struct {
+	ID        int64              `json:"id"`
+	Uuid      uuid.UUID          `json:"uuid"`
+	OrderNo   string             `json:"order_no"`
+	Status    string             `json:"status"`
+	Currency  string             `json:"currency"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UnitCount int64              `json:"unit_count"`
+}
+
+// TEC-1085: orders a return of buyer to seller may refer to (seller sold
+// them to buyer, not draft or cancelled), newest first; q matches order_no.
+func (q *Queries) ListReturnOrders(ctx context.Context, arg ListReturnOrdersParams) ([]ListReturnOrdersRow, error) {
+	rows, err := q.db.Query(ctx, listReturnOrders,
+		arg.BrandID,
+		arg.SellerOrgID,
+		arg.BuyerOrgID,
+		arg.Q,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListReturnOrdersRow{}
+	for rows.Next() {
+		var i ListReturnOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrderNo,
+			&i.Status,
+			&i.Currency,
+			&i.CreatedAt,
+			&i.UnitCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReturnSourceOrgs = `-- name: ListReturnSourceOrgs :many
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct FROM organizations
+WHERE brand_id = $1
+  AND parent_id = $2::bigint
+  AND type IN ('dealer', 'distributor')
+  AND deleted_at IS NULL
+ORDER BY name, id
+`
+
+type ListReturnSourceOrgsParams struct {
+	BrandID  int64 `json:"brand_id"`
+	ParentID int64 `json:"parent_id"`
+}
+
+// TEC-1085: organizations a parent may open a return for (its direct
+// dealer / distributor children in the brand).
+func (q *Queries) ListReturnSourceOrgs(ctx context.Context, arg ListReturnSourceOrgsParams) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listReturnSourceOrgs, arg.BrandID, arg.ParentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Slug,
+			&i.Name,
+			&i.City,
+			&i.District,
+			&i.Phone,
+			&i.Address,
+			&i.LogoObjectKey,
+			&i.Status,
+			&i.PlanCode,
+			&i.AccessStartsAt,
+			&i.AccessEndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Email,
+			&i.Website,
+			&i.Tagline,
+			&i.FooterText,
+			&i.PaperSize,
+			&i.PrimaryColor,
+			&i.Type,
+			&i.ParentID,
+			&i.BrandID,
+			&i.Currency,
+			&i.Locale,
+			&i.Timezone,
+			&i.CountryID,
+			&i.ContractPdfKey,
+			&i.ContractValidUntil,
+			&i.Settings,
+			&i.ProvinceID,
+			&i.DistrictID,
+			&i.PhoneRaw,
+			&i.GoogleBusinessUrl,
+			&i.Latitude,
+			&i.Longitude,
+			&i.InvoiceVkn,
+			&i.InvoiceTckn,
+			&i.InvoiceTaxOffice,
+			&i.InvoiceLegalName,
+			&i.EinvoiceRegistered,
+			&i.EinvoiceAlias,
+			&i.InvoiceEmail,
+			&i.ServicePointEnabled,
+			&i.ServicePointName,
+			&i.ServicePointLogoObjectKey,
+			&i.MergedIntoID,
+			&i.BillingTitle,
+			&i.TaxOffice,
+			&i.TaxNo,
+			&i.BillingAddress,
+			&i.BillingEmail,
+			&i.Iban,
+			&i.BillingUpdatedAt,
+			&i.BillingUpdatedByUserID,
+			&i.StandardDiscountPct,
+			&i.FirstOrderDiscountPct,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTransferItemsOfReversedSales = `-- name: ListTransferItemsOfReversedSales :many
@@ -628,7 +958,7 @@ func (q *Queries) ListTransferRequestItems(ctx context.Context, requestID int64)
 }
 
 const listTransferRequestsFiltered = `-- name: ListTransferRequestsFiltered :many
-SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.from_org_id, r.to_org_id, r.approver_org_id, r.product_id, r.unit_id, r.quantity, r.meters, r.currency, r.unit_price, r.line_total, r.rate_snapshot, r.status, r.reason, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.completed_at, r.cancelled_at, r.created_at, r.updated_at, r.transfer_no, r.total, r.cancel_reason, r.shipped_by_user_id, r.received_by_user_id, r.cancelled_by_user_id, r.shipped_at, r.received_at, r.kind, r.accounting_processed_at, r.accounting_processed_by_user_id, r.accounting_note FROM stock_transfer_requests r
+SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.from_org_id, r.to_org_id, r.approver_org_id, r.product_id, r.unit_id, r.quantity, r.meters, r.currency, r.unit_price, r.line_total, r.rate_snapshot, r.status, r.reason, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.completed_at, r.cancelled_at, r.created_at, r.updated_at, r.transfer_no, r.total, r.cancel_reason, r.shipped_by_user_id, r.received_by_user_id, r.cancelled_by_user_id, r.shipped_at, r.received_at, r.kind, r.accounting_processed_at, r.accounting_processed_by_user_id, r.accounting_note, r.order_id, r.opened_by_parent FROM stock_transfer_requests r
 WHERE r.brand_id = $1
   AND (
       ((COALESCE(cardinality($2::text[]), 0) = 0 OR 'outgoing' = ANY ($2::text[]))
@@ -640,31 +970,33 @@ WHERE r.brand_id = $1
   )
   AND (COALESCE(cardinality($4::text[]), 0) = 0 OR r.status = ANY ($4::text[]))
   AND (COALESCE(cardinality($5::text[]), 0) = 0 OR r.kind = ANY ($5::text[]))
-  AND ($6::timestamptz IS NULL OR r.created_at >= $6::timestamptz)
-  AND ($7::timestamptz IS NULL OR r.created_at < $7::timestamptz)
-  AND ($8::text IS NULL
-       OR r.transfer_no ILIKE '%' || $8::text || '%'
+  AND ($6::uuid IS NULL
+       OR r.order_id = (SELECT so.id FROM orders so WHERE so.uuid = $6::uuid))
+  AND ($7::timestamptz IS NULL OR r.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR r.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR r.transfer_no ILIKE '%' || $9::text || '%'
        OR EXISTS (SELECT 1 FROM organizations qo
                   WHERE qo.id IN (r.from_org_id, r.to_org_id)
-                    AND qo.name ILIKE '%' || $8::text || '%'))
-  AND (COALESCE(cardinality($9::uuid[]), 0) = 0
+                    AND qo.name ILIKE '%' || $9::text || '%'))
+  AND (COALESCE(cardinality($10::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM organizations fo
-                  WHERE fo.uuid = ANY ($9::uuid[])
+                  WHERE fo.uuid = ANY ($10::uuid[])
                     AND fo.id IN (r.from_org_id, r.to_org_id)))
 ORDER BY
-  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'transfer_no' THEN r.transfer_no END END ASC,
-  CASE WHEN $10::bool THEN CASE $11::text WHEN 'transfer_no' THEN r.transfer_no END END DESC,
-  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'status' THEN
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'transfer_no' THEN r.transfer_no END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'transfer_no' THEN r.transfer_no END END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'status' THEN
     CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
                  WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END ASC,
-  CASE WHEN $10::bool THEN CASE $11::text WHEN 'status' THEN
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'status' THEN
     CASE r.status WHEN 'requested' THEN 1 WHEN 'approved' THEN 2 WHEN 'shipped' THEN 3
                  WHEN 'received' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END END END DESC,
-  CASE WHEN NOT $10::bool THEN CASE $11::text WHEN 'created_at' THEN r.created_at END END ASC,
-  CASE WHEN $10::bool THEN CASE $11::text WHEN 'created_at' THEN r.created_at END END DESC,
-  CASE WHEN $10::bool THEN r.id END DESC,
+  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'created_at' THEN r.created_at END END ASC,
+  CASE WHEN $11::bool THEN CASE $12::text WHEN 'created_at' THEN r.created_at END END DESC,
+  CASE WHEN $11::bool THEN r.id END DESC,
   r.id ASC
-LIMIT $13 OFFSET $12
+LIMIT $14 OFFSET $13
 `
 
 type ListTransferRequestsFilteredParams struct {
@@ -673,6 +1005,7 @@ type ListTransferRequestsFilteredParams struct {
 	OrgID         int64              `json:"org_id"`
 	Statuses      []string           `json:"statuses"`
 	Kinds         []string           `json:"kinds"`
+	OrderUuid     pgtype.UUID        `json:"order_uuid"`
 	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore pgtype.Timestamptz `json:"created_before"`
 	Q             pgtype.Text        `json:"q"`
@@ -696,6 +1029,7 @@ func (q *Queries) ListTransferRequestsFiltered(ctx context.Context, arg ListTran
 		arg.OrgID,
 		arg.Statuses,
 		arg.Kinds,
+		arg.OrderUuid,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,
@@ -750,6 +1084,8 @@ func (q *Queries) ListTransferRequestsFiltered(ctx context.Context, arg ListTran
 			&i.AccountingProcessedAt,
 			&i.AccountingProcessedByUserID,
 			&i.AccountingNote,
+			&i.OrderID,
+			&i.OpenedByParent,
 		); err != nil {
 			return nil, err
 		}
@@ -901,7 +1237,7 @@ func (q *Queries) LockOrdersOfTransferRequest(ctx context.Context, requestID int
 }
 
 const lockTransferRequestByUUID = `-- name: LockTransferRequestByUUID :one
-SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note FROM stock_transfer_requests
+SELECT id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent FROM stock_transfer_requests
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -952,6 +1288,8 @@ func (q *Queries) LockTransferRequestByUUID(ctx context.Context, arg LockTransfe
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
@@ -960,7 +1298,7 @@ const receiveTransferRequest = `-- name: ReceiveTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'received', received_by_user_id = $1, received_at = NOW()
 WHERE id = $2 AND status = 'shipped'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent
 `
 
 type ReceiveTransferRequestParams struct {
@@ -1009,6 +1347,8 @@ func (q *Queries) ReceiveTransferRequest(ctx context.Context, arg ReceiveTransfe
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }
@@ -1103,7 +1443,7 @@ const shipTransferRequest = `-- name: ShipTransferRequest :one
 UPDATE stock_transfer_requests
 SET status = 'shipped', shipped_by_user_id = $1, shipped_at = NOW()
 WHERE id = $2 AND status = 'approved'
-RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note
+RETURNING id, uuid, organization_id, brand_id, from_org_id, to_org_id, approver_org_id, product_id, unit_id, quantity, meters, currency, unit_price, line_total, rate_snapshot, status, reason, requested_by_user_id, decided_by_user_id, decided_at, decision_note, completed_at, cancelled_at, created_at, updated_at, transfer_no, total, cancel_reason, shipped_by_user_id, received_by_user_id, cancelled_by_user_id, shipped_at, received_at, kind, accounting_processed_at, accounting_processed_by_user_id, accounting_note, order_id, opened_by_parent
 `
 
 type ShipTransferRequestParams struct {
@@ -1152,6 +1492,8 @@ func (q *Queries) ShipTransferRequest(ctx context.Context, arg ShipTransferReque
 		&i.AccountingProcessedAt,
 		&i.AccountingProcessedByUserID,
 		&i.AccountingNote,
+		&i.OrderID,
+		&i.OpenedByParent,
 	)
 	return i, err
 }

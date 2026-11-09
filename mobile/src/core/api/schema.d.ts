@@ -13743,7 +13743,7 @@ export interface paths {
         put?: never;
         /**
          * Request a stock transfer to a sibling organization (K13)
-         * @description The active organization (dealer or distributor) gives units it holds to a sibling: same brand, same type, same parent. Any other target (another parent, brand or type, the parent itself) is 422 TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode needs a quantity, pieces and rolls move whole. A unit not in the giver's stock, reserved by an order or on another open request is 400 with detail code TRANSFER_UNIT_NOT_AVAILABLE, TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs transfers.request. Writes transfers.requested; no stock moves yet. With kind=return (TEC-223) the units go back to the active organization's direct parent: to_org_uuid may be omitted, and when set it must name that parent, else 422 TRANSFER_NOT_PARENT (also for an organization without a parent, such as the center).
+         * @description The active organization (dealer or distributor) gives units it holds to a sibling: same brand, same type, same parent. Any other target (another parent, brand or type, the parent itself) is 422 TRANSFER_NOT_SIBLING. Units are named by barcode; a fixed barcode needs a quantity, pieces and rolls move whole. A unit not in the giver's stock, reserved by an order or on another open request is 400 with detail code TRANSFER_UNIT_NOT_AVAILABLE, TRANSFER_UNIT_RESERVED or TRANSFER_INSUFFICIENT_STOCK. Needs transfers.request. Writes transfers.requested; no stock moves yet. With kind=return (TEC-223) the units go back to the active organization's direct parent: to_org_uuid may be omitted, and when set it must name that parent, else 422 TRANSFER_NOT_PARENT (also for an organization without a parent, such as the center). TEC-1085: with from_org_uuid the active organization (the parent, transfers.approve) opens a return in the name of a direct dealer / distributor child (else 422 TRANSFER_NOT_CHILD): the units leave the child's stock, the return starts approved with its prices frozen (transfers.approved is written) and opened_by_parent is true. order_uuid links a return to the order the parent sold to the giver (else 400 with detail code TRANSFER_ORDER_MISMATCH; draft and cancelled orders are refused); the order's line price is frozen first. from_org_uuid or order_uuid imply kind=return. An own request needs transfers.request.
          */
         post: operations["createStockTransfer"];
         delete?: never;
@@ -13764,6 +13764,66 @@ export interface paths {
          * @description Live organizations of the same brand, type and parent as the active organization (empty for the center). With kind=return, the direct parent only (TEC-223). Needs transfers.request.
          */
         get: operations["listStockTransferTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/return-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Children the active organization may open a return for
+         * @description TEC-1085: the live direct dealer / distributor children of the active organization in its brand. Needs transfers.approve.
+         */
+        get: operations["listStockReturnSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/return-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders a return may refer to
+         * @description TEC-1085: orders the receiver of the return sold to the giver (not draft or cancelled), newest first, at most 50. Without from_org_uuid the giver is the active organization and the receiver its parent (transfers.request; 422 TRANSFER_NOT_PARENT without a parent); with from_org_uuid the giver is that direct child and the receiver the active organization (transfers.approve; 422 TRANSFER_NOT_CHILD).
+         */
+        get: operations["listStockReturnOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-transfers/return-orders/{uuid}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Units of an order offered for a return
+         * @description TEC-1085: the units assigned to the order with what the giver may still return of each (returnable: 1 for a serial unit it holds in stock, for a fixed barcode the smaller of the order quantity and what it holds, else 0). from_org_uuid and the permissions as in return-orders; an order not sold by the receiver to the giver is 404.
+         */
+        get: operations["listStockReturnOrderUnits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13803,7 +13863,7 @@ export interface paths {
         put?: never;
         /**
          * Move a stock transfer request to another status
-         * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. On receipt the giver books income on the receiver's cari and the receiver a purchase expense on the giver's cari for the line totals frozen at approval, in the same transaction (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt back when an organization's currency has no rate for the day. A return (kind=return, TEC-223) has the parent as receiver: the parent (transfers.approve) approves or rejects, the giver ships or cancels, the parent receives; approval freezes the unit's order price to the giver (else the giver's purchase price), and the receipt books the reversal of the parent's sale (the giver income on the parent's cari, the parent a purchase expense on the giver's cari, source stock_return).
+         * @description requested -> approved | rejected (receiver with transfers.request or the common parent with transfers.approve; approval freezes the giver's purchase price per unit, K13; a rejection writes no stock movement); requested -> cancelled (giver or parent); approved -> shipped (giver: one ledger transfer_out per unit with idempotency key transfer:transfer_item:<id>:transfer_out:<barcode>, serial units go in_transit owned by the receiver; 409 TRANSFER_STOCK_UNAVAILABLE when the ledger refuses); approved -> cancelled (any party, no movement); shipped -> received (receiver: one transfer_in per unit, available at the receiver); shipped -> cancelled (giver, once the goods are back: one transfer_cancel_restore per unit). rejected, received and cancelled are final. A request for the current status is a no-op; other moves answer 409 TRANSFER_INVALID_TRANSITION. Every move writes a transfers.* outbox event. On receipt the giver books income on the receiver's cari and the receiver a purchase expense on the giver's cari for the line totals frozen at approval, in the same transaction (K13, source stock_transfer); 400 RATE_NOT_FOUND rolls the receipt back when an organization's currency has no rate for the day. A return (kind=return, TEC-223) has the parent as receiver: the parent (transfers.approve) approves or rejects, the giver ships or cancels, the parent receives; approval freezes the unit's order price to the giver (else the giver's purchase price), and the receipt books the reversal of the parent's sale (the giver income on the parent's cari, the parent a purchase expense on the giver's cari, source stock_return). A return the parent opened (opened_by_parent, TEC-1085) starts approved: the giver or the parent ships it, the parent receives it after shipping or straight from approved (ship and receive in one step, the same movements and accounting), the giver or the parent cancels it.
          */
         post: operations["transitionStockTransfer"];
         delete?: never;
@@ -25865,6 +25925,8 @@ export interface components {
             uuid: string;
             transfer_no: string;
             sender: components["schemas"]["CariCounterparty"];
+            /** @description TEC-1085 — the order the return refers to */
+            order: components["schemas"]["StockTransferOrderRef"] | null;
             /** Format: int64 */
             item_count: number;
             currency: string;
@@ -28622,6 +28684,10 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             available_transitions: components["schemas"]["StockTransferStatus"][];
+            /** @description TEC-1085: the parent opened the return in the giver's name */
+            opened_by_parent: boolean;
+            /** @description TEC-1085 — the order the return refers to */
+            order: components["schemas"]["StockTransferOrderRef"] | null;
             /** @description Detail only */
             items?: components["schemas"]["StockTransferItem"][];
             /** @description TEC-1060. The steps with their users, oldest first (detail only) */
@@ -28633,6 +28699,54 @@ export interface components {
             /** Format: date-time */
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
+        };
+        StockTransferOrderRef: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+        };
+        StockReturnOrder: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+            status: string;
+            currency: string;
+            /** Format: int64 */
+            unit_count: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockReturnOrderUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: components["schemas"]["OrderProductRef"];
+            /** @description Fixed barcode quantity on the order */
+            quantity: number | null;
+            meters: string | null;
+            /**
+             * Format: int64
+             * @description What the giver may still return (0 when it does not hold the unit)
+             */
+            returnable: number;
+        };
+        EnvelopeStockReturnOrders: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockReturnOrder"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockReturnOrderUnits: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockReturnOrderUnit"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         StockTransferItemInput: {
             barcode: string;
@@ -28646,6 +28760,16 @@ export interface components {
              * @description Required for a sibling transfer; optional for a return (must be the direct parent)
              */
             to_org_uuid?: string;
+            /**
+             * Format: uuid
+             * @description TEC-1085: a direct child the parent opens the return for (transfers.approve)
+             */
+            from_org_uuid?: string;
+            /**
+             * Format: uuid
+             * @description TEC-1085: the order the return refers to (sold by the parent to the giver)
+             */
+            order_uuid?: string;
             note?: string;
             items: components["schemas"]["StockTransferItemInput"][];
         };
@@ -57161,6 +57285,8 @@ export interface operations {
                 created_to?: components["parameters"]["CreatedTo"];
                 /** @description Comma separated sender / receiver organization uuids (any of). */
                 organization_uuid?: string;
+                /** @description TEC-1085 — keeps the returns linked to this order. */
+                order_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -57234,6 +57360,83 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listStockReturnSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Child organizations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockTransferTargets"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listStockReturnOrders: {
+        parameters: {
+            query?: {
+                from_org_uuid?: string;
+                q?: components["parameters"]["Q"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReturnOrders"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listStockReturnOrderUnits: {
+        parameters: {
+            query?: {
+                from_org_uuid?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReturnOrderUnits"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getStockTransfer: {

@@ -39,8 +39,14 @@ func RegisterRoutes(
 	request := middleware.RequirePermission(rbac.PermTransfersRequest)
 
 	mux.Handle("GET /v1/stock-transfers", route(h.List))
-	mux.Handle("POST /v1/stock-transfers", route(h.Create, request))
+	// TEC-1085: the use case checks transfers.request for an own request
+	// and transfers.approve for a return opened for a child.
+	mux.Handle("POST /v1/stock-transfers", route(h.Create))
 	mux.Handle("GET /v1/stock-transfers/targets", route(h.Targets, request))
+	mux.Handle("GET /v1/stock-transfers/return-sources", route(h.ReturnSources,
+		middleware.RequirePermission(rbac.PermTransfersApprove)))
+	mux.Handle("GET /v1/stock-transfers/return-orders", route(h.ReturnOrders))
+	mux.Handle("GET /v1/stock-transfers/return-orders/{uuid}/units", route(h.ReturnOrderUnits))
 	mux.Handle("GET /v1/stock-transfers/{uuid}", route(h.Get))
 	mux.Handle("POST /v1/stock-transfers/{uuid}/transitions", route(h.Transition))
 }

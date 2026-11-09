@@ -377,6 +377,30 @@ function QueueReturnsTable({ slug }: { slug: string }) {
           enableSorting: false,
           gridSecondary: true,
         }),
+        // TEC-1085: the order the return refers to.
+        createColumn<AccountingQueueReturn>({
+          id: "order",
+          accessorFn: (r) => r.order?.order_no ?? "",
+          labelKey: "orders.list.columns.order_no",
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.order ? (
+              <Link
+                href={routes.tenant.orders.detail(
+                  slug,
+                  row.original.order.uuid,
+                )}
+                className="font-mono hover:underline"
+                dir="ltr"
+                data-testid="queue-return-order"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {row.original.order.order_no}
+              </Link>
+            ) : (
+              "—"
+            ),
+        }),
         createColumn<AccountingQueueReturn>({
           accessorKey: "item_count",
           labelKey: "accounting.queue.columns.item_count",
@@ -462,7 +486,7 @@ function QueueReturnsTable({ slug }: { slug: string }) {
             ]
           : []),
       ] as ColumnDef<AccountingQueueReturn, unknown>[],
-    [access.canWrite, format, t, unmark],
+    [access.canWrite, format, slug, t, unmark],
   );
 
   const listState = useServerListState({

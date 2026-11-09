@@ -116,11 +116,65 @@ var returnTransitions = map[string]map[string][]grant{
 	},
 }
 
+// parentReturnTransitions is the state machine of a return the parent
+// opened for the child (TEC-1085). It starts approved (the parent is the
+// decider and the prices are frozen at creation); the parent may ship it
+// for the child, receive it after shipping, or ship and receive it in one
+// step (approved -> received), so the return works without a member of the
+// child:
+//
+//	approved -> shipped (giver or parent; transfer_out per unit)
+//	approved -> received (parent; transfer_out + transfer_in + accounting)
+//	approved -> cancelled (giver or parent; no movement)
+//	shipped -> received (parent; transfer_in + accounting reversal)
+//	shipped -> cancelled (giver or parent; transfer_cancel_restore)
+var parentReturnTransitions = map[string]map[string][]grant{
+	StatusApproved: {
+		StatusShipped:   {{PartySender, reqPerm}, {PartyParent, approvePerm}},
+		StatusReceived:  {{PartyParent, approvePerm}},
+		StatusCancelled: {{PartySender, reqPerm}, {PartyParent, approvePerm}},
+	},
+	StatusShipped: {
+		StatusReceived:  {{PartyParent, []string{rbac.PermTransfersApprove, rbac.PermTransfersRequest}}},
+		StatusCancelled: {{PartySender, reqPerm}, {PartyParent, approvePerm}},
+	},
+}
+
 func machine(kind string) map[string]map[string][]grant {
 	if kind == KindReturn {
 		return returnTransitions
 	}
 	return transitions
+}
+
+// requestMachine is the state machine of a stored request.
+func requestMachine(kind string, openedByParent bool) map[string]map[string][]grant {
+	if kind == KindReturn && openedByParent {
+		return parentReturnTransitions
+	}
+	return machine(kind)
+}
+
+// lookupRequestTransition returns the grants of from -> to of a stored
+// request (its kind and who opened it), or ok=false.
+func lookupRequestTransition(kind string, openedByParent bool, from, to string) ([]grant, bool) {
+	g, ok := requestMachine(kind, openedByParent)[from][to]
+	return g, ok
+}
+
+// availableRequestTransitions is availableKindTransitions for a stored
+// request.
+func availableRequestTransitions(kind string, openedByParent bool, from string, p Party, can func(slug string) bool) []string {
+	out := []string{}
+	if p == "" {
+		return out
+	}
+	for _, to := range Statuses {
+		if gs, ok := lookupRequestTransition(kind, openedByParent, from, to); ok && allowed(gs, p, can) {
+			out = append(out, to)
+		}
+	}
+	return out
 }
 
 // lookupTransition returns the grants of from -> to of a sibling transfer,

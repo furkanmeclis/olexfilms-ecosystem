@@ -51,12 +51,14 @@ const countAccountingQueueReturns = `-- name: CountAccountingQueueReturns :one
 SELECT COUNT(*)::bigint
 FROM stock_transfer_requests t
 JOIN organizations f ON f.id = t.from_org_id
+LEFT JOIN orders ro ON ro.id = t.order_id
 WHERE t.to_org_id = $1::bigint
   AND t.kind = 'return' AND t.status = 'received'
   AND ($2::bool IS NULL
        OR (t.accounting_processed_at IS NOT NULL) = $2::bool)
   AND ($3::text IS NULL
        OR t.transfer_no ILIKE $3::text || '%'
+       OR ro.order_no ILIKE $3::text || '%'
        OR f.name ILIKE '%' || $3::text || '%')
 `
 
@@ -119,16 +121,19 @@ SELECT t.uuid, t.transfer_no, t.currency, COALESCE(t.total::text, '')::text AS t
        t.accounting_processed_at, t.accounting_note,
        btrim(COALESCE(pu.name, '') || ' ' || COALESCE(pu.surname, ''))::text AS processed_by_name,
        f.uuid AS sender_uuid, f.name AS sender_name, f.type AS sender_type,
-       (SELECT COUNT(*) FROM stock_transfer_request_items i WHERE i.request_id = t.id)::bigint AS item_count
+       (SELECT COUNT(*) FROM stock_transfer_request_items i WHERE i.request_id = t.id)::bigint AS item_count,
+       ro.uuid AS order_uuid, ro.order_no AS order_no
 FROM stock_transfer_requests t
 JOIN organizations f ON f.id = t.from_org_id
 LEFT JOIN users pu ON pu.id = t.accounting_processed_by_user_id
+LEFT JOIN orders ro ON ro.id = t.order_id
 WHERE t.to_org_id = $1::bigint
   AND t.kind = 'return' AND t.status = 'received'
   AND ($2::bool IS NULL
        OR (t.accounting_processed_at IS NOT NULL) = $2::bool)
   AND ($3::text IS NULL
        OR t.transfer_no ILIKE $3::text || '%'
+       OR ro.order_no ILIKE $3::text || '%'
        OR f.name ILIKE '%' || $3::text || '%')
 ORDER BY
   CASE WHEN NOT $4::bool THEN CASE $5::text WHEN 'transfer_no' THEN t.transfer_no END END ASC,
@@ -164,10 +169,13 @@ type ListAccountingQueueReturnsRow struct {
 	SenderName            string             `json:"sender_name"`
 	SenderType            string             `json:"sender_type"`
 	ItemCount             int64              `json:"item_count"`
+	OrderUuid             pgtype.UUID        `json:"order_uuid"`
+	OrderNo               pgtype.Text        `json:"order_no"`
 }
 
 // processed: NULL every received return, true processed ones, false waiting.
 // sort_key received_at (default), transfer_no, processed_at; id tiebreak.
+// TEC-1085: the order the return refers to.
 func (q *Queries) ListAccountingQueueReturns(ctx context.Context, arg ListAccountingQueueReturnsParams) ([]ListAccountingQueueReturnsRow, error) {
 	rows, err := q.db.Query(ctx, listAccountingQueueReturns,
 		arg.OrganizationID,
@@ -199,6 +207,8 @@ func (q *Queries) ListAccountingQueueReturns(ctx context.Context, arg ListAccoun
 			&i.SenderName,
 			&i.SenderType,
 			&i.ItemCount,
+			&i.OrderUuid,
+			&i.OrderNo,
 		); err != nil {
 			return nil, err
 		}
