@@ -93,7 +93,16 @@ type Caller struct {
 	Principal authctx.Principal
 	Org       orgctx.Scope
 	Filter    scopefilter.Filter
+	// PriceGrant is set by a background job (list export) whose request
+	// snapshot already granted the price columns; request callers rely on
+	// the principal (TEC-1050).
+	PriceGrant bool
 }
+
+// SeesPrices reports whether the caller may see prices, totals and rates
+// (TEC-1050): a principal holding a rbac.PriceViewPermissions grant, or a
+// job that snapshotted one. Otherwise the views carry null money fields.
+func (c Caller) SeesPrices() bool { return c.PriceGrant || c.Principal.SeesPrices() }
 
 func (c Caller) actor() pgtype.Int8 {
 	if c.Principal.UserInternal == 0 {

@@ -239,6 +239,20 @@ export const ALL_PERMISSIONS: readonly PermissionSlug[] = Object.values(
   Permission,
 ).sort((a, b) => a.localeCompare(b));
 
+/**
+ * TEC-1050: any of these (any scope) lets the user see prices, amounts,
+ * totals and exchange rates at all; mirrors the backend
+ * `rbac.PriceViewPermissions`. Warehouse roles hold none, and the API
+ * returns those fields as null for them.
+ */
+export const PRICE_VIEW_PERMISSIONS: readonly PermissionSlug[] = [
+  Permission.PricingPurchaseRead,
+  Permission.PricingSaleRead,
+  Permission.PricingSaleWrite,
+  Permission.PricingRecommendedRead,
+  Permission.PricingRecommendedWrite,
+];
+
 const knownPermissionSet = new Set<string>(ALL_PERMISSIONS);
 
 export function isKnownPermission(slug: string): slug is PermissionSlug {

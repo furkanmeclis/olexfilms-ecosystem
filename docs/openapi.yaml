@@ -24953,7 +24953,14 @@ paths:
         (inclusive, order currency). The party filters only narrow the
         scoped set, so an organization outside the scope gives an empty
         list. An explicit sort, a date, party or total filter makes `q`
-        search Postgres instead of the index.
+        search Postgres instead of the index. TEC-1050: a caller without a
+        price permission (any of pricing.purchase.read, pricing.sale.read,
+        pricing.sale.write, pricing.recommended.read,
+        pricing.recommended.write; the warehouse roles hold none) gets
+        null money fields, and `total_min` / `total_max` and `sort=total`
+        are ignored for it. The same applies to every order response and
+        to `POST /v1/orders/export` (no currency / subtotal / tax / total
+        columns) and the order slip PDF (prices shown as "—").
       security:
         - bearerAuth: []
       parameters:
@@ -46240,17 +46247,17 @@ components:
         quantity: { type: [integer, "null"], description: Pieces (null for roll_meter products) }
         meters: { type: [string, "null"], description: Meters with two decimals (roll_meter products) }
         unit_price:
-          type: string
-          description: Buyer's purchase price (NUMERIC(14,4)); locked at approval
+          type: [string, "null"]
+          description: "Buyer's purchase price (NUMERIC(14,4)); locked at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
           example: "80.0000"
         price_source:
-          type: string
-          enum: [list, override, distributor_dealer, manual, missing]
-          description: manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024)
+          type: [string, "null"]
+          enum: [list, override, distributor_dealer, manual, missing, null]
+          description: "manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
         price_missing:
           type: boolean
-          description: The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024)
-        line_total: { type: string, example: "240.00" }
+          description: The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false when prices are hidden (TEC-1050)
+        line_total: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         assigned:
           type: string
@@ -46396,14 +46403,15 @@ components:
         seller: { $ref: "#/components/schemas/OrderOrgRef" }
         buyer: { $ref: "#/components/schemas/OrderOrgRef" }
         currency: { type: string, minLength: 3, maxLength: 3, description: Seller brand currency }
-        subtotal: { type: string, example: "240.00" }
-        tax_total: { type: string, example: "0.00" }
-        total: { type: string, example: "240.00" }
+        subtotal: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        tax_total: { type: [string, "null"], example: "0.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        total: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         rate_snapshot:
+          description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
           oneOf:
             - $ref: "#/components/schemas/OrderRateSnapshot"
             - type: "null"
-        try_rate: { type: [string, "null"], description: TRY rate frozen at approval }
+        try_rate: { type: [string, "null"], description: "TRY rate frozen at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         cancel_reason: { type: [string, "null"] }
         submitted_at: { type: [string, "null"], format: date-time }
@@ -47126,8 +47134,8 @@ components:
         product: { $ref: "#/components/schemas/OrderProductRef" }
         quantity: { type: [integer, "null"], description: Fixed barcode quantity }
         meters: { type: [string, "null"], description: Remaining meters of a roll when requested }
-        unit_price: { type: [string, "null"], description: Giver's purchase price frozen at approval (K13) }
-        line_total: { type: [string, "null"] }
+        unit_price: { type: [string, "null"], description: "Giver's purchase price frozen at approval (K13); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        line_total: { type: [string, "null"], description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         shipped: { type: boolean, description: The transfer_out movement is written }
         received: { type: boolean, description: The transfer_in movement is written }
         restored: { type: boolean, description: The transfer_cancel_restore movement is written }
@@ -47152,7 +47160,7 @@ components:
         receiver: { $ref: "#/components/schemas/OrderOrgRef" }
         parent: { $ref: "#/components/schemas/OrderOrgRef" }
         currency: { type: string }
-        total: { type: [string, "null"], description: Sum of the frozen line totals (null until approval or with an unpriced unit) }
+        total: { type: [string, "null"], description: "Sum of the frozen line totals (null until approval or with an unpriced unit); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         decision_note: { type: [string, "null"] }
         cancel_reason: { type: [string, "null"] }

@@ -54,13 +54,16 @@ func (s *Service) OrderSlip(ctx context.Context, c Caller, id uuid.UUID, lang, t
 	d := OrderSlipDoc{ShippingDoc: shipping, CreatedAt: o.CreatedAt.Time,
 		Status: i18n.Translate(loc, "orders.status."+o.Status), Currency: o.Currency,
 		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2), Notes: o.Note.String}
+	if !c.SeesPrices() {
+		d.hidePrices()
+	}
 	lh := d.Letterhead
 	vars := map[string]string{
 		"company_name": lh.CompanyName, "company_address": lh.Address, "company_phone": lh.Phone, "company_email": lh.Email, "company_website": lh.Website, "footer_text": lh.FooterText,
 		"company_logo":  pdfrender.ImageTag(lh.LogoMIME, lh.LogoBytes, lh.CompanyName),
 		"customer_name": d.Buyer.Name, "customer_phone": d.Buyer.Phone, "customer_email": d.Buyer.Email, "delivery_address": d.Buyer.Address,
 		"order_number": d.OrderNo, "order_date": pdfrender.IssuedAt(d.CreatedAt, d.Zone), "items_table": orderSlipItemsHTML(d),
-		"subtotal": d.Subtotal + " " + d.Currency, "tax_total": d.TaxTotal + " " + d.Currency, "total_amount": d.Total + " " + d.Currency, "currency": d.Currency,
+		"subtotal": slipMoney(d.Subtotal, d.Currency), "tax_total": slipMoney(d.TaxTotal, d.Currency), "total_amount": slipMoney(d.Total, d.Currency), "currency": d.Currency,
 		"order_status": d.Status, "notes": d.Notes, "seller_tax": d.Seller.TaxNo, "buyer_tax": d.Buyer.TaxNo, "issued_at": pdfrender.IssuedAt(d.GeneratedAt, d.Zone),
 	}
 	templates := documents.New(nil, s.q, s.store, s.pdf, nil, pdfrender.FontsEmbedded, s.log)
@@ -77,6 +80,26 @@ func (s *Service) OrderSlip(ctx context.Context, c Caller, id uuid.UUID, lang, t
 	return data, "order-slip-" + o.OrderNo + ".pdf", nil
 }
 
+// hidePrices blanks the money of the slip for a caller who may not see
+// prices (TEC-1050); the cells render as "—".
+func (d *OrderSlipDoc) hidePrices() {
+	d.Subtotal, d.TaxTotal, d.Total = "", "", ""
+	lines := make([]ShippingLine, len(d.Lines))
+	for i, l := range d.Lines {
+		l.UnitPrice, l.LineTotal = "", ""
+		lines[i] = l
+	}
+	d.Lines = lines
+}
+
+// slipMoney renders an amount with its currency; a blank amount is "—".
+func slipMoney(amount, currency string) string {
+	if amount == "" {
+		return "—"
+	}
+	return amount + " " + currency
+}
+
 func orderSlipItemsHTML(d OrderSlipDoc) string {
 	esc := html.EscapeString
 	var b strings.Builder
@@ -88,7 +111,7 @@ func orderSlipItemsHTML(d OrderSlipDoc) string {
 	for _, l := range d.Lines {
 		b.WriteString(`<tr>`)
 		// Orders store effective prices and aggregate tax only; do not infer historical discounts or VAT rates.
-		for _, v := range []string{l.Name, ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, l.UnitPrice + " " + d.Currency, "—", "—", l.LineTotal + " " + d.Currency} {
+		for _, v := range []string{l.Name, ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, slipMoney(l.UnitPrice, d.Currency), "—", "—", slipMoney(l.LineTotal, d.Currency)} {
 			b.WriteString(`<td>` + esc(v) + `</td>`)
 		}
 		b.WriteString(`</tr>`)
@@ -125,7 +148,7 @@ func OrderSlipHTML(d OrderSlipDoc) string {
 	}
 	b.WriteString(`</tr></table>` + orderSlipItemsHTML(d) + `<table class="doc-totals">`)
 	for _, m := range [][2]string{{t("subtotal"), d.Subtotal}, {t("vat"), d.TaxTotal}, {t("total"), d.Total}} {
-		b.WriteString(`<tr><th>` + esc(m[0]) + `</th><td dir="ltr">` + esc(m[1]+" "+d.Currency) + `</td></tr>`)
+		b.WriteString(`<tr><th>` + esc(m[0]) + `</th><td dir="ltr">` + esc(slipMoney(m[1], d.Currency)) + `</td></tr>`)
 	}
 	b.WriteString(`</table>`)
 	if d.Notes != "" {
