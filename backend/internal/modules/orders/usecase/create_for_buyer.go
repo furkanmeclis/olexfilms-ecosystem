@@ -51,8 +51,13 @@ func errNotChildDealer() error {
 // seller's approval leaves it (prices locked, rate frozen), so the warehouse
 // flow (preparing, unit assignment, ready, shipped, received) runs
 // unchanged. Prices never block: a typed unit price wins, otherwise the
-// dealer's purchase price, otherwise 0 marked missing.
+// dealer's purchase price, otherwise 0 marked missing. The warehouse staff
+// get orders.warehouse_new unless the creator prepares it himself
+// (SelfPrepare, TEC-1052).
 func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) (OrderView, error) {
+	if in.SelfPrepare && !c.can(rbac.PermOrdersShip) {
+		return OrderView{}, invalid("self_prepare", "needs orders.ship: only a user who prepares orders can prepare it himself")
+	}
 	buyerUUID, err := uuid.Parse(strings.TrimSpace(*in.BuyerOrgUUID))
 	if err != nil {
 		return OrderView{}, invalid("buyer_org_uuid", "must be a UUID")
@@ -133,6 +138,9 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if warehouse != nil {
 			meta["seller_warehouse"] = warehouse.Code
 		}
+		if in.SelfPrepare {
+			meta["self_prepare"] = true
+		}
 		if err := s.history(ctx, q, o, "", StatusApproved, c, nil, meta); err != nil {
 			return err
 		}
@@ -145,6 +153,11 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		}
 		if err := s.emitCreatedBySeller(ctx, q, tx, o, seller, buyer, c); err != nil {
 			return err
+		}
+		// TEC-1052: the creator prepares it himself; no warehouse staff
+		// (of this warehouse or another) is told.
+		if in.SelfPrepare {
+			return nil
 		}
 		return s.emitWarehouseNew(ctx, q, tx, o, warehouse, c)
 	})

@@ -27577,6 +27577,8 @@ export interface components {
              * @description TEC-1028: the center's active warehouse the order falls into (only with buyer_org_uuid, else 400). Omitted: the center's primary warehouse.
              */
             seller_warehouse_uuid?: string;
+            /** @description TEC-1052: the creating center user prepares the order himself (only with buyer_org_uuid, else 400; needs orders.ship, else 400; omitted: false). No orders.warehouse_new is written, so no warehouse staff (of the order's warehouse or another) is notified; the status history keeps self_prepare in its metadata. */
+            self_prepare?: boolean;
             items: components["schemas"]["OrderItemInput"][];
         };
         /** @enum {string} */

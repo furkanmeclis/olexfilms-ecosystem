@@ -187,6 +187,9 @@ type CreateInput struct {
 	// SellerWarehouseUUID: the center's warehouse the order falls into
 	// (TEC-1028, with BuyerOrgUUID); empty = the primary warehouse.
 	SellerWarehouseUUID *string
+	// SelfPrepare: the center user prepares the order himself (TEC-1052,
+	// with BuyerOrgUUID, needs orders.ship): no warehouse staff is told.
+	SelfPrepare bool
 }
 
 // DraftResult reports whether a stock-forecast draft reused an existing open
@@ -378,6 +381,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 	}
 	if in.SellerWarehouseUUID != nil && strings.TrimSpace(*in.SellerWarehouseUUID) != "" {
 		return OrderView{}, invalid("seller_warehouse_uuid", "is only accepted with buyer_org_uuid")
+	}
+	if in.SelfPrepare {
+		return OrderView{}, invalid("self_prepare", "is only accepted with buyer_org_uuid")
 	}
 	var created db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {

@@ -947,9 +947,24 @@ export function OrderDetailPage({
       ) : null}
       {assign && !fully ? <OrderScanBar order={order} /> : null}
       <OrderPlacementPanel slug={slug} order={order} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* TEC-1052 (5.10): while preparing, the lines (barcode assignment)
+          take the full width and the side cards move below them. */}
+      <div
+        className={
+          assign
+            ? "grid gap-6"
+            : "grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        }
+        data-testid="order-detail-layout"
+      >
         <Items order={order} assign={assign} />
-        <div className="space-y-6">
+        <div
+          className={
+            assign
+              ? "grid items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3"
+              : "space-y-6"
+          }
+        >
           <Parties order={order} />
           {order.status === "received" && order.role === "seller" ? (
             <InvoicesCard
