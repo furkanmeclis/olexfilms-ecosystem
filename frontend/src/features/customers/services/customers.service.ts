@@ -29,8 +29,9 @@ export type ListExportQuery = NonNullable<
 
 /**
  * GET /v1/customers params (TEC-163, TEC-371): `status` / `type` /
- * `organization_uuid` are CSV, `linked_from` / `linked_to` dates, `sort`
- * one of name, email, status, linked_at, first_service_at (`-` desc).
+ * `organization_uuid` / `opened_by_uuid` are CSV, `linked_from` /
+ * `linked_to` dates, `sort` one of name, email, status, linked_at,
+ * first_service_at, opened_by (`-` desc).
  */
 export type CustomerListQuery = {
   q?: string;
@@ -39,6 +40,8 @@ export type CustomerListQuery = {
   linked_from?: string;
   linked_to?: string;
   organization_uuid?: string;
+  /** TEC-1074: CSV of opening organizations (`opened_by`). */
+  opened_by_uuid?: string;
   sort?: string;
   limit: number;
   offset: number;

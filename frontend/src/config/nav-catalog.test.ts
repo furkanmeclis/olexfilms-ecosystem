@@ -48,3 +48,20 @@ describe("tenant nav: catalog labels (TEC-862)", () => {
     }
   });
 });
+
+describe("tenant nav: legacy order (TEC-1074)", () => {
+  const ids = tenantNav("acme").groups.map((g) => g.id);
+
+  it("puts services right after the home group", () => {
+    expect(ids.slice(0, 2)).toEqual(["tenant", "services"]);
+  });
+
+  it("keeps the service catalog with the catalog, below customers", () => {
+    const catalog = ids.indexOf("catalog");
+    expect(ids.indexOf("service-catalog")).toBe(
+      ids.indexOf("catalog-dealer") + 1,
+    );
+    expect(catalog).toBeGreaterThan(ids.indexOf("customers"));
+    expect(catalog).toBeGreaterThan(ids.indexOf("orders"));
+  });
+});

@@ -145,6 +145,13 @@ const SERVICE_WIZARD_PERMISSIONS = [
   permissions.vehicles.read,
 ];
 
+/**
+ * TEC-1074: group order follows the legacy olexfilms (Filament) panel so
+ * dealers recognise it after the switch: service management (services,
+ * warranties) first, then customers & orders, then product management
+ * (catalog, service catalog, stock), then the rest. The service catalog is
+ * a catalog page, not next to the services list.
+ */
 export function tenantNav(slug: string) {
   return defineNav({
     id: "tenant",
@@ -173,86 +180,6 @@ export function tenantNav(slug: string) {
           },
           // TEC-403: MCP / WhatsApp write tools waiting for approval.
           pendingActionsNavItem(slug),
-        ],
-      },
-      ...catalogNavGroups(slug),
-      {
-        // TEC-311: subscriptions (service_subscriptions.read) and the center
-        // cancellation queue (cancel_approve) live next to the catalog.
-        id: "service-catalog",
-        labelKey: "layout.nav_service_catalog",
-        icon: ClipboardList,
-        defaultOpen: true,
-        anyPermission: [
-          permissions.serviceCatalog.read,
-          permissions.serviceSubscriptions.read,
-        ],
-        feature: "service_catalog",
-        items: [
-          {
-            id: "service-catalog",
-            titleKey: "layout.nav_service_catalog",
-            href: routes.tenant.catalog.services(slug),
-            icon: ClipboardList,
-            permission: permissions.serviceCatalog.read,
-            feature: "service_catalog",
-          },
-          {
-            id: "service-subscriptions",
-            titleKey: "layout.nav_service_subscriptions",
-            href: routes.tenant.serviceSubscriptions.list(slug),
-            icon: Repeat,
-            permission: permissions.serviceSubscriptions.read,
-            feature: "service_catalog",
-          },
-          {
-            id: "service-subscription-cancels",
-            titleKey: "layout.nav_service_subscription_cancels",
-            href: routes.tenant.serviceSubscriptions.cancelRequests(slug),
-            icon: Inbox,
-            permission: permissions.serviceSubscriptions.cancelApprove,
-            feature: "service_catalog",
-            orgTypes: ["center"],
-          },
-        ],
-      },
-      {
-        id: "certificates",
-        labelKey: "certificates.nav",
-        icon: BadgeCheck,
-        defaultOpen: true,
-        anyPermission: [
-          permissions.certificates.read,
-          permissions.certificates.approveService,
-        ],
-        feature: "certificates",
-        items: [
-          {
-            id: "certificates-list",
-            titleKey: "certificates.nav_list",
-            href: routes.tenant.certificates.list(slug),
-            icon: BadgeCheck,
-            permission: permissions.certificates.read,
-            feature: "certificates",
-          },
-          {
-            id: "certificate-verification",
-            titleKey: "certificates.verification.nav",
-            href: routes.tenant.certificates.verification(slug),
-            icon: Inbox,
-            permission: permissions.certificates.verify,
-            feature: "certificates",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            id: "certificate-approvals",
-            titleKey: "certificates.approvals.nav",
-            href: routes.tenant.certificates.approvals(slug),
-            icon: ShieldCheck,
-            permission: permissions.certificates.approveService,
-            feature: "certificates",
-            orgTypes: ["center"],
-          },
         ],
       },
       {
@@ -320,6 +247,45 @@ export function tenantNav(slug: string) {
             permission: permissions.warrantyClaims.read,
             orgTypes: ["center", "distributor"],
             feature: "warranty_claims",
+          },
+        ],
+      },
+      {
+        id: "certificates",
+        labelKey: "certificates.nav",
+        icon: BadgeCheck,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.certificates.read,
+          permissions.certificates.approveService,
+        ],
+        feature: "certificates",
+        items: [
+          {
+            id: "certificates-list",
+            titleKey: "certificates.nav_list",
+            href: routes.tenant.certificates.list(slug),
+            icon: BadgeCheck,
+            permission: permissions.certificates.read,
+            feature: "certificates",
+          },
+          {
+            id: "certificate-verification",
+            titleKey: "certificates.verification.nav",
+            href: routes.tenant.certificates.verification(slug),
+            icon: Inbox,
+            permission: permissions.certificates.verify,
+            feature: "certificates",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "certificate-approvals",
+            titleKey: "certificates.approvals.nav",
+            href: routes.tenant.certificates.approvals(slug),
+            icon: ShieldCheck,
+            permission: permissions.certificates.approveService,
+            feature: "certificates",
+            orgTypes: ["center"],
           },
         ],
       },
@@ -469,6 +435,265 @@ export function tenantNav(slug: string) {
           },
         ],
       },
+      ...catalogNavGroups(slug),
+      {
+        // TEC-311: subscriptions (service_subscriptions.read) and the center
+        // cancellation queue (cancel_approve) live next to the catalog.
+        id: "service-catalog",
+        labelKey: "layout.nav_service_catalog",
+        icon: ClipboardList,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.serviceCatalog.read,
+          permissions.serviceSubscriptions.read,
+        ],
+        feature: "service_catalog",
+        items: [
+          {
+            id: "service-catalog",
+            titleKey: "layout.nav_service_catalog",
+            href: routes.tenant.catalog.services(slug),
+            icon: ClipboardList,
+            permission: permissions.serviceCatalog.read,
+            feature: "service_catalog",
+          },
+          {
+            id: "service-subscriptions",
+            titleKey: "layout.nav_service_subscriptions",
+            href: routes.tenant.serviceSubscriptions.list(slug),
+            icon: Repeat,
+            permission: permissions.serviceSubscriptions.read,
+            feature: "service_catalog",
+          },
+          {
+            id: "service-subscription-cancels",
+            titleKey: "layout.nav_service_subscription_cancels",
+            href: routes.tenant.serviceSubscriptions.cancelRequests(slug),
+            icon: Inbox,
+            permission: permissions.serviceSubscriptions.cancelApprove,
+            feature: "service_catalog",
+            orgTypes: ["center"],
+          },
+        ],
+      },
+      {
+        // TEC-224: the dealer's own stock (K12: units, no bins or counts);
+        // same gates as /v1/stock/organizations/{uuid}/units (stock.read
+        // and the stock module). A distributor reads its dealers too.
+        // TEC-763: the center gets its stock list (by product and unit) and
+        // every type the reclassification requests (/v1/stock/
+        // reclassifications, stock.read).
+        id: "stock",
+        labelKey: "stock.nav",
+        icon: Boxes,
+        defaultOpen: true,
+        permission: permissions.stock.read,
+        feature: "stock",
+        orgTypes: ["center", "distributor", "dealer"],
+        items: [
+          {
+            id: "stock-mine",
+            titleKey: "stock.nav_mine",
+            href: routes.tenant.stock.root(slug),
+            icon: Boxes,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["distributor", "dealer"],
+          },
+          {
+            id: "stock-center",
+            titleKey: "stock.nav_center",
+            href: routes.tenant.stock.root(slug),
+            icon: Boxes,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center"],
+          },
+          {
+            id: "stock-reclassifications",
+            titleKey: "stock.nav_reclassifications",
+            href: routes.tenant.stock.reclassifications(slug),
+            icon: Replace,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center", "distributor", "dealer"],
+          },
+          {
+            // TEC-764: stock settings › label templates (center and
+            // distributor print labels, K12; same gates as
+            // /v1/stock/label-templates).
+            id: "stock-label-templates",
+            titleKey: "stock.nav_label_templates",
+            href: routes.tenant.stock.labelTemplates(slug),
+            icon: Tags,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center", "distributor"],
+          },
+        ],
+      },
+      {
+        // TEC-197: stock transfer requests between sibling dealers or
+        // distributors (K13); same gates as /v1/stock-transfers (the
+        // dealer_transfers module and transfers.request or
+        // transfers.approve). A new request needs transfers.request and is
+        // made by a dealer or a distributor.
+        id: "transfers",
+        labelKey: "transfers.nav",
+        icon: ArrowLeftRight,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.transfers.request,
+          permissions.transfers.approve,
+        ],
+        feature: "dealer_transfers",
+        items: [
+          {
+            id: "transfers-list",
+            titleKey: "transfers.nav_list",
+            href: routes.tenant.transfers.list(slug),
+            icon: ArrowLeftRight,
+            anyPermission: [
+              permissions.transfers.request,
+              permissions.transfers.approve,
+            ],
+            feature: "dealer_transfers",
+          },
+          {
+            id: "transfers-new",
+            titleKey: "transfers.nav_new",
+            href: routes.tenant.transfers.create(slug),
+            icon: Package,
+            permission: permissions.transfers.request,
+            orgTypes: ["distributor", "dealer"],
+            feature: "dealer_transfers",
+          },
+        ],
+      },
+      {
+        // TEC-755: stock forecast add-on (same gates as /v1/stock-forecasts:
+        // the stock_forecast module and stock_forecast.read). Its own group,
+        // so the center (network demand) and staff without stock.read reach
+        // it too.
+        id: "stock-forecast",
+        labelKey: "stock_forecast.nav",
+        icon: TrendingUp,
+        defaultOpen: true,
+        permission: permissions.stockForecast.read,
+        feature: "stock_forecast",
+        orgTypes: ["center", "distributor", "dealer"],
+        items: [
+          {
+            id: "stock-forecast",
+            titleKey: "stock_forecast.nav",
+            href: routes.tenant.stockForecast.list(slug),
+            icon: TrendingUp,
+            permission: permissions.stockForecast.read,
+            feature: "stock_forecast",
+            orgTypes: ["center", "distributor", "dealer"],
+          },
+        ],
+      },
+      {
+        // TEC-231: the full warehouse of the center and the distributor
+        // (K12; a dealer has "My stock"). Same gates as /v1/warehouse/*
+        // (warehouse.read and the warehouse module). Barcode batches are
+        // center only (K14, stock.read like /v1/stock/barcodes). TEC-232
+        // adds transfers, counts and end of day to this group.
+        id: "warehouse",
+        labelKey: "warehouse.nav",
+        icon: Warehouse,
+        defaultOpen: true,
+        permission: permissions.warehouse.read,
+        feature: "warehouse",
+        orgTypes: ["center", "distributor"],
+        items: [
+          {
+            id: "warehouse-locations",
+            titleKey: "warehouse.nav_locations",
+            href: routes.tenant.warehouse.locations(slug),
+            icon: FolderTree,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-scan",
+            titleKey: "warehouse.nav_scan",
+            href: routes.tenant.warehouse.scan(slug),
+            icon: ScanLine,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-entries",
+            titleKey: "warehouse.nav_entries",
+            href: routes.tenant.warehouse.entries(slug),
+            icon: PackagePlus,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            // TEC-1006: units of a warehouse with the ones that left it.
+            id: "warehouse-units",
+            titleKey: "warehouse.nav_units",
+            href: routes.tenant.warehouse.units(slug),
+            icon: Boxes,
+            permission: [permissions.warehouse.read, permissions.stock.read],
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            // TEC-1008: bulk barcode operations (super_admin: stock.bulk).
+            id: "warehouse-bulk",
+            titleKey: "warehouse.nav_bulk",
+            href: routes.tenant.warehouse.bulk(slug),
+            icon: Layers,
+            permission: permissions.stock.bulk,
+            feature: "warehouse",
+            orgTypes: ["center"],
+          },
+          {
+            id: "warehouse-barcodes",
+            titleKey: "warehouse.nav_barcodes",
+            href: routes.tenant.warehouse.barcodes(slug),
+            icon: Barcode,
+            permission: [permissions.warehouse.read, permissions.stock.read],
+            feature: "warehouse",
+            orgTypes: ["center"],
+          },
+          // TEC-232 (slice 2): transfers, counts, end of day.
+          {
+            id: "warehouse-transfers",
+            titleKey: "warehouse.nav_transfers",
+            href: routes.tenant.warehouse.transfers(slug),
+            icon: ArrowLeftRight,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-counts",
+            titleKey: "warehouse.nav_counts",
+            href: routes.tenant.warehouse.counts(slug),
+            icon: ClipboardCheck,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "warehouse-end-of-day",
+            titleKey: "warehouse.nav_end_of_day",
+            href: routes.tenant.warehouse.endOfDay(slug),
+            icon: Sunset,
+            permission: permissions.warehouse.read,
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+        ],
+      },
       // TEC-349: staff cards, payments and the own-book reports.
       staffReportsNavGroup(slug),
       {
@@ -531,124 +756,6 @@ export function tenantNav(slug: string) {
       },
       // TEC-348: dealer sale prices, quick sale, suppliers, purchases.
       dealerSalesNavGroup(slug),
-      {
-        // TEC-197: stock transfer requests between sibling dealers or
-        // distributors (K13); same gates as /v1/stock-transfers (the
-        // dealer_transfers module and transfers.request or
-        // transfers.approve). A new request needs transfers.request and is
-        // made by a dealer or a distributor.
-        id: "transfers",
-        labelKey: "transfers.nav",
-        icon: ArrowLeftRight,
-        defaultOpen: true,
-        anyPermission: [
-          permissions.transfers.request,
-          permissions.transfers.approve,
-        ],
-        feature: "dealer_transfers",
-        items: [
-          {
-            id: "transfers-list",
-            titleKey: "transfers.nav_list",
-            href: routes.tenant.transfers.list(slug),
-            icon: ArrowLeftRight,
-            anyPermission: [
-              permissions.transfers.request,
-              permissions.transfers.approve,
-            ],
-            feature: "dealer_transfers",
-          },
-          {
-            id: "transfers-new",
-            titleKey: "transfers.nav_new",
-            href: routes.tenant.transfers.create(slug),
-            icon: Package,
-            permission: permissions.transfers.request,
-            orgTypes: ["distributor", "dealer"],
-            feature: "dealer_transfers",
-          },
-        ],
-      },
-      {
-        // TEC-224: the dealer's own stock (K12: units, no bins or counts);
-        // same gates as /v1/stock/organizations/{uuid}/units (stock.read
-        // and the stock module). A distributor reads its dealers too.
-        // TEC-763: the center gets its stock list (by product and unit) and
-        // every type the reclassification requests (/v1/stock/
-        // reclassifications, stock.read).
-        id: "stock",
-        labelKey: "stock.nav",
-        icon: Boxes,
-        defaultOpen: true,
-        permission: permissions.stock.read,
-        feature: "stock",
-        orgTypes: ["center", "distributor", "dealer"],
-        items: [
-          {
-            id: "stock-mine",
-            titleKey: "stock.nav_mine",
-            href: routes.tenant.stock.root(slug),
-            icon: Boxes,
-            permission: permissions.stock.read,
-            feature: "stock",
-            orgTypes: ["distributor", "dealer"],
-          },
-          {
-            id: "stock-center",
-            titleKey: "stock.nav_center",
-            href: routes.tenant.stock.root(slug),
-            icon: Boxes,
-            permission: permissions.stock.read,
-            feature: "stock",
-            orgTypes: ["center"],
-          },
-          {
-            id: "stock-reclassifications",
-            titleKey: "stock.nav_reclassifications",
-            href: routes.tenant.stock.reclassifications(slug),
-            icon: Replace,
-            permission: permissions.stock.read,
-            feature: "stock",
-            orgTypes: ["center", "distributor", "dealer"],
-          },
-          {
-            // TEC-764: stock settings › label templates (center and
-            // distributor print labels, K12; same gates as
-            // /v1/stock/label-templates).
-            id: "stock-label-templates",
-            titleKey: "stock.nav_label_templates",
-            href: routes.tenant.stock.labelTemplates(slug),
-            icon: Tags,
-            permission: permissions.stock.read,
-            feature: "stock",
-            orgTypes: ["center", "distributor"],
-          },
-        ],
-      },
-      {
-        // TEC-755: stock forecast add-on (same gates as /v1/stock-forecasts:
-        // the stock_forecast module and stock_forecast.read). Its own group,
-        // so the center (network demand) and staff without stock.read reach
-        // it too.
-        id: "stock-forecast",
-        labelKey: "stock_forecast.nav",
-        icon: TrendingUp,
-        defaultOpen: true,
-        permission: permissions.stockForecast.read,
-        feature: "stock_forecast",
-        orgTypes: ["center", "distributor", "dealer"],
-        items: [
-          {
-            id: "stock-forecast",
-            titleKey: "stock_forecast.nav",
-            href: routes.tenant.stockForecast.list(slug),
-            icon: TrendingUp,
-            permission: permissions.stockForecast.read,
-            feature: "stock_forecast",
-            orgTypes: ["center", "distributor", "dealer"],
-          },
-        ],
-      },
       {
         // TEC-489: efficiency and waste analysis add-on (same gates as
         // /v1/efficiency/*: the efficiency module and efficiency.read).
@@ -802,106 +909,6 @@ export function tenantNav(slug: string) {
             icon: Plus,
             permission: permissions.tasks.write,
             orgTypes: ["center"],
-          },
-        ],
-      },
-      {
-        // TEC-231: the full warehouse of the center and the distributor
-        // (K12; a dealer has "My stock"). Same gates as /v1/warehouse/*
-        // (warehouse.read and the warehouse module). Barcode batches are
-        // center only (K14, stock.read like /v1/stock/barcodes). TEC-232
-        // adds transfers, counts and end of day to this group.
-        id: "warehouse",
-        labelKey: "warehouse.nav",
-        icon: Warehouse,
-        defaultOpen: true,
-        permission: permissions.warehouse.read,
-        feature: "warehouse",
-        orgTypes: ["center", "distributor"],
-        items: [
-          {
-            id: "warehouse-locations",
-            titleKey: "warehouse.nav_locations",
-            href: routes.tenant.warehouse.locations(slug),
-            icon: FolderTree,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            id: "warehouse-scan",
-            titleKey: "warehouse.nav_scan",
-            href: routes.tenant.warehouse.scan(slug),
-            icon: ScanLine,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            id: "warehouse-entries",
-            titleKey: "warehouse.nav_entries",
-            href: routes.tenant.warehouse.entries(slug),
-            icon: PackagePlus,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            // TEC-1006: units of a warehouse with the ones that left it.
-            id: "warehouse-units",
-            titleKey: "warehouse.nav_units",
-            href: routes.tenant.warehouse.units(slug),
-            icon: Boxes,
-            permission: [permissions.warehouse.read, permissions.stock.read],
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            // TEC-1008: bulk barcode operations (super_admin: stock.bulk).
-            id: "warehouse-bulk",
-            titleKey: "warehouse.nav_bulk",
-            href: routes.tenant.warehouse.bulk(slug),
-            icon: Layers,
-            permission: permissions.stock.bulk,
-            feature: "warehouse",
-            orgTypes: ["center"],
-          },
-          {
-            id: "warehouse-barcodes",
-            titleKey: "warehouse.nav_barcodes",
-            href: routes.tenant.warehouse.barcodes(slug),
-            icon: Barcode,
-            permission: [permissions.warehouse.read, permissions.stock.read],
-            feature: "warehouse",
-            orgTypes: ["center"],
-          },
-          // TEC-232 (slice 2): transfers, counts, end of day.
-          {
-            id: "warehouse-transfers",
-            titleKey: "warehouse.nav_transfers",
-            href: routes.tenant.warehouse.transfers(slug),
-            icon: ArrowLeftRight,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            id: "warehouse-counts",
-            titleKey: "warehouse.nav_counts",
-            href: routes.tenant.warehouse.counts(slug),
-            icon: ClipboardCheck,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
-          },
-          {
-            id: "warehouse-end-of-day",
-            titleKey: "warehouse.nav_end_of_day",
-            href: routes.tenant.warehouse.endOfDay(slug),
-            icon: Sunset,
-            permission: permissions.warehouse.read,
-            feature: "warehouse",
-            orgTypes: ["center", "distributor"],
           },
         ],
       },

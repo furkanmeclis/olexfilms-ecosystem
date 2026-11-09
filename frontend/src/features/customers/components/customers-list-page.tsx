@@ -86,7 +86,8 @@ function summaryAccessInput(c: CustomerSummary) {
 /**
  * Tenant > Customers (TEC-163, TEC-372): server DataTable over
  * GET /v1/customers with sort, status / type facets, linked date range,
- * organization filter (center / distributor), `q`, the detail actions per
+ * organization and opening organization (TEC-1074) filters (center /
+ * distributor), `q`, the detail actions per
  * row and the list export with the same filters and sort. Mobile shows
  * cards.
  */
@@ -222,6 +223,21 @@ export function CustomersListPage({ slug }: { slug: string }) {
                 : "—"}
             </span>
           ),
+        }),
+        // TEC-1074: the organization that opened the customer (first link
+        // inside the scope); a dealer only ever sees itself, so it is hidden
+        // there by default.
+        createColumn<CustomerSummary>({
+          id: "opened_by",
+          accessorFn: (row) => row.opened_by?.name ?? "",
+          labelKey: "customers.fields.opened_by",
+          enableSorting: true,
+          defaultHidden: !canFilterOrg,
+          filterVariant: "faceted",
+          filterOptions: orgOptions,
+          enableColumnFilter: canFilterOrg && orgOptions.length > 0,
+          param: "opened_by_uuid",
+          cell: ({ row }) => row.original.opened_by?.name ?? "—",
         }),
         // Filter only: the row carries no organization (TEC-371 matches
         // customers linked to the chosen organizations, inside the scope).
