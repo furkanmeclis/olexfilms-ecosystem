@@ -18,7 +18,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000172 | TEC-1070 | organizations fatura kolonları + iade kuyruğu |
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 | 000174 | TEC-1058 | order_items.plotter_cut |
-| 000175 | TEC-1076 | yalnız gerekirse |
+| 000175 | TEC-1076 | KULLANILMADI (boşluk) |
 | 000176 | TEC-1089 [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | center_sales rolü, dist. depo/muhasebe izinleri |
 | 000177 | RV-Karar iade | stock_transfer_requests.order_id (planlı) |
 
@@ -43,7 +43,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
 | 5 + 5.1 Mobil | TEC-1055 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) | 🟢 | — | kartta depo/adet/USD+TL/görevli; direkt ürün listesi; marka+SKU+stok |
 | 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | [#521](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/521) | 🟢 | — | #518 üstünde; sevk öncesi satış+depo düzenler, atanmış altına 409 |
-| 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
+| 5.5 + 5.9 Mobil | TEC-1057 | | | — | ⏳ mobil paket 4a |
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | [#524](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/524) | 🟢 | 000174 | #521 üstünde; kalem anahtarı + PATCH, aylık rapor `orders.plotter_cut` |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) (5.4.1) | 🟢 | — | hareket geçmişi tamam; plotter sonraki mobil pakette |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
@@ -82,7 +82,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 9 + 9.1 + 9.2 Web sihirbaz | TEC-1076 | | | 000175? | ⏳ |
+| 9 + 9.1 + 9.2 Web sihirbaz | TEC-1076 | [#527](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/527) | 🟢 | — | hizmet no son adımda; çoklu parça + gövde; ürün bölgeden sonra; sözleşmede ürün tablosu; TEC-1082 ek fotoğraf |
 | 9.3 Mobil gövde tekrar seçimi | TEC-1077 | [#525](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/525) | 🟢 | — | bölge bir kez seçilir, özet görseli |
 
 ## 7. Metrajlı çıkış
