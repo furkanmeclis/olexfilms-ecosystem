@@ -15,6 +15,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000169 | TEC-1062 | bekleme havuzu |
 | 000170 | TEC-1054 / TEC-1060 | yalnız gerekirse |
 | 000171 | TEC-1061 | products.dealer_orderable |
+| 000172 | TEC-1070 | cari muhasebe bilgileri (gerekirse) |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -56,21 +57,21 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 7.1 Web depo ana sayfası | TEC-1066 | | | | ⏸ |
+| 7.1 Web depo ana sayfası | TEC-1066 | | | — | ⏳ #512 üstünde |
 | 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | | | | ⏸ |
 | 5.8 Mobil satış görevlisi | TEC-1068 | | | | ⏸ |
 | 6 Mobil stok depo filtresi | TEC-1069 | | | | ⏸ |
-| 8 + 8.1 Web+API muhasebe | TEC-1070 | | | | ⏸ |
+| 8 + 8.1 Web+API muhasebe | TEC-1070 | | | 000172? | ⏳ #512 üstünde |
 | 8.1 Mobil muhasebe kuyruğu | TEC-1071 | | | | ⏸ |
 
 ## 5. Merkez ekranları
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 1 Web+API genel bakış | TEC-1072 | | | | ⏳ |
+| 1 Web+API genel bakış | TEC-1072 | [#516](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/516) | 🟢 | — | dönem seçici, en çok kullanılan ürün grafiği, distribütör sayısı |
 | 1.1 + 3.1 Mobil | TEC-1073 | | | | ⏸ |
-| 2 + 4 Web menü, Müşteriler ve Araçlar | TEC-1074 | | | | ⏳ |
-| 3 Web+API hizmet listesi | TEC-1075 | | | | ⏳ |
+| 2 + 4 Web menü, Müşteriler ve Araçlar | TEC-1074 | [#512](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/512) | 🟢 | — | legacy sıra; "açan bayi" = ilk müşteri-org bağlantısı (varsayım) |
+| 3 Web+API hizmet listesi | TEC-1075 | [#513](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/513) | 🟢 | — | stats ucu; defaultHidden kök nedeni useDataTable (genel düzeltme); "Olex Merkez" = TEC-1003 veri durumu, artık servis noktası adı |
 
 ## 6. Hizmet oluşturma
 
@@ -110,6 +111,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **9.3? (TEC-1083):** mobilde sözleşme — öneri: açılışta sonradan tamamlama, sonra tam adım.
 - **5.7 dist. (TEC-1081):** distribütör bazlı görünürlük ilk geçişte gerekli mi?
 - **5.4 (TEC-1050):** `dealer_staff` ve `center_service` (AFM Florya hizmet personeli) rollerinde `pricing.*` izni yok → artık sipariş tutarı görmüyorlar (design.md "staff fiyat görmez" ile uyumlu). Görmeleri gerekiyorsa rol paketine fiyat okuma izni eklenir (migration).
+- **3 (TEC-1075):** Merkez hizmet listesi varsayılan "Kendi" görünümünde açılıyor; "Ağ" varsayılan olsun mu?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
