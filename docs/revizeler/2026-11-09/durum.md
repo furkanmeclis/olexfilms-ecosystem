@@ -62,10 +62,10 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 1 Web+API genel bakış | TEC-1072 | | | | ⏸ |
+| 1 Web+API genel bakış | TEC-1072 | | | | ⏳ |
 | 1.1 + 3.1 Mobil | TEC-1073 | | | | ⏸ |
-| 2 + 4 Web menü, Müşteriler ve Araçlar | TEC-1074 | | | | ⏸ |
-| 3 Web+API hizmet listesi | TEC-1075 | | | | ⏸ |
+| 2 + 4 Web menü, Müşteriler ve Araçlar | TEC-1074 | | | | ⏳ |
+| 3 Web+API hizmet listesi | TEC-1075 | | | | ⏳ |
 
 ## 6. Hizmet oluşturma
 
@@ -85,19 +85,26 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 
 | Madde | Linear | Durum |
 | --- | --- | --- |
-| Bayi/Distribütör, Olex Merkez = AFM Florya, Florya'dan AFM Florya'ya sipariş | TEC-1080 | 🟡 analiz ⏳ |
-| 5.7 distribütör bazlı | TEC-1081 | 🟡 analiz ⏳ |
-| 9.2 sözleşme ek fotoğraf | TEC-1082 | 🟡 analiz ⏳ |
-| 9.3? mobil araç kabul / sözleşme | TEC-1083 | 🟡 analiz ⏳ |
-| Kodların kredili kullanımı | TEC-1084 | 🟡 analiz ⏳ |
-| İadelerin oluşturulması (kapsam) | TEC-1085 | 🟡 analiz ⏳ |
-| 5.1 dipnot metrajlı sipariş yolu | TEC-1086 | 🟡 analiz ⏳ |
-| 7.4 mobil Yeni Giriş (ertelendi) | TEC-1087 | 🟡 analiz ⏳ |
-| Kapatılabilecek modüller (sunucuda hiçbir şey kapatılmadı) | TEC-1088 | 🟡 analiz ⏳ |
+| Bayi/Distribütör, Olex Merkez = AFM Florya, Florya'dan AFM Florya'ya sipariş | TEC-1080 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| 5.7 distribütör bazlı | TEC-1081 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| 9.2 sözleşme ek fotoğraf | TEC-1082 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| 9.3? mobil araç kabul / sözleşme | TEC-1083 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| Kodların kredili kullanımı | TEC-1084 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| İadelerin oluşturulması (kapsam) | TEC-1085 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| 5.1 dipnot metrajlı sipariş yolu | TEC-1086 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| 7.4 mobil Yeni Giriş (ertelendi) | TEC-1087 | 🟡 analiz Linear yorumunda, karar bekliyor |
+| Kapatılabilecek modüller (sunucuda hiçbir şey kapatılmadı) | TEC-1088 | 🟡 analiz Linear yorumunda, karar bekliyor |
 
 ## Açık sorular
 
-(İşler ilerledikçe eklenecek.)
+- **K0 (TEC-1080):** AFM Florya ayrı bayi mi olsun? Öneri 1b (yeni bayi org'u aç, eski veri merkezde kalsın) veya 1a (org-merge undo). Kök neden: AFM Florya TEC-1003 ile merkeze birleşti; sipariş alıcısı olarak seçilebilecek org yok, alıcı=satıcı=merkez olunca cari oluşmuyor.
+- **Metraj (TEC-1078):** ondalık metre `2.5M` mi `250CM` mi? Aynı metrede ikinci kesim `-3M-2` uygun mu? (Varsayım: 2.5M ve -3M-2.)
+- **Modüller (TEC-1088):** hangi modüller geçici kapatılsın? Liste Linear'da; sunucuda hiçbir şey kapatılmadı.
+- **İade (TEC-1085):** merkezin bayi adına iade açması + iadenin siparişe bağlanması açılıştan önce mi?
+- **Kredi (TEC-1084):** "kredili kod" = veresiye kod kullanımı mı, kredi paketi mi?
+- **9.3? (TEC-1083):** mobilde sözleşme — öneri: açılışta sonradan tamamlama, sonra tam adım.
+- **5.7 dist. (TEC-1081):** distribütör bazlı görünürlük ilk geçişte gerekli mi?
+- **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
 
