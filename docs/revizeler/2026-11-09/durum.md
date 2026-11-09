@@ -10,10 +10,11 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | No | İş | Not |
 | --- | --- | --- |
 | 000166 | TEC-1047 / TEC-1052 | KULLANILMADI (boşluk) |
-| 000167 | TEC-1050 | yalnız gerekirse |
+| 000167 | TEC-1050 | KULLANILMADI (boşluk) |
 | 000168 | TEC-1052 | KULLANILMADI (boşluk) |
 | 000169 | TEC-1062 | bekleme havuzu |
 | 000170 | TEC-1054 / TEC-1060 | yalnız gerekirse |
+| 000171 | TEC-1061 | products.dealer_orderable |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -23,7 +24,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | --- | --- | --- | --- | --- | --- |
 | 7.5 Web+API sabit barkodlu ürün siparişe eklenemiyor | TEC-1047 | [#508](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/508) | 🟢 | — | kök neden: hazırlamada adetsiz okutma 400, tekrar okutma 409, öneri yalnız konumlu adet; üçü düzeltildi |
 | 5.2 + 5.10 Web+API depo seçimi, bildirim, aramasız ürün listesi, KALEMLER | TEC-1052 | [#510](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/510) | 🟢 | — | #508 üstünde; `self_prepare` ("ben hazırlayacağım") eklendi; ürün popülerlik sıralaması üründe yok, ada göre |
-| 5.4 Web+API depo fiyat görmesin | TEC-1050 | | | | ⏳ |
+| 5.4 Web+API depo fiyat görmesin | TEC-1050 | [#511](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/511) | 🟢 | — | izin tabanlı `SeesPrices()`; sipariş, transfer, export, fiş; dealer_staff/center_service de artık fiyat görmüyor (soru) |
 | 7 Mobil depo değişince birimler | TEC-1049 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 kök neden: depo seçimi hiçbir listeye gitmiyordu; sipariş listesi depo filtresi backend'de yok → TEC-1054 |
 | 7.5 Mobil | TEC-1048 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 mobil UI engeli yok; depo hazırlamada adet/SKU okutma düzeltildi |
 | 5.2.1 Mobil depo seçimi | TEC-1053 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 depo seçimi eklendi; "kendim hazırlayacağım" API'si TEC-1052'den sonra |
@@ -40,7 +41,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | | ⏸ |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | 000170? | ⏳ TEC-1054 üstünde |
-| 5.7 Web+API siparişe açık ürün | TEC-1061 | | | | ⏸ |
+| 5.7 Web+API siparişe açık ürün | TEC-1061 | | | 000171 | ⏳ #510 üstünde |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | | | 000169 | ⏳ |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
 
@@ -108,6 +109,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **Kredi (TEC-1084):** "kredili kod" = veresiye kod kullanımı mı, kredi paketi mi?
 - **9.3? (TEC-1083):** mobilde sözleşme — öneri: açılışta sonradan tamamlama, sonra tam adım.
 - **5.7 dist. (TEC-1081):** distribütör bazlı görünürlük ilk geçişte gerekli mi?
+- **5.4 (TEC-1050):** `dealer_staff` ve `center_service` (AFM Florya hizmet personeli) rollerinde `pricing.*` izni yok → artık sipariş tutarı görmüyorlar (design.md "staff fiyat görmez" ile uyumlu). Görmeleri gerekiyorsa rol paketine fiyat okuma izni eklenir (migration).
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
