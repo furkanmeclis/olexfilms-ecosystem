@@ -105,5 +105,6 @@
   "settings_group_ai": "AI",
   "settings_group_accounts": "Accounts",
   "nav_team_new": "Add staff",
-  "nav_dealer_new": "New dealer"
+  "nav_dealer_new": "New dealer",
+  "nav_dealer_pool": "Waiting pool"
 }

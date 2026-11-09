@@ -105,5 +105,6 @@
   "settings_group_ai": "IA",
   "settings_group_accounts": "Cuentas",
   "nav_team_new": "Añadir empleado",
-  "nav_dealer_new": "Nuevo distribuidor"
+  "nav_dealer_new": "Nuevo distribuidor",
+  "nav_dealer_pool": "Lista de espera"
 }

@@ -404,6 +404,15 @@ export function tenantSettingsNav(slug: string): NavCatalog {
             permission: permissions.organizations.tenantWrite,
             orgTypes: ["center", "distributor"],
           },
+          {
+            // TEC-1062: recipients opened from the order form.
+            id: "dealer-pool",
+            titleKey: "layout.nav_dealer_pool",
+            href: routes.tenant.settings.dealerPool(slug),
+            icon: Store,
+            permission: permissions.organizations.tenantRead,
+            orgTypes: ["center"],
+          },
         ],
       },
       {

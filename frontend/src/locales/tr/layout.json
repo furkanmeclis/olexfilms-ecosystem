@@ -105,5 +105,6 @@
   "settings_group_ai": "Yapay zekâ",
   "settings_group_accounts": "Hesaplar",
   "nav_team_new": "Personel ekle",
-  "nav_dealer_new": "Yeni bayi"
+  "nav_dealer_new": "Yeni bayi",
+  "nav_dealer_pool": "Bekleme havuzu"
 }

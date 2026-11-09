@@ -2387,6 +2387,21 @@ type PartConsumptionExpectation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PendingRecipient struct {
+	ID               int64              `json:"id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	RecipientOrgID   int64              `json:"recipient_org_id"`
+	Kind             string             `json:"kind"`
+	State            string             `json:"state"`
+	Note             pgtype.Text        `json:"note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	ResolvedByUserID pgtype.Int8        `json:"resolved_by_user_id"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PerformanceMetricsMonthly struct {
 	ID             int64              `json:"id"`
 	OrganizationID int64              `json:"organization_id"`

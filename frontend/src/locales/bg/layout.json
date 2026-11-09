@@ -105,5 +105,6 @@
   "settings_group_ai": "ИИ",
   "settings_group_accounts": "Акаунти",
   "nav_team_new": "Добавяне на служител",
-  "nav_dealer_new": "Нов дилър"
+  "nav_dealer_new": "Нов дилър",
+  "nav_dealer_pool": "Чакащ пул"
 }

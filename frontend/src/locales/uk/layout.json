@@ -105,5 +105,6 @@
   "settings_group_ai": "ШІ",
   "settings_group_accounts": "Облікові записи",
   "nav_team_new": "Додати працівника",
-  "nav_dealer_new": "Новий дилер"
+  "nav_dealer_new": "Новий дилер",
+  "nav_dealer_pool": "Пул очікування"
 }

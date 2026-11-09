@@ -111,6 +111,17 @@ func RegisterRoutes(
 		require(rbac.PermMembersWrite)))
 	mux.Handle("POST /v1/tenant/dealers", middleware.Chain(http.HandlerFunc(h.TenantCreateDealer), authn, requireOrg,
 		require(rbac.PermOrganizationsWrite)))
+	// TEC-1062: the center's waiting pool of recipients. Whoever opens
+	// orders (orders.write) may add a recipient from the order form; turning
+	// one into a dealer opens an account (organizations.write).
+	mux.Handle("POST /v1/tenant/pending-recipients", middleware.Chain(http.HandlerFunc(h.TenantCreatePendingRecipient),
+		authn, requireOrg, middleware.RequireAnyPermission(rbac.PermOrganizationsWrite, rbac.PermOrdersWrite)))
+	mux.Handle("GET /v1/tenant/pending-recipients", middleware.Chain(http.HandlerFunc(h.TenantListPendingRecipients),
+		authn, requireOrg, middleware.RequireAnyPermission(rbac.PermOrganizationsRead, rbac.PermOrdersWrite)))
+	mux.Handle("POST /v1/tenant/pending-recipients/{uuid}/convert", middleware.Chain(
+		http.HandlerFunc(h.TenantConvertPendingRecipient), authn, requireOrg, require(rbac.PermOrganizationsWrite)))
+	mux.Handle("POST /v1/tenant/pending-recipients/{uuid}/keep-retail", middleware.Chain(
+		http.HandlerFunc(h.TenantKeepRecipientAsRetail), authn, requireOrg, require(rbac.PermOrganizationsWrite)))
 	mux.Handle("GET /v1/tenant/settings", tenantSettingsRead(h.TenantGetSettings))
 	mux.Handle("PATCH /v1/tenant/settings", tenantSettingsWrite(h.TenantPatchSettings))
 	mux.Handle("PUT /v1/tenant/settings/logo", tenantSettingsWrite(h.TenantUploadLogo))

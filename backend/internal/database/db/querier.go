@@ -277,6 +277,7 @@ type Querier interface {
 	CountOrderItems(ctx context.Context, orderID int64) (int64, error)
 	CountOrdersByDeliveryMethod(ctx context.Context, deliveryMethodID pgtype.Int8) (int64, error)
 	CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error)
+	CountOrdersOfBuyer(ctx context.Context, buyerOrgID int64) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
 	// Active owner memberships of an organization (TEC-1036: the last owner
@@ -291,6 +292,7 @@ type Querier interface {
 	CountOrganizationsInScope(ctx context.Context, arg CountOrganizationsInScopeParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	CountPendingCampaignRecipients(ctx context.Context, campaignID int64) (int64, error)
+	CountPendingRecipients(ctx context.Context, arg CountPendingRecipientsParams) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
 	// current owner is immutable, so a merge waits until they are closed.
 	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
@@ -500,6 +502,8 @@ type Querier interface {
 	// TEC-487: efficiency and waste analytics. These queries are intentionally
 	// read/projection focused; authorization scope is resolved by the usecase.
 	CreatePartConsumptionExpectation(ctx context.Context, arg CreatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
+	// TEC-1062: the center's waiting pool of recipients (migration 000169).
+	CreatePendingRecipient(ctx context.Context, arg CreatePendingRecipientParams) (PendingRecipient, error)
 	// Targets ---------------------------------------------------------------------------
 	CreatePerformanceTarget(ctx context.Context, arg CreatePerformanceTargetParams) (PerformanceTarget, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
@@ -1200,6 +1204,10 @@ type Querier interface {
 	GetOrganizationMemberUser(ctx context.Context, arg GetOrganizationMemberUserParams) (GetOrganizationMemberUserRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPartConsumptionExpectationByUUID(ctx context.Context, arg GetPartConsumptionExpectationByUUIDParams) (PartConsumptionExpectation, error)
+	// The pool row of a recipient organization, any state.
+	GetPendingRecipientByOrg(ctx context.Context, recipientOrgID int64) (PendingRecipient, error)
+	// The pool row of a recipient of the center, locked for a state change.
+	GetPendingRecipientForUpdate(ctx context.Context, arg GetPendingRecipientForUpdateParams) (PendingRecipient, error)
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPerformanceTarget(ctx context.Context, arg GetPerformanceTargetParams) (PerformanceTarget, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
@@ -2357,6 +2365,8 @@ type Querier interface {
 	// Auto approval: open requests of a module that may have been switched on.
 	ListPendingModuleRequestsByKey(ctx context.Context, moduleKey string) ([]ModuleRequest, error)
 	ListPendingModuleRequestsForOrgs(ctx context.Context, orgIds []int64) ([]ModuleRequest, error)
+	// Sort: docs/list-contract.md, keys from usecase.PendingRecipientSort.
+	ListPendingRecipients(ctx context.Context, arg ListPendingRecipientsParams) ([]ListPendingRecipientsRow, error)
 	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
 	// Staff targets ---------------------------------------------------------------------
 	// Region map ------------------------------------------------------------------------
@@ -3538,6 +3548,7 @@ type Querier interface {
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
+	ResolvePendingRecipient(ctx context.Context, arg ResolvePendingRecipientParams) (PendingRecipient, error)
 	// TEC-1005: the service of a public code /warranty/{code}: its service
 	// number (printed warranty cards, TEC-1004), else a warranty public code of
 	// it (the per-warranty links before TEC-1005), else a legacy alias. Only a
@@ -3718,6 +3729,9 @@ type Querier interface {
 	SetProductsActiveByUUIDs(ctx context.Context, arg SetProductsActiveByUUIDsParams) ([]uuid.UUID, error)
 	SetPurchaseFinanceEntry(ctx context.Context, arg SetPurchaseFinanceEntryParams) (Purchase, error)
 	SetQuoteStatus(ctx context.Context, arg SetQuoteStatusParams) (Quote, error)
+	// The tax identity typed with the recipient (10 digits: VKN, 11: TCKN).
+	SetRecipientInvoiceTax(ctx context.Context, arg SetRecipientInvoiceTaxParams) error
+	SetRecipientOrganizationStatus(ctx context.Context, arg SetRecipientOrganizationStatusParams) (Organization, error)
 	SetReviewQuestionActive(ctx context.Context, arg SetReviewQuestionActiveParams) (ReviewQuestion, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)

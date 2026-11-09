@@ -40,10 +40,27 @@ func normalizeUnitPrice(raw string) (string, bool) {
 	return r.FloatString(4), true
 }
 
-// errNotChildDealer: the buyer is not an active dealer directly under the
-// caller's center.
+// errNotChildDealer: the buyer is not an active dealer (or a waiting pool
+// recipient, TEC-1062) directly under the caller's center.
 func errNotChildDealer() error {
 	return invalid("buyer_org_uuid", "must be an active dealer directly under this center")
+}
+
+// pendingRecipientOf reports whether buyer is a recipient of the center's
+// waiting pool (TEC-1062): an organization in status pending, kept in the
+// pool or as a retail point, that the center opens orders for.
+func pendingRecipientOf(ctx context.Context, q *db.Queries, centerID int64, buyer db.Organization) (bool, error) {
+	if buyer.Status != "pending" {
+		return false, nil
+	}
+	row, err := q.GetPendingRecipientByOrg(ctx, buyer.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("orders: pending recipient: %w", err)
+	}
+	return row.OrganizationID == centerID && row.State != "converted", nil
 }
 
 // createForBuyer opens an order of the center (the seller) for a dealer
@@ -85,8 +102,17 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return fmt.Errorf("orders: buyer: %w", err)
 		}
-		if buyer.Type != OrgDealer || buyer.Status != "active" || buyer.BrandID != seller.BrandID {
+		if buyer.Type != OrgDealer || buyer.BrandID != seller.BrandID {
 			return errNotChildDealer()
+		}
+		if buyer.Status != "active" {
+			ok, err := pendingRecipientOf(ctx, q, seller.ID, buyer)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return errNotChildDealer()
+			}
 		}
 		sup, err := s.supplier(ctx, q, buyer)
 		if errors.Is(err, ErrNoSupplier) || (err == nil && sup.ID != seller.ID) {

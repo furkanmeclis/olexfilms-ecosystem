@@ -99,9 +99,16 @@ export const ordersService = {
     }>("GET", "/v1/tenant/organizations", {
       query: { type: "dealer", limit: 200, ...(q ? { q } : {}) },
     });
-    return (data.items ?? [])
-      .filter((o) => o.parent?.uuid === centerUuid && o.status === "active")
-      .map((o) => ({ uuid: o.uuid, name: o.name }));
+    return (
+      (data.items ?? [])
+        // TEC-1062: "pending" are the waiting pool / retail recipients.
+        .filter(
+          (o) =>
+            o.parent?.uuid === centerUuid &&
+            (o.status === "active" || o.status === "pending"),
+        )
+        .map((o) => ({ uuid: o.uuid, name: o.name }))
+    );
   },
   create(body: OrderCreateInput) {
     return platformRequest<Order>("POST", "/v1/orders", { body });

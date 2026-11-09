@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { routes } from "@/config/routes";
+import { NewRecipientDialog } from "@/features/accounts/components/new-recipient-dialog";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
@@ -65,6 +66,7 @@ export function CenterOrderForm({
   const router = useRouter();
   const qc = useQueryClient();
   const [dealer, setDealer] = useState<ComboboxOption | null>(null);
+  const [newRecipient, setNewRecipient] = useState(false); // TEC-1062
   const [lines, setLines] = useState<OrderFormLine[]>([]);
   const [note, setNote] = useState("");
   const [warehouse, setWarehouse] = useState<string | null>(null);
@@ -158,6 +160,21 @@ export function CenterOrderForm({
                     : null,
                 )
               }
+            />
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto px-0"
+              data-testid="center-order-new-recipient"
+              onClick={() => setNewRecipient(true)}
+            >
+              {t("organizations.recipients.new")}
+            </Button>
+            <NewRecipientDialog
+              open={newRecipient}
+              onOpenChange={setNewRecipient}
+              onCreated={(r) => setDealer({ value: r.uuid, label: r.name })}
             />
             {touched && dealer === null ? (
               <p
