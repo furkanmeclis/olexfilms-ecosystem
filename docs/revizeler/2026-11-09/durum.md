@@ -43,9 +43,9 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
 | 5 + 5.1 Mobil | TEC-1055 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) | 🟢 | — | kartta depo/adet/USD+TL/görevli; direkt ürün listesi; marka+SKU+stok |
 | 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | [#521](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/521) | 🟢 | — | #518 üstünde; sevk öncesi satış+depo düzenler, atanmış altına 409 |
-| 5.5 + 5.9 Mobil | TEC-1057 | | | — | ⏳ mobil paket 4a |
+| 5.5 + 5.9 Mobil | TEC-1057 | [#533](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/533) | 🟢 | — | kalem düzenleme sheet'i; + TEC-1059 plotter, TEC-1087 distribütör düzeltmesi |
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | [#524](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/524) | 🟢 | 000174 | #521 üstünde; kalem anahtarı + PATCH, aylık rapor `orders.plotter_cut` |
-| 5.6 + 5.4.1 Mobil | TEC-1059 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) (5.4.1) | 🟢 | — | hareket geçmişi tamam; plotter sonraki mobil pakette |
+| 5.6 + 5.4.1 Mobil | TEC-1059 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) (5.4.1), [#533](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/533) (plotter) | 🟢 | — | tamam |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
