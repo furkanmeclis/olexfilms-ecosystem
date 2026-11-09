@@ -19,6 +19,8 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 | 000174 | TEC-1058 | order_items.plotter_cut |
 | 000175 | TEC-1076 | yalnız gerekirse |
+| 000176 | RV-Karar rol izinleri | center_sales rolü, dist. depo/muhasebe izinleri |
+| 000177 | RV-Karar iade | stock_transfer_requests.order_id (planlı) |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -40,9 +42,9 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | --- | --- | --- | --- | --- | --- |
 | 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
 | 5 + 5.1 Mobil | TEC-1055 | | | — | ⏳ mobil paket 2 (#518 + #509 üstünde) |
-| 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | | | — | ⏳ #518 üstünde |
+| 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | [#521](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/521) | 🟢 | — | #518 üstünde; sevk öncesi satış+depo düzenler, atanmış altına 409 |
 | 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
-| 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | 000174 | ⏳ TEC-1056 üstünde |
+| 5.6 Web+API plotter işareti + rapor | TEC-1058 | [#524](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/524) | 🟢 | 000174 | #521 üstünde; kalem anahtarı + PATCH, aylık rapor `orders.plotter_cut` |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | — | ⏳ hareket geçmişi mobil paket 2'de; plotter TEC-1058 sonrası |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
@@ -114,7 +116,33 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - AFM Florya kararı (TEC-1080) seçilirse 1b: yeni bayi org'u açılması.
 - Modül kapatma (TEC-1088) kararı.
 
-## Açık sorular
+## Kararlar (kullanıcı 09.11 sabah kararları koordinatöre bıraktı — revizeye göre verildi)
+
+| Konu | Karar | Uygulama |
+| --- | --- | --- |
+| K0 AFM Florya (TEC-1080) | **1b**: AFM Florya ayrı bayi org'u olarak açılır (merkeze bağlı, kendi carisi); eski hizmet/garanti merkezde tarihçe kalır; sipariş Florya deposundan AFM Florya bayisine açılır. TEC-1003 birleşmesi geri alınmaz. | Kod gerekmez. **Kullanıcı:** panelden yeni bayi aç (Ayarlar > Hesaplar), AFM Florya personelini bayi rollerine ekle. design.md güncellendi. |
+| Metraj biçimi (TEC-1078) | `2.5M`, ikinci kesim `-3M-2` | #520'de olduğu gibi |
+| Modüller (TEC-1088) | Bayi standardında kapatılması önerilen: leads, appointments, dealer_accounting, service_catalog, intake_contracts (mobil sözleşme gelene kadar); açık kalacak: dealer_transfers, announcements, warranty_claims, measurements (sekme rol bazlı gizlendi). Eklentiler kapalı kalsın. | **Sunucuda kapatma yapılmadı** (yasak); kullanıcı panelden Özellikler sayfasından kapatır. |
+| İade (TEC-1085) | (b) uygulanır: merkez bayi adına iade açar, iade siparişe bağlanır, muhasebe kuyruğu İadeler sekmesinde. Faturalı iade ertelendi. | Kodlanıyor (000177) |
+| Kredili kod (TEC-1084) | Açılış kapsamı dışı; revize "birlikte karar alacağız" diyor. | Yok |
+| 9.3? mobil sözleşme (TEC-1083) | Seçenek 3: mobil detayda sözleşme durumu + imzalat; `CONTRACT_REQUIRED` anlaşılır mesaj; `intake_required` kapalı kalır. | Mobil paket 3a'ya eklendi |
+| 9.2 ek fotoğraf (TEC-1082) | "Hasar / not fotoğrafları (isteğe bağlı)", katlanır alan + ipucu | TEC-1076 PR'ına eklendi |
+| 5.7 distribütör bazlı (TEC-1081) | Şimdilik yok (TR'de distribütör yok); genel anahtar yeterli. Kapalı ürünler global aramadan da gizlenir. | Arama gizleme kodlanıyor |
+| 7.4 (TEC-1087) | Mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine | Mobil paket 2'ye eklendi |
+| 5.4 staff fiyatı | dealer_staff / center_service fiyat görmez (design.md) | #511 olduğu gibi |
+| 5.3 satış temsilcisi fiyatı | Yeni rol **center_sales**: fiyat okuma/yazma + iskonto; alış fiyatı yok | Kodlanıyor (000176). **Kullanıcı:** Zorbey'i center_sales rolüne ata |
+| 5.3 K8 liste fiyatı | Merkeze bağlı bayi liste fiyatı = `sale_to_distributor_price`, iskonto bunun üzerine | #522 olduğu gibi |
+| 5.3 ilk sipariş | Legacy siparişler sayılır (mevcut bayi ilk sipariş iskontosu almaz) | #522 olduğu gibi |
+| 3 hizmet listesi | Merkezde varsayılan görünüm **Ağ** (bayi adları görünsün) | Kodlanıyor |
+| KRİTİK cari | Üyesiz alıcıda (havuz/teslim yeri) merkez "teslim alındı"yı alıcı adına yapabilir → cari K9 ile oluşur | Kodlanıyor |
+| KRİTİK seçiciler | Havuzdaki (pending) org'lar sipariş alıcı seçicisi dışındaki seçicilerde gizli | Kodlanıyor |
+| 5.4.1 bayi zaman çizelgesi | Bayi depocu adını ve barkodları görebilir (şeffaflık) | #518 olduğu gibi |
+| 5.6 plotter raporu | Tüm işaretli kalemler (ürün kırılımı yeterli) | #524 olduğu gibi |
+| 7.1 dist. depo Bayiler | distributor_warehouse_staff'a organizations.read | Kodlanıyor (000176) |
+| 8 dist. muhasebe | distributor_accounting'e einvoice.manage; "Faturalandı" sevk/teslim edilmiş siparişte de konabilir (legacy gibi); muhasebe ana menüsünde katalog gizli | Kodlanıyor (000176 + muhasebe takip) |
+| 7.1 test hesabı | Depo hesabının rolü panelden kontrol edilmeli (center_warehouse müşteri görmez) | **Kullanıcı** |
+
+## Eski soru listesi (yukarıda karara bağlandı)
 
 - **K0 (TEC-1080):** AFM Florya ayrı bayi mi olsun? Öneri 1b (yeni bayi org'u aç, eski veri merkezde kalsın) veya 1a (org-merge undo). Kök neden: AFM Florya TEC-1003 ile merkeze birleşti; sipariş alıcısı olarak seçilebilecek org yok, alıcı=satıcı=merkez olunca cari oluşmuyor.
 - **Metraj (TEC-1078):** ondalık metre `2.5M` mi `250CM` mi? Aynı metrede ikinci kesim `-3M-2` uygun mu? (Varsayım: 2.5M ve -3M-2.)
