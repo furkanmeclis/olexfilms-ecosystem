@@ -66,6 +66,16 @@ test('unit price (center orders): optional, ≥ 0, up to 4 decimals, sent only w
   assert.deepEqual(toItemInputs([{ ...base, unit_price: ' ' }], true), [{ product_uuid: 'p', quantity: 2 }]);
 });
 
+test('plotter mark is sent on every line, gift lines included', () => {
+  const base: CartLine = { product_uuid: 'p', sku: 'S', name: 'N', unit_type: 'piece', amount: '2', plotter_cut: true };
+  assert.deepEqual(toItemInputs([{ ...base, is_gift: true, unit_price: '5' }], true, true), [
+    { product_uuid: 'p', quantity: 2, plotter_cut: true, is_gift: true },
+  ]);
+  assert.deepEqual(toItemInputs([{ ...base, discount_pct: '10' }], true, true), [
+    { product_uuid: 'p', quantity: 2, plotter_cut: true, discount_pct: '10' },
+  ]);
+});
+
 test('submitPreview: amounts with their unit, capped with a remainder', () => {
   const lines = addLine(addLine([], piece), roll).map((l) => (l.unit_type === 'roll_meter' ? { ...l, amount: ' 12,5 ' } : l));
   assert.deepEqual(submitPreview(lines).rows, [

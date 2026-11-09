@@ -95,5 +95,21 @@
   "recipient.errors.required": "Məcburi sahə.",
   "recipient.errors.phone_invalid": "Düzgün telefon nömrəsi daxil et.",
   "recipient.errors.tax_no_invalid": "Vergi nömrəsi 10, şəxsiyyət nömrəsi 11 rəqəmdir.",
-  "recipient.errors.too_long": "Çox uzundur."
+  "recipient.errors.too_long": "Çox uzundur.",
+  "quote.list_price": "Siyahı qiyməti (USD)",
+  "quote.discount": "Endirim %",
+  "quote.gift": "Hədiyyə",
+  "quote.gift_free": "Hədiyyə (0)",
+  "quote.discounted_price": "Endirimli qiymət",
+  "quote.line_total": "Sətir cəmi",
+  "quote.total": "Cəmi",
+  "quote.total_try": "Cari TRY dəyəri",
+  "quote.rate": "Cari məzənnə: 1 {{currency}} = {{rate}} TRY. Məzənnə sifariş təsdiqlənəndə sabitlənir.",
+  "quote.no_rate": "Cari məzənnə yoxdur; TRY dəyəri göstərilə bilmir.",
+  "quote.incomplete": "Bəzi məhsulların qiyməti yoxdur və ya miqdarı yanlışdır; cəm natamamdır.",
+  "quote.unavailable": "Qiymətlər yüklənmədi.",
+  "quote.pick_buyer": "Qiymətləri görmək üçün əvvəlcə dileri seç.",
+  "quote.default_first_order": "İlk sifariş endirimi tətbiq olunur: %{{pct}}",
+  "quote.default_standard": "Standart diler endirimi tətbiq olunur: %{{pct}}",
+  "errors.discount_invalid": "Endirim 0 ilə 100 arasında olmalı, ən çoxu 2 onluq."
 }

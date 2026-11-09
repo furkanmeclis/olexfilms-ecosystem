@@ -109,5 +109,21 @@
   "recipient.errors.required": "Zorunlu alan.",
   "recipient.errors.phone_invalid": "Geçerli bir telefon numarası gir.",
   "recipient.errors.tax_no_invalid": "Vergi no 10, TC kimlik no 11 haneli olmalı.",
-  "recipient.errors.too_long": "Çok uzun."
+  "recipient.errors.too_long": "Çok uzun.",
+  "quote.list_price": "Liste fiyatı (USD)",
+  "quote.discount": "İskonto %",
+  "quote.gift": "Hediye",
+  "quote.gift_free": "Hediye (0)",
+  "quote.discounted_price": "İskontolu fiyat",
+  "quote.line_total": "Satır toplamı",
+  "quote.total": "Toplam",
+  "quote.total_try": "Anlık TL karşılığı",
+  "quote.rate": "Anlık kur: 1 {{currency}} = {{rate}} TL. Kur sipariş onayında sabitlenir.",
+  "quote.no_rate": "Güncel kur yok; TL karşılığı gösterilemiyor.",
+  "quote.incomplete": "Fiyatı olmayan veya miktarı geçersiz ürün var; toplam eksik.",
+  "quote.unavailable": "Fiyatlar alınamadı.",
+  "quote.pick_buyer": "Fiyatları görmek için önce bayiyi seç.",
+  "quote.default_first_order": "İlk sipariş iskontosu uygulanıyor: %{{pct}}",
+  "quote.default_standard": "Standart bayi iskontosu uygulanıyor: %{{pct}}",
+  "errors.discount_invalid": "İskonto 0 ile 100 arasında olmalı, en fazla 2 ondalık."
 }

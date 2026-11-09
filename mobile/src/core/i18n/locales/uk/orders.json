@@ -95,5 +95,21 @@
   "recipient.errors.required": "Обов'язкове поле.",
   "recipient.errors.phone_invalid": "Введіть дійсний номер телефону.",
   "recipient.errors.tax_no_invalid": "Податковий № має 10 цифр, ID — 11.",
-  "recipient.errors.too_long": "Задовго."
+  "recipient.errors.too_long": "Задовго.",
+  "quote.list_price": "Ціна за прайсом (USD)",
+  "quote.discount": "Знижка %",
+  "quote.gift": "Подарунок",
+  "quote.gift_free": "Подарунок (0)",
+  "quote.discounted_price": "Ціна зі знижкою",
+  "quote.line_total": "Сума рядка",
+  "quote.total": "Разом",
+  "quote.total_try": "Поточна вартість у TRY",
+  "quote.rate": "Поточний курс: 1 {{currency}} = {{rate}} TRY. Курс фіксується під час схвалення замовлення.",
+  "quote.no_rate": "Немає поточного курсу; вартість у TRY неможливо показати.",
+  "quote.incomplete": "Деякі товари без ціни або з неправильною кількістю; сума неповна.",
+  "quote.unavailable": "Не вдалося завантажити ціни.",
+  "quote.pick_buyer": "Спершу виберіть дилера, щоб побачити ціни.",
+  "quote.default_first_order": "Застосовано знижку на перше замовлення: {{pct}}%",
+  "quote.default_standard": "Застосовано стандартну дилерську знижку: {{pct}}%",
+  "errors.discount_invalid": "Знижка має бути від 0 до 100, не більше 2 знаків після коми."
 }

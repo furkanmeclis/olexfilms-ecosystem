@@ -95,5 +95,21 @@
   "recipient.errors.required": "Pflichtfeld.",
   "recipient.errors.phone_invalid": "Gib eine gültige Telefonnummer ein.",
   "recipient.errors.tax_no_invalid": "Die Steuernr. hat 10, die Ausweisnr. 11 Ziffern.",
-  "recipient.errors.too_long": "Zu lang."
+  "recipient.errors.too_long": "Zu lang.",
+  "quote.list_price": "Listenpreis (USD)",
+  "quote.discount": "Rabatt %",
+  "quote.gift": "Geschenk",
+  "quote.gift_free": "Geschenk (0)",
+  "quote.discounted_price": "Rabattierter Preis",
+  "quote.line_total": "Zeilensumme",
+  "quote.total": "Gesamt",
+  "quote.total_try": "Aktueller TRY-Wert",
+  "quote.rate": "Aktueller Kurs: 1 {{currency}} = {{rate}} TRY. Der Kurs wird bei der Freigabe der Bestellung festgelegt.",
+  "quote.no_rate": "Kein aktueller Kurs; der TRY-Wert kann nicht angezeigt werden.",
+  "quote.incomplete": "Einige Produkte haben keinen Preis oder eine ungültige Menge; die Summe ist unvollständig.",
+  "quote.unavailable": "Preise konnten nicht geladen werden.",
+  "quote.pick_buyer": "Wähle zuerst den Händler, um Preise zu sehen.",
+  "quote.default_first_order": "Erstbestellungsrabatt angewendet: {{pct}} %",
+  "quote.default_standard": "Standard-Händlerrabatt angewendet: {{pct}} %",
+  "errors.discount_invalid": "Der Rabatt muss zwischen 0 und 100 liegen, höchstens 2 Nachkommastellen."
 }

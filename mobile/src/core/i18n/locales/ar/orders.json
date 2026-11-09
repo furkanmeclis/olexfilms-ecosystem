@@ -95,5 +95,21 @@
   "recipient.errors.required": "حقل مطلوب.",
   "recipient.errors.phone_invalid": "أدخل رقم هاتف صالحًا.",
   "recipient.errors.tax_no_invalid": "الرقم الضريبي 10 أرقام ورقم الهوية 11 رقمًا.",
-  "recipient.errors.too_long": "طويل جدًا."
+  "recipient.errors.too_long": "طويل جدًا.",
+  "quote.list_price": "سعر القائمة (USD)",
+  "quote.discount": "الخصم %",
+  "quote.gift": "هدية",
+  "quote.gift_free": "هدية (0)",
+  "quote.discounted_price": "السعر بعد الخصم",
+  "quote.line_total": "إجمالي السطر",
+  "quote.total": "الإجمالي",
+  "quote.total_try": "القيمة الحالية بالليرة التركية",
+  "quote.rate": "السعر الحالي: 1 {{currency}} = {{rate}} TRY. يُثبَّت السعر عند اعتماد الطلب.",
+  "quote.no_rate": "لا يوجد سعر صرف حالي؛ لا يمكن عرض القيمة بالليرة التركية.",
+  "quote.incomplete": "بعض المنتجات بلا سعر أو بكمية غير صالحة؛ الإجمالي غير مكتمل.",
+  "quote.unavailable": "تعذّر تحميل الأسعار.",
+  "quote.pick_buyer": "اختر الموزّع أولًا لرؤية الأسعار.",
+  "quote.default_first_order": "تم تطبيق خصم الطلب الأول: {{pct}}%",
+  "quote.default_standard": "تم تطبيق خصم الموزّع القياسي: {{pct}}%",
+  "errors.discount_invalid": "يجب أن يكون الخصم بين 0 و100، بحد أقصى منزلتين عشريتين."
 }

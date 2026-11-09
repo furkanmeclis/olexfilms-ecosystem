@@ -95,5 +95,21 @@
   "recipient.errors.required": "Υποχρεωτικό πεδίο.",
   "recipient.errors.phone_invalid": "Δώσε έγκυρο αριθμό τηλεφώνου.",
   "recipient.errors.tax_no_invalid": "Ο ΑΦΜ έχει 10 ψηφία, η ταυτότητα 11.",
-  "recipient.errors.too_long": "Πολύ μεγάλο."
+  "recipient.errors.too_long": "Πολύ μεγάλο.",
+  "quote.list_price": "Τιμή καταλόγου (USD)",
+  "quote.discount": "Έκπτωση %",
+  "quote.gift": "Δώρο",
+  "quote.gift_free": "Δώρο (0)",
+  "quote.discounted_price": "Τιμή με έκπτωση",
+  "quote.line_total": "Σύνολο γραμμής",
+  "quote.total": "Σύνολο",
+  "quote.total_try": "Τρέχουσα αξία σε TRY",
+  "quote.rate": "Τρέχουσα ισοτιμία: 1 {{currency}} = {{rate}} TRY. Η ισοτιμία κλειδώνει με την έγκριση της παραγγελίας.",
+  "quote.no_rate": "Δεν υπάρχει τρέχουσα ισοτιμία· η αξία σε TRY δεν μπορεί να εμφανιστεί.",
+  "quote.incomplete": "Ορισμένα προϊόντα δεν έχουν τιμή ή έχουν μη έγκυρη ποσότητα· το σύνολο είναι ελλιπές.",
+  "quote.unavailable": "Δεν ήταν δυνατή η φόρτωση των τιμών.",
+  "quote.pick_buyer": "Επίλεξε πρώτα τον αντιπρόσωπο για να δεις τις τιμές.",
+  "quote.default_first_order": "Εφαρμόζεται έκπτωση πρώτης παραγγελίας: {{pct}}%",
+  "quote.default_standard": "Εφαρμόζεται τυπική έκπτωση αντιπροσώπου: {{pct}}%",
+  "errors.discount_invalid": "Η έκπτωση πρέπει να είναι από 0 έως 100, με έως 2 δεκαδικά."
 }

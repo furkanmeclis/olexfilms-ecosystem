@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
@@ -23,12 +23,14 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { formatMoney } from '@/features/accounting/lib';
 import { useWarehouses } from '@/features/warehouse/api';
 import { WarehouseField } from '@/features/warehouse/warehouse-picker';
 
 import { useCart } from './cart';
 import { PlotterSwitch } from './order-edit';
-import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
+import { type CartLine, cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
+import { linePrice, type Quote, quoteTotals } from './order-quote';
 import { RecipientNewForm } from './recipient-new-form';
 
 const CATALOG = '/bayi/menu/catalog/products';
@@ -48,6 +50,122 @@ function useDealers(enabled: boolean) {
     queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200, include_pending: true } } })),
     select: (d) => (d.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name, pending: o.status === 'pending' })) as Dealer[],
   });
+}
+
+/**
+ * TEC-1065 (API TEC-1064): price preview of the center's order for a dealer:
+ * list price, the dealer's default discount and the current TRY rate. Only
+ * asked with pricing.sale.read and a chosen dealer; writes nothing.
+ */
+function useQuote(enabled: boolean, buyerUuid: string | undefined, productUuids: string[]) {
+  const key = [...productUuids].sort();
+  return useQuery({
+    queryKey: ['orders', 'quote', buyerUuid, key],
+    enabled: enabled && !!buyerUuid && key.length > 0,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      unwrap(api.POST('/v1/orders/quote', { body: { buyer_org_uuid: buyerUuid, product_uuids: key } })) as Promise<Quote>,
+  });
+}
+
+const PRICE_INPUT =
+  'min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums';
+
+function PriceRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <Text variant="callout" tone="muted" className="flex-1">
+        {label}
+      </Text>
+      <Text variant={strong ? 'headline' : 'callout'} className="tabular-nums">
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/** List price, discount (manual or default), gift switch, discounted price and line total of one line. */
+function LineQuote({
+  line,
+  quote,
+  onDiscount,
+  onGift,
+}: {
+  line: CartLine;
+  quote: Quote | undefined;
+  onDiscount: (v: string) => void;
+  onGift: (v: boolean) => void;
+}) {
+  const { t, i18n } = useTranslation('orders');
+  const p = linePrice(line, quote);
+  const currency = quote?.currency ?? 'USD';
+  const money = (v: number | null) => (v === null ? '—' : formatMoney(v, currency, i18n.language));
+  return (
+    <View className="gap-2 border-t border-border pt-2">
+      <PriceRow label={t('quote.list_price')} value={money(p.list)} />
+      {!line.is_gift && !line.unit_price?.trim() ? (
+        <View className="flex-row items-center gap-3">
+          <Text variant="callout" tone="muted" className="flex-1">
+            {t('quote.discount')}
+          </Text>
+          <TextInput
+            value={line.discount_pct ?? ''}
+            onChangeText={onDiscount}
+            accessibilityLabel={t('quote.discount')}
+            placeholder={quote?.discount_pct ?? '0'}
+            placeholderTextColorClassName="accent-muted-foreground"
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            className={PRICE_INPUT}
+          />
+        </View>
+      ) : null}
+      <View className="min-h-11 flex-row items-center justify-between gap-3">
+        <Text variant="callout" tone="muted" className="flex-1">
+          {t('quote.gift')}
+        </Text>
+        <Switch value={!!line.is_gift} onValueChange={onGift} accessibilityLabel={t('quote.gift')} />
+      </View>
+      <PriceRow label={t('quote.discounted_price')} value={line.is_gift ? t('quote.gift_free') : money(p.unit)} />
+      <PriceRow label={t('quote.line_total')} value={money(p.total)} strong />
+    </View>
+  );
+}
+
+/** Order total in USD and its current TRY value, with the default discount it was priced with. */
+function QuoteSummary({ lines, quote, pending }: { lines: CartLine[]; quote: Quote | undefined; pending: boolean }) {
+  const { t, i18n } = useTranslation('orders');
+  if (!quote) {
+    return (
+      <Text variant="footnote" tone="muted">
+        {pending ? t('common:loading') : t('quote.unavailable')}
+      </Text>
+    );
+  }
+  const totals = quoteTotals(lines, quote);
+  return (
+    <View className="gap-2 rounded-lg border border-border bg-card p-3.5">
+      {quote.discount_pct ? (
+        <Text variant="footnote" tone="muted">
+          {t(quote.first_order ? 'quote.default_first_order' : 'quote.default_standard', { pct: quote.discount_pct })}
+        </Text>
+      ) : null}
+      <PriceRow label={t('quote.total')} value={formatMoney(totals.total, quote.currency, i18n.language)} strong />
+      <PriceRow
+        label={t('quote.total_try')}
+        value={totals.totalTry === null ? '—' : formatMoney(totals.totalTry, 'TRY', i18n.language)}
+      />
+      <Text variant="footnote" tone="muted">
+        {quote.try_rate ? t('quote.rate', { currency: quote.currency, rate: quote.try_rate }) : t('quote.no_rate')}
+      </Text>
+      {totals.incomplete ? (
+        <Text variant="footnote" tone="danger">
+          {t('quote.incomplete')}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 /** Required buyer of a center order: a row that opens a searchable sheet, like the other pickers. */
@@ -209,7 +327,7 @@ function DealerSheet({
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
-  const { lines, note, setAmount, setPrice, setPlotter, remove, setNote, clear } = useCart();
+  const { lines, note, setAmount, setPrice, setPlotter, setDiscount, setGift, remove, setNote, clear } = useCart();
   const me = useSession((s) => s.me);
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
@@ -217,6 +335,14 @@ export function OrderNewScreen() {
   // TEC-1051: a warehouse role without pricing permissions neither sees nor sets prices.
   const prices = usePricesVisible();
   const [buyer, setBuyer] = useState<Dealer | null>(null);
+  // TEC-1065: list price, discount, gift and totals only with pricing.sale.read.
+  const saleRead = useCan('pricing.sale.read');
+  const quoting = center && prices && saleRead;
+  const quote = useQuote(
+    quoting,
+    buyer?.uuid,
+    lines.map((l) => l.product_uuid),
+  );
   // TEC-1053 (TEC-1028 API): the center picks the warehouse that prepares the
   // order (seller_warehouse_uuid), the primary one until changed. Without
   // access to the warehouse list the field is hidden and the API uses the primary.
@@ -251,7 +377,7 @@ export function OrderNewScreen() {
             buyer_org_uuid: buyer.uuid,
             ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
             ...(canShip && selfPrepare ? { self_prepare: true } : {}),
-            items: toItemInputs(lines, prices),
+            items: toItemInputs(lines, prices, quoting),
             ...(note.trim() ? { note: note.trim() } : {}),
           },
         }),
@@ -423,7 +549,7 @@ export function OrderNewScreen() {
                         className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
                       />
                     </View>
-                    {center && prices ? (
+                    {center && prices && !(quoting && l.is_gift) ? (
                       <View className="flex-row items-center gap-3">
                         <Text variant="callout" tone="muted" className="flex-1">
                           {t('unit_price')}
@@ -436,9 +562,17 @@ export function OrderNewScreen() {
                           placeholderTextColorClassName="accent-muted-foreground"
                           keyboardType="decimal-pad"
                           selectTextOnFocus
-                          className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
+                          className={PRICE_INPUT}
                         />
                       </View>
+                    ) : null}
+                    {quoting && buyer ? (
+                      <LineQuote
+                        line={l}
+                        quote={quote.data}
+                        onDiscount={(v) => setDiscount(l.product_uuid, v)}
+                        onGift={(v) => setGift(l.product_uuid, v)}
+                      />
                     ) : null}
                     {/* TEC-1059: the center tells the line went out plotter cut (information only). */}
                     {center ? (
@@ -469,6 +603,15 @@ export function OrderNewScreen() {
               multiline
               maxLength={NOTE_MAX}
             />
+            {quoting ? (
+              buyer ? (
+                <QuoteSummary lines={lines} quote={quote.data} pending={quote.isPending} />
+              ) : (
+                <Text variant="footnote" tone="muted">
+                  {t('quote.pick_buyer')}
+                </Text>
+              )
+            ) : null}
             {prices ? (
               <Text variant="footnote" tone="muted">
                 {t(center ? 'price_rule_center' : 'price_rule')}

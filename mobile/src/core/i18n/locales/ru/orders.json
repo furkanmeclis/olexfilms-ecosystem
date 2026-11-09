@@ -95,5 +95,21 @@
   "recipient.errors.required": "Обязательное поле.",
   "recipient.errors.phone_invalid": "Введите корректный номер телефона.",
   "recipient.errors.tax_no_invalid": "ИНН — 10 цифр, ID — 11.",
-  "recipient.errors.too_long": "Слишком длинно."
+  "recipient.errors.too_long": "Слишком длинно.",
+  "quote.list_price": "Цена по прайсу (USD)",
+  "quote.discount": "Скидка %",
+  "quote.gift": "Подарок",
+  "quote.gift_free": "Подарок (0)",
+  "quote.discounted_price": "Цена со скидкой",
+  "quote.line_total": "Сумма строки",
+  "quote.total": "Итого",
+  "quote.total_try": "Текущая стоимость в TRY",
+  "quote.rate": "Текущий курс: 1 {{currency}} = {{rate}} TRY. Курс фиксируется при одобрении заказа.",
+  "quote.no_rate": "Нет текущего курса; стоимость в TRY показать нельзя.",
+  "quote.incomplete": "У некоторых товаров нет цены или неверное количество; итог неполный.",
+  "quote.unavailable": "Не удалось загрузить цены.",
+  "quote.pick_buyer": "Сначала выберите дилера, чтобы увидеть цены.",
+  "quote.default_first_order": "Применена скидка на первый заказ: {{pct}}%",
+  "quote.default_standard": "Применена стандартная дилерская скидка: {{pct}}%",
+  "errors.discount_invalid": "Скидка должна быть от 0 до 100, не более 2 знаков после запятой."
 }

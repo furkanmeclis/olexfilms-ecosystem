@@ -13,6 +13,8 @@ const METERS_RE = /^[0-9]{1,8}(\.[0-9]{1,2})?$/;
 /** Manual unit price of a center order (TEC-1024): ≥ 0, up to 4 decimals. */
 const PRICE_RE = /^[0-9]{1,12}(\.[0-9]{1,4})?$/;
 const INT_RE = /^[0-9]+$/;
+/** Manual discount (TEC-1064): 0..100, up to 2 decimals. */
+const DISCOUNT_RE = /^[0-9]{1,3}(\.[0-9]{1,2})?$/;
 
 /** One cart line; amount is the raw input (pieces or meters). */
 export type CartLine = {
@@ -25,9 +27,13 @@ export type CartLine = {
   unit_price?: string;
   /** TEC-1059: "sent plotter cut" (information only); undefined is not sent. */
   plotter_cut?: boolean;
+  /** Center orders only (TEC-1064): a manual discount; empty keeps the dealer's default. */
+  discount_pct?: string;
+  /** Center orders only (TEC-1064): the line is a gift, charged 0. */
+  is_gift?: boolean;
 };
 
-export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid';
+export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid' | 'discount_invalid';
 export type CartErrors = { form?: 'empty' | 'too_many'; lines: Record<string, LineError> };
 
 export type ItemInput = {
@@ -36,6 +42,8 @@ export type ItemInput = {
   meters?: string;
   unit_price?: string;
   plotter_cut?: boolean;
+  discount_pct?: string;
+  is_gift?: boolean;
 };
 
 export const isRoll = (unitType: string) => unitType === 'roll_meter';
@@ -45,9 +53,16 @@ export function normalizeAmount(raw: string): string {
   return raw.trim().replace(',', '.');
 }
 
+/** A manual discount the API would refuse; empty is valid (the default discount applies). */
+export function discountInvalid(raw: string | undefined): boolean {
+  const v = normalizeAmount(raw ?? '');
+  return !!v && (!DISCOUNT_RE.test(v) || Number(v) > 100);
+}
+
 export function lineError(line: CartLine): LineError | null {
   const price = normalizeAmount(line.unit_price ?? '');
   if (price && !PRICE_RE.test(price)) return 'price_invalid';
+  if (discountInvalid(line.discount_pct)) return 'discount_invalid';
   const v = normalizeAmount(line.amount);
   if (isRoll(line.unit_type)) return METERS_RE.test(v) && Number(v) > 0 ? null : 'meters_invalid';
   if (!INT_RE.test(v)) return 'quantity_invalid';
@@ -73,17 +88,24 @@ export function cartIsValid(errors: CartErrors): boolean {
 /**
  * Order item inputs: quantity for pieces, meters for rolls. A dealer never
  * sends prices (K8); the center may send a manual unit price when it orders
- * for a dealer (`withPrice`, TEC-1024).
+ * for a dealer (`withPrice`, TEC-1024), and a manual discount or the gift
+ * flag (`withDiscount`, TEC-1064); a gift sends no price and no discount.
  */
-export function toItemInputs(lines: CartLine[], withPrice = false): ItemInput[] {
+export function toItemInputs(lines: CartLine[], withPrice = false, withDiscount = false): ItemInput[] {
   return lines.map((line) => {
     const v = normalizeAmount(line.amount);
     const item: ItemInput = isRoll(line.unit_type)
       ? { product_uuid: line.product_uuid, meters: v }
       : { product_uuid: line.product_uuid, quantity: Number(v) };
     const price = normalizeAmount(line.unit_price ?? '');
-    if (withPrice && price) item.unit_price = price;
     if (line.plotter_cut !== undefined) item.plotter_cut = line.plotter_cut;
+    if (withDiscount && line.is_gift) {
+      item.is_gift = true;
+      return item;
+    }
+    if (withPrice && price) item.unit_price = price;
+    const discount = normalizeAmount(line.discount_pct ?? '');
+    if (withDiscount && discount) item.discount_pct = discount;
     return item;
   });
 }
