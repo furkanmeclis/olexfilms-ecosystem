@@ -56,8 +56,9 @@ const windowsExcept = (...skip: string[]) =>
 
 /**
  * One-click selections (TEC-864; the first three follow the legacy quick
- * picks). Each one replaces only its own group; parts a category does not
- * offer are skipped. The mapping is product-owned: change it here.
+ * picks). They add to the selection and combine (TEC-1076); parts a
+ * category does not offer are skipped. The mapping is product-owned:
+ * change it here.
  */
 export const PART_PRESETS = [
   { id: "hood_only", group: "body", parts: ["body_kaput"] },
@@ -140,32 +141,35 @@ export function presetParts(
   return preset.parts.filter((p) => available.includes(p));
 }
 
-/** A preset is active when its group holds exactly its (available) parts. */
+/**
+ * A preset is active when all of its (available) parts are selected. TEC-1076
+ * (revize 9.1): presets combine, e.g. "front two windows" + "windshield" are
+ * both active at once; a larger selection keeps its sub-presets lit.
+ */
 export function isPresetActive(
   selected: readonly string[],
   preset: PartPreset,
   available: readonly string[],
 ): boolean {
   const parts = presetParts(preset, available);
-  if (parts.length === 0) return false;
-  const inGroup = selected.filter((p) => partGroup(p) === preset.group);
-  return (
-    inGroup.length === parts.length && parts.every((p) => inGroup.includes(p))
-  );
+  return parts.length > 0 && parts.every((p) => selected.includes(p));
 }
 
 /**
- * Applies a preset: replaces the selection of its group with the preset's
- * parts (the other group is kept); applying an active preset clears it.
+ * Applies a preset on top of the selection (TEC-1076: multi-select): an
+ * inactive preset adds its parts, an active one removes them; every other
+ * part stays.
  */
 export function applyPreset(
   selected: readonly string[],
   preset: PartPreset,
   available: readonly string[],
 ): string[] {
-  const others = selected.filter((p) => partGroup(p) !== preset.group);
-  if (isPresetActive(selected, preset, available)) return others;
-  return [...others, ...presetParts(preset, available)];
+  const parts = presetParts(preset, available);
+  if (isPresetActive(selected, preset, available)) {
+    return selected.filter((p) => !parts.includes(p));
+  }
+  return [...selected, ...parts.filter((p) => !selected.includes(p))];
 }
 
 /**
@@ -186,27 +190,6 @@ export function visiblePresets(available: readonly string[]): PartPreset[] {
     out.push(preset);
   }
   return out;
-}
-
-/**
- * Whether the selection is fully described by the given presets: every
- * group is empty or equals one of its presets, and nothing outside the
- * body / window groups is selected. Used to keep the detailed picker
- * closed when a quick pick explains the selection.
- */
-export function selectionMatchesPresets(
-  selected: readonly string[],
-  presets: readonly PartPreset[],
-  available: readonly string[],
-): boolean {
-  if (selected.some((p) => partGroup(p) === null)) return false;
-  return (Object.keys(PART_GROUPS) as PartGroup[]).every((group) => {
-    if (!selected.some((p) => partGroup(p) === group)) return true;
-    return presets.some(
-      (preset) =>
-        preset.group === group && isPresetActive(selected, preset, available),
-    );
-  });
 }
 
 /** Parts of a new item: the selection limited to its category's parts. */

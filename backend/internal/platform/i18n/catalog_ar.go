@@ -302,7 +302,9 @@ var arCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "التواقيع",
 	"contracts.pdf.signed_at":                          "تاريخ التوقيع",
 	"contracts.pdf.otp_verified":                       "تم التحقق برمز OTP",
-	"contracts.pdf.attachments":                        "الصور والمرفقات",
+	"contracts.pdf.attachments":                        "صور الأضرار / الملاحظات",
+	"contracts.pdf.products":                           "المنتجات المستخدمة",
+	"contracts.pdf.product_code":                       "رمز المنتج",
 	"contracts.pdf.footer":                             "أُنشئ هذا المستند بتوقيع إلكتروني بسيط.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "العقد {{no}}",

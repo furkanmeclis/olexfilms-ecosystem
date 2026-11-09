@@ -201,6 +201,7 @@ export class MockApi {
       status_label: status[0].toUpperCase() + status.slice(1),
       editable: draft,
       items_editable: draft,
+      service_no_editable: draft,
       available_transitions: draft ? ["pending", "completed", "cancelled"] : [],
       items: this.items,
       images: [],
@@ -342,6 +343,13 @@ export class MockApi {
     if (method === "POST" && path === "/v1/services") {
       this.seedDraft((body?.km as number | undefined) ?? null);
       return ok(this.view(), 201);
+    }
+    // TEC-1004 / TEC-1076: the last step checks the typed service number;
+    // only another service's number is taken.
+    if (method === "GET" && path === "/v1/services/service-no-availability") {
+      const no = url.searchParams.get("service_no") ?? "";
+      const own = this.service?.service_no === no;
+      return ok({ service_no: no, available: own || no !== "TAKEN-001" });
     }
     if (this.service && method === "GET" && path === svc)
       return ok(this.view());

@@ -428,3 +428,17 @@ WHERE uuid = sqlc.arg(uuid) AND instance_id = sqlc.arg(instance_id);
 -- name: DeleteContractMedia :execrows
 DELETE FROM contract_media
 WHERE uuid = sqlc.arg(uuid) AND instance_id = sqlc.arg(instance_id);
+
+-- ---------------------------------------------------------------------------
+-- Products (TEC-1076).
+
+-- name: ListContractServiceProducts :many
+-- The products used on a service contract's subject with their codes (SKU
+-- and unit barcode) and applied parts, for the contract PDF.
+SELECT si.id, p.name AS product_name, p.sku, u.barcode, si.applied_parts
+FROM service_items si
+JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+JOIN units u ON u.id = si.unit_id AND u.brand_id = si.brand_id
+WHERE si.service_id = sqlc.arg(service_id)
+  AND si.organization_id = sqlc.arg(organization_id)
+ORDER BY si.id;

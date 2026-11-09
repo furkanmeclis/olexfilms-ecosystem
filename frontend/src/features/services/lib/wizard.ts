@@ -4,15 +4,19 @@
  * intake contract right before the completing stock step; it is hidden
  * while the organization's intake_contracts module is off. TEC-500: the
  * intake photos follow the customer / vehicle step while the
- * photo_standard module is on.
+ * photo_standard module is on. TEC-1076 (revize 9 / 9.2): the products
+ * (stock) follow the parts right away, so each product gets its own
+ * application areas and the contract can list the used product codes; the
+ * service number is entered on the last step, which completes the service.
  */
 export const WIZARD_STEPS = [
   "customer_vehicle",
   "photos",
   "parts",
+  "stock",
   "measurement",
   "contract",
-  "stock",
+  "complete",
 ] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number];

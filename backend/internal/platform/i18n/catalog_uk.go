@@ -302,7 +302,9 @@ var ukCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Підписи",
 	"contracts.pdf.signed_at":                          "Підписано",
 	"contracts.pdf.otp_verified":                       "Підтверджено одноразовим кодом",
-	"contracts.pdf.attachments":                        "Фото та вкладення",
+	"contracts.pdf.attachments":                        "Фото пошкоджень / нотаток",
+	"contracts.pdf.products":                           "Використані продукти",
+	"contracts.pdf.product_code":                       "Код продукту",
 	"contracts.pdf.footer":                             "Документ підписано простим електронним підписом.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Договір {{no}}",

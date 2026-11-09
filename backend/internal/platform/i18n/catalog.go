@@ -303,7 +303,9 @@ var trCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "İmzalar",
 	"contracts.pdf.signed_at":                          "İmza zamanı",
 	"contracts.pdf.otp_verified":                       "OTP ile doğrulandı",
-	"contracts.pdf.attachments":                        "Görseller ve ekler",
+	"contracts.pdf.attachments":                        "Hasar / not fotoğrafları",
+	"contracts.pdf.products":                           "Kullanılan ürünler",
+	"contracts.pdf.product_code":                       "Ürün kodu",
 	"contracts.pdf.footer":                             "Bu belge basit elektronik imza ile oluşturulmuştur.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Sözleşme {{no}}",
@@ -1533,7 +1535,9 @@ var enCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Signatures",
 	"contracts.pdf.signed_at":                          "Signed at",
 	"contracts.pdf.otp_verified":                       "Verified by OTP",
-	"contracts.pdf.attachments":                        "Photos & attachments",
+	"contracts.pdf.attachments":                        "Damage / note photos",
+	"contracts.pdf.products":                           "Products used",
+	"contracts.pdf.product_code":                       "Product code",
 	"contracts.pdf.footer":                             "This document was created with a simple electronic signature.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Contract {{no}}",

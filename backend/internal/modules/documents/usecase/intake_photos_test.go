@@ -11,9 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TEC-499: the startup sync adds {{intake_photos_html}} to the system seed of
-// the default contract template and never touches an admin-published one.
-func TestEnsureContractIntakePhotos(t *testing.T) {
+// TEC-499 / TEC-1076: the startup sync adds {{products_html}} and
+// {{intake_photos_html}} to the system seed of the default contract template
+// and never touches an admin-published one.
+func TestEnsureContractBlocks(t *testing.T) {
 	e := newEnv(t, nil, 0)
 	ctx := context.Background()
 	// Languages without a contract seed (000030 seeds tr and en only), so
@@ -57,7 +58,7 @@ func TestEnsureContractIntakePhotos(t *testing.T) {
 	t.Cleanup(func() { _, _ = e.pool.Exec(context.Background(), `DELETE FROM users WHERE id = $1`, admin.ID) })
 	edited := insert(adminLang, pgtype.Int8{Int64: admin.ID, Valid: true})
 
-	if _, err := e.svc.EnsureContractIntakePhotos(ctx); err != nil {
+	if _, err := e.svc.EnsureContractBlocks(ctx); err != nil {
 		t.Fatal(err)
 	}
 	active := func(lang string) db.DocumentTemplate {
@@ -75,7 +76,10 @@ func TestEnsureContractIntakePhotos(t *testing.T) {
 	if !strings.Contains(got.Html, IntakePhotosPlaceholder+"\n"+`<p class="doc-footer">`) {
 		t.Fatalf("placeholder not before the footer:\n%s", got.Html)
 	}
-	if !strings.Contains(string(got.Variables), "intake_photos_html") {
+	if !strings.Contains(got.Html, ProductsPlaceholder+"\n"+IntakePhotosPlaceholder) {
+		t.Fatalf("products placeholder not before the photos:\n%s", got.Html)
+	}
+	if !strings.Contains(string(got.Variables), "intake_photos_html") || !strings.Contains(string(got.Variables), "products_html") {
 		t.Fatalf("variables = %s", got.Variables)
 	}
 	if row := active(adminLang); row.ID != edited.ID || strings.Contains(row.Html, "intake_photos_html") {
@@ -83,7 +87,7 @@ func TestEnsureContractIntakePhotos(t *testing.T) {
 	}
 
 	// Idempotent: a second run adds no version.
-	if _, err := e.svc.EnsureContractIntakePhotos(ctx); err != nil {
+	if _, err := e.svc.EnsureContractBlocks(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if row := active(seedLang); row.ID != got.ID {
@@ -96,8 +100,8 @@ func TestEnsureContractIntakePhotos(t *testing.T) {
 		if err != nil || row.CreatedBy.Valid {
 			continue
 		}
-		if !strings.Contains(row.Html, "intake_photos_html") {
-			t.Fatalf("%s default contract template lacks the placeholder", lang)
+		if !strings.Contains(row.Html, "intake_photos_html") || !strings.Contains(row.Html, "products_html") {
+			t.Fatalf("%s default contract template lacks a placeholder", lang)
 		}
 	}
 }

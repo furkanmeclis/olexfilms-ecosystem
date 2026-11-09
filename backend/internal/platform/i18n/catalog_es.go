@@ -302,7 +302,9 @@ var esCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Firmas",
 	"contracts.pdf.signed_at":                          "Firmado el",
 	"contracts.pdf.otp_verified":                       "Verificado con código de un solo uso",
-	"contracts.pdf.attachments":                        "Fotos y adjuntos",
+	"contracts.pdf.attachments":                        "Fotos de daños / notas",
+	"contracts.pdf.products":                           "Productos utilizados",
+	"contracts.pdf.product_code":                       "Código de producto",
 	"contracts.pdf.footer":                             "Este documento se ha creado con una firma electrónica simple.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Contrato {{no}}",

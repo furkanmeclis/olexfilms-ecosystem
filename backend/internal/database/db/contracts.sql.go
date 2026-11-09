@@ -1432,6 +1432,60 @@ func (q *Queries) ListContractPDFSigners(ctx context.Context, instanceID int64) 
 	return items, nil
 }
 
+const listContractServiceProducts = `-- name: ListContractServiceProducts :many
+
+SELECT si.id, p.name AS product_name, p.sku, u.barcode, si.applied_parts
+FROM service_items si
+JOIN products p ON p.id = si.product_id AND p.brand_id = si.brand_id
+JOIN units u ON u.id = si.unit_id AND u.brand_id = si.brand_id
+WHERE si.service_id = $1
+  AND si.organization_id = $2
+ORDER BY si.id
+`
+
+type ListContractServiceProductsParams struct {
+	ServiceID      int64 `json:"service_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type ListContractServiceProductsRow struct {
+	ID           int64  `json:"id"`
+	ProductName  string `json:"product_name"`
+	Sku          string `json:"sku"`
+	Barcode      string `json:"barcode"`
+	AppliedParts []byte `json:"applied_parts"`
+}
+
+// ---------------------------------------------------------------------------
+// Products (TEC-1076).
+// The products used on a service contract's subject with their codes (SKU
+// and unit barcode) and applied parts, for the contract PDF.
+func (q *Queries) ListContractServiceProducts(ctx context.Context, arg ListContractServiceProductsParams) ([]ListContractServiceProductsRow, error) {
+	rows, err := q.db.Query(ctx, listContractServiceProducts, arg.ServiceID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContractServiceProductsRow{}
+	for rows.Next() {
+		var i ListContractServiceProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductName,
+			&i.Sku,
+			&i.Barcode,
+			&i.AppliedParts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listContractSignatures = `-- name: ListContractSignatures :many
 SELECT id, uuid, signer_id, instance_id, organization_id, brand_id, storage_key, sha256, ip_address, user_agent, created_at FROM contract_signatures
 WHERE instance_id = $1

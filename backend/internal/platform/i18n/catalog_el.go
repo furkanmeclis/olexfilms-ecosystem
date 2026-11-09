@@ -302,7 +302,9 @@ var elCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Υπογραφές",
 	"contracts.pdf.signed_at":                          "Υπογράφηκε στις",
 	"contracts.pdf.otp_verified":                       "Επαληθεύτηκε με OTP",
-	"contracts.pdf.attachments":                        "Φωτογραφίες και συνημμένα",
+	"contracts.pdf.attachments":                        "Φωτογραφίες ζημιών / σημειώσεων",
+	"contracts.pdf.products":                           "Χρησιμοποιούμενα προϊόντα",
+	"contracts.pdf.product_code":                       "Κωδικός προϊόντος",
 	"contracts.pdf.footer":                             "Αυτό το έγγραφο δημιουργήθηκε με απλή ηλεκτρονική υπογραφή.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Σύμβαση {{no}}",

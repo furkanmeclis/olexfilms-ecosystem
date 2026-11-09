@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  ChevronDown,
   FileSignature,
   ImageIcon,
   ImagePlus,
@@ -26,6 +27,11 @@ import { Loading } from "@/components/common/loading";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { localeDir, normalizeLocale } from "@/config/i18n";
@@ -482,6 +488,69 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/**
+ * TEC-1082: the contract's own photos are optional damage / note shots
+ * (close-ups the standard intake angles miss, the odometer, items left in
+ * the car). They go into the signed PDF and are fixed after signing. The
+ * section starts folded unless photos are already attached.
+ */
+function MediaSection({
+  contract,
+  canWrite,
+  onChanged,
+}: {
+  contract: Contract;
+  canWrite: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(() => contract.media.length > 0);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} asChild>
+      <section
+        className="space-y-3 rounded-lg border p-4"
+        data-testid="contract-media-section"
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 text-start font-medium"
+            data-testid="contract-media-toggle"
+          >
+            <span>
+              {t(`${T}.media`)}
+              {contract.media.length > 0 ? (
+                <Badge variant="secondary" className="ms-2">
+                  {contract.media.length}
+                </Badge>
+              ) : null}
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 transition-transform${open ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+        </CollapsibleTrigger>
+        {/* Kept mounted: the upload state survives folding. */}
+        <CollapsibleContent
+          forceMount
+          className="space-y-3 data-[state=closed]:hidden"
+          data-testid="contract-media-content"
+        >
+          <p className="text-muted-foreground text-sm">
+            {t(`${T}.media_purpose`)}
+          </p>
+          <MediaPanel
+            contract={contract}
+            canWrite={canWrite}
+            onChanged={onChanged}
+          />
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
+  );
+}
+
 export type ContractStepProps = {
   service: Service;
   onBack: () => void;
@@ -659,9 +728,7 @@ export function ContractStep({
             </Section>
           </div>
         ) : null}
-        <Section title={t(`${T}.media`)}>
-          <MediaPanel contract={data} canWrite={canWrite} onChanged={refresh} />
-        </Section>
+        <MediaSection contract={data} canWrite={canWrite} onChanged={refresh} />
       </div>
     );
   }

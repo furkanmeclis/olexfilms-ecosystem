@@ -302,7 +302,9 @@ var ruCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Подписи",
 	"contracts.pdf.signed_at":                          "Подписан",
 	"contracts.pdf.otp_verified":                       "Подтверждено одноразовым кодом",
-	"contracts.pdf.attachments":                        "Фото и вложения",
+	"contracts.pdf.attachments":                        "Фото повреждений / заметок",
+	"contracts.pdf.products":                           "Использованные продукты",
+	"contracts.pdf.product_code":                       "Код продукта",
 	"contracts.pdf.footer":                             "Документ подписан простой электронной подписью.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Договор {{no}}",

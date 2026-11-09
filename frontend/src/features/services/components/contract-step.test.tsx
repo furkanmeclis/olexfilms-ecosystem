@@ -436,6 +436,10 @@ describe("ContractStep (TEC-291)", () => {
     );
     expect($$('[data-testid="contract-media-item"]')).toHaveLength(1);
     expect($('[data-testid="contract-media-remove"]')).not.toBeNull();
+    // TEC-1082: attached photos keep the section open.
+    expect(
+      $('[data-testid="contract-media-content"]')?.getAttribute("data-state"),
+    ).toBe("open");
 
     // A file over 12 MB is rejected before the upload.
     const input = $('[data-testid="contract-media-input"]') as HTMLInputElement;
@@ -466,6 +470,29 @@ describe("ContractStep (TEC-291)", () => {
     expect($('[data-testid="contract-media-remove"]')).toBeNull();
     expect($('[data-testid="contract-media-input"]')).toBeNull();
   });
+
+  it("folds the optional damage / note photos while none is attached (TEC-1082)", async () => {
+    const pending = contract({ media: [] });
+    contractApi.get.mockResolvedValue(pending);
+    await render(
+      createElement(ContractStep, {
+        service: service({ contract: summary(pending) }),
+        onBack: vi.fn(),
+        onNext: vi.fn(),
+      }),
+    );
+    const content = () =>
+      $('[data-testid="contract-media-content"]')?.getAttribute("data-state");
+    expect($('[data-testid="contract-media-toggle"]')?.textContent).toContain(
+      "services.contract.media",
+    );
+    expect(content()).toBe("closed");
+    await click($('[data-testid="contract-media-toggle"]'));
+    expect(content()).toBe("open");
+    expect($('[data-testid="contract-media-content"]')?.textContent).toContain(
+      "services.contract.media_purpose",
+    );
+  });
 });
 
 describe("ServiceWizardPage contract step (TEC-291)", () => {
@@ -478,7 +505,13 @@ describe("ServiceWizardPage contract step (TEC-291)", () => {
     const off = $$('[data-testid="wizard-stepper"] [data-step]').map((b) =>
       b.getAttribute("data-step"),
     );
-    expect(off).toEqual(["customer_vehicle", "parts", "measurement", "stock"]);
+    expect(off).toEqual([
+      "customer_vehicle",
+      "parts",
+      "stock",
+      "measurement",
+      "complete",
+    ]);
 
     act(() => root.unmount());
     root = createRoot(container);
@@ -492,13 +525,14 @@ describe("ServiceWizardPage contract step (TEC-291)", () => {
     expect(on).toEqual([
       "customer_vehicle",
       "parts",
+      "stock",
       "measurement",
       "contract",
-      "stock",
+      "complete",
     ]);
   });
 
-  it("keeps the stock step closed while a required contract is not executed", async () => {
+  it("keeps the last step closed while a required contract is not executed", async () => {
     const pending = contract();
     contractApi.get.mockResolvedValue(pending);
     wizardApi.getService.mockResolvedValue(
@@ -507,11 +541,13 @@ describe("ServiceWizardPage contract step (TEC-291)", () => {
     await render(
       createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
     );
-    expect(disabled('[data-step="stock"]')).toBe(true);
+    // TEC-1076: the products come before the contract and stay open.
+    expect(disabled('[data-step="complete"]')).toBe(true);
+    expect(disabled('[data-step="stock"]')).toBe(false);
     await click($('[data-step="contract"]'));
     expect($('[data-testid="contract-step"]')).not.toBeNull();
     expect(disabled('[data-testid="contract-next"]')).toBe(true);
-    expect($('[data-testid="stock-step"]')).toBeNull();
+    expect($('[data-testid="complete-step"]')).toBeNull();
   });
 });
 

@@ -237,6 +237,8 @@ var specs = map[string]KindSpec{
 		block("contract", "media_html", "Gömülü medya", "Embedded media"),
 		// TEC-499: vehicle intake photo grid (photo standard add-on).
 		block("contract", "intake_photos_html", "Araç kabul fotoğrafları", "Vehicle intake photos"),
+		// TEC-1076: products used on the service with SKU and barcode.
+		block("contract", "products_html", "Kullanılan ürünler ve kodları", "Products used and their codes"),
 	})},
 	KindOrderSlip: {Kind: KindOrderSlip, Variables: join(companyVars, customerVars, totalsVars, []Variable{
 		text("order", "order_status", "Durum", "Status", "Onaylandı", "Approved"),

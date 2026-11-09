@@ -8,7 +8,6 @@ import {
   isKnownPart,
   isPresetActive,
   partGroup,
-  selectionMatchesPresets,
   visiblePresets,
 } from "./car-parts";
 
@@ -89,7 +88,7 @@ describe("part presets (TEC-864)", () => {
     );
   });
 
-  it("replaces only its own group and skips unavailable parts", () => {
+  it("adds to the selection and skips unavailable parts", () => {
     const available = BODY_PARTS.filter((p) => p !== "body_tavan");
     const next = applyPreset(
       ["body_kaput", "window_on_cam"],
@@ -97,6 +96,22 @@ describe("part presets (TEC-864)", () => {
       [...available, "window_on_cam"],
     );
     expect(sorted(next)).toEqual(sorted([...available, "window_on_cam"]));
+  });
+
+  it("combines presets of one group: front two windows + windshield (TEC-1076)", () => {
+    const two = applyPreset([], preset("front_two_windows"), ALL);
+    const both = applyPreset(two, preset("windshield"), ALL);
+    expect(sorted(both)).toEqual(
+      sorted(["window_sol_on_kapi", "window_sag_on_kapi", "window_on_cam"]),
+    );
+    expect(isPresetActive(both, preset("front_two_windows"), ALL)).toBe(true);
+    expect(isPresetActive(both, preset("windshield"), ALL)).toBe(true);
+    expect(isPresetActive(both, preset("all_windows"), ALL)).toBe(false);
+    // Pressing an active preset removes only its own parts.
+    expect(applyPreset(both, preset("windshield"), ALL)).toEqual(two);
+    // A hand-picked extra part is kept.
+    const extra = applyPreset(["body_tavan"], preset("windshield"), ALL);
+    expect(sorted(extra)).toEqual(sorted(["body_tavan", "window_on_cam"]));
   });
 
   it("shows only presets with available parts and drops duplicates", () => {
@@ -116,18 +131,5 @@ describe("part presets (TEC-864)", () => {
       "all_windows_no_windshield",
     ]);
     expect(visiblePresets([])).toEqual([]);
-  });
-
-  it("tells whether the selection is explained by the presets", () => {
-    const presets = visiblePresets(ALL);
-    expect(selectionMatchesPresets([], presets, ALL)).toBe(true);
-    const front = applyPreset([], preset("front_three"), ALL);
-    const both = applyPreset(front, preset("windshield"), ALL);
-    expect(selectionMatchesPresets(both, presets, ALL)).toBe(true);
-    expect(isPresetActive(both, preset("front_three"), ALL)).toBe(true);
-    expect(
-      selectionMatchesPresets(["body_kaput", "body_tavan"], presets, ALL),
-    ).toBe(false);
-    expect(selectionMatchesPresets(["custom_part"], presets, ALL)).toBe(false);
   });
 });

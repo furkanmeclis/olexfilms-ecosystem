@@ -1888,6 +1888,11 @@ type Querier interface {
 	ListContractInstancesBySubject(ctx context.Context, arg ListContractInstancesBySubjectParams) ([]ContractInstance, error)
 	ListContractMedia(ctx context.Context, instanceID int64) ([]ContractMedium, error)
 	ListContractPDFSigners(ctx context.Context, instanceID int64) ([]ListContractPDFSignersRow, error)
+	// ---------------------------------------------------------------------------
+	// Products (TEC-1076).
+	// The products used on a service contract's subject with their codes (SKU
+	// and unit barcode) and applied parts, for the contract PDF.
+	ListContractServiceProducts(ctx context.Context, arg ListContractServiceProductsParams) ([]ListContractServiceProductsRow, error)
 	ListContractSignatures(ctx context.Context, instanceID int64) ([]ContractSignature, error)
 	ListContractSigners(ctx context.Context, instanceID int64) ([]ContractSigner, error)
 	// ---------------------------------------------------------------------------
