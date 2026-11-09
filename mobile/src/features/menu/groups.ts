@@ -107,6 +107,16 @@ export const ITEMS: MenuItem[] = [
   // Finance.
   // TEC-957: cari accounts and disputes (both sides read with accounting.read); e-invoices in the center.
   { key: 'accounting', icon: 'accounting', group: 'finance', permission: 'accounting.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  // TEC-1071: accounting queue (orders to invoice, on the road, returns) of the seller books (web TEC-1070).
+  {
+    key: 'accounting_queue',
+    icon: 'inbox',
+    group: 'finance',
+    permission: 'accounting.read',
+    spaces: ['admin'],
+    built: ['admin'],
+    orgTypes: ['center', 'distributor'],
+  },
   { key: 'disputes', icon: 'alert', group: 'finance', permission: 'accounting.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'sale_prices', icon: 'accounting', group: 'finance', permission: 'dealer_pricing.write', spaces: ['bayi'], built: ['bayi'] },
   {

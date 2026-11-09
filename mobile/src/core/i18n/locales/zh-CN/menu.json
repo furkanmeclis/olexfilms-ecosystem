@@ -27,5 +27,6 @@
   "group.assistant": "AI",
   "group.other": "其他",
   "group.account": "账户与设置",
-  "measure": "测量"
+  "measure": "测量",
+  "accounting_queue": "财务队列"
 }

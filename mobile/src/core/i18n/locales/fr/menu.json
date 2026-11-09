@@ -27,5 +27,6 @@
   "group.assistant": "IA",
   "group.other": "Autres",
   "group.account": "Compte et paramètres",
-  "measure": "Mesure"
+  "measure": "Mesure",
+  "accounting_queue": "File comptable"
 }

@@ -27,5 +27,6 @@
   "group.assistant": "KI",
   "group.other": "Weiteres",
   "group.account": "Konto und Einstellungen",
-  "measure": "Messen"
+  "measure": "Messen",
+  "accounting_queue": "Buchhaltungs-Warteschlange"
 }

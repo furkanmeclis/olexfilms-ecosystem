@@ -128,7 +128,7 @@ describe('menu group definition', () => {
       operations: ['approvals', 'measure', 'appointments', 'occupancy', 'tasks', 'warranty_claims', 'measurements', 'certificates'],
       customers: ['customers', 'leads', 'fleets', 'service_subscriptions'],
       stock: ['orders', 'stock', 'quick_sale', 'transfers', 'purchases', 'catalog'],
-      finance: ['accounting', 'disputes', 'sale_prices', 'pricing', 'einvoices'],
+      finance: ['accounting', 'accounting_queue', 'disputes', 'sale_prices', 'pricing', 'einvoices'],
       business: ['network', 'staff', 'performance', 'reports', 'campaigns', 'announcements'],
       assistant: ['assistant', 'ai_actions'],
       account: ['warehouse', 'search', 'spaces', 'settings'],
@@ -181,7 +181,7 @@ describe('menuGroups per role', () => {
     assert.deepEqual(dealer.finance, ['service_subscriptions', 'accounting', 'disputes', 'sale_prices']);
     assert.equal(dealer.customers, undefined);
     const dist = layout(menuGroups(viewer(ROLES.distributor_accounting!)));
-    assert.deepEqual(dist.finance, ['service_subscriptions', 'orders', 'accounting', 'disputes', 'pricing']);
+    assert.deepEqual(dist.finance, ['service_subscriptions', 'orders', 'accounting', 'accounting_queue', 'disputes', 'pricing']);
   });
 
   it('lone orders join operations before finance', () => {
@@ -198,6 +198,14 @@ describe('menuGroups per role', () => {
     assert.equal(has('center_social'), false);
     const reviewer = viewer({ orgType: 'center', workplace: true, permissions: ['warranty_claims.review'] });
     assert.ok(keysOf(menuGroups(reviewer)).includes('approvals'));
+  });
+
+  it('accounting queue only for center and distributor books (TEC-1071)', () => {
+    const has = (role: string) => keysOf(menuGroups(viewer(ROLES[role]!))).includes('accounting_queue');
+    assert.equal(has('center_accounting'), true);
+    assert.equal(has('distributor_accounting'), true);
+    assert.equal(has('dealer_accounting'), false);
+    assert.equal(has('dealer_owner'), false);
   });
 
   it('center accounting: tasks alone in operations join business', () => {

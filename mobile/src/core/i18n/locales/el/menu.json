@@ -27,5 +27,6 @@
   "group.assistant": "ΤΝ",
   "group.other": "Άλλα",
   "group.account": "Λογαριασμός και ρυθμίσεις",
-  "measure": "Μέτρηση"
+  "measure": "Μέτρηση",
+  "accounting_queue": "Ουρά λογιστηρίου"
 }

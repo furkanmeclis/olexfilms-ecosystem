@@ -66,6 +66,7 @@ const ROUTE_MODULES: Record<string, string> = {
   orders: 'orders',
   stock: 'stock',
   accounting: 'accounting',
+  accounting_queue: 'accounting',
   disputes: 'accounting',
   einvoices: 'e_invoice',
   quick_sale: 'dealer_accounting',

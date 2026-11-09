@@ -40,5 +40,6 @@
   "group.assistant": "AI",
   "group.other": "Other",
   "group.account": "Account and settings",
-  "measure": "Measure"
+  "measure": "Measure",
+  "accounting_queue": "Accounting queue"
 }
