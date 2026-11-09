@@ -46,6 +46,18 @@ SELECT COUNT(*)::bigint FROM (
   FROM users u
   JOIN customer_organizations co ON co.user_id = u.id
   LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+  LEFT JOIN LATERAL (
+    -- TEC-1074: the organization that opened the customer (first link inside
+    -- the scope, so a dealer never sees another dealer's name).
+    SELECT oo.uuid, oo.name, oo.type
+    FROM customer_organizations oco
+    JOIN organizations oo ON oo.id = oco.organization_id
+    WHERE oco.user_id = u.id
+      AND ($1::bigint[] IS NULL OR oco.organization_id = ANY ($1::bigint[]))
+      AND ($2::bigint IS NULL OR oco.brand_id = $2)
+    ORDER BY oco.created_at ASC, oco.id ASC
+    LIMIT 1
+  ) opener ON true
   WHERE u.deleted_at IS NULL
     AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
     AND ($2::bigint IS NULL OR co.brand_id = $2)
@@ -66,9 +78,10 @@ SELECT COUNT(*)::bigint FROM (
       OR u.phone_e164 LIKE '%' || $6 || '%'
       OR cp.company_name ILIKE '%' || $6 || '%'
     )
+    AND ($7::uuid[] IS NULL OR opener.uuid = ANY ($7::uuid[]))
   GROUP BY u.id
-  HAVING ($7::timestamptz IS NULL OR MIN(co.created_at) >= $7::timestamptz)
-     AND ($8::timestamptz IS NULL OR MIN(co.created_at) < $8::timestamptz)
+  HAVING ($8::timestamptz IS NULL OR MIN(co.created_at) >= $8::timestamptz)
+     AND ($9::timestamptz IS NULL OR MIN(co.created_at) < $9::timestamptz)
 ) matched
 `
 
@@ -79,6 +92,7 @@ type CountOrganizationCustomersParams struct {
 	Statuses          []string           `json:"statuses"`
 	CustomerTypes     []string           `json:"customer_types"`
 	Q                 pgtype.Text        `json:"q"`
+	OpenedByUuids     []uuid.UUID        `json:"opened_by_uuids"`
 	LinkedFrom        pgtype.Timestamptz `json:"linked_from"`
 	LinkedBefore      pgtype.Timestamptz `json:"linked_before"`
 }
@@ -91,6 +105,7 @@ func (q *Queries) CountOrganizationCustomers(ctx context.Context, arg CountOrgan
 		arg.Statuses,
 		arg.CustomerTypes,
 		arg.Q,
+		arg.OpenedByUuids,
 		arg.LinkedFrom,
 		arg.LinkedBefore,
 	)
@@ -934,10 +949,23 @@ const listOrganizationCustomers = `-- name: ListOrganizationCustomers :many
 SELECT u.id, u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status, u.locale, u.created_at,
        cp.type AS customer_type, cp.company_name,
        MIN(co.created_at)::timestamptz AS linked_at,
-       MIN(co.first_service_at)::timestamptz AS first_service_at
+       MIN(co.first_service_at)::timestamptz AS first_service_at,
+       opener.uuid::uuid AS opened_by_uuid, opener.name::text AS opened_by_name, opener.type::text AS opened_by_type
 FROM users u
 JOIN customer_organizations co ON co.user_id = u.id
 LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+LEFT JOIN LATERAL (
+  -- TEC-1074: the organization that opened the customer (first link inside
+  -- the scope, so a dealer never sees another dealer's name).
+  SELECT oo.uuid, oo.name, oo.type
+  FROM customer_organizations oco
+  JOIN organizations oo ON oo.id = oco.organization_id
+  WHERE oco.user_id = u.id
+    AND ($1::bigint[] IS NULL OR oco.organization_id = ANY ($1::bigint[]))
+    AND ($2::bigint IS NULL OR oco.brand_id = $2)
+  ORDER BY oco.created_at ASC, oco.id ASC
+  LIMIT 1
+) opener ON true
 WHERE u.deleted_at IS NULL
   AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
   AND ($2::bigint IS NULL OR co.brand_id = $2)
@@ -958,27 +986,28 @@ WHERE u.deleted_at IS NULL
     OR u.phone_e164 LIKE '%' || $6 || '%'
     OR cp.company_name ILIKE '%' || $6 || '%'
   )
+  AND ($7::uuid[] IS NULL OR opener.uuid = ANY ($7::uuid[]))
   -- TEC-164: Meilisearch hits; the scope filter above still applies.
-  AND ($7::uuid[] IS NULL OR u.uuid = ANY ($7::uuid[]))
-GROUP BY u.id, cp.user_id
-HAVING ($8::timestamptz IS NULL OR MIN(co.created_at) >= $8::timestamptz)
-   AND ($9::timestamptz IS NULL OR MIN(co.created_at) < $9::timestamptz)
+  AND ($8::uuid[] IS NULL OR u.uuid = ANY ($8::uuid[]))
+GROUP BY u.id, cp.user_id, opener.uuid, opener.name, opener.type
+HAVING ($9::timestamptz IS NULL OR MIN(co.created_at) >= $9::timestamptz)
+   AND ($10::timestamptz IS NULL OR MIN(co.created_at) < $10::timestamptz)
 ORDER BY
-  CASE WHEN NOT $10::bool THEN
-    CASE $11::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  CASE WHEN NOT $11::bool THEN
+    CASE $12::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status WHEN 'opened_by' THEN lower(opener.name) END
   END ASC,
-  CASE WHEN $10::bool THEN
-    CASE $11::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+  CASE WHEN $11::bool THEN
+    CASE $12::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status WHEN 'opened_by' THEN lower(opener.name) END
   END DESC,
-  CASE WHEN NOT $10::bool AND $11::text = 'email' THEN lower(u.email) END ASC NULLS LAST,
-  CASE WHEN $10::bool AND $11::text = 'email' THEN lower(u.email) END DESC NULLS LAST,
-  CASE WHEN NOT $10::bool AND $11::text = 'linked_at' THEN MIN(co.created_at) END ASC,
-  CASE WHEN $10::bool AND $11::text = 'linked_at' THEN MIN(co.created_at) END DESC,
-  CASE WHEN NOT $10::bool AND $11::text = 'first_service_at' THEN MIN(co.first_service_at) END ASC NULLS LAST,
-  CASE WHEN $10::bool AND $11::text = 'first_service_at' THEN MIN(co.first_service_at) END DESC NULLS LAST,
-  CASE WHEN $10::bool THEN u.id END DESC,
+  CASE WHEN NOT $11::bool AND $12::text = 'email' THEN lower(u.email) END ASC NULLS LAST,
+  CASE WHEN $11::bool AND $12::text = 'email' THEN lower(u.email) END DESC NULLS LAST,
+  CASE WHEN NOT $11::bool AND $12::text = 'linked_at' THEN MIN(co.created_at) END ASC,
+  CASE WHEN $11::bool AND $12::text = 'linked_at' THEN MIN(co.created_at) END DESC,
+  CASE WHEN NOT $11::bool AND $12::text = 'first_service_at' THEN MIN(co.first_service_at) END ASC NULLS LAST,
+  CASE WHEN $11::bool AND $12::text = 'first_service_at' THEN MIN(co.first_service_at) END DESC NULLS LAST,
+  CASE WHEN $11::bool THEN u.id END DESC,
   u.id ASC
-LIMIT $13 OFFSET $12
+LIMIT $14 OFFSET $13
 `
 
 type ListOrganizationCustomersParams struct {
@@ -988,6 +1017,7 @@ type ListOrganizationCustomersParams struct {
 	Statuses          []string           `json:"statuses"`
 	CustomerTypes     []string           `json:"customer_types"`
 	Q                 pgtype.Text        `json:"q"`
+	OpenedByUuids     []uuid.UUID        `json:"opened_by_uuids"`
 	Uuids             []uuid.UUID        `json:"uuids"`
 	LinkedFrom        pgtype.Timestamptz `json:"linked_from"`
 	LinkedBefore      pgtype.Timestamptz `json:"linked_before"`
@@ -1011,13 +1041,17 @@ type ListOrganizationCustomersRow struct {
 	CompanyName    pgtype.Text        `json:"company_name"`
 	LinkedAt       pgtype.Timestamptz `json:"linked_at"`
 	FirstServiceAt pgtype.Timestamptz `json:"first_service_at"`
+	OpenedByUuid   uuid.UUID          `json:"opened_by_uuid"`
+	OpenedByName   string             `json:"opened_by_name"`
+	OpenedByType   string             `json:"opened_by_type"`
 }
 
 // Customers of the organizations in scope; one row per user.
 // TEC-371: statuses / customer types are CSV filters, linked_at is a date
 // range on the first link, organization_uuids narrows the links to those
-// organizations (inside the scope above). Sort: docs/list-contract.md, keys
-// from customers usecase customersSortSpec.
+// organizations (inside the scope above). TEC-1074: opened_by_* is the
+// first in-scope link (opened_by_uuids filters on it). Sort:
+// docs/list-contract.md, keys from customers usecase customersSortSpec.
 func (q *Queries) ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationCustomers,
 		arg.OrgIds,
@@ -1026,6 +1060,7 @@ func (q *Queries) ListOrganizationCustomers(ctx context.Context, arg ListOrganiz
 		arg.Statuses,
 		arg.CustomerTypes,
 		arg.Q,
+		arg.OpenedByUuids,
 		arg.Uuids,
 		arg.LinkedFrom,
 		arg.LinkedBefore,
@@ -1055,6 +1090,9 @@ func (q *Queries) ListOrganizationCustomers(ctx context.Context, arg ListOrganiz
 			&i.CompanyName,
 			&i.LinkedAt,
 			&i.FirstServiceAt,
+			&i.OpenedByUuid,
+			&i.OpenedByName,
+			&i.OpenedByType,
 		); err != nil {
 			return nil, err
 		}

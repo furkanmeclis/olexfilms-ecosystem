@@ -158,6 +158,7 @@ const service = (over: Partial<Service> = {}): Service => ({
   status: "draft",
   status_label: "Draft",
   organization: { uuid: "o1", name: "Bayi", type: "dealer" },
+  applied_by: "Bayi",
   customer: {
     uuid: "c1",
     name: "Ayşe",

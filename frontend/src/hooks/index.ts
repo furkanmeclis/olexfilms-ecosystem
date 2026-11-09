@@ -1,5 +1,6 @@
 export { useAuth } from "@/providers/auth-provider";
 export { usePermission } from "@/providers/permission-provider";
+export { useCanSeePrices } from "./use-can-see-prices";
 export { usePagination } from "./use-pagination";
 export { useFilters } from "./use-filters";
 export { useSorting } from "./use-sorting";

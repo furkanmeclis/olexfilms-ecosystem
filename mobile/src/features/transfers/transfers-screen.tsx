@@ -5,6 +5,8 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 
+import { hasAmount } from '@/core/price-visibility';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage, i18n } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
@@ -191,6 +193,7 @@ export function TransferDetailScreen() {
   const qc = useQueryClient();
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const q = useTransfer(uuid);
+  const prices = usePricesVisible();
   const [busy, setBusy] = useState<TransferStatus | null>(null);
   const tr = q.data;
 
@@ -259,7 +262,8 @@ export function TransferDetailScreen() {
               <InfoRow label={t('created')} value={f.dateTime(tr.created_at)} />
               {tr.shipped_at ? <InfoRow label={t('shipped_at')} value={f.dateTime(tr.shipped_at)} /> : null}
               {tr.received_at ? <InfoRow label={t('received_at')} value={f.dateTime(tr.received_at)} /> : null}
-              <InfoRow label={t('total')} value={tr.total ? f.money(tr.total, tr.currency) : '–'} last />
+              {/* TEC-1051: no amount for a warehouse role without pricing permissions. */}
+              {prices ? <InfoRow label={t('total')} value={hasAmount(tr.total) ? f.money(tr.total, tr.currency) : '–'} last /> : null}
             </List>
 
             {tr.note || tr.decision_note || tr.cancel_reason ? (

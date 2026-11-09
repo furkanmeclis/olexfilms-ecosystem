@@ -52,6 +52,14 @@ func orderAmountsVisible(p Principal, role string) bool {
 	return purchase || sale
 }
 
+// moneyText reads an order money field; null (hidden, TEC-1050) is empty.
+func moneyText(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 type orderRow struct {
 	UUID      uuid.UUID  `json:"uuid"`
 	OrderNo   string     `json:"order_no"`
@@ -72,7 +80,7 @@ func toOrderRow(p Principal, v ordersuc.OrderView) orderRow {
 		CreatedAt: v.CreatedAt, ShippedAt: v.ShippedAt,
 	}
 	if orderAmountsVisible(p, v.Role) {
-		r.Currency, r.Total = v.Currency, v.Total
+		r.Currency, r.Total = v.Currency, moneyText(v.Total)
 	}
 	return r
 }
@@ -217,13 +225,13 @@ func (t GetOrder) Run(ctx context.Context, env Env, raw json.RawMessage) (Result
 		CancelReason: textPtr(v.CancelReason, maxTextChars), Lines: []orderLine{}, History: []orderStatusLog{},
 	}
 	if prices {
-		d.Subtotal, d.TaxTotal = v.Subtotal, v.TaxTotal
+		d.Subtotal, d.TaxTotal = moneyText(v.Subtotal), moneyText(v.TaxTotal)
 	}
 	for _, it := range v.Items {
 		l := orderLine{Product: dataText(it.Product.Name, maxNameChars), SKU: it.Product.SKU,
 			Quantity: it.Quantity, Meters: it.Meters, Assigned: it.Assigned}
 		if prices {
-			l.UnitPrice, l.LineTotal = it.UnitPrice, it.LineTotal
+			l.UnitPrice, l.LineTotal = moneyText(it.UnitPrice), moneyText(it.LineTotal)
 		}
 		d.Lines = append(d.Lines, l)
 	}

@@ -38,7 +38,7 @@ export function TransferNewScreen() {
       const x = await transferApi.create({ from_warehouse_uuid: fromId, to_warehouse_uuid: toId, note: note.trim() || null });
       qc.setQueryData(wk.transfer(x.uuid), x);
       void qc.invalidateQueries({ queryKey: ['warehouse', 'transfers'] });
-      void qc.invalidateQueries({ queryKey: wk.summary() });
+      void qc.invalidateQueries({ queryKey: wk.summaries() });
       replace(`/depo/jobs/transfer/${x.uuid}`);
     } catch (e) {
       alertError(e);

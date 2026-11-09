@@ -52,6 +52,17 @@ type CustomerSummary struct {
 	CreatedAt      time.Time  `json:"created_at"`
 	LinkedAt       *time.Time `json:"linked_at"`
 	FirstServiceAt *time.Time `json:"first_service_at"`
+	// OpenedBy is the organization that opened the customer: the first
+	// organization link inside the caller's scope (TEC-1074). Only the list
+	// fills it.
+	OpenedBy *OrganizationRef `json:"opened_by,omitempty"`
+}
+
+// OrganizationRef names an organization on a list row.
+type OrganizationRef struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
 }
 
 // CustomerDetail is one customer. Identity numbers are never returned in
@@ -119,7 +130,10 @@ type ListFilter struct {
 	Linked apiquery.TimeRange
 	// OrganizationUUIDs narrows the organization links (inside the scope).
 	OrganizationUUIDs []uuid.UUID
-	Sort              apiquery.ResolvedSort
+	// OpenedByUUIDs keeps the customers whose opening organization (first
+	// link inside the scope) is one of these (TEC-1074).
+	OpenedByUUIDs []uuid.UUID
+	Sort          apiquery.ResolvedSort
 	// SortExplicit: the request named a sort, so the relevance ordered
 	// index search is not used.
 	SortExplicit bool
@@ -619,14 +633,15 @@ func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]
 	// TEC-371: an explicit sort or a filter the index does not carry (type,
 	// linked_at, organization) stays on SQL as well.
 	if q != "" && !slices.Contains(f.Statuses, StatusAnonymized) && !f.SortExplicit && len(f.Types) == 0 &&
-		f.Linked.From == nil && f.Linked.Before == nil && len(f.OrganizationUUIDs) == 0 && s.indexEnabled() {
+		f.Linked.From == nil && f.Linked.Before == nil && len(f.OrganizationUUIDs) == 0 && len(f.OpenedByUUIDs) == 0 &&
+		s.indexEnabled() {
 		rows, total, indexed = s.searchIndexed(ctx, c, f.Statuses, q, f.Limit, f.Offset)
 	}
 	if !indexed {
 		var err error
 		rows, err = s.q.ListOrganizationCustomers(ctx, db.ListOrganizationCustomersParams{
 			OrgIds: c.orgIDs(), BrandID: c.brand(), Statuses: f.Statuses, CustomerTypes: f.Types,
-			OrganizationUuids: f.OrganizationUUIDs, Q: text(q),
+			OrganizationUuids: f.OrganizationUUIDs, OpenedByUuids: f.OpenedByUUIDs, Q: text(q),
 			LinkedFrom: tsArg(&f.Linked, true), LinkedBefore: tsArg(&f.Linked, false),
 			SortKey: sort.Key, SortDesc: sort.Desc,
 			LimitCount: f.Limit, OffsetCount: f.Offset,
@@ -636,7 +651,7 @@ func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]
 		}
 		total, err = s.q.CountOrganizationCustomers(ctx, db.CountOrganizationCustomersParams{
 			OrgIds: c.orgIDs(), BrandID: c.brand(), Statuses: f.Statuses, CustomerTypes: f.Types,
-			OrganizationUuids: f.OrganizationUUIDs, Q: text(q),
+			OrganizationUuids: f.OrganizationUUIDs, OpenedByUuids: f.OpenedByUUIDs, Q: text(q),
 			LinkedFrom: tsArg(&f.Linked, true), LinkedBefore: tsArg(&f.Linked, false),
 		})
 		if err != nil {
@@ -649,6 +664,9 @@ func (s *Service) ListCustomers(ctx context.Context, c Caller, f ListFilter) ([]
 			UUID: r.Uuid, Name: r.Name, Surname: r.Surname, Email: strOrNil(r.Email), Phone: strOrNil(r.PhoneE164),
 			Status: r.Status, Type: TypeIndividual, CompanyName: strOrNil(r.CompanyName), Locale: strOrNil(r.Locale),
 			CreatedAt: r.CreatedAt.Time, LinkedAt: timePtr(r.LinkedAt), FirstServiceAt: timePtr(r.FirstServiceAt),
+		}
+		if r.OpenedByUuid != uuid.Nil {
+			sum.OpenedBy = &OrganizationRef{UUID: r.OpenedByUuid, Name: r.OpenedByName, Type: r.OpenedByType}
 		}
 		if r.CustomerType.Valid {
 			sum.Type = r.CustomerType.String

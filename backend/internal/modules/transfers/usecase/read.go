@@ -49,7 +49,9 @@ type ItemView struct {
 	AccountingExcluded bool `json:"accounting_excluded"`
 }
 
-// TransferView is a request as the API returns it. Role is the active
+// TransferView is a request as the API returns it. total and the items'
+// unit_price / line_total are null for a caller who may not see prices
+// (TEC-1050, authctx.Principal.SeesPrices). Role is the active
 // organization's side (sender, receiver, parent).
 type TransferView struct {
 	UUID       uuid.UUID `json:"uuid"`
@@ -131,7 +133,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, r db.Sto
 		return TransferView{}, fmt.Errorf("transfers: item count: %w", err)
 	}
 	party := partyOf(c, r)
-	return TransferView{
+	v := TransferView{
 		UUID: r.Uuid, TransferNo: r.TransferNo, Kind: r.Kind, Status: r.Status, Role: string(party),
 		Sender: sender, Receiver: receiver, Parent: parent,
 		Currency: strings.TrimSpace(r.Currency), Total: numericTextPtr(r.Total, 2),
@@ -140,7 +142,11 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, r db.Sto
 		ReceivedAt: tsPtr(r.ReceivedAt), CancelledAt: tsPtr(r.CancelledAt),
 		CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,
 		AvailableTransitions: availableKindTransitions(r.Kind, r.Status, party, c.can),
-	}, nil
+	}
+	if !c.Principal.SeesPrices() {
+		v.Total = nil
+	}
+	return v, nil
 }
 
 // view is the full request: summary and units.
@@ -166,6 +172,10 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, r db.StockT
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32
 			iv.Quantity = &qv
+		}
+		if !c.Principal.SeesPrices() {
+			// TEC-1050: no unit price or line total without a price grant.
+			iv.UnitPrice, iv.LineTotal = nil, nil
 		}
 		v.Items = append(v.Items, iv)
 	}

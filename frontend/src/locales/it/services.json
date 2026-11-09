@@ -369,5 +369,14 @@
   "network_scope.network": "Tutta la rete",
   "wizard.performer": "Eseguito da",
   "wizard.performer_own": "{{name}} (nostro punto di servizio)",
-  "wizard.performer_hint": "Se scegli un rivenditore, il servizio viene aperto per lui e l'azione viene registrata."
+  "wizard.performer_hint": "Se scegli un rivenditore, il servizio viene aperto per lui e l'azione viene registrata.",
+  "list.stats.total": "Servizi totali",
+  "list.stats.total_hint": "Inclusi {{cancelled}} annullati",
+  "list.stats.this_month": "Aperti questo mese",
+  "list.stats.this_month_hint": "Dall'inizio del mese",
+  "list.stats.in_progress": "In corso",
+  "list.stats.in_progress_hint": "In attesa, in lavorazione, pronti · {{draft}} bozze",
+  "list.stats.completed": "Completati",
+  "list.stats.active_warranties": "Garanzie attive",
+  "list.stats.warranties_hint": "{{total}} garanzie in totale"
 }

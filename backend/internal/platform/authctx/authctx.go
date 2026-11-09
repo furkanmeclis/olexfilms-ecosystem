@@ -98,6 +98,11 @@ func (p Principal) Can(slug string, need rbac.Scope) bool {
 	return ok && scope.Covers(need)
 }
 
+// SeesPrices reports whether the principal may see prices, amounts, totals
+// and exchange rates at all (TEC-1050): it holds one of
+// rbac.PriceViewPermissions at any scope. Warehouse roles hold none.
+func (p Principal) SeesPrices() bool { return rbac.SeesPrices(p.HasPermission) }
+
 // HasRole reports whether the principal includes the given role slug.
 func (p Principal) HasRole(slug string) bool {
 	for _, role := range p.Roles {

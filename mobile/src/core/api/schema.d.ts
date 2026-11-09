@@ -7955,7 +7955,7 @@ export interface paths {
         };
         /**
          * Customers linked to the organizations in scope
-         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`; default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope). An explicit sort or any of the TEC-371 filters keeps a `q` search on SQL.
+         * @description customers.read. A dealer sees the customers linked to its organization (customer_organizations), a distributor its subtree, the center the brand; always the domain brand (K20). Anonymized customers are listed masked (`anonymized: true`, localized name, no contact data). TEC-164: `q` searches the Meilisearch customers index when it is up (filtered on the scope's organizations and the brand, ranked by relevance; the hits are reloaded from Postgres with the same scope) and falls back to the SQL search otherwise. Anonymized customers are never indexed, so `status=anonymized` always uses the SQL search. TEC-371: sort (`name`, `email`, `status`, `linked_at`, `first_service_at`, `opened_by` (TEC-1074, opening organization name); default `-linked_at`, `id` tiebreak), `status` / `type` CSV, `linked_from`/`linked_to` (first organization link) and `organization_uuid` CSV (links to those organizations, inside the scope); TEC-1074 `opened_by_uuid` CSV. An explicit sort or any of these filters keeps a `q` search on SQL.
          */
         get: operations["listCustomers"];
         put?: never;
@@ -12131,6 +12131,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/services/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summary cards of the service list
+         * @description TEC-1075. services.read, same scope as GET /v1/services (organization, subtree, brand, own). Totals per status, the services opened this calendar month (request time zone, K10 default Europe/Istanbul) and the warranty counts of those services (legacy hub ServiceOverviewStatsWidget). `organization_uuid` narrows like the list filter (the center's own / network switch).
+         */
+        get: operations["getServiceListStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/services/service-no-availability": {
         parameters: {
             query?: never;
@@ -13076,7 +13096,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index.
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index. TEC-1050: a caller without a price permission (any of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; the warehouse roles hold none) gets null money fields, and `total_min` / `total_max` and `sort=total` are ignored for it. The same applies to every order response and to `POST /v1/orders/export` (no currency / subtotal / tax / total columns) and the order slip PDF (prices shown as "—").
          */
         get: operations["listOrders"];
         put?: never;
@@ -18501,6 +18521,14 @@ export interface components {
             linked_at: string | null;
             /** Format: date-time */
             first_service_at: string | null;
+            /** @description TEC-1074: the organization that opened the customer (first organization link inside the caller's scope). List rows only. */
+            opened_by?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                /** @enum {string} */
+                type: "center" | "distributor" | "dealer";
+            };
         };
         CustomerDetail: components["schemas"]["CustomerSummary"] & {
             tax_office: string | null;
@@ -26451,6 +26479,8 @@ export interface components {
             status: components["schemas"]["ServiceStatus"];
             status_label: string;
             organization: components["schemas"]["ServiceOrgRef"];
+            /** @description TEC-1075: who applied the service. The center's service point name (e.g. AFM Florya) for the center's own services when its service point is on, else the organization name. */
+            applied_by: string;
             customer: components["schemas"]["ServiceCustomerRef"];
             /** Format: uuid */
             vehicle_uuid: string;
@@ -26534,6 +26564,44 @@ export interface components {
             valid: boolean;
             /** @description Valid and not held by another service, warranty code or alias */
             available: boolean;
+        };
+        ServiceListStats: {
+            /** Format: int64 */
+            total: number;
+            /**
+             * Format: int64
+             * @description Opened since month_start
+             */
+            this_month: number;
+            /** Format: date-time */
+            month_start: string;
+            by_status: {
+                /** Format: int64 */
+                draft: number;
+                /** Format: int64 */
+                pending: number;
+                /** Format: int64 */
+                processing: number;
+                /** Format: int64 */
+                ready: number;
+                /** Format: int64 */
+                completed: number;
+                /** Format: int64 */
+                cancelled: number;
+            };
+            /** Format: int64 */
+            warranties: number;
+            /**
+             * Format: int64
+             * @description Active and not past end_at
+             */
+            active_warranties: number;
+        };
+        EnvelopeServiceListStats: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceListStats"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeServiceNoAvailability: {
             /** @enum {boolean} */
@@ -27176,19 +27244,22 @@ export interface components {
             /** @description Meters with two decimals (roll_meter products) */
             meters: string | null;
             /**
-             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval
+             * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
              * @example 80.0000
              */
-            unit_price: string;
+            unit_price: string | null;
             /**
-             * @description manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024)
-             * @enum {string}
+             * @description manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @enum {string|null}
              */
-            price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing";
-            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024) */
+            price_source: "list" | "override" | "distributor_dealer" | "manual" | "missing" | null;
+            /** @description The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false when prices are hidden (TEC-1050) */
             price_missing: boolean;
-            /** @example 240.00 */
-            line_total: string;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            line_total: string | null;
             note: string | null;
             /**
              * @description Amount covered by the assigned units (pieces, or meters with two decimals)
@@ -27280,14 +27351,24 @@ export interface components {
             buyer: components["schemas"]["OrderOrgRef"];
             /** @description Seller brand currency */
             currency: string;
-            /** @example 240.00 */
-            subtotal: string;
-            /** @example 0.00 */
-            tax_total: string;
-            /** @example 240.00 */
-            total: string;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            subtotal: string | null;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 0.00
+             */
+            tax_total: string | null;
+            /**
+             * @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
+             * @example 240.00
+             */
+            total: string | null;
+            /** @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             rate_snapshot: components["schemas"]["OrderRateSnapshot"] | null;
-            /** @description TRY rate frozen at approval */
+            /** @description TRY rate frozen at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             try_rate: string | null;
             note: string | null;
             cancel_reason: string | null;
@@ -27872,8 +27953,9 @@ export interface components {
             quantity: number | null;
             /** @description Remaining meters of a roll when requested */
             meters: string | null;
-            /** @description Giver's purchase price frozen at approval (K13) */
+            /** @description Giver's purchase price frozen at approval (K13); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             unit_price: string | null;
+            /** @description null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             line_total: string | null;
             /** @description The transfer_out movement is written */
             shipped: boolean;
@@ -27899,7 +27981,7 @@ export interface components {
             receiver: components["schemas"]["OrderOrgRef"];
             parent: components["schemas"]["OrderOrgRef"];
             currency: string;
-            /** @description Sum of the frozen line totals (null until approval or with an unpriced unit) */
+            /** @description Sum of the frozen line totals (null until approval or with an unpriced unit); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles) */
             total: string | null;
             note: string | null;
             decision_note: string | null;
@@ -46021,6 +46103,8 @@ export interface operations {
                 linked_to?: string;
                 /** @description CSV of organization UUIDs; customers linked to one of them (inside the scope). */
                 organization_uuid?: string;
+                /** @description TEC-1074: CSV of organization UUIDs; customers whose opening organization (`opened_by`, first link inside the scope) is one of them. */
+                opened_by_uuid?: string;
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
@@ -53648,6 +53732,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getServiceListStats: {
+        parameters: {
+            query?: {
+                /** @description CSV of organization UUIDs (inside the scope). */
+                organization_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceListStats"];
                 };
             };
             400: components["responses"]["BadRequest"];

@@ -1,9 +1,9 @@
 {
-  "nav": "客户",
+  "nav": "客户与车辆",
   "nav_list": "客户列表",
   "nav_new": "新建客户",
   "loading": "加载中…",
-  "list.title": "客户",
+  "list.title": "客户与车辆",
   "list.description": "与您可见的组织关联的客户。",
   "list.forbidden": "您需要客户读取权限才能打开此页面。",
   "list.search": "搜索",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "经销商员工",
   "actions.upgrade.confirm": "升级",
   "actions.upgrade.success": "该客户现已成为 {{dealer}} 的成员。",
-  "fields.organization": "组织"
+  "fields.organization": "组织",
+  "fields.opened_by": "开户经销商"
 }

@@ -37,6 +37,7 @@ import {
   NetworkScopeToggle,
   useNetworkScope,
 } from "@/features/services/lib/network-scope";
+import { ServiceListStatsCards } from "@/features/services/components/service-list-stats";
 import { useScopeOrganizationOptions } from "@/features/services/lib/use-scope-organizations";
 import {
   SERVICES_EXPORT_PATH,
@@ -144,14 +145,17 @@ export function ServicesListPage({ slug }: { slug: string }) {
         }),
         createColumn<Service>({
           id: "organization",
-          accessorFn: (row) => row.organization.name,
+          // TEC-1075: who applied the service (the center's service point
+          // name for its own services); the filter stays on organizations.
+          accessorFn: (row) => row.applied_by || row.organization.name,
           labelKey: "services.list.columns.organization",
           enableSorting: true,
           filterVariant: "faceted",
           filterOptions: orgFilter.options,
           enableColumnFilter: orgFilter.enabled,
           param: "organization_uuid",
-          cell: ({ row }) => row.original.organization.name,
+          cell: ({ row }) =>
+            row.original.applied_by || row.original.organization.name,
         }),
         createColumn<Service>({
           accessorKey: "package",
@@ -363,6 +367,10 @@ export function ServicesListPage({ slug }: { slug: string }) {
         ) : null
       }
     >
+      <ServiceListStatsCards
+        enabled={access.canRead}
+        organizationUuid={network.organizationUuid}
+      />
       <EntityTable
         columns={columns}
         data={list.data?.items ?? []}
@@ -405,7 +413,7 @@ export function ServicesListPage({ slug }: { slug: string }) {
               ) : null}
             </p>
             <p className="text-muted-foreground text-xs">
-              {customerName(s) || "—"} · {s.organization.name}
+              {customerName(s) || "—"} · {s.applied_by || s.organization.name}
             </p>
             <p className="text-muted-foreground text-xs">
               {format.dateTime(s.created_at)}

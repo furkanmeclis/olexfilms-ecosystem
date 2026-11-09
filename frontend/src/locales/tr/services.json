@@ -369,5 +369,14 @@
   "network_scope.network": "Tüm ağ",
   "wizard.performer": "Hizmeti yapan",
   "wizard.performer_own": "{{name}} (kendi hizmet noktamız)",
-  "wizard.performer_hint": "Bir bayi seçerseniz hizmet o bayiye ait açılır ve işlem kayda geçer."
+  "wizard.performer_hint": "Bir bayi seçerseniz hizmet o bayiye ait açılır ve işlem kayda geçer.",
+  "list.stats.total": "Toplam hizmet",
+  "list.stats.total_hint": "{{cancelled}} iptal dahil",
+  "list.stats.this_month": "Bu ay açılan",
+  "list.stats.this_month_hint": "Ay başından bu yana",
+  "list.stats.in_progress": "Devam eden",
+  "list.stats.in_progress_hint": "Bekleyen, işlemde, hazır · {{draft}} taslak",
+  "list.stats.completed": "Tamamlanan",
+  "list.stats.active_warranties": "Aktif garanti",
+  "list.stats.warranties_hint": "Toplam {{total}} garanti"
 }

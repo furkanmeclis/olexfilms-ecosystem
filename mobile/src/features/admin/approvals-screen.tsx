@@ -3,6 +3,8 @@ import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, RefreshControl, View } from 'react-native';
 
+import { hasAmount } from '@/core/price-visibility';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
@@ -75,6 +77,8 @@ function OrderApprovals() {
     queryFn: () => unwrap(api.GET('/v1/orders', { params: { query: { status: 'submitted', side: 'seller', limit: LIMIT } } })),
   });
   const items = q.data?.items ?? [];
+  // TEC-1051: no totals for a warehouse role without pricing permissions.
+  const prices = usePricesVisible();
   return (
     <Section title={t('approvals.orders')} query={q} count={q.data?.total}>
       {items.length ? (
@@ -83,7 +87,11 @@ function OrderApprovals() {
             <ListRow
               key={o.uuid}
               title={`${o.order_no} · ${o.buyer.name}`}
-              subtitle={`${f.money(o.total, o.currency)} · ${f.date(o.submitted_at ?? o.created_at)}`}
+              subtitle={
+                prices && hasAmount(o.total)
+                  ? `${f.money(o.total, o.currency)} · ${f.date(o.submitted_at ?? o.created_at)}`
+                  : f.date(o.submitted_at ?? o.created_at)
+              }
               onPress={() => router.push(href(`orders/${o.uuid}`))}
               last={i === items.length - 1}
             />

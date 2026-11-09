@@ -112,6 +112,7 @@ beforeEach(() => {
     "orders.write",
     "catalog.read",
     "organizations.read",
+    "pricing.sale.read",
   ]);
   state.orgType = "distributor";
   api.list.mockResolvedValue({ items: [], total: 45, limit: 20, offset: 0 });
@@ -245,6 +246,22 @@ describe("OrdersListPage (TEC-374 DataTable)", () => {
       created_from: "2026-10-01",
       created_to: "2026-10-02",
     });
+  });
+
+  it("hides the total column without a price permission (TEC-1050)", async () => {
+    state.grants = new Set([
+      "orders.read",
+      "orders.ship",
+      "organizations.read",
+    ]);
+    await render();
+    expect(column("total")).toBeUndefined();
+    expect(column("order_no")).toBeDefined();
+  });
+
+  it("shows the total column with a price permission (TEC-1050)", async () => {
+    await render();
+    expect(column("total")).toBeDefined();
   });
 
   it("offers the buyers of the scope as a party filter on the incoming tab", async () => {

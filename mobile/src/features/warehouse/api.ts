@@ -1,9 +1,11 @@
-import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/core/api/client';
 import { toApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { MOBILE_API_VERSION } from '@/core/config';
+
+import { sameWarehouse, transferFilter, type TransferDirection, warehouseFilter, wk } from './scope';
 
 type S = components['schemas'];
 
@@ -38,27 +40,15 @@ export async function noContent(call: Promise<{ error?: unknown; response: Respo
   if (r.error !== undefined || !r.response.ok) throw toApiError(r.response.status, r.error);
 }
 
-/** Query keys of the warehouse feature. */
-export const wk = {
-  all: ['warehouse'] as const,
-  warehouses: () => ['warehouse', 'warehouses'] as const,
-  rooms: (warehouse: string) => ['warehouse', 'rooms', warehouse] as const,
-  transfers: (status: string) => ['warehouse', 'transfers', status] as const,
-  transfer: (uuid: string) => ['warehouse', 'transfer', uuid] as const,
-  counts: (status: string) => ['warehouse', 'counts', status] as const,
-  count: (uuid: string) => ['warehouse', 'count', uuid] as const,
-  countScans: (uuid: string) => ['warehouse', 'count', uuid, 'scans'] as const,
-  countReport: (uuid: string) => ['warehouse', 'count', uuid, 'report'] as const,
-  entries: (status: string) => ['warehouse', 'entries', status] as const,
-  entry: (uuid: string) => ['warehouse', 'entry', uuid] as const,
-  summary: () => ['warehouse', 'summary'] as const,
-};
+/** Query keys of the warehouse feature (scoped by warehouse, TEC-1049). */
+export { wk };
 
 // --- warehouses ----------------------------------------------------------------
 
-export function useWarehouses() {
+export function useWarehouses(enabled = true) {
   return useQuery({
     queryKey: wk.warehouses(),
+    enabled,
     queryFn: () => unwrap(api.GET('/v1/mobile/warehouse/warehouses', { params: { ...mobile, query: { active: true } } })),
     select: (d) => d.items,
     staleTime: 5 * 60_000,
@@ -89,19 +79,31 @@ export function resolveScan(code: string, opts: { expect?: ScanExpect; warehouse
 
 // --- transfers -----------------------------------------------------------------
 
-export function useTransfers(status: string, enabled = true) {
+/**
+ * Transfers of the current warehouse: outgoing (from it) or incoming (to it).
+ * `scope.ready` false waits for the warehouse list (TEC-1049).
+ */
+export function useTransfers(
+  status: string,
+  scope: { uuid: string | undefined; ready: boolean },
+  direction: TransferDirection = 'out',
+  enabled = true,
+) {
   return useInfiniteQuery({
-    queryKey: wk.transfers(status),
-    enabled,
+    queryKey: wk.transfers(status, scope.uuid, direction),
+    enabled: enabled && scope.ready,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/mobile/warehouse/transfers', {
-          params: { ...mobile, query: { status: status || undefined, limit: PAGE, offset: pageParam } },
+          params: {
+            ...mobile,
+            query: { status: status || undefined, ...transferFilter(scope.uuid, direction), limit: PAGE, offset: pageParam },
+          },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
-    placeholderData: keepPreviousData,
+    placeholderData: (prev, prevQuery) => (sameWarehouse(prevQuery?.queryKey, scope.uuid) ? prev : undefined),
   });
 }
 
@@ -137,19 +139,23 @@ export const transferApi = {
 
 // --- counts --------------------------------------------------------------------
 
-export function useCounts(status: string, enabled = true) {
+/** Stock counts of the current warehouse (TEC-1049). */
+export function useCounts(status: string, scope: { uuid: string | undefined; ready: boolean }, enabled = true) {
   return useInfiniteQuery({
-    queryKey: wk.counts(status),
-    enabled,
+    queryKey: wk.counts(status, scope.uuid),
+    enabled: enabled && scope.ready,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/mobile/warehouse/stock-counts', {
-          params: { ...mobile, query: { status: status || undefined, limit: PAGE, offset: pageParam } },
+          params: {
+            ...mobile,
+            query: { status: status || undefined, ...warehouseFilter(scope.uuid), limit: PAGE, offset: pageParam },
+          },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
-    placeholderData: keepPreviousData,
+    placeholderData: (prev, prevQuery) => (sameWarehouse(prevQuery?.queryKey, scope.uuid) ? prev : undefined),
   });
 }
 
@@ -206,19 +212,20 @@ export const countApi = {
 
 // --- stock entries (panel routes through the mobile mirror) -----------------------
 
-export function useEntries(status: string, enabled = true) {
+/** Stock entries of the current warehouse (TEC-1049). */
+export function useEntries(status: string, scope: { uuid: string | undefined; ready: boolean }, enabled = true) {
   return useInfiniteQuery({
-    queryKey: wk.entries(status),
-    enabled,
+    queryKey: wk.entries(status, scope.uuid),
+    enabled: enabled && scope.ready,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/warehouse/stock-entries', {
-          params: { query: { status: status || undefined, limit: PAGE, offset: pageParam } },
+          params: { query: { status: status || undefined, ...warehouseFilter(scope.uuid), limit: PAGE, offset: pageParam } },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
-    placeholderData: keepPreviousData,
+    placeholderData: (prev, prevQuery) => (sameWarehouse(prevQuery?.queryKey, scope.uuid) ? prev : undefined),
   });
 }
 
@@ -246,31 +253,43 @@ export const entryApi = {
 // --- home summary ---------------------------------------------------------------
 
 /**
- * Open work for the home counters. No summary endpoint exists yet, so this is
- * three list calls with limit 1 (only `total` is read).
+ * Open work of the current warehouse for the home counters (TEC-1049). No
+ * summary endpoint exists yet, so these are list calls with limit 1 (only
+ * `total` is read); open transfers are the outgoing plus the incoming ones.
  */
-export function useWarehouseSummary(canEntries: boolean) {
+export function useWarehouseSummary(canEntries: boolean, scope: { uuid: string | undefined; ready: boolean }) {
   return useQuery({
-    queryKey: wk.summary(),
+    queryKey: wk.summary(scope.uuid),
+    enabled: scope.ready,
     queryFn: async () => {
-      const [transfers, counts, entries] = await Promise.all([
+      const open = 'draft,in_transit';
+      const transfers = (direction: TransferDirection) =>
         unwrap(
           api.GET('/v1/mobile/warehouse/transfers', {
-            params: { ...mobile, query: { status: 'draft,in_transit', limit: 1 } },
+            params: { ...mobile, query: { status: open, ...transferFilter(scope.uuid, direction), limit: 1 } },
           }),
-        ),
+        );
+      const [out, incoming, counts, entries] = await Promise.all([
+        transfers('out'),
+        // Without a warehouse the outgoing call already lists every transfer.
+        scope.uuid ? transfers('in') : Promise.resolve({ total: 0 }),
         unwrap(
           api.GET('/v1/mobile/warehouse/stock-counts', {
-            params: { ...mobile, query: { status: 'draft,in_progress,pending_review', limit: 1 } },
+            params: {
+              ...mobile,
+              query: { status: 'draft,in_progress,pending_review', ...warehouseFilter(scope.uuid), limit: 1 },
+            },
           }),
         ),
         canEntries
-          ? unwrap(api.GET('/v1/warehouse/stock-entries', { params: { query: { status: 'draft', limit: 1 } } })).catch(
-              () => null,
-            )
+          ? unwrap(
+              api.GET('/v1/warehouse/stock-entries', {
+                params: { query: { status: 'draft', ...warehouseFilter(scope.uuid), limit: 1 } },
+              }),
+            ).catch(() => null)
           : Promise.resolve(null),
       ]);
-      return { transfers: transfers.total, counts: counts.total, entries: entries?.total ?? null };
+      return { transfers: out.total + incoming.total, counts: counts.total, entries: entries?.total ?? null };
     },
   });
 }

@@ -72,6 +72,7 @@ import { isApiError } from "@/lib/api";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 
 function Section({
   title,
@@ -344,6 +345,8 @@ export const ORDER_ITEMS_PERSIST_KEY = "tenant-order-items-v1";
  */
 function Items({ order, assign }: { order: Order; assign: boolean }) {
   const { t, format } = useLocale();
+  // TEC-1050: price columns and totals only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const store = useStoreOrder();
   const items = useMemo(() => order.items ?? [], [order.items]);
   const unassign = useMutation({
@@ -393,6 +396,8 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
             ? `${row.original.meters ?? "0"} ${t("orders.unit.m")}`
             : `${row.original.quantity ?? 0} ${t("orders.unit.pcs")}`,
       }) as ColumnDef<OrderItem, unknown>,
+    ];
+    const priceCols: ColumnDef<OrderItem, unknown>[] = [
       createColumn<OrderItem>({
         id: "unit_price",
         accessorFn: (item) => amountNumber(item.unit_price),
@@ -430,6 +435,7 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
         ),
       }) as ColumnDef<OrderItem, unknown>,
     ];
+    if (canSeePrices) cols.push(...priceCols);
     if (showInvoice) {
       cols.push(
         createColumn<OrderItem>({
@@ -529,6 +535,7 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
     return cols;
   }, [
     assign,
+    canSeePrices,
     format,
     order,
     showAssigned,
@@ -556,28 +563,30 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
           pagination: items.length > 20,
         }}
       />
-      <dl className="mt-4 space-y-1 border-t pt-3 text-sm">
-        <div className="flex justify-between gap-2">
-          <dt className="text-muted-foreground">
-            {t("orders.detail.subtotal")}
-          </dt>
-          <dd>
-            {format.currency(amountNumber(order.subtotal), order.currency)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt className="text-muted-foreground">{t("orders.detail.tax")}</dt>
-          <dd>
-            {format.currency(amountNumber(order.tax_total), order.currency)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2 font-semibold">
-          <dt>{t("orders.detail.total")}</dt>
-          <dd data-testid="order-total">
-            {format.currency(amountNumber(order.total), order.currency)}
-          </dd>
-        </div>
-      </dl>
+      {canSeePrices ? (
+        <dl className="mt-4 space-y-1 border-t pt-3 text-sm">
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">
+              {t("orders.detail.subtotal")}
+            </dt>
+            <dd>
+              {format.currency(amountNumber(order.subtotal), order.currency)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">{t("orders.detail.tax")}</dt>
+            <dd>
+              {format.currency(amountNumber(order.tax_total), order.currency)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2 font-semibold">
+            <dt>{t("orders.detail.total")}</dt>
+            <dd data-testid="order-total">
+              {format.currency(amountNumber(order.total), order.currency)}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
     </Section>
   );
 }
@@ -696,6 +705,8 @@ function InvoicesCard({
 
 function Parties({ order }: { order: Order }) {
   const { t, format } = useLocale();
+  // TEC-1050: currency and the frozen rate only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const rate = order.rate_snapshot;
   return (
     <Section
@@ -716,21 +727,28 @@ function Parties({ order }: { order: Order }) {
         <Field label={t("orders.detail.role")}>
           {t(`orders.role.${order.role}`)}
         </Field>
-        <Field label={t("orders.detail.currency")}>
-          <span dir="ltr">{order.currency}</span>
-        </Field>
-        <Field label={t("orders.detail.rate")}>
-          {rate ? (
-            <span dir="ltr" data-testid="order-rate">
-              1 {rate.base} = {rate.rate} {rate.quote} ({rate.rate_date},{" "}
-              {rate.source.toUpperCase()})
-            </span>
-          ) : (
-            <span className="text-muted-foreground" data-testid="order-rate">
-              {t("orders.detail.rate_pending")}
-            </span>
-          )}
-        </Field>
+        {canSeePrices ? (
+          <>
+            <Field label={t("orders.detail.currency")}>
+              <span dir="ltr">{order.currency}</span>
+            </Field>
+            <Field label={t("orders.detail.rate")}>
+              {rate ? (
+                <span dir="ltr" data-testid="order-rate">
+                  1 {rate.base} = {rate.rate} {rate.quote} ({rate.rate_date},{" "}
+                  {rate.source.toUpperCase()})
+                </span>
+              ) : (
+                <span
+                  className="text-muted-foreground"
+                  data-testid="order-rate"
+                >
+                  {t("orders.detail.rate_pending")}
+                </span>
+              )}
+            </Field>
+          </>
+        ) : null}
         <Field label={t("orders.detail.created_at")}>
           {format.dateTime(order.created_at)}
         </Field>
