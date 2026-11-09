@@ -3549,6 +3549,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pending-recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The center's waiting pool of order recipients (TEC-1062)
+         * @description organizations.read or orders.write. Recipients the center opened from the order form without a dealer record: dealer organizations in status pending (no members) directly under the center. state pending is the waiting pool, retail a kept retail / delivery point, converted an active dealer now. List contract: sort name, kind, state, city, created_at (default -created_at); q searches name, phone and city.
+         */
+        get: operations["listPendingRecipients"];
+        put?: never;
+        /**
+         * Open a new order recipient in the waiting pool (TEC-1062)
+         * @description organizations.write or orders.write, the active organization is the center. Opens a dealer organization in status pending directly under the center, with no members, no trial and no contract, and puts it in the waiting pool. The center can open orders for it at once (POST /v1/orders with buyer_org_uuid); the order is prepared and shipped as usual. The phone is required (E.164 or the national form of the address country, K29); tax_no is a 10 digit VKN or an 11 digit TCKN and is stored on the invoice profile.
+         */
+        post: operations["createPendingRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pending-recipients/{uuid}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn a recipient into an active dealer (TEC-1062)
+         * @description organizations.write. The recipient organization becomes an active dealer of the center; its orders stay on it. With an owner (phone first account, see POST /v1/tenant/members) the person becomes its dealer_owner and signs in on the phone. 409 when it is already a dealer.
+         */
+        post: operations["convertPendingRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pending-recipients/{uuid}/keep-retail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep a pool recipient as a retail / delivery point (TEC-1062)
+         * @description organizations.write. The recipient leaves the waiting pool (state retail) and stays an organization without members that orders can still be opened for. 409 unless it is in the pool.
+         */
+        post: operations["keepPendingRecipientAsRetail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/settings": {
         parameters: {
             query?: never;
@@ -19979,6 +20043,89 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["TenantDealerResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PendingRecipientCreateRequest: {
+            name: string;
+            /**
+             * @description E.164 or national form
+             * @example +905551112233
+             */
+            phone: string;
+            city?: string;
+            district?: string;
+            address?: string;
+            /** Format: int64 */
+            country_id?: number;
+            /** Format: int64 */
+            province_id?: number;
+            /** Format: int64 */
+            district_id?: number;
+            /** @description 10 digit VKN or 11 digit TCKN */
+            tax_no?: string;
+            tax_office?: string;
+            /**
+             * @default dealer_candidate
+             * @enum {string}
+             */
+            kind: "dealer_candidate" | "retail_point";
+            note?: string;
+        };
+        PendingRecipientConvertRequest: {
+            owner?: components["schemas"]["TenantAccountInput"];
+        };
+        PendingRecipient: {
+            /**
+             * Format: uuid
+             * @description The recipient organization
+             */
+            uuid: string;
+            slug: string;
+            name: string;
+            phone: string;
+            city: string;
+            district: string;
+            address: string;
+            tax_no?: string;
+            tax_office?: string;
+            /** @enum {string} */
+            kind: "dealer_candidate" | "retail_point";
+            /** @enum {string} */
+            state: "pending" | "retail" | "converted";
+            organization_status: string;
+            note?: string;
+            /** Format: int64 */
+            orders_count: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            resolved_at?: string;
+        };
+        PendingRecipientConvertResult: {
+            recipient: components["schemas"]["PendingRecipient"];
+            owner?: components["schemas"]["TenantMember"];
+        };
+        EnvelopePendingRecipient: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PendingRecipient"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePendingRecipientConvert: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PendingRecipientConvertResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePendingRecipientList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PendingRecipient"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeOrganization: {
@@ -38171,6 +38318,123 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listPendingRecipients: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                state?: ("pending" | "retail" | "converted")[];
+                kind?: ("dealer_candidate" | "retail_point")[];
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pool page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePendingRecipientList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPendingRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingRecipientCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Recipient created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePendingRecipient"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    convertPendingRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingRecipientConvertRequest"];
+            };
+        };
+        responses: {
+            /** @description Converted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePendingRecipientConvert"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    keepPendingRecipientAsRetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kept as a retail point */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePendingRecipient"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };

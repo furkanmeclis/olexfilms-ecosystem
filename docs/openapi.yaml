@@ -6298,6 +6298,168 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/tenant/pending-recipients:
+    get:
+      tags: [Tenant]
+      operationId: listPendingRecipients
+      summary: The center's waiting pool of order recipients (TEC-1062)
+      description: >-
+        organizations.read or orders.write. Recipients the center opened
+        from the order form without a dealer record: dealer organizations
+        in status pending (no members) directly under the center. state
+        pending is the waiting pool, retail a kept retail / delivery point,
+        converted an active dealer now. List contract: sort name, kind,
+        state, city, created_at (default -created_at); q searches name,
+        phone and city.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: state
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [pending, retail, converted] }
+        - name: kind
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [dealer_candidate, retail_point] }
+        - name: created_from
+          in: query
+          schema: { type: string }
+        - name: created_to
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Pool page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePendingRecipientList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Tenant]
+      operationId: createPendingRecipient
+      summary: Open a new order recipient in the waiting pool (TEC-1062)
+      description: >-
+        organizations.write or orders.write, the active organization is the
+        center. Opens a dealer organization in status pending directly under
+        the center, with no members, no trial and no contract, and puts it
+        in the waiting pool. The center can open orders for it at once
+        (POST /v1/orders with buyer_org_uuid); the order is prepared and
+        shipped as usual. The phone is required (E.164 or the national form
+        of the address country, K29); tax_no is a 10 digit VKN or an 11
+        digit TCKN and is stored on the invoice profile.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PendingRecipientCreateRequest"
+      responses:
+        "201":
+          description: Recipient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePendingRecipient"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/pending-recipients/{uuid}/convert:
+    post:
+      tags: [Tenant]
+      operationId: convertPendingRecipient
+      summary: Turn a recipient into an active dealer (TEC-1062)
+      description: >-
+        organizations.write. The recipient organization becomes an active
+        dealer of the center; its orders stay on it. With an owner (phone
+        first account, see POST /v1/tenant/members) the person becomes its
+        dealer_owner and signs in on the phone. 409 when it is already a
+        dealer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PendingRecipientConvertRequest"
+      responses:
+        "200":
+          description: Converted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePendingRecipientConvert"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/tenant/pending-recipients/{uuid}/keep-retail:
+    post:
+      tags: [Tenant]
+      operationId: keepPendingRecipientAsRetail
+      summary: Keep a pool recipient as a retail / delivery point (TEC-1062)
+      description: >-
+        organizations.write. The recipient leaves the waiting pool (state
+        retail) and stays an organization without members that orders can
+        still be opened for. 409 unless it is in the pool.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Kept as a retail point
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePendingRecipient"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/tenant/settings:
     get:
       tags: [Tenant]
@@ -37071,6 +37233,92 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/TenantDealerResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PendingRecipientCreateRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name: { type: string, maxLength: 255 }
+        phone: { type: string, description: "E.164 or national form", example: "+905551112233" }
+        city: { type: string }
+        district: { type: string }
+        address: { type: string }
+        country_id: { type: integer, format: int64 }
+        province_id: { type: integer, format: int64 }
+        district_id: { type: integer, format: int64 }
+        tax_no: { type: string, description: "10 digit VKN or 11 digit TCKN", pattern: "^[0-9]{10,11}$" }
+        tax_office: { type: string }
+        kind:
+          type: string
+          enum: [dealer_candidate, retail_point]
+          default: dealer_candidate
+        note: { type: string, maxLength: 2000 }
+
+    PendingRecipientConvertRequest:
+      type: object
+      properties:
+        owner: { $ref: "#/components/schemas/TenantAccountInput" }
+
+    PendingRecipient:
+      type: object
+      required: [uuid, slug, name, phone, city, district, address, kind, state, organization_status, orders_count, created_at]
+      properties:
+        uuid: { type: string, format: uuid, description: The recipient organization }
+        slug: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        city: { type: string }
+        district: { type: string }
+        address: { type: string }
+        tax_no: { type: string }
+        tax_office: { type: string }
+        kind: { type: string, enum: [dealer_candidate, retail_point] }
+        state: { type: string, enum: [pending, retail, converted] }
+        organization_status: { type: string }
+        note: { type: string }
+        orders_count: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: string, format: date-time }
+
+    PendingRecipientConvertResult:
+      type: object
+      required: [recipient]
+      properties:
+        recipient: { $ref: "#/components/schemas/PendingRecipient" }
+        owner: { $ref: "#/components/schemas/TenantMember" }
+
+    EnvelopePendingRecipient:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PendingRecipient" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePendingRecipientConvert:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PendingRecipientConvertResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePendingRecipientList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PendingRecipient" }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeOrganization:

@@ -105,5 +105,6 @@
   "settings_group_ai": "ΤΝ",
   "settings_group_accounts": "Λογαριασμοί",
   "nav_team_new": "Προσθήκη υπαλλήλου",
-  "nav_dealer_new": "Νέος αντιπρόσωπος"
+  "nav_dealer_new": "Νέος αντιπρόσωπος",
+  "nav_dealer_pool": "Δεξαμενή αναμονής"
 }

@@ -410,8 +410,11 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	if err != nil {
 		return RegisterResult{}, err
 	}
-	if err := addMember(ctx, qtx, org, ownerUserID, "owner", nil); err != nil {
-		return RegisterResult{}, err
+	// TEC-1062: a waiting pool recipient opens without an owner (0).
+	if ownerUserID != 0 {
+		if err := addMember(ctx, qtx, org, ownerUserID, "owner", nil); err != nil {
+			return RegisterResult{}, err
+		}
 	}
 	// K4 / TEC-207: the preset opens the distributor's warehouse in the
 	// same transaction.

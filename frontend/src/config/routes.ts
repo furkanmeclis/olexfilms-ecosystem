@@ -42,6 +42,8 @@ export const routes = {
       /** Phone-first account opening: staff and a dealer with its owner. */
       teamNew: (slug: string) => `/t/${slug}/settings/team/new`,
       dealerNew: (slug: string) => `/t/${slug}/settings/dealers/new`,
+      /** TEC-1062: the center's waiting pool of order recipients. */
+      dealerPool: (slug: string) => `/t/${slug}/settings/dealers/pool`,
     },
     features: {
       root: (slug: string) => `/t/${slug}/settings/modules`,
