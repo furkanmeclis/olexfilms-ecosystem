@@ -43,7 +43,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | | ⏸ |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | 000170? | ⏳ TEC-1054 üstünde |
-| 5.7 Web+API siparişe açık ürün | TEC-1061 | | | 000171 | ⏳ #510 üstünde |
+| 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
 
@@ -85,7 +85,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| Metraj Web+API `KOD-3M` | TEC-1078 | | | | ⏸ |
+| Metraj Web+API `KOD-3M` | TEC-1078 | | | — | ⏳ #508 üstünde |
 | Metraj Mobil | TEC-1079 | | | | ⏸ |
 
 ## Karar gerektirenler (kodlama yok)
@@ -115,6 +115,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **3 (TEC-1075):** Merkez hizmet listesi varsayılan "Kendi" görünümünde açılıyor; "Ağ" varsayılan olsun mu?
 - **KRİTİK (TEC-1062):** Cari kaydı yalnız alıcı "teslim alındı" deyince oluşuyor; üyesiz perakende teslim yerinde bunu yapacak kimse yok → cari oluşmaz. Merkez "teslim alındı"yı alıcı adına yapabilsin mi?
 - **KRİTİK (TEC-1062):** pending alıcılar diğer org seçicilerinde (görev, transfer) de görünüyor; filtrelensin mi?
+- **5.7 (TEC-1061):** Siparişe kapalı ürünler global aramada (Meilisearch) hâlâ görünüyor; aramadan da gizlensin mi?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
