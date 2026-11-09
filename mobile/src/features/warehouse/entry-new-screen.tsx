@@ -42,7 +42,7 @@ export function EntryNewScreen() {
       const x = await entryApi.create({ warehouse_uuid: whId, mode: center ? mode : 'with_existing', note: note.trim() || null });
       qc.setQueryData(wk.entry(x.uuid), x);
       void qc.invalidateQueries({ queryKey: ['warehouse', 'entries'] });
-      void qc.invalidateQueries({ queryKey: wk.summary() });
+      void qc.invalidateQueries({ queryKey: wk.summaries() });
       replace(`/depo/jobs/entry/${x.uuid}`);
     } catch (e) {
       alertError(e);

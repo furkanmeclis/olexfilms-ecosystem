@@ -4,6 +4,7 @@ import { useSession } from '@/core/auth/session';
 import { readJSON, writeJSON } from '@/core/storage';
 
 import { useWarehouses, type Warehouse } from './api';
+import { pickWarehouse } from './scope';
 
 /**
  * The warehouse the user works in, per organization. The backend has no
@@ -29,8 +30,8 @@ export const useWarehouseChoice = create<Store>((set, get) => ({
 }));
 
 /**
- * Current warehouse: the saved one if still active, else the first active
- * warehouse of the organization.
+ * Current warehouse: the saved one if still active, else the primary (or
+ * first) active warehouse of the organization.
  */
 export function useCurrentWarehouse(): {
   warehouse: Warehouse | undefined;
@@ -45,7 +46,7 @@ export function useCurrentWarehouse(): {
   const select = useWarehouseChoice((s) => s.select);
   const q = useWarehouses();
   const list = q.data ?? [];
-  const warehouse = list.find((w) => w.uuid === saved) ?? list[0];
+  const warehouse = pickWarehouse(list, saved);
   return {
     warehouse,
     warehouses: list,
@@ -54,4 +55,14 @@ export function useCurrentWarehouse(): {
     refetch: () => void q.refetch(),
     select: (uuid) => select(org, uuid),
   };
+}
+
+/**
+ * Warehouse filter of the depo lists (TEC-1049): the current warehouse uuid
+ * and whether the warehouse list has settled. Lists wait for `ready`, so they
+ * never load unscoped first and then again for the warehouse.
+ */
+export function useWarehouseScope(): { uuid: string | undefined; ready: boolean } {
+  const { warehouse, isLoading } = useCurrentWarehouse();
+  return { uuid: warehouse?.uuid, ready: !isLoading };
 }

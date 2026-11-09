@@ -37,7 +37,8 @@ export function WarehouseHome() {
   const read = useCan('warehouse.read');
   const stockRead = useCan('stock.read');
   const { warehouse, warehouses, isLoading, isError, refetch, select } = useCurrentWarehouse();
-  const summary = useWarehouseSummary(true);
+  // TEC-1049: the counters follow the picked warehouse (its uuid is in the query key).
+  const summary = useWarehouseSummary(true, { uuid: warehouse?.uuid, ready: !isLoading });
   const pendingOrders = usePendingOrderCount(orders);
   const [picking, setPicking] = useState(false);
 

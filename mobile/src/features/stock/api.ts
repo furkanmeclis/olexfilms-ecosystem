@@ -2,11 +2,13 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-qu
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
+import { sameWarehouse, stockKeys } from '@/features/warehouse/scope';
 
 type S = components['schemas'];
 export type StockProduct = S['StockProduct'];
 export type StockUnitRow = S['StockUnitRow'];
 export type StockUnitHistory = S['StockUnitHistory'];
+export type StockWarehouseUnit = S['StockWarehouseUnit'];
 
 const PAGE = 30;
 
@@ -31,6 +33,39 @@ export function useOrgProducts(org: string, q: string, status: '' | 'in_stock' |
       ),
     getNextPageParam: next,
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Units in one warehouse (GET /v1/stock/warehouses/{uuid}/units, state=in;
+ * TEC-1049). The organization lists above have no warehouse filter, so the
+ * depo space reads this one: the warehouse uuid is in the query key, a switch
+ * loads the new warehouse instead of serving the old cache.
+ */
+export function useWarehouseUnits(warehouse: string, q: string, product = '') {
+  return useInfiniteQuery({
+    queryKey: stockKeys.warehouseUnits(warehouse, q, product),
+    enabled: !!warehouse,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET('/v1/stock/warehouses/{uuid}/units', {
+          params: {
+            path: { uuid: warehouse },
+            query: {
+              state: 'in',
+              q: q || undefined,
+              product_uuid: product || undefined,
+              sort: 'product',
+              limit: PAGE,
+              offset: pageParam,
+            },
+          },
+        }),
+      ),
+    getNextPageParam: next,
+    // Keep the list while the search changes, never another warehouse's rows.
+    placeholderData: (prev, prevQuery) => (sameWarehouse(prevQuery?.queryKey, warehouse) ? prev : undefined),
   });
 }
 
