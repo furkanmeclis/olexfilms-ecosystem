@@ -174,5 +174,7 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "Təhvil sənədi PDF, JPEG, PNG və ya WebP olmalıdır (10 MB-a qədər).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Təyinatdan əvvəl bu vahidi anbarda yerləşdirin.",
   "page_forbidden_body": "Bu səhifəyə baxmaq icazəniz yoxdur.",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "Yeni miqdar təyin olunmuş barkodlardan azdır; əvvəlcə təyinatı ləğv edin."
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Yeni miqdar təyin olunmuş barkodlardan azdır; əvvəlcə təyinatı ləğv edin.",
+  "codes.ORDER_NOT_INVOICEABLE": "Yalnız göndərilmiş, çatdırılmış və ya qəbul edilmiş sifariş fakturalanmış kimi işarələnə bilər.",
+  "codes.ORDER_INVOICED": "Fakturalanmış sifariş ləğv edilə bilməz; əvvəlcə faktura qeydini silin."
 }

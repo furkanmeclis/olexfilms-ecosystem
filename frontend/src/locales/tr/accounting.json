@@ -239,7 +239,7 @@
   "queue.tabs.orders": "Faturalanacak",
   "queue.tabs.transit": "Yolda",
   "queue.tabs.returns": "İadeler",
-  "queue.transit_hint": "Sevk edilmiş ya da teslim edilmiş siparişler. Alıcı teslim aldığında faturalanacaklar sekmesine geçer.",
+  "queue.transit_hint": "Sevk edilmiş ya da teslim edilmiş, faturası tamamlanmamış siparişler. Burada da faturalandı işaretlenebilir; alıcı teslim aldığında faturalanacaklar sekmesine geçer.",
   "queue.orders_empty": "Faturalanacak sipariş yok.",
   "queue.returns_empty": "İade yok.",
   "queue.mark_invoiced": "Faturalandı",

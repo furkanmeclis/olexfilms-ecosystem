@@ -174,9 +174,10 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "L'accusé de réception doit être un PDF, JPEG, PNG ou WebP (10 Mo max.).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Placez cette unité dans l’entrepôt avant de l’attribuer.",
   "page_forbidden_body": "Vous n'êtes pas autorisé à consulter cette page.",
-  "codes.ORDER_NOT_INVOICEABLE": "Seule une commande reçue peut être marquée comme facturée.",
+  "codes.ORDER_NOT_INVOICEABLE": "Seule une commande expédiée, livrée ou reçue peut être marquée comme facturée.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "L'une des lignes sélectionnées est déjà facturée.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Toutes les lignes de la commande sont déjà facturées.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande.",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nouvelle quantité est inférieure aux codes-barres attribués ; retirez d'abord l'attribution."
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "La nouvelle quantité est inférieure aux codes-barres attribués ; retirez d'abord l'attribution.",
+  "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture."
 }

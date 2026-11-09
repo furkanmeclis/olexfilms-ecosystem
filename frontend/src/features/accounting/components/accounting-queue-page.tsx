@@ -152,7 +152,8 @@ function QueueOrdersTable({
   const router = useRouter();
   const access = useAccountingAccess(slug);
   const client = useQueryClient();
-  const canInvoice = tab === "orders" && can(Permission.EinvoiceManage);
+  // TEC-1070: in transit orders are marked invoiced too (like legacy).
+  const canInvoice = can(Permission.EinvoiceManage);
   const [invoicing, setInvoicing] = useState<string | null>(null);
   const detail = useQuery({
     queryKey: orderKeys.detail(invoicing ?? ""),

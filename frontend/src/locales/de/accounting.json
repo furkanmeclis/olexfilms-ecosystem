@@ -239,7 +239,7 @@
   "queue.tabs.orders": "Zu fakturieren",
   "queue.tabs.transit": "Unterwegs",
   "queue.tabs.returns": "Retouren",
-  "queue.transit_hint": "Versandte oder zugestellte Bestellungen. Sie wechseln zu „Zu fakturieren“, sobald der Käufer sie empfängt.",
+  "queue.transit_hint": "Versandte oder zugestellte, nicht vollständig fakturierte Bestellungen. Sie können auch hier als fakturiert markiert werden; sie wechseln zu „Zu fakturieren“, sobald der Käufer sie empfängt.",
   "queue.orders_empty": "Keine Bestellungen zu fakturieren.",
   "queue.returns_empty": "Keine Retouren.",
   "queue.mark_invoiced": "Als fakturiert markieren",

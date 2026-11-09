@@ -239,7 +239,7 @@
   "queue.tabs.orders": "To invoice",
   "queue.tabs.transit": "On the road",
   "queue.tabs.returns": "Returns",
-  "queue.transit_hint": "Shipped or delivered orders. They move to the to-invoice tab when the buyer receives them.",
+  "queue.transit_hint": "Shipped or delivered orders not fully invoiced. They can be marked invoiced here too; they move to the to-invoice tab when the buyer receives them.",
   "queue.orders_empty": "No orders to invoice.",
   "queue.returns_empty": "No returns.",
   "queue.mark_invoiced": "Mark invoiced",

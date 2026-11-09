@@ -239,7 +239,7 @@
   "queue.tabs.orders": "Da fatturare",
   "queue.tabs.transit": "In viaggio",
   "queue.tabs.returns": "Resi",
-  "queue.transit_hint": "Ordini spediti o consegnati. Passano alla scheda «Da fatturare» quando l'acquirente li riceve.",
+  "queue.transit_hint": "Ordini spediti o consegnati non del tutto fatturati. Possono essere segnati come fatturati anche qui; passano alla scheda «Da fatturare» quando l'acquirente li riceve.",
   "queue.orders_empty": "Nessun ordine da fatturare.",
   "queue.returns_empty": "Nessun reso.",
   "queue.mark_invoiced": "Segna fatturato",

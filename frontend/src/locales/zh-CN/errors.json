@@ -174,5 +174,7 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "签收单必须是 PDF、JPEG、PNG 或 WebP（最大 10 MB）。",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "分配前请将此货品放置到仓库库位。",
   "page_forbidden_body": "您无权查看此页面。",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "新数量低于已分配的条码;请先取消分配。"
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "新数量低于已分配的条码;请先取消分配。",
+  "codes.ORDER_NOT_INVOICEABLE": "只有已发货、已送达或已收货的订单才能标记为已开票。",
+  "codes.ORDER_INVOICED": "已开票的订单不能取消；请先删除发票记录。"
 }

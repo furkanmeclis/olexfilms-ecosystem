@@ -239,7 +239,7 @@
   "queue.tabs.orders": "待开票",
   "queue.tabs.transit": "在途",
   "queue.tabs.returns": "退货",
-  "queue.transit_hint": "已发货或已送达的订单。买方收货后转入“待开票”。",
+  "queue.transit_hint": "已发货或已送达但未完全开票的订单。也可在此标记为已开票；买方收货后转入“待开票”。",
   "queue.orders_empty": "没有待开票的订单。",
   "queue.returns_empty": "没有退货。",
   "queue.mark_invoiced": "标记已开票",

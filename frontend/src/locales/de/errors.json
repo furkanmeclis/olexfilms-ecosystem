@@ -174,9 +174,10 @@
   "codes.ORDER_RECEIPT_FILE_INVALID": "Der Empfangsbeleg muss PDF, JPEG, PNG oder WebP sein (bis 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Lagern Sie diese Einheit vor der Zuweisung ein.",
   "page_forbidden_body": "Sie haben keine Berechtigung, diese Seite anzuzeigen.",
-  "codes.ORDER_NOT_INVOICEABLE": "Nur eine empfangene Bestellung kann als fakturiert markiert werden.",
+  "codes.ORDER_NOT_INVOICEABLE": "Nur eine versandte, zugestellte oder empfangene Bestellung kann als fakturiert markiert werden.",
   "codes.ORDER_ITEM_ALREADY_INVOICED": "Eine der ausgewählten Positionen ist bereits fakturiert.",
   "codes.ORDER_NOTHING_TO_INVOICE": "Alle Positionen der Bestellung sind bereits fakturiert.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst.",
-  "codes.ORDER_LINE_BELOW_ASSIGNED": "Die neue Menge liegt unter den zugewiesenen Barcodes; zuerst die Zuweisung entfernen."
+  "codes.ORDER_LINE_BELOW_ASSIGNED": "Die neue Menge liegt unter den zugewiesenen Barcodes; zuerst die Zuweisung entfernen.",
+  "codes.ORDER_INVOICED": "Eine fakturierte Bestellung kann nicht storniert werden; löschen Sie zuerst den Rechnungseintrag."
 }

@@ -1,7 +1,9 @@
 package usecase
 
 // Manual "invoiced" marks (TEC-1030). The seller's accounting records the
-// external invoice (number, date) it cut for a received order, per line:
+// external invoice (number, date) it cut for a shipped, delivered or
+// received order (TEC-1070: like legacy, the invoice may be cut while the
+// goods are on the road), per line:
 // one order_invoices row per invoice, its lines in order_invoice_items.
 // orders.invoice_status is the projection (pending, partial, invoiced).
 // Only the seller side marks; the e-invoice module hides an order marked
@@ -40,8 +42,12 @@ const (
 )
 
 var (
-	// ErrNotInvoiceable: only a received order is marked invoiced.
-	ErrNotInvoiceable = errors.New("orders: only a received order can be marked invoiced")
+	// ErrNotInvoiceable: only a shipped, delivered or received order is
+	// marked invoiced.
+	ErrNotInvoiceable = errors.New("orders: only a shipped, delivered or received order can be marked invoiced")
+	// ErrOrderInvoiced: an order with an invoice record is not cancelled
+	// (legacy: a return / cancel invoice is needed); delete the record first.
+	ErrOrderInvoiced = errors.New("orders: an invoiced order cannot be cancelled")
 	// ErrItemAlreadyInvoiced: a selected line is on an invoice already.
 	ErrItemAlreadyInvoiced = errors.New("orders: the order line is already invoiced")
 	// ErrNothingToInvoice: every line of the order is invoiced.
@@ -95,8 +101,29 @@ func (in MarkInvoicedInput) validate() (string, pgtype.Date, pgtype.Text, error)
 	return no, pgtype.Date{Time: day, Valid: true}, note, nil
 }
 
-// MarkInvoiced records an invoice on the lines of a received order the
-// caller sells; the order's invoice status follows.
+// Invoiceable reports whether an order in status may get an invoice mark:
+// shipped, delivered or received (TEC-1070).
+func Invoiceable(status string) bool {
+	return status == StatusShipped || status == StatusDelivered || status == StatusReceived
+}
+
+// invoicedGuard drops the cancel moves of an order with an invoice mark
+// (ErrOrderInvoiced).
+func invoicedGuard(o db.Order, moves []string) []string {
+	if o.InvoiceStatus == InvoiceStatusPending {
+		return moves
+	}
+	out := moves[:0:0]
+	for _, m := range moves {
+		if m != StatusCancelling && m != StatusCancelled {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// MarkInvoiced records an invoice on the lines of a shipped, delivered or
+// received order the caller sells; the order's invoice status follows.
 func (s *Service) MarkInvoiced(ctx context.Context, c Caller, orderUUID uuid.UUID, in MarkInvoicedInput) (OrderView, error) {
 	no, day, note, err := in.validate()
 	if err != nil {
@@ -119,7 +146,7 @@ func (s *Service) MarkInvoiced(ctx context.Context, c Caller, orderUUID uuid.UUI
 		if partyOf(c, o) != PartySeller {
 			return ErrForbidden
 		}
-		if o.Status != StatusReceived {
+		if !Invoiceable(o.Status) {
 			return ErrNotInvoiceable
 		}
 		items, err := q.ListOrderItems(ctx, o.ID)

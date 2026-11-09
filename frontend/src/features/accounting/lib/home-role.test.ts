@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { tenantNav } from "@/config/nav";
 import { Permission } from "@/config/permissions";
 import { queueTabOf } from "@/features/accounting/components/accounting-queue-page";
-import { isAccountingHomeRole } from "@/features/accounting/lib/home-role";
+import {
+  accountingSidebarCatalog,
+  isAccountingHomeRole,
+  QUEUE_IN_TRANSIT,
+} from "@/features/accounting/lib/home-role";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 
 // Grants of the system roles that matter here (rbac/catalog.go).
@@ -87,6 +91,48 @@ describe("accounting nav (TEC-1070)", () => {
       expect(visible).not.toContain(id);
     }
     expect(ids(CENTER_ACCOUNTING, "dealer")).not.toContain("accounting-queue");
+  });
+});
+
+describe("accounting home sidebar (TEC-1070 decision follow-up)", () => {
+  const groupIds = (perms: string[], catalog = tenantNav("acme")) => {
+    const access = {
+      can: (p: string | string[]) =>
+        (Array.isArray(p) ? p : [p]).every((x) => perms.includes(x)),
+      canAny: (list: string[]) => list.some((x) => perms.includes(x)),
+      org: {
+        type: "center",
+        role: "staff",
+        features: [
+          "accounting",
+          "orders",
+          "catalog",
+          "service_catalog",
+          "stock",
+        ],
+      },
+    };
+    return catalog.groups
+      .filter((g) => visibleNavItems(g, access).length > 0)
+      .map((g) => g.id);
+  };
+  const perms = [...CENTER_ACCOUNTING, Permission.ServiceCatalogRead];
+
+  it("hides the catalog and service catalog groups from the menu only", () => {
+    const full = groupIds(perms);
+    // The groups are open to the account (permissions unchanged) ...
+    expect(full).toEqual(
+      expect.arrayContaining(["catalog", "service-catalog"]),
+    );
+    // ... but its sidebar leaves them out and keeps the rest.
+    const menu = groupIds(perms, accountingSidebarCatalog(tenantNav("acme")));
+    expect(menu).not.toContain("catalog");
+    expect(menu).not.toContain("service-catalog");
+    expect(menu).toEqual(expect.arrayContaining(["orders", "accounting"]));
+  });
+
+  it("in transit orders are still not fully invoiced", () => {
+    expect(QUEUE_IN_TRANSIT.invoice_status).toBe("pending,partial");
   });
 });
 

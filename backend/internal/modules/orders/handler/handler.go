@@ -34,6 +34,7 @@ const (
 	CodeStockUnavailable          = "ORDER_STOCK_UNAVAILABLE"
 	CodePriceNotFound             = ord.CodePriceNotFound
 	CodeNotInvoiceable            = "ORDER_NOT_INVOICEABLE"
+	CodeOrderInvoiced             = "ORDER_INVOICED"
 	CodeItemAlreadyInvoiced       = "ORDER_ITEM_ALREADY_INVOICED"
 	CodeNothingToInvoice          = "ORDER_NOTHING_TO_INVOICE"
 	CodeInvoiceNoTaken            = "ORDER_INVOICE_NO_TAKEN"
@@ -107,7 +108,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ord.ErrInvoiceNotFound):
 		response.NotFound(w, r, "Invoice record not found")
 	case errors.Is(err, ord.ErrNotInvoiceable):
-		response.Conflict(w, r, CodeNotInvoiceable, "Only a received order can be marked invoiced")
+		response.Conflict(w, r, CodeNotInvoiceable, "Only a shipped, delivered or received order can be marked invoiced")
+	case errors.Is(err, ord.ErrOrderInvoiced):
+		response.Conflict(w, r, CodeOrderInvoiced, "An invoiced order cannot be cancelled; delete its invoice record first")
 	case errors.Is(err, ord.ErrItemAlreadyInvoiced):
 		response.Conflict(w, r, CodeItemAlreadyInvoiced, "The order line is already invoiced")
 	case errors.Is(err, ord.ErrNothingToInvoice):

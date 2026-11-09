@@ -210,6 +210,21 @@ export function orderActions(order: Order): OrderAction[] {
 }
 
 /** Draft lines can be edited by the buyer with orders.write. */
+/**
+ * TEC-1030 / TEC-1070: the seller marks an order invoiced once it is
+ * shipped (shipped, delivered, received), like legacy.
+ */
+export function orderInvoiceable(
+  order: Pick<Order, "status" | "role">,
+): boolean {
+  return (
+    order.role === "seller" &&
+    (order.status === "shipped" ||
+      order.status === "delivered" ||
+      order.status === "received")
+  );
+}
+
 export function canEditDraft(can: Can, order: Order): boolean {
   return (
     order.role === "buyer" &&
