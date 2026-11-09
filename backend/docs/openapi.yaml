@@ -11369,6 +11369,33 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/stock/warehouse-summary:
+    get:
+      tags: [Stock]
+      operationId: getStockWarehouseSummary
+      summary: In-stock totals per warehouse of the active organization (TEC-1066)
+      description: >-
+        Needs `stock.read`. One row per warehouse of the active organization
+        that holds stock (primary first), plus a last row with a null
+        `warehouse` for stock held without a location. Counts only (no
+        prices): distinct products, pieces (fixed barcodes add their
+        quantity on hand), rolls and remaining meters. The brand bound
+        follows the stock.read scope (the center warehouse sees every brand,
+        K20). Used by the warehouse home.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Warehouse stock summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockWarehouseSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/platform/stock/rebuild-check:
     post:
       tags: [Stock]
@@ -41086,6 +41113,33 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
+    EnvelopeStockWarehouseSummary:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockWarehouseSummary" }
+    StockWarehouseSummary:
+      type: object
+      required: [warehouse, products, pieces, rolls, meters]
+      properties:
+        warehouse:
+          type: [object, "null"]
+          required: [uuid, code, name, is_primary]
+          properties:
+            uuid: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+            is_primary: { type: boolean }
+        products: { type: integer, format: int64 }
+        pieces: { type: integer, format: int64 }
+        rolls: { type: integer, format: int64 }
+        meters: { type: string, description: Remaining meters of the rolls (decimal string). }
     EnvelopeStockWarehouseUnitPage:
       type: object
       required: [data]

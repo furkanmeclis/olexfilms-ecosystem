@@ -221,5 +221,16 @@
   "recipients.convert_description": "收货方成为活跃经销商并保留其订单。若填写负责人，其可在手机上通过 WhatsApp 验证码登录；也可留空。",
   "recipients.converted": "收货方已转为经销商。",
   "recipients.keep_retail": "保留为收货点",
-  "recipients.kept_retail": "收货方已保留为收货点。"
+  "recipients.kept_retail": "收货方已保留为收货点。",
+  "directory.title": "经销商",
+  "directory.description": "经销商的地址和联系方式；可从此处打开其订单。",
+  "directory.columns.name": "名称",
+  "directory.columns.type": "类型",
+  "directory.columns.location": "城市 / 区县",
+  "directory.columns.phone": "电话",
+  "directory.columns.address": "地址",
+  "directory.columns.orders": "订单",
+  "directory.orders": "其订单",
+  "directory.empty_title": "没有经销商",
+  "directory.empty_description": "您的权限范围内没有经销商。"
 }

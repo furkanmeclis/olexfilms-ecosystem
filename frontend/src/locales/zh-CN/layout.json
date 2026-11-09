@@ -106,5 +106,6 @@
   "settings_group_accounts": "账户",
   "nav_team_new": "添加员工",
   "nav_dealer_new": "新经销商",
-  "nav_dealer_pool": "待处理池"
+  "nav_dealer_pool": "待处理池",
+  "nav_dealers": "经销商"
 }

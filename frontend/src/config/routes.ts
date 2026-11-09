@@ -151,6 +151,10 @@ export const routes = {
         `/t/${slug}/services/${uuid}/wizard`,
     },
     /** TEC-170 orders: list, new draft, detail, draft edit. */
+    /** TEC-1066: dealers in the organizations.read scope (read only). */
+    dealers: {
+      list: (slug: string) => `/t/${slug}/dealers`,
+    },
     orders: {
       list: (slug: string) => `/t/${slug}/orders`,
       create: (slug: string) => `/t/${slug}/orders/new`,

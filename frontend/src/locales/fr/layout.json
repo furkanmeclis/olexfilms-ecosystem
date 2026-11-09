@@ -106,5 +106,6 @@
   "settings_group_accounts": "Comptes",
   "nav_team_new": "Ajouter un employé",
   "nav_dealer_new": "Nouveau revendeur",
-  "nav_dealer_pool": "File d'attente"
+  "nav_dealer_pool": "File d'attente",
+  "nav_dealers": "Revendeurs"
 }

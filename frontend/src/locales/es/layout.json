@@ -106,5 +106,6 @@
   "settings_group_accounts": "Cuentas",
   "nav_team_new": "Añadir empleado",
   "nav_dealer_new": "Nuevo distribuidor",
-  "nav_dealer_pool": "Lista de espera"
+  "nav_dealer_pool": "Lista de espera",
+  "nav_dealers": "Distribuidores autorizados"
 }

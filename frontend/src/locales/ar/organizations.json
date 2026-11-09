@@ -221,5 +221,16 @@
   "recipients.convert_description": "يصبح المستلم وكيلًا نشطًا ويحتفظ بطلباته. إذا أدخلت المالك فإنه يسجل الدخول من الهاتف برمز واتساب؛ ويمكنك تركه فارغًا.",
   "recipients.converted": "أصبح المستلم وكيلًا.",
   "recipients.keep_retail": "إبقاء كنقطة تسليم",
-  "recipients.kept_retail": "تم إبقاء المستلم نقطة تسليم."
+  "recipients.kept_retail": "تم إبقاء المستلم نقطة تسليم.",
+  "directory.title": "الوكلاء",
+  "directory.description": "عناوين الوكلاء وبيانات الاتصال بهم؛ افتح طلباتهم من هنا.",
+  "directory.columns.name": "الاسم",
+  "directory.columns.type": "النوع",
+  "directory.columns.location": "المدينة / الحي",
+  "directory.columns.phone": "الهاتف",
+  "directory.columns.address": "العنوان",
+  "directory.columns.orders": "الطلبات",
+  "directory.orders": "طلباتهم",
+  "directory.empty_title": "لا يوجد وكلاء",
+  "directory.empty_description": "لا يوجد وكلاء ضمن نطاقك."
 }

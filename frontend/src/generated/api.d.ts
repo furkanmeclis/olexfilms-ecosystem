@@ -6203,6 +6203,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/warehouse-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * In-stock totals per warehouse of the active organization (TEC-1066)
+         * @description Needs `stock.read`. One row per warehouse of the active organization that holds stock (primary first), plus a last row with a null `warehouse` for stock held without a location. Counts only (no prices): distinct products, pieces (fixed barcodes add their quantity on hand), rolls and remaining meters. The brand bound follows the stock.read scope (the center warehouse sees every brand, K20). Used by the warehouse home.
+         */
+        get: operations["getStockWarehouseSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/stock/rebuild-check": {
         parameters: {
             query?: never;
@@ -22970,6 +22990,28 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        EnvelopeStockWarehouseSummary: {
+            data: {
+                items: components["schemas"]["StockWarehouseSummary"][];
+            };
+        };
+        StockWarehouseSummary: {
+            warehouse: {
+                /** Format: uuid */
+                uuid: string;
+                code: string;
+                name: string;
+                is_primary: boolean;
+            } | null;
+            /** Format: int64 */
+            products: number;
+            /** Format: int64 */
+            pieces: number;
+            /** Format: int64 */
+            rolls: number;
+            /** @description Remaining meters of the rolls (decimal string). */
+            meters: string;
         };
         EnvelopeStockWarehouseUnitPage: {
             data: {
@@ -43327,6 +43369,28 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getStockWarehouseSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse stock summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockWarehouseSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     checkStockRebuild: {

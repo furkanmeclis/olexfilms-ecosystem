@@ -13,3 +13,5 @@ export { EodReportsPage } from "./components/eod-reports-page";
 export { TransferDetailPage } from "./components/transfer-detail-page";
 export { TransfersPage } from "./components/transfers-page";
 export { WarehouseSettingsPage } from "./components/warehouse-settings-page";
+export { WarehouseDashboard } from "./components/warehouse-dashboard";
+export { isWarehouseHomeRole } from "./lib/home-role";

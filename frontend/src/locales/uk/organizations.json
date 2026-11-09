@@ -221,5 +221,16 @@
   "recipients.convert_description": "Одержувач стає активним дилером і зберігає свої замовлення. Якщо вкажете власника, він входить з телефона за кодом WhatsApp; можна залишити порожнім.",
   "recipients.converted": "Одержувач тепер дилер.",
   "recipients.keep_retail": "Залишити як місце доставки",
-  "recipients.kept_retail": "Одержувача залишено як місце доставки."
+  "recipients.kept_retail": "Одержувача залишено як місце доставки.",
+  "directory.title": "Дилери",
+  "directory.description": "Адреси та контакти дилерів; відкривайте їхні замовлення звідси.",
+  "directory.columns.name": "Назва",
+  "directory.columns.type": "Тип",
+  "directory.columns.location": "Місто / район",
+  "directory.columns.phone": "Телефон",
+  "directory.columns.address": "Адреса",
+  "directory.columns.orders": "Замовлення",
+  "directory.orders": "Їхні замовлення",
+  "directory.empty_title": "Немає дилерів",
+  "directory.empty_description": "У вашій зоні доступу немає дилерів."
 }

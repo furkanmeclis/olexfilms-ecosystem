@@ -221,5 +221,16 @@
   "recipients.convert_description": "The recipient becomes an active dealer and keeps its orders. If you enter the owner, they sign in on the phone with a WhatsApp code; you may leave it empty.",
   "recipients.converted": "The recipient is now a dealer.",
   "recipients.keep_retail": "Keep as delivery point",
-  "recipients.kept_retail": "The recipient is kept as a delivery point."
+  "recipients.kept_retail": "The recipient is kept as a delivery point.",
+  "directory.title": "Dealers",
+  "directory.description": "Dealer addresses and contact details; open their orders from here.",
+  "directory.columns.name": "Name",
+  "directory.columns.type": "Type",
+  "directory.columns.location": "City / district",
+  "directory.columns.phone": "Phone",
+  "directory.columns.address": "Address",
+  "directory.columns.orders": "Orders",
+  "directory.orders": "Their orders",
+  "directory.empty_title": "No dealers",
+  "directory.empty_description": "There are no dealers in your scope."
 }

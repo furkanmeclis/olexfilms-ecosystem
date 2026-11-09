@@ -932,3 +932,83 @@ func (q *Queries) ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) 
 	}
 	return items, nil
 }
+
+const warehouseStockSummary = `-- name: WarehouseStockSummary :many
+WITH held AS (
+    SELECT s.unit_id, 1::bigint AS quantity, s.owner_type, s.owner_id
+    FROM unit_current_state s
+    WHERE s.holder_org_id = $2
+      AND s.owner_type IN ('organization', 'warehouse_location')
+    UNION ALL
+    SELECT h.unit_id, SUM(h.quantity_on_hand)::bigint AS quantity, h.owner_type, h.owner_id
+    FROM fixed_barcode_holdings h
+    WHERE h.holder_org_id = $2
+      AND h.owner_type IN ('organization', 'warehouse_location')
+    GROUP BY h.unit_id, h.owner_type, h.owner_id
+    HAVING SUM(h.quantity_on_hand) > 0
+)
+SELECT w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       COALESCE(w.is_primary, false)::bool AS is_primary,
+       COUNT(DISTINCT u.product_id)::bigint AS products,
+       COALESCE(SUM(held.quantity) FILTER (WHERE u.remaining_meters IS NULL), 0)::bigint AS pieces,
+       COUNT(*) FILTER (WHERE u.remaining_meters IS NOT NULL)::bigint AS rolls,
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE u.remaining_meters IS NOT NULL), 0)::text AS meters
+FROM held
+JOIN units u ON u.id = held.unit_id
+LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+LEFT JOIN warehouses w ON w.id = l.warehouse_id
+WHERE u.status IN ('available', 'placed')
+  AND ($1::bigint IS NULL OR u.brand_id = $1::bigint)
+GROUP BY w.id, w.uuid, w.code, w.name, w.is_primary, w.sort_order
+ORDER BY (w.id IS NULL), COALESCE(w.is_primary, false) DESC, w.sort_order, w.name, w.id
+`
+
+type WarehouseStockSummaryParams struct {
+	BrandID        pgtype.Int8 `json:"brand_id"`
+	OrganizationID int64       `json:"organization_id"`
+}
+
+type WarehouseStockSummaryRow struct {
+	WarehouseUuid pgtype.UUID `json:"warehouse_uuid"`
+	WarehouseCode pgtype.Text `json:"warehouse_code"`
+	WarehouseName pgtype.Text `json:"warehouse_name"`
+	IsPrimary     bool        `json:"is_primary"`
+	Products      int64       `json:"products"`
+	Pieces        int64       `json:"pieces"`
+	Rolls         int64       `json:"rolls"`
+	Meters        string      `json:"meters"`
+}
+
+// TEC-1066: in-stock totals of the organization per warehouse for the
+// warehouse home (counts only, no prices). Units on a location count for the
+// location's warehouse; units held by the organization without a location
+// (legacy, unplaced) form the row with a NULL warehouse. Fixed barcodes add
+// their quantity on hand; a unit with meters is a roll.
+func (q *Queries) WarehouseStockSummary(ctx context.Context, arg WarehouseStockSummaryParams) ([]WarehouseStockSummaryRow, error) {
+	rows, err := q.db.Query(ctx, warehouseStockSummary, arg.BrandID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarehouseStockSummaryRow{}
+	for rows.Next() {
+		var i WarehouseStockSummaryRow
+		if err := rows.Scan(
+			&i.WarehouseUuid,
+			&i.WarehouseCode,
+			&i.WarehouseName,
+			&i.IsPrimary,
+			&i.Products,
+			&i.Pieces,
+			&i.Rolls,
+			&i.Meters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

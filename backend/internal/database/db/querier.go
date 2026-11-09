@@ -4226,6 +4226,12 @@ type Querier interface {
 	// has_any: the user has at least one membership in the organization (the
 	// restriction is on); is_member: one of them is the given warehouse.
 	WarehouseMembershipCheck(ctx context.Context, arg WarehouseMembershipCheckParams) (WarehouseMembershipCheckRow, error)
+	// TEC-1066: in-stock totals of the organization per warehouse for the
+	// warehouse home (counts only, no prices). Units on a location count for the
+	// location's warehouse; units held by the organization without a location
+	// (legacy, unplaced) form the row with a NULL warehouse. Fixed barcodes add
+	// their quantity on hand; a unit with meters is a roll.
+	WarehouseStockSummary(ctx context.Context, arg WarehouseStockSummaryParams) ([]WarehouseStockSummaryRow, error)
 	// Transfer aggregate report: per product, the transfers and units of the
 	// organization's warehouse transfers matching the list filters (status,
 	// from / to warehouse, created range, q) and the product filter. shipped:

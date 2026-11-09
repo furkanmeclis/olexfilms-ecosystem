@@ -221,5 +221,16 @@
   "recipients.convert_description": "Der Empfänger wird ein aktiver Händler und behält seine Bestellungen. Wenn Sie den Inhaber eintragen, meldet er sich per WhatsApp-Code am Telefon an; Sie können es leer lassen.",
   "recipients.converted": "Der Empfänger ist jetzt Händler.",
   "recipients.keep_retail": "Als Lieferort behalten",
-  "recipients.kept_retail": "Der Empfänger bleibt ein Lieferort."
+  "recipients.kept_retail": "Der Empfänger bleibt ein Lieferort.",
+  "directory.title": "Händler",
+  "directory.description": "Adressen und Kontaktdaten der Händler; ihre Bestellungen von hier aus öffnen.",
+  "directory.columns.name": "Name",
+  "directory.columns.type": "Typ",
+  "directory.columns.location": "Stadt / Bezirk",
+  "directory.columns.phone": "Telefon",
+  "directory.columns.address": "Adresse",
+  "directory.columns.orders": "Bestellungen",
+  "directory.orders": "Ihre Bestellungen",
+  "directory.empty_title": "Keine Händler",
+  "directory.empty_description": "In Ihrem Bereich gibt es keine Händler."
 }

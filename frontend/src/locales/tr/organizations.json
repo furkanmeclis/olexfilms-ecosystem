@@ -221,5 +221,16 @@
   "recipients.convert_description": "Alıcı aktif bayi olur, siparişleri üzerinde kalır. Sahibini girerseniz telefonuyla WhatsApp koduyla giriş yapar; boş bırakabilirsiniz.",
   "recipients.converted": "Alıcı bayiye dönüştürüldü.",
   "recipients.keep_retail": "Teslim yeri olarak bırak",
-  "recipients.kept_retail": "Alıcı teslim yeri olarak bırakıldı."
+  "recipients.kept_retail": "Alıcı teslim yeri olarak bırakıldı.",
+  "directory.title": "Bayiler",
+  "directory.description": "Bayilerin adres ve iletişim bilgileri; siparişlerine buradan geçin.",
+  "directory.columns.name": "Ad",
+  "directory.columns.type": "Tür",
+  "directory.columns.location": "İl / ilçe",
+  "directory.columns.phone": "Telefon",
+  "directory.columns.address": "Adres",
+  "directory.columns.orders": "Siparişler",
+  "directory.orders": "Siparişleri",
+  "directory.empty_title": "Bayi yok",
+  "directory.empty_description": "Yetki alanınızda bayi bulunmuyor."
 }
