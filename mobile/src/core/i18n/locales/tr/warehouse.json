@@ -700,5 +700,9 @@
   "orders.assign.fixed_none": "{{name}} için depoda sabit barkod stoğu bulunamadı.",
   "orders.assign.fixed_qty_auto": "Sabit barkod adedi (değiştirmezseniz kalemin eksiği kadar)",
   "m.warehouse_all": "Tüm depolar",
-  "m.warehouse_totals_partial": "Bu depo için ilk {{count}} birim toplandı; adetler eksik olabilir."
+  "m.warehouse_totals_partial": "Bu depo için ilk {{count}} birim toplandı; adetler eksik olabilir.",
+  "orders.actions.receive_on_behalf.button": "Alıcı adına teslim alındı",
+  "orders.actions.receive_on_behalf.title": "Alıcı adına teslim alınsın mı?",
+  "orders.actions.receive_on_behalf.description": "Alıcının üyesi yok; sipariş onun adına teslim alındı olarak kapanır ve cari kayıtları işlenir.",
+  "orders.actions.receive_on_behalf.confirm": "Alıcı adına teslim alındı"
 }

@@ -20,6 +20,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
+import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
 import { useWarehouses } from '@/features/warehouse/api';
@@ -28,19 +29,24 @@ import { WarehouseField } from '@/features/warehouse/warehouse-picker';
 import { useCart } from './cart';
 import { PlotterSwitch } from './order-edit';
 import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
+import { RecipientNewForm } from './recipient-new-form';
 
 const CATALOG = '/bayi/menu/catalog/products';
 
-type Dealer = { uuid: string; name: string };
+/** `pending`: a waiting pool recipient (TEC-1062), shown with a tag. */
+type Dealer = { uuid: string; name: string; pending?: boolean };
 
-/** Dealers of the center's network, the buyers it can order for (TEC-1024). */
+/**
+ * Dealers of the center's network, the buyers it can order for (TEC-1024), with
+ * the waiting pool recipients (TEC-1062, `include_pending`).
+ */
 function useDealers(enabled: boolean) {
   return useQuery({
     queryKey: ['tenant', 'organizations', 'dealers'],
     enabled,
     staleTime: 5 * 60_000,
     queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200, include_pending: true } } })),
-    select: (d) => (d.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name })) as Dealer[],
+    select: (d) => (d.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name, pending: o.status === 'pending' })) as Dealer[],
   });
 }
 
@@ -95,12 +101,16 @@ function DealerSheet({
 }) {
   const { t } = useTranslation('orders');
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const dealers = useDealers(visible);
   const [q, setQ] = useState('');
+  // TEC-1063: "new recipient / delivery point" replaces the list inside the same sheet.
+  const [creating, setCreating] = useState(false);
   const needle = q.trim().toLocaleLowerCase();
   const results = (dealers.data ?? []).filter((d) => !needle || d.name.toLocaleLowerCase().includes(needle));
   const close = () => {
     setQ('');
+    setCreating(false);
     onClose();
   };
   return (
@@ -108,9 +118,25 @@ function DealerSheet({
       {/* iOS presents a page sheet below the status bar; Android shows it full screen. */}
       <View className="flex-1 bg-background" style={{ paddingTop: Platform.OS === 'ios' ? 0 : insets.top }}>
         <View className="flex-row items-center justify-between ps-5 pe-2 pb-2 pt-4">
-          <Text variant="title">{t('buyer_label')}</Text>
+          <Text variant="title" className="flex-1" numberOfLines={1}>
+            {creating ? t('recipient.title') : t('buyer_label')}
+          </Text>
+          {creating ? <Button title={t('common:back')} variant="ghost" onPress={() => setCreating(false)} /> : null}
           <Button title={t('common:close')} variant="ghost" onPress={close} />
         </View>
+        {creating ? (
+          <RecipientNewForm
+            initialName={q.trim() || undefined}
+            bottomInset={insets.bottom}
+            onCreated={(r) => {
+              void qc.invalidateQueries({ queryKey: ['tenant', 'organizations'] });
+              setCreating(false);
+              setQ('');
+              onPick(r);
+            }}
+          />
+        ) : (
+        <>
         <View className="px-4 pb-3">
           <View className="min-h-11 flex-row items-center gap-2 rounded-xl bg-secondary px-3">
             <Icon name="search" tone="muted-foreground" size={17} />
@@ -134,6 +160,19 @@ function DealerSheet({
           keyboardDismissMode="on-drag"
           contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
           ItemSeparatorComponent={() => <View className="ms-14 h-px bg-border" />}
+          ListHeaderComponent={
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setCreating(true)}
+              className="min-h-[52px] flex-row items-center gap-3 border-b border-border px-4 active:bg-secondary">
+              <View className="size-8 items-center justify-center rounded-md bg-primary/10">
+                <Icon name="add" tone="primary" size={16} weight="semibold" />
+              </View>
+              <Text variant="body" tone="primary" className="flex-1" numberOfLines={1}>
+                {t('recipient.new')}
+              </Text>
+            </Pressable>
+          }
           ListEmptyComponent={
             <Text variant="callout" tone="muted" className="px-5 py-8 text-center">
               {dealers.isPending ? t('common:loading') : t('buyer_none')}
@@ -155,10 +194,13 @@ function DealerSheet({
               <Text variant="body" className="flex-1" numberOfLines={1}>
                 {item.name}
               </Text>
+              {item.pending ? <StatusPill tone="neutral" label={t('recipient.pending_tag')} /> : null}
               {item.uuid === value?.uuid ? <Icon name="check" tone="primary" size={18} weight="semibold" /> : null}
             </Pressable>
           )}
         />
+        </>
+        )}
       </View>
     </Modal>
   );

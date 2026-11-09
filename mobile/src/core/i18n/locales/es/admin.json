@@ -126,5 +126,8 @@
   "home.services_count": "Servicios: {{count}}",
   "home.rank_partial": "Clasificación según los últimos {{count}} registros del periodo.",
   "home.empty_period": "Nada en este periodo.",
-  "home.more_dealers": "+{{count}} distribuidores más"
+  "home.more_dealers": "+{{count}} distribuidores más",
+  "orders.action.received_on_behalf": "Recibido en nombre del comprador",
+  "orders.confirm.received_on_behalf": "¿Marcar el pedido como recibido en nombre del comprador?",
+  "orders.on_behalf_note": "en nombre del comprador"
 }

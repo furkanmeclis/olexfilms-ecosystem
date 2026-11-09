@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "No se encontró stock con código de barras fijo de {{name}} en el almacén.",
   "orders.assign.fixed_qty_auto": "Cantidad de código fijo (sin cambiar: lo que falta en la línea)",
   "m.warehouse_all": "Todos los almacenes",
-  "m.warehouse_totals_partial": "Solo se sumaron las primeras {{count}} unidades de este almacén; las cantidades pueden estar incompletas."
+  "m.warehouse_totals_partial": "Solo se sumaron las primeras {{count}} unidades de este almacén; las cantidades pueden estar incompletas.",
+  "orders.actions.receive_on_behalf.button": "Recibido en nombre del comprador",
+  "orders.actions.receive_on_behalf.title": "¿Recibir en nombre del comprador?",
+  "orders.actions.receive_on_behalf.description": "El comprador no tiene miembros; el pedido se cierra como recibido en su nombre y se registran los asientos de la cuenta.",
+  "orders.actions.receive_on_behalf.confirm": "Recibido en nombre del comprador"
 }

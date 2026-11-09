@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "Aucun stock à code-barres fixe de {{name}} trouvé dans l'entrepôt.",
   "orders.assign.fixed_qty_auto": "Quantité code-barres fixe (inchangée : ce qui manque à la ligne)",
   "m.warehouse_all": "Tous les entrepôts",
-  "m.warehouse_totals_partial": "Seules les {{count}} premières unités de cet entrepôt ont été additionnées ; les quantités peuvent être incomplètes."
+  "m.warehouse_totals_partial": "Seules les {{count}} premières unités de cet entrepôt ont été additionnées ; les quantités peuvent être incomplètes.",
+  "orders.actions.receive_on_behalf.button": "Reçu au nom de l'acheteur",
+  "orders.actions.receive_on_behalf.title": "Réceptionner au nom de l'acheteur ?",
+  "orders.actions.receive_on_behalf.description": "L'acheteur n'a aucun membre ; la commande est clôturée comme reçue en son nom et les écritures de compte sont passées.",
+  "orders.actions.receive_on_behalf.confirm": "Reçu au nom de l'acheteur"
 }

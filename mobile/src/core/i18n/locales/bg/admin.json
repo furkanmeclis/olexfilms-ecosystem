@@ -126,5 +126,8 @@
   "home.services_count": "Услуги: {{count}}",
   "home.rank_partial": "Класирането е по последните {{count}} записа за периода.",
   "home.empty_period": "Няма записи за периода.",
-  "home.more_dealers": "+{{count}} още дилъри"
+  "home.more_dealers": "+{{count}} още дилъри",
+  "orders.action.received_on_behalf": "Получено от името на купувача",
+  "orders.confirm.received_on_behalf": "Да се отбележи ли поръчката като получена от името на купувача?",
+  "orders.on_behalf_note": "от името на купувача"
 }

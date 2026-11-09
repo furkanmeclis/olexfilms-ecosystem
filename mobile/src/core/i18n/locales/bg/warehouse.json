@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "Не е намерена наличност със стандартен баркод за {{name}} в склада.",
   "orders.assign.fixed_qty_auto": "Количество за стандартен баркод (без промяна: колкото липсва в реда)",
   "m.warehouse_all": "Всички складове",
-  "m.warehouse_totals_partial": "Сумирани са само първите {{count}} единици в този склад; количествата може да са непълни."
+  "m.warehouse_totals_partial": "Сумирани са само първите {{count}} единици в този склад; количествата може да са непълни.",
+  "orders.actions.receive_on_behalf.button": "Получено от името на купувача",
+  "orders.actions.receive_on_behalf.title": "Да се получи ли от името на купувача?",
+  "orders.actions.receive_on_behalf.description": "Купувачът няма членове; поръчката се затваря като получена от негово име и счетоводните записи се осчетоводяват.",
+  "orders.actions.receive_on_behalf.confirm": "Получено от името на купувача"
 }

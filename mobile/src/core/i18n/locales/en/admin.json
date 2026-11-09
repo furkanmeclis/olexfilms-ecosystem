@@ -126,5 +126,8 @@
   "home.services_count": "Services: {{count}}",
   "home.rank_partial": "Ranked on the latest {{count}} records of the period.",
   "home.empty_period": "Nothing in this period.",
-  "home.more_dealers": "+{{count}} more dealers"
+  "home.more_dealers": "+{{count}} more dealers",
+  "orders.action.received_on_behalf": "Received on behalf of the buyer",
+  "orders.confirm.received_on_behalf": "Mark the order as received on behalf of the buyer?",
+  "orders.on_behalf_note": "on behalf of the buyer"
 }

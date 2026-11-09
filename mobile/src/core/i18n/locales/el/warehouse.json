@@ -567,5 +567,9 @@
   "orders.assign.fixed_none": "Δεν βρέθηκε απόθεμα σταθερού barcode για {{name}} στην αποθήκη.",
   "orders.assign.fixed_qty_auto": "Ποσότητα σταθερού barcode (χωρίς αλλαγή: όσο λείπει από τη γραμμή)",
   "m.warehouse_all": "Όλες οι αποθήκες",
-  "m.warehouse_totals_partial": "Αθροίστηκαν μόνο οι πρώτες {{count}} μονάδες αυτής της αποθήκης· οι ποσότητες μπορεί να είναι ελλιπείς."
+  "m.warehouse_totals_partial": "Αθροίστηκαν μόνο οι πρώτες {{count}} μονάδες αυτής της αποθήκης· οι ποσότητες μπορεί να είναι ελλιπείς.",
+  "orders.actions.receive_on_behalf.button": "Παραλήφθηκε εκ μέρους του αγοραστή",
+  "orders.actions.receive_on_behalf.title": "Παραλαβή εκ μέρους του αγοραστή;",
+  "orders.actions.receive_on_behalf.description": "Ο αγοραστής δεν έχει μέλη· η παραγγελία κλείνει ως παραληφθείσα εκ μέρους του και καταχωρούνται οι λογιστικές εγγραφές.",
+  "orders.actions.receive_on_behalf.confirm": "Παραλήφθηκε εκ μέρους του αγοραστή"
 }
