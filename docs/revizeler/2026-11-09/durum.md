@@ -61,8 +61,8 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | --- | --- | --- | --- | --- | --- |
 | 7.1 Web depo ana sayfası | TEC-1066 | | | — | ⏳ #512 üstünde |
 | 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | | | | ⏸ |
-| 5.8 Mobil satış görevlisi | TEC-1068 | | | | ⏸ |
-| 6 Mobil stok depo filtresi | TEC-1069 | | | | ⏸ |
+| 5.8 Mobil satış görevlisi | TEC-1068 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
+| 6 Mobil stok depo filtresi | TEC-1069 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
 | 8 + 8.1 Web+API muhasebe | TEC-1070 | | | 000172? | ⏳ #512 üstünde |
 | 8.1 Mobil muhasebe kuyruğu | TEC-1071 | | | | ⏸ |
 
@@ -71,7 +71,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 1 Web+API genel bakış | TEC-1072 | [#516](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/516) | 🟢 | — | dönem seçici, en çok kullanılan ürün grafiği, distribütör sayısı |
-| 1.1 + 3.1 Mobil | TEC-1073 | | | | ⏸ |
+| 1.1 + 3.1 Mobil | TEC-1073 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
 | 2 + 4 Web menü, Müşteriler ve Araçlar | TEC-1074 | [#512](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/512) | 🟢 | — | legacy sıra; "açan bayi" = ilk müşteri-org bağlantısı (varsayım) |
 | 3 Web+API hizmet listesi | TEC-1075 | [#513](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/513) | 🟢 | — | stats ucu; defaultHidden kök nedeni useDataTable (genel düzeltme); "Olex Merkez" = TEC-1003 veri durumu, artık servis noktası adı |
 
@@ -80,13 +80,13 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 9 + 9.1 + 9.2 Web sihirbaz | TEC-1076 | | | | ⏸ |
-| 9.3 Mobil gövde tekrar seçimi | TEC-1077 | | | | ⏸ |
+| 9.3 Mobil gövde tekrar seçimi | TEC-1077 | | | — | ⏳ mobil paket 3a (#509 üstünde) |
 
 ## 7. Metrajlı çıkış
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| Metraj Web+API `KOD-3M` | TEC-1078 | | | — | ⏳ #508 üstünde |
+| Metraj Web+API `KOD-3M` | TEC-1078 | [#520](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/520) | 🟢 | — | #508 üstünde; `-3M`, `-2.5M`, `-3M-2`; birim geçmişinde parçalar, `family=` filtresi |
 | Metraj Mobil | TEC-1079 | | | | ⏸ |
 
 ## Karar gerektirenler (kodlama yok)
