@@ -4,6 +4,7 @@ import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
 import { API_URL } from '@/core/config';
 import { PAGE_SIZE, usePagedQuery } from '@/features/admin/kit';
+import { stockByProduct } from '@/features/orders/order-summary';
 
 type S = components['schemas'];
 export type Product = S['CatalogProduct'];
@@ -52,5 +53,38 @@ export function useProduct(uuid: string) {
   return useQuery({
     queryKey: catalogKeys.product(uuid),
     queryFn: () => unwrap(api.GET('/v1/catalog/products/{uuid}', { params: { path: { uuid } } })),
+  });
+}
+
+/** Stock rows read for the catalog marks: 100 per page, at most this many pages. */
+const STOCK_PAGE = 100;
+const STOCK_PAGES = 5;
+
+/**
+ * On hand stock per product of one organization (TEC-1055, revize 5.1), for
+ * the "in stock / out of stock" mark of the catalog rows. Only products in
+ * stock are read; `complete` is false when there were more than the pages
+ * read, then a product missing from the map is unknown, not out of stock.
+ */
+export function useCatalogStock(org: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['catalog', 'stock', org ?? ''],
+    enabled: enabled && !!org,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const rows: S['StockProduct'][] = [];
+      let total = 0;
+      for (let page = 0; page < STOCK_PAGES; page++) {
+        const res = await unwrap(
+          api.GET('/v1/stock/organizations/{uuid}/products', {
+            params: { path: { uuid: org! }, query: { status: 'in_stock', limit: STOCK_PAGE, offset: page * STOCK_PAGE } },
+          }),
+        );
+        rows.push(...res.items);
+        total = res.total;
+        if (rows.length >= total || !res.items.length) break;
+      }
+      return { map: stockByProduct(rows), complete: rows.length >= total };
+    },
   });
 }

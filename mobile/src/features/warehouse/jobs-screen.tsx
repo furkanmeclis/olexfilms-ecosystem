@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
+import { useActivityText, useAmountText } from '@/features/orders/order-timeline';
 import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
 import { StatusPill } from '@/ui/status-pill';
@@ -145,7 +146,7 @@ function JobsList({
   const transfers = useTransfers(status, scope, direction, tab === 'transfers');
   const counts = useCounts(status, scope, tab === 'counts');
   const entries = useEntries(status, scope, tab === 'entries');
-  const orders = useOrders(orderScope, tab === 'orders');
+  const orders = useOrders(orderScope, tab === 'orders', scope);
   const q = tab === 'transfers' ? transfers : tab === 'counts' ? counts : tab === 'entries' ? entries : orders;
 
   const items: (Transfer | StockCount | StockEntry | Order)[] =
@@ -246,14 +247,21 @@ export function EntryCard({ entry: x }: { entry: StockEntry }) {
   );
 }
 
+/**
+ * Warehouse order card (TEC-1067, revize 7.3): the other party (the dealer)
+ * first, then how much is ordered and who took the latest step (the creator
+ * while nothing else happened), the order number second. Nothing about prices.
+ */
 export function OrderCard({ order: x }: { order: Order }) {
   const { t } = useTranslation('warehouse');
+  const amountText = useAmountText();
+  const activityText = useActivityText();
   const other = x.role === 'buyer' ? x.seller : x.buyer;
   return (
     <DocCard
-      title={x.order_no}
-      subtitle={`${t(`orders.role.${x.role}`)} · ${other.name}`}
-      meta={[formatDate(x.created_at), x.delivery_method?.name, x.note].filter(Boolean).join(' · ')}
+      title={other.name}
+      subtitle={[amountText(x), activityText(x.last_activity)].filter(Boolean).join(' · ') || t(`orders.role.${x.role}`)}
+      meta={[x.order_no, formatDate(x.created_at), x.delivery_method?.name, x.note].filter(Boolean).join(' · ')}
       status={<StatusPill tone={orderTone(x.status)} label={t(`orders.status.${x.status}`)} />}
       onPress={() => go(`/depo/jobs/order/${x.uuid}`)}
     />

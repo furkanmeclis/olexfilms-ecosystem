@@ -204,12 +204,15 @@ export function CardRow({
   title,
   subtitle,
   meta,
+  detail,
   trailing,
   onPress,
 }: {
   title: string;
   subtitle?: string;
   meta?: string;
+  /** Fourth line, e.g. the user who took the latest step (TEC-1055). */
+  detail?: string | null;
   trailing?: React.ReactNode;
   onPress?: () => void;
 }) {
@@ -227,6 +230,11 @@ export function CardRow({
         {meta ? (
           <Text variant="footnote" tone="muted" numberOfLines={1}>
             {meta}
+          </Text>
+        ) : null}
+        {detail ? (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {detail}
           </Text>
         ) : null}
       </View>

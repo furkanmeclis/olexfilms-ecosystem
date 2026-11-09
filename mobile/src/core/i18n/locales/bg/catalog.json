@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "В наличност: {{amount}}",
+  "stock_out": "Няма наличност",
+  "stock_pieces": "{{n}} бр.",
+  "stock_meters": "{{n}} м"
+}

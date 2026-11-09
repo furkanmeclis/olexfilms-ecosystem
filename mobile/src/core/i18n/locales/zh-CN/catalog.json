@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "有库存：{{amount}}",
+  "stock_out": "无库存",
+  "stock_pieces": "{{n}} 件",
+  "stock_meters": "{{n}} 米"
+}

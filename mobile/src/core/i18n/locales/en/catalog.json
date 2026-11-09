@@ -21,5 +21,9 @@
   "barcode_serial": "One per unit",
   "description": "Description",
   "unit_type.piece": "Piece",
-  "unit_type.roll_meter": "Roll (meters)"
+  "unit_type.roll_meter": "Roll (meters)",
+  "stock_in": "In stock: {{amount}}",
+  "stock_out": "Out of stock",
+  "stock_pieces": "{{n}} pcs",
+  "stock_meters": "{{n}} m"
 }

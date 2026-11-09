@@ -1,7 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { pickWarehouse, sameWarehouse, stockKeys, transferFilter, warehouseFilter, wk } from './scope.ts';
+import {
+  pickWarehouse,
+  sameWarehouse,
+  showsStockEntries,
+  stockKeys,
+  transferFilter,
+  warehouseFilter,
+  wk,
+} from './scope.ts';
+
+test('showsStockEntries: center manager only (TEC-1087)', () => {
+  const manager = ['warehouse.write', 'members.write', 'warehouse.read'];
+  const staff = ['warehouse.write', 'warehouse.read', 'stock.import'];
+  assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'center' }), true);
+  assert.equal(showsStockEntries({ permissions: staff, superAdmin: false, orgType: 'center' }), false);
+  assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'distributor' }), false);
+  assert.equal(showsStockEntries({ permissions: [], superAdmin: true, orgType: undefined }), true);
+});
 
 const A = { uuid: 'wh-a', is_primary: false };
 const B = { uuid: 'wh-b', is_primary: true };

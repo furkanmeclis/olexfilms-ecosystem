@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "En stock : {{amount}}",
+  "stock_out": "Rupture de stock",
+  "stock_pieces": "{{n}} pcs",
+  "stock_meters": "{{n}} m"
+}

@@ -21,5 +21,9 @@
   "barcode_serial": "Her birime ayrı",
   "description": "Açıklama",
   "unit_type.piece": "Adet",
-  "unit_type.roll_meter": "Rulo (metre)"
+  "unit_type.roll_meter": "Rulo (metre)",
+  "stock_in": "Stokta: {{amount}}",
+  "stock_out": "Stokta yok",
+  "stock_pieces": "{{n}} adet",
+  "stock_meters": "{{n}} m"
 }

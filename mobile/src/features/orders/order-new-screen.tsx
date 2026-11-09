@@ -3,14 +3,14 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Modal, Platform, Pressable, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Platform, Pressable, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
-import { activeMembership, kindsOf } from '@/core/spaces';
+import { activeMembership, kindsOf, useCan } from '@/core/spaces';
 import { usePricesVisible } from '@/core/use-prices-visible';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
@@ -182,6 +182,10 @@ export function OrderNewScreen() {
   const [pickedWarehouse, setPickedWarehouse] = useState<string | null>(null);
   const sellerWarehouse =
     pickedWarehouse ?? activeWarehouses.find((w) => w.is_primary)?.uuid ?? activeWarehouses[0]?.uuid ?? '';
+  // TEC-1053 (TEC-1052 API): a center user who ships orders may prepare this one
+  // himself; then no warehouse staff is notified. Only offered with orders.ship.
+  const canShip = useCan('orders.ship');
+  const [selfPrepare, setSelfPrepare] = useState(false);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const errors = useMemo(() => validateCart(lines), [lines]);
@@ -203,6 +207,7 @@ export function OrderNewScreen() {
           body: {
             buyer_org_uuid: buyer.uuid,
             ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
+            ...(canShip && selfPrepare ? { self_prepare: true } : {}),
             items: toItemInputs(lines, prices),
             ...(note.trim() ? { note: note.trim() } : {}),
           },
@@ -319,6 +324,19 @@ export function OrderNewScreen() {
                 />
                 <Text variant="footnote" tone="muted">
                   {t('seller_warehouse_hint')}
+                </Text>
+              </View>
+            ) : null}
+            {center && canShip ? (
+              <View className="gap-1.5">
+                <View className="min-h-12 flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4">
+                  <Text variant="body" className="flex-1">
+                    {t('self_prepare')}
+                  </Text>
+                  <Switch value={selfPrepare} onValueChange={setSelfPrepare} accessibilityLabel={t('self_prepare')} />
+                </View>
+                <Text variant="footnote" tone="muted">
+                  {t('self_prepare_hint')}
                 </Text>
               </View>
             ) : null}

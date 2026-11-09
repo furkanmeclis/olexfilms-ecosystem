@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 
-import { useCan } from '@/core/spaces';
-import { ErrorState, ListSkeleton, PagedList, useDebounced } from '@/features/admin/kit';
+import { useSession } from '@/core/auth/session';
+import { activeMembership, useCan } from '@/core/spaces';
+import { stockState } from '@/features/orders/order-summary';
+import { ErrorState, ListSkeleton, PagedList, useDebounced, useFormat } from '@/features/admin/kit';
 import { useCart } from '@/features/orders/cart';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -15,10 +17,21 @@ import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
 import { plainText } from './plain-text';
-import { type Category, firstImage, type Product, productImageUrl, useCategories, useProduct, useProducts } from './api';
+import {
+  type Category,
+  firstImage,
+  type Product,
+  productImageUrl,
+  useCatalogStock,
+  useCategories,
+  useProduct,
+  useProducts,
+} from './api';
 
 const BASE = '/bayi/menu/catalog';
 export const NEW_ORDER = '/bayi/menu/orders/new';
+/** Every product of the catalog: where a new order starts (TEC-1055). */
+export const CATALOG_PRODUCTS = `${BASE}/products`;
 
 /** A dealer may order (orders.write) only what the catalog shows (catalog.read). */
 export function useCanOrder() {
@@ -107,6 +120,16 @@ export function ProductsScreen() {
   const list = useProducts(params.category ?? '', query);
   const lines = useCart((s) => s.lines);
   const add = useCart((s) => s.add);
+  const f = useFormat();
+  // TEC-1055 (revize 5.1): the brand before the SKU (Olex Films / Glorian). The
+  // catalog lists the active organization's brand, so its name is the row's brand.
+  const me = useSession((s) => s.me);
+  const membership = activeMembership(me);
+  const brand = membership?.brand?.name ?? '';
+  // Stock marks: the center sells from its own stock and can read it. A dealer
+  // cannot read the seller's stock, so its rows carry no mark (needs an API field).
+  const stockRead = useCan('stock.read');
+  const stock = useCatalogStock(membership?.uuid, stockRead && membership?.type === 'center');
 
   return (
     <>
@@ -140,8 +163,9 @@ export function ProductsScreen() {
                   {item.name}
                 </Text>
                 <Text variant="footnote" tone="muted" numberOfLines={1}>
-                  {item.sku} · {t(`unit_type.${item.unit_type}`)}
+                  {[brand, item.sku, t(`unit_type.${item.unit_type}`)].filter(Boolean).join(' · ')}
                 </Text>
+                <StockMark state={stockState(stock.data?.map, item.uuid, stock.data?.complete ?? false)} f={f} />
               </View>
               {canOrder ? (
                 <Pressable
@@ -162,6 +186,29 @@ export function ProductsScreen() {
         }}
       />
     </>
+  );
+}
+
+function StockMark({ state, f }: { state: ReturnType<typeof stockState>; f: ReturnType<typeof useFormat> }) {
+  const { t } = useTranslation('catalog');
+  if (state.kind === 'unknown') return null;
+  if (state.kind === 'out') {
+    return (
+      <Text variant="footnote" tone="danger" numberOfLines={1}>
+        {t('stock_out')}
+      </Text>
+    );
+  }
+  const amount = [
+    state.quantity > 0 ? t('stock_pieces', { n: f.number(state.quantity) }) : null,
+    state.meters > 0 ? t('stock_meters', { n: f.number(state.meters, 2) }) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <Text variant="footnote" tone="primary" numberOfLines={1}>
+      {t('stock_in', { amount })}
+    </Text>
   );
 }
 

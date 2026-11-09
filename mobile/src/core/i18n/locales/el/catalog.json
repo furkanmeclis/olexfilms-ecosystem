@@ -1,1 +1,6 @@
-{}
+{
+  "stock_in": "Σε απόθεμα: {{amount}}",
+  "stock_out": "Εκτός αποθέματος",
+  "stock_pieces": "{{n}} τεμ.",
+  "stock_meters": "{{n}} μ"
+}
