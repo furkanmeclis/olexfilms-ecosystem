@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
 
-import { usePricesVisible } from '@/core/use-prices-visible';
 import { useCan } from '@/core/spaces';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -30,7 +30,16 @@ import {
   useSuggestions,
   useUnplaced,
 } from './orders-api';
-import { allCovered as everyLineCovered, asksWholeRoll, assignTarget, isCovered, isRollItem, requiredOf } from './order-assign';
+import {
+  allCovered as everyLineCovered,
+  asksWholeRoll,
+  assignTarget,
+  fixedAssignQuantity,
+  fixedSuggestionUnits,
+  isCovered,
+  isRollItem,
+  requiredOf,
+} from './order-assign';
 import { Card, ErrorState, Field, IconButton, ListSkeleton, Segmented } from './parts';
 import { QtyStepper } from './qty-stepper';
 import { useDocAction } from './use-action';
@@ -68,6 +77,12 @@ export function OrderScreen() {
   const [view, setView] = useState<'lines' | 'pick'>('lines');
   const [scanning, setScanning] = useState<'assign' | 'place' | null>(null);
   const [qty, setQty] = useState(1);
+  // TEC-1048: an untouched stepper sends what the line still needs (one scan per fixed barcode line).
+  const [qtyTouched, setQtyTouched] = useState(false);
+  const resetQty = () => {
+    setQty(1);
+    setQtyTouched(false);
+  };
   const [meters, setMeters] = useState('');
   const [suggestFor, setSuggestFor] = useState<OrderItem | null>(null);
   const [locationsFor, setLocationsFor] = useState<string | null>(null);
@@ -127,6 +142,11 @@ export function OrderScreen() {
     if (!o?.items) return { ok: false, title: t('scan.failed') };
     try {
       const r = await resolveScan(code);
+      // TEC-1048: the product code of a fixed-barcode product (no own label per
+      // piece) prepares the line by quantity from the suggested fixed barcodes.
+      if (r.status === 'ok' && r.type === 'product' && r.product?.uses_fixed_barcode) {
+        return await assignFixedByProduct(r.product.uuid, r.product.name);
+      }
       if (r.status !== 'ok' || r.type !== 'unit' || !r.unit) return { ok: false, title: t('m.scan_unit_not_product') };
       const line = assignTarget(o.items, r.product?.uuid);
       if (line.kind === 'not_on_order') return { ok: false, title: t('m.not_on_order', { barcode: r.unit.barcode }) };
@@ -140,14 +160,14 @@ export function OrderScreen() {
       const body: { barcode: string; quantity?: number; meters?: string; idempotency_key?: string } = {
         barcode: r.unit.barcode,
       };
-      if (r.unit.unit_kind === 'fixed') body.quantity = qty;
+      if (r.unit.unit_kind === 'fixed') body.quantity = fixedAssignQuantity(item, qty, qtyTouched, r.unit.quantity_on_hand);
       if (isRoll(item) && meters.trim()) {
         body.meters = meters.trim().replace(',', '.');
         body.idempotency_key = splitKey.for(`${item.uuid}:${r.unit.barcode}:${body.meters}`);
       }
       store(await orderApi.assign(uuid, item.uuid, body));
       splitKey.done();
-      if (body.quantity) setQty(1);
+      if (body.quantity) resetQty();
       if (body.meters) setMeters('');
       return {
         ok: true,
@@ -157,6 +177,20 @@ export function OrderScreen() {
     } catch (e) {
       return { ok: false, title: whError(e) };
     }
+  };
+
+  /** Fixed-barcode product scanned by its code: assign the line's missing pieces from its fixed barcodes. */
+  const assignFixedByProduct = async (product: string, name: string): Promise<ScanOutcome> => {
+    const line = assignTarget(o?.items ?? [], product);
+    if (line.kind === 'not_on_order') return { ok: false, title: t('m.not_on_order', { barcode: name }) };
+    if (line.kind === 'covered') return { ok: false, title: t('orders.assign.line_full', { name }) };
+    const s = await orderApi.suggestions(uuid, line.item.uuid, true);
+    const units = fixedSuggestionUnits(s.suggestions, qtyTouched ? qty : null);
+    if (!units.length) return { ok: false, title: t('orders.assign.fixed_none', { name }) };
+    store(await orderApi.applySuggestions(uuid, line.item.uuid, { units }));
+    resetQty();
+    const total = units.reduce((n, u) => n + u.quantity, 0);
+    return { ok: true, title: name, detail: `× ${total}` };
   };
 
   /** Buyer: a location QR sets the shelf; each unit scanned goes onto it. */
@@ -467,7 +501,14 @@ export function OrderScreen() {
         complete={allCovered ? { title: t('orders.assign.order_complete'), action: t('common:close') } : undefined}
         footer={
           <>
-            <QtyStepper label={t('m.fixed_qty')} value={qty} onChange={setQty} />
+            <QtyStepper
+              label={qtyTouched ? t('m.fixed_qty') : t('orders.assign.fixed_qty_auto')}
+              value={qty}
+              onChange={(n) => {
+                setQty(n);
+                setQtyTouched(true);
+              }}
+            />
             {items.some(isRoll) ? (
               <View className="gap-1.5 rounded-lg bg-card p-2">
                 {/* The header hint is cut to two lines; the roll rule is told in full here. */}

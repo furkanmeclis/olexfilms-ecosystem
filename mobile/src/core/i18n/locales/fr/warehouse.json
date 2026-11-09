@@ -563,5 +563,7 @@
   "m.transfers_out": "Sortants",
   "m.transfers_in": "Entrants",
   "m.this_warehouse_units": "Unités de cet entrepôt",
-  "m.product_totals": "Totaux par produit"
+  "m.product_totals": "Totaux par produit",
+  "orders.assign.fixed_none": "Aucun stock à code-barres fixe de {{name}} trouvé dans l'entrepôt.",
+  "orders.assign.fixed_qty_auto": "Quantité code-barres fixe (inchangée : ce qui manque à la ligne)"
 }

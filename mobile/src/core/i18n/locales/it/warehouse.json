@@ -563,5 +563,7 @@
   "m.transfers_out": "In uscita",
   "m.transfers_in": "In entrata",
   "m.this_warehouse_units": "Unità in questo magazzino",
-  "m.product_totals": "Totali per prodotto"
+  "m.product_totals": "Totali per prodotto",
+  "orders.assign.fixed_none": "Nessuna giacenza con codice a barre fisso di {{name}} trovata in magazzino.",
+  "orders.assign.fixed_qty_auto": "Quantità codice fisso (invariata: quanto manca alla riga)"
 }

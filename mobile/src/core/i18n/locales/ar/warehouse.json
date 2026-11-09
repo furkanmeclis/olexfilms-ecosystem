@@ -563,5 +563,7 @@
   "m.transfers_out": "صادرة",
   "m.transfers_in": "واردة",
   "m.this_warehouse_units": "الوحدات في هذا المستودع",
-  "m.product_totals": "إجماليات المنتجات"
+  "m.product_totals": "إجماليات المنتجات",
+  "orders.assign.fixed_none": "لم يُعثر على مخزون بباركود ثابت لـ {{name}} في المستودع.",
+  "orders.assign.fixed_qty_auto": "كمية الباركود الثابت (دون تغيير: ما ينقص البند)"
 }

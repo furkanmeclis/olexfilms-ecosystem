@@ -563,5 +563,7 @@
   "m.transfers_out": "调出",
   "m.transfers_in": "调入",
   "m.this_warehouse_units": "本仓库单元",
-  "m.product_totals": "产品汇总"
+  "m.product_totals": "产品汇总",
+  "orders.assign.fixed_none": "仓库中未找到 {{name}} 的固定条码库存。",
+  "orders.assign.fixed_qty_auto": "固定条码数量（不修改则为该行缺少的数量）"
 }

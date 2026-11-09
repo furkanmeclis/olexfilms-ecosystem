@@ -563,5 +563,7 @@
   "m.transfers_out": "Gedən",
   "m.transfers_in": "Gələn",
   "m.this_warehouse_units": "Bu anbardakı vahidlər",
-  "m.product_totals": "Məhsul cəmləri"
+  "m.product_totals": "Məhsul cəmləri",
+  "orders.assign.fixed_none": "Anbarda {{name}} üçün sabit barkod stoku tapılmadı.",
+  "orders.assign.fixed_qty_auto": "Sabit barkod sayı (dəyişməsəniz sətirin çatışmayan miqdarı)"
 }

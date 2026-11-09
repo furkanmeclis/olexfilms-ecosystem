@@ -146,6 +146,12 @@ export const orderApi = {
         params: { path: { uuid, item_uuid: item, unit_uuid: unit } },
       }),
     ),
+  suggestions: (uuid: string, item: string, unlocated: boolean) =>
+    unwrap(
+      api.GET('/v1/orders/{uuid}/items/{item_uuid}/suggestions', {
+        params: { path: { uuid, item_uuid: item }, query: { include_unlocated: unlocated } },
+      }),
+    ),
   applySuggestions: (uuid: string, item: string, body: S['OrderSuggestionsApplyInput']) =>
     unwrap(
       api.POST('/v1/orders/{uuid}/items/{item_uuid}/suggestions/apply', {

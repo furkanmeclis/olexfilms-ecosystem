@@ -563,5 +563,7 @@
   "m.transfers_out": "Исходящие",
   "m.transfers_in": "Входящие",
   "m.this_warehouse_units": "Единицы на этом складе",
-  "m.product_totals": "Итоги по товарам"
+  "m.product_totals": "Итоги по товарам",
+  "orders.assign.fixed_none": "Для {{name}} на складе не найден запас с фиксированным штрихкодом.",
+  "orders.assign.fixed_qty_auto": "Количество фиксированного штрихкода (без изменений: сколько не хватает в строке)"
 }

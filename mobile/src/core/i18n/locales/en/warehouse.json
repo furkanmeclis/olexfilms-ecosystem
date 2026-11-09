@@ -696,5 +696,7 @@
   "m.transfers_out": "Outgoing",
   "m.transfers_in": "Incoming",
   "m.this_warehouse_units": "Units in this warehouse",
-  "m.product_totals": "Product totals"
+  "m.product_totals": "Product totals",
+  "orders.assign.fixed_none": "No fixed barcode stock of {{name}} was found in the warehouse.",
+  "orders.assign.fixed_qty_auto": "Fixed barcode quantity (unchanged: what the line still needs)"
 }
