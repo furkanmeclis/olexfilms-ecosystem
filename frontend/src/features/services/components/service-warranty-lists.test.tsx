@@ -19,7 +19,7 @@ const captured = vi.hoisted(() => ({
   grants: new Set<string>(),
   orgType: "center" as string | null,
   push: vi.fn(),
-  services: { listServices: vi.fn() },
+  services: { listServices: vi.fn(), listStats: vi.fn() },
   warranties: { list: vi.fn() },
   customers: { listOrganizations: vi.fn() },
   catalog: { listProducts: vi.fn() },
@@ -182,6 +182,21 @@ beforeEach(() => {
   captured.servicePdf.mockReset();
   captured.certificate.mockReset();
   captured.services.listServices.mockReset().mockResolvedValue(page([], 45));
+  captured.services.listStats.mockReset().mockResolvedValue({
+    total: 45,
+    this_month: 7,
+    month_start: "2026-11-01T00:00:00+03:00",
+    by_status: {
+      draft: 2,
+      pending: 3,
+      processing: 4,
+      ready: 1,
+      completed: 30,
+      cancelled: 5,
+    },
+    warranties: 60,
+    active_warranties: 50,
+  });
   captured.warranties.list.mockReset().mockResolvedValue(page([], 12));
   captured.customers.listOrganizations.mockReset().mockResolvedValue([
     { uuid: "o1", name: "Olex Bayi", type: "dealer" },
@@ -441,6 +456,21 @@ describe("ServicesListPage (TEC-378)", () => {
     await render(createElement(ServicesListPage, { slug: "acme" }));
     expect(container.querySelector("[data-testid=create]")).toBeNull();
     expect(lastActions()).toEqual(["view", "pdf"]);
+  });
+});
+
+describe("ServicesListPage stats (TEC-1075)", () => {
+  it("shows the summary cards in the list scope", async () => {
+    captured.grants = new Set([Permission.ServicesRead]);
+    await render(createElement(ServicesListPage, { slug: "acme" }));
+    expect(captured.services.listStats).toHaveBeenCalled();
+    const cards = container.querySelector("[data-testid=service-list-stats]");
+    expect(cards?.textContent).toContain("services.list.stats.total45");
+    expect(cards?.textContent).toContain("services.list.stats.this_month7");
+    expect(cards?.textContent).toContain("services.list.stats.in_progress8");
+    expect(cards?.textContent).toContain(
+      "services.list.stats.active_warranties50",
+    );
   });
 });
 

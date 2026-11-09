@@ -559,5 +559,11 @@
   "eod.generate_all_warehouses": "Όλες οι αποθήκες",
   "eod.pdf_ios_only": "Το PDF της αναφοράς δεν κοινοποιείται από αυτή τη συσκευή· κοινοποιήστε το από iPhone ή από το web panel.",
   "counts.defaults_summary": "Ρυθμίσεις: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Για προχωρημένους"
+  "counts.advanced": "Για προχωρημένους",
+  "m.transfers_out": "Εξερχόμενες",
+  "m.transfers_in": "Εισερχόμενες",
+  "m.this_warehouse_units": "Μονάδες σε αυτή την αποθήκη",
+  "m.product_totals": "Σύνολα προϊόντων",
+  "orders.assign.fixed_none": "Δεν βρέθηκε απόθεμα σταθερού barcode για {{name}} στην αποθήκη.",
+  "orders.assign.fixed_qty_auto": "Ποσότητα σταθερού barcode (χωρίς αλλαγή: όσο λείπει από τη γραμμή)"
 }

@@ -49,6 +49,7 @@ import {
 } from "@/features/orders/services/orders.service";
 import { ExportMenu } from "@/features/io/components/export-menu";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -68,6 +69,8 @@ const PARTY_COLUMN = "party";
 export function OrdersListPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  // TEC-1050: no total column, filter or card amount without a price grant.
+  const canSeePrices = useCanSeePrices();
   const router = useRouter();
   const org = useActiveOrganization(slug);
   const access = resolveOrderListAccess(can, org?.type);
@@ -177,23 +180,30 @@ export function OrdersListPage({ slug }: { slug: string }) {
               />
             ) : null,
         }),
-        createColumn<Order>({
-          id: "total",
-          accessorFn: (o) => amountNumber(o.total),
-          labelKey: "orders.list.columns.total",
-          enableSorting: true,
-          filterVariant: "number-range",
-          param: "total",
-          meta: { cellClassName: "text-end", headerClassName: "text-end" },
-          cell: ({ row }) => (
-            <span className="whitespace-nowrap tabular-nums">
-              {format.currency(
-                amountNumber(row.original.total),
-                row.original.currency,
-              )}
-            </span>
-          ),
-        }),
+        ...(canSeePrices
+          ? [
+              createColumn<Order>({
+                id: "total",
+                accessorFn: (o) => amountNumber(o.total),
+                labelKey: "orders.list.columns.total",
+                enableSorting: true,
+                filterVariant: "number-range",
+                param: "total",
+                meta: {
+                  cellClassName: "text-end",
+                  headerClassName: "text-end",
+                },
+                cell: ({ row }) => (
+                  <span className="whitespace-nowrap tabular-nums">
+                    {format.currency(
+                      amountNumber(row.original.total),
+                      row.original.currency,
+                    )}
+                  </span>
+                ),
+              }),
+            ]
+          : []),
         createColumn<Order>({
           accessorKey: "created_at",
           labelKey: "orders.list.columns.created_at",
@@ -271,6 +281,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
     [
       can,
       canFilterParty,
+      canSeePrices,
       format,
       partyOptions,
       router,
@@ -453,9 +464,11 @@ export function OrdersListPage({ slug }: { slug: string }) {
             </p>
             <div className="text-muted-foreground flex justify-between gap-2 text-xs">
               <span>{format.dateTime(order.created_at)}</span>
-              <span className="text-foreground font-medium tabular-nums">
-                {format.currency(amountNumber(order.total), order.currency)}
-              </span>
+              {canSeePrices && order.total != null ? (
+                <span className="text-foreground font-medium tabular-nums">
+                  {format.currency(amountNumber(order.total), order.currency)}
+                </span>
+              ) : null}
             </div>
           </div>
         )}

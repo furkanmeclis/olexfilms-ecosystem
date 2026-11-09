@@ -11,6 +11,7 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { activeMembership, kindsOf } from '@/core/spaces';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { cn } from '@/ui/cn';
@@ -20,6 +21,9 @@ import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+
+import { useWarehouses } from '@/features/warehouse/api';
+import { WarehouseField } from '@/features/warehouse/warehouse-picker';
 
 import { useCart } from './cart';
 import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
@@ -167,7 +171,17 @@ export function OrderNewScreen() {
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
   const warehouse = kindsOf(me).includes('depo');
+  // TEC-1051: a warehouse role without pricing permissions neither sees nor sets prices.
+  const prices = usePricesVisible();
   const [buyer, setBuyer] = useState<Dealer | null>(null);
+  // TEC-1053 (TEC-1028 API): the center picks the warehouse that prepares the
+  // order (seller_warehouse_uuid), the primary one until changed. Without
+  // access to the warehouse list the field is hidden and the API uses the primary.
+  const warehouses = useWarehouses(center);
+  const activeWarehouses = warehouses.data ?? [];
+  const [pickedWarehouse, setPickedWarehouse] = useState<string | null>(null);
+  const sellerWarehouse =
+    pickedWarehouse ?? activeWarehouses.find((w) => w.is_primary)?.uuid ?? activeWarehouses[0]?.uuid ?? '';
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const errors = useMemo(() => validateCart(lines), [lines]);
@@ -188,7 +202,8 @@ export function OrderNewScreen() {
         api.POST('/v1/orders', {
           body: {
             buyer_org_uuid: buyer.uuid,
-            items: toItemInputs(lines, true),
+            ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
+            items: toItemInputs(lines, prices),
             ...(note.trim() ? { note: note.trim() } : {}),
           },
         }),
@@ -199,7 +214,7 @@ export function OrderNewScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const missing = order.items?.filter((i) => i.price_missing).length ?? 0;
       router.replace((warehouse ? `/depo/jobs/order/${order.uuid}` : `/bayi/menu/orders/${order.uuid}`) as never);
-      if (missing) Alert.alert(t('price_missing_title'), t('price_missing_body', { count: missing }));
+      if (missing && prices) Alert.alert(t('price_missing_title'), t('price_missing_body', { count: missing }));
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('save_failed'), errorMessage(isApiError(e) ? e.code : undefined));
@@ -295,6 +310,18 @@ export function OrderNewScreen() {
         ) : (
           <>
             {center ? <DealerPicker value={buyer} onChange={setBuyer} error={touched && !buyer ? t('buyer_required') : undefined} /> : null}
+            {center && activeWarehouses.length > 0 ? (
+              <View className="gap-1.5">
+                <WarehouseField
+                  label={t('seller_warehouse')}
+                  value={sellerWarehouse}
+                  onChange={(w) => setPickedWarehouse(w.uuid)}
+                />
+                <Text variant="footnote" tone="muted">
+                  {t('seller_warehouse_hint')}
+                </Text>
+              </View>
+            ) : null}
             <SectionHeader title={t('lines', { count: lines.length })} />
             <View className="gap-2.5">
               {lines.map((l) => {
@@ -335,7 +362,7 @@ export function OrderNewScreen() {
                         className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
                       />
                     </View>
-                    {center ? (
+                    {center && prices ? (
                       <View className="flex-row items-center gap-3">
                         <Text variant="callout" tone="muted" className="flex-1">
                           {t('unit_price')}
@@ -377,9 +404,11 @@ export function OrderNewScreen() {
               multiline
               maxLength={NOTE_MAX}
             />
-            <Text variant="footnote" tone="muted">
-              {t(center ? 'price_rule_center' : 'price_rule')}
-            </Text>
+            {prices ? (
+              <Text variant="footnote" tone="muted">
+                {t(center ? 'price_rule_center' : 'price_rule')}
+              </Text>
+            ) : null}
             {center ? (
               <Button
                 title={t('create_for_dealer')}

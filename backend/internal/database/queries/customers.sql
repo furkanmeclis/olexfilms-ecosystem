@@ -99,16 +99,30 @@ SELECT EXISTS (
 -- Customers of the organizations in scope; one row per user.
 -- TEC-371: statuses / customer types are CSV filters, linked_at is a date
 -- range on the first link, organization_uuids narrows the links to those
--- organizations (inside the scope above). Sort: docs/list-contract.md, keys
--- from customers usecase customersSortSpec.
+-- organizations (inside the scope above). TEC-1074: opened_by_* is the
+-- first in-scope link (opened_by_uuids filters on it). Sort:
+-- docs/list-contract.md, keys from customers usecase customersSortSpec.
 -- name: ListOrganizationCustomers :many
 SELECT u.id, u.uuid, u.name, u.surname, u.email, u.phone_e164, u.status, u.locale, u.created_at,
        cp.type AS customer_type, cp.company_name,
        MIN(co.created_at)::timestamptz AS linked_at,
-       MIN(co.first_service_at)::timestamptz AS first_service_at
+       MIN(co.first_service_at)::timestamptz AS first_service_at,
+       opener.uuid::uuid AS opened_by_uuid, opener.name::text AS opened_by_name, opener.type::text AS opened_by_type
 FROM users u
 JOIN customer_organizations co ON co.user_id = u.id
 LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+LEFT JOIN LATERAL (
+  -- TEC-1074: the organization that opened the customer (first link inside
+  -- the scope, so a dealer never sees another dealer's name).
+  SELECT oo.uuid, oo.name, oo.type
+  FROM customer_organizations oco
+  JOIN organizations oo ON oo.id = oco.organization_id
+  WHERE oco.user_id = u.id
+    AND (sqlc.narg(org_ids)::bigint[] IS NULL OR oco.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+    AND (sqlc.narg(brand_id)::bigint IS NULL OR oco.brand_id = sqlc.narg(brand_id))
+  ORDER BY oco.created_at ASC, oco.id ASC
+  LIMIT 1
+) opener ON true
 WHERE u.deleted_at IS NULL
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
@@ -129,17 +143,18 @@ WHERE u.deleted_at IS NULL
     OR u.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
     OR cp.company_name ILIKE '%' || sqlc.narg(q) || '%'
   )
+  AND (sqlc.narg(opened_by_uuids)::uuid[] IS NULL OR opener.uuid = ANY (sqlc.narg(opened_by_uuids)::uuid[]))
   -- TEC-164: Meilisearch hits; the scope filter above still applies.
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR u.uuid = ANY (sqlc.narg(uuids)::uuid[]))
-GROUP BY u.id, cp.user_id
+GROUP BY u.id, cp.user_id, opener.uuid, opener.name, opener.type
 HAVING (sqlc.narg(linked_from)::timestamptz IS NULL OR MIN(co.created_at) >= sqlc.narg(linked_from)::timestamptz)
    AND (sqlc.narg(linked_before)::timestamptz IS NULL OR MIN(co.created_at) < sqlc.narg(linked_before)::timestamptz)
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status WHEN 'opened_by' THEN lower(opener.name) END
   END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status END
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(u.name || ' ' || u.surname) WHEN 'status' THEN u.status WHEN 'opened_by' THEN lower(opener.name) END
   END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'email' THEN lower(u.email) END ASC NULLS LAST,
   CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'email' THEN lower(u.email) END DESC NULLS LAST,
@@ -157,6 +172,18 @@ SELECT COUNT(*)::bigint FROM (
   FROM users u
   JOIN customer_organizations co ON co.user_id = u.id
   LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+  LEFT JOIN LATERAL (
+    -- TEC-1074: the organization that opened the customer (first link inside
+    -- the scope, so a dealer never sees another dealer's name).
+    SELECT oo.uuid, oo.name, oo.type
+    FROM customer_organizations oco
+    JOIN organizations oo ON oo.id = oco.organization_id
+    WHERE oco.user_id = u.id
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR oco.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+      AND (sqlc.narg(brand_id)::bigint IS NULL OR oco.brand_id = sqlc.narg(brand_id))
+    ORDER BY oco.created_at ASC, oco.id ASC
+    LIMIT 1
+  ) opener ON true
   WHERE u.deleted_at IS NULL
     AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
     AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
@@ -177,6 +204,7 @@ SELECT COUNT(*)::bigint FROM (
       OR u.phone_e164 LIKE '%' || sqlc.narg(q) || '%'
       OR cp.company_name ILIKE '%' || sqlc.narg(q) || '%'
     )
+    AND (sqlc.narg(opened_by_uuids)::uuid[] IS NULL OR opener.uuid = ANY (sqlc.narg(opened_by_uuids)::uuid[]))
   GROUP BY u.id
   HAVING (sqlc.narg(linked_from)::timestamptz IS NULL OR MIN(co.created_at) >= sqlc.narg(linked_from)::timestamptz)
      AND (sqlc.narg(linked_before)::timestamptz IS NULL OR MIN(co.created_at) < sqlc.narg(linked_before)::timestamptz)

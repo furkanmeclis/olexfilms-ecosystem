@@ -12,7 +12,9 @@ import { type StockCount, type StockEntry, type Transfer, useCounts, useEntries,
 import { countTone, entryTone, formatDate, go, transferTone } from './format';
 import { orderTone } from './order-screen';
 import { type Order, type OrderScope, useOrders } from './orders-api';
+import { useWarehouseScope } from './context';
 import { Chips, DocCard, ListStatus, Segmented } from './parts';
+import type { TransferDirection } from './scope';
 
 export type JobsTab = 'transfers' | 'counts' | 'entries' | 'orders';
 type Scope = 'open' | 'done' | 'all';
@@ -40,6 +42,7 @@ export function JobsScreen() {
     if (params.tab) setTab(params.tab);
   }
   const [scope, setScope] = useState<Scope>('open');
+  const [direction, setDirection] = useState<TransferDirection>('out');
   const write = useCan('warehouse.write');
 
   const newPath =
@@ -71,6 +74,7 @@ export function JobsScreen() {
         tab={tab}
         status={tab === 'orders' ? '' : STATUS[tab][scope]}
         orderScope={ORDER_SCOPE[scope]}
+        direction={direction}
         header={
           <View className="gap-3 pb-2">
             <Segmented
@@ -100,6 +104,17 @@ export function JobsScreen() {
                     ]
               }
             />
+            {tab === 'transfers' ? (
+              // The API filters one side at a time: leaving this warehouse or arriving at it.
+              <Chips
+                value={direction}
+                onChange={setDirection}
+                options={[
+                  { value: 'out', label: t('m.transfers_out') },
+                  { value: 'in', label: t('m.transfers_in') },
+                ]}
+              />
+            ) : null}
           </View>
         }
         onCreate={write && newPath ? () => go(newPath) : undefined}
@@ -112,20 +127,24 @@ function JobsList({
   tab,
   status,
   orderScope,
+  direction,
   header,
   onCreate,
 }: {
   tab: JobsTab;
   status: string;
   orderScope: OrderScope;
+  direction: TransferDirection;
   header: React.ReactElement;
   onCreate?: () => void;
 }) {
   const { t } = useTranslation('warehouse');
   // Only the visible tab fetches; the others keep their cache.
-  const transfers = useTransfers(status, tab === 'transfers');
-  const counts = useCounts(status, tab === 'counts');
-  const entries = useEntries(status, tab === 'entries');
+  // TEC-1049: every list is the current warehouse's; its uuid is in each query key.
+  const scope = useWarehouseScope();
+  const transfers = useTransfers(status, scope, direction, tab === 'transfers');
+  const counts = useCounts(status, scope, tab === 'counts');
+  const entries = useEntries(status, scope, tab === 'entries');
   const orders = useOrders(orderScope, tab === 'orders');
   const q = tab === 'transfers' ? transfers : tab === 'counts' ? counts : tab === 'entries' ? entries : orders;
 

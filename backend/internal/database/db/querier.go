@@ -2298,8 +2298,9 @@ type Querier interface {
 	// Customers of the organizations in scope; one row per user.
 	// TEC-371: statuses / customer types are CSV filters, linked_at is a date
 	// range on the first link, organization_uuids narrows the links to those
-	// organizations (inside the scope above). Sort: docs/list-contract.md, keys
-	// from customers usecase customersSortSpec.
+	// organizations (inside the scope above). TEC-1074: opened_by_* is the
+	// first in-scope link (opened_by_uuids filters on it). Sort:
+	// docs/list-contract.md, keys from customers usecase customersSortSpec.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
 	// Every typed location (aisle, shelf, bin) of the organization with its
 	// warehouse and room; callers resolve the parents from the same set.
@@ -3602,6 +3603,14 @@ type Querier interface {
 	// the breakdowns read completed services only.
 	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
 	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
+	// TEC-1075: summary cards above the service list (legacy hub
+	// ServiceOverviewStatsWidget): totals by status and the services opened
+	// since month_start, in the same scope as ListServicesInScope (org_ids NULL
+	// = whole brand, created_by for scope own) and its organization_uuids
+	// filter (the center's own / network switch).
+	ServiceListStats(ctx context.Context, arg ServiceListStatsParams) (ServiceListStatsRow, error)
+	// TEC-1075: warranty counts of the services ServiceListStats counts.
+	ServiceListWarrantyStats(ctx context.Context, arg ServiceListWarrantyStatsParams) (ServiceListWarrantyStatsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	// TEC-1004: a hand-entered service number must not be another service's
 	// number, nor a warranty public code or alias of another service (the

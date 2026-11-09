@@ -97,7 +97,7 @@ export function CountNewScreen() {
       });
       qc.setQueryData(wk.count(x.uuid), x);
       void qc.invalidateQueries({ queryKey: ['warehouse', 'counts'] });
-      void qc.invalidateQueries({ queryKey: wk.summary() });
+      void qc.invalidateQueries({ queryKey: wk.summaries() });
       replace(`/depo/jobs/count/${x.uuid}`);
     } catch (e) {
       alertError(e);

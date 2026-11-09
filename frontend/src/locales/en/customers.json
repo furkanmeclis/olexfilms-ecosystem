@@ -1,9 +1,9 @@
 {
-  "nav": "Customers",
+  "nav": "Customers and Vehicles",
   "nav_list": "Customer list",
   "nav_new": "New customer",
   "loading": "Loading…",
-  "list.title": "Customers",
+  "list.title": "Customers and Vehicles",
   "list.description": "Customers linked to the organizations you can see.",
   "list.forbidden": "You need the customer read permission to open this page.",
   "list.search": "Search",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Dealer staff",
   "actions.upgrade.confirm": "Upgrade",
   "actions.upgrade.success": "The customer is now a member of {{dealer}}.",
-  "fields.organization": "Organization"
+  "fields.organization": "Organization",
+  "fields.opened_by": "Opened by dealer"
 }

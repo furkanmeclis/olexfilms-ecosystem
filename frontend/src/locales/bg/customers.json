@@ -1,9 +1,9 @@
 {
-  "nav": "Клиенти",
+  "nav": "Клиенти и автомобили",
   "nav_list": "Списък с клиенти",
   "nav_new": "Нов клиент",
   "loading": "Зареждане…",
-  "list.title": "Клиенти",
+  "list.title": "Клиенти и автомобили",
   "list.description": "Клиенти, свързани с организациите, които виждате.",
   "list.forbidden": "За да отворите тази страница, ви трябва право за четене на клиенти.",
   "list.search": "Търсене",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Служител на дилър",
   "actions.upgrade.confirm": "Повишаване",
   "actions.upgrade.success": "Клиентът вече е член на {{dealer}}.",
-  "fields.organization": "Организация"
+  "fields.organization": "Организация",
+  "fields.opened_by": "Открит от дилър"
 }
