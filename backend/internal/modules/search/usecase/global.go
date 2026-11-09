@@ -213,12 +213,13 @@ func (s *Service) specJobs(ctx context.Context, q, spec string, limit int) []pen
 		var run func(context.Context) []searchengine.Hit
 		if s.Enabled() {
 			run = func(ctx context.Context) []searchengine.Hit {
-				hits, err := s.client.Search(ctx, []string{id}, q, limit, map[string]string{id: filter})
+				hits, err := s.client.Search(ctx, []string{id}, q, fetchLimit([]string{id}, limit), map[string]string{id: filter})
 				if err != nil {
 					s.log.Warn("search_global_group_failed", "spec", id, "error", err)
 					return nil
 				}
-				return hits
+				// TEC-1061: no product closed to dealer orders outside the center.
+				return s.VisibleHits(ctx, hits, limit)
 			}
 		}
 		out = append(out, pending{res: meta, run: run})
