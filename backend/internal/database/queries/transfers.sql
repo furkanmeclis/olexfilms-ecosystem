@@ -5,12 +5,13 @@
 -- name: InsertTransferRequest :one
 INSERT INTO stock_transfer_requests (
     organization_id, brand_id, from_org_id, to_org_id, approver_org_id,
-    currency, reason, requested_by_user_id, kind
+    currency, reason, requested_by_user_id, kind, order_id, opened_by_parent
 )
 VALUES (
     sqlc.arg(from_org_id), sqlc.arg(brand_id), sqlc.arg(from_org_id), sqlc.arg(to_org_id),
     sqlc.arg(approver_org_id), sqlc.arg(currency), sqlc.narg(reason), sqlc.narg(requested_by_user_id),
-    COALESCE(NULLIF(sqlc.arg(kind)::text, ''), 'sibling')
+    COALESCE(NULLIF(sqlc.arg(kind)::text, ''), 'sibling'), sqlc.narg(order_id),
+    sqlc.arg(opened_by_parent)::bool
 )
 RETURNING *;
 
@@ -42,6 +43,8 @@ WHERE r.brand_id = sqlc.arg(brand_id)
   )
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR r.kind = ANY (sqlc.narg(kinds)::text[]))
+  AND (sqlc.narg(order_uuid)::uuid IS NULL
+       OR r.order_id = (SELECT so.id FROM orders so WHERE so.uuid = sqlc.narg(order_uuid)::uuid))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
@@ -81,6 +84,8 @@ WHERE r.brand_id = sqlc.arg(brand_id)
   )
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR r.kind = ANY (sqlc.narg(kinds)::text[]))
+  AND (sqlc.narg(order_uuid)::uuid IS NULL
+       OR r.order_id = (SELECT so.id FROM orders so WHERE so.uuid = sqlc.narg(order_uuid)::uuid))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
@@ -217,6 +222,8 @@ WHERE oiu.unit_id = sqlc.arg(unit_id)
   AND o.buyer_org_id = sqlc.arg(buyer_org_id)
   AND o.currency = sqlc.arg(currency)::text
   AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+  -- TEC-1085: a return linked to an order takes that order's line.
+  AND (sqlc.narg(order_id)::bigint IS NULL OR o.id = sqlc.narg(order_id)::bigint)
 ORDER BY oiu.assigned_at DESC, oiu.id DESC
 LIMIT 1;
 
@@ -256,3 +263,54 @@ ORDER BY i.id;
 UPDATE stock_transfer_request_items
 SET accounting_excluded = true
 WHERE request_id = sqlc.arg(request_id) AND id = ANY (sqlc.arg(ids)::bigint[]);
+
+-- TEC-1085: organizations a parent may open a return for (its direct
+-- dealer / distributor children in the brand).
+-- name: ListReturnSourceOrgs :many
+SELECT * FROM organizations
+WHERE brand_id = sqlc.arg(brand_id)
+  AND parent_id = sqlc.arg(parent_id)::bigint
+  AND type IN ('dealer', 'distributor')
+  AND deleted_at IS NULL
+ORDER BY name, id;
+
+-- TEC-1085: orders a return of buyer to seller may refer to (seller sold
+-- them to buyer, not draft or cancelled), newest first; q matches order_no.
+-- name: ListReturnOrders :many
+SELECT o.id, o.uuid, o.order_no, o.status, o.currency, o.created_at,
+       (SELECT COUNT(*) FROM order_item_units oiu
+          JOIN order_items oi ON oi.id = oiu.order_item_id
+         WHERE oi.order_id = o.id)::bigint AS unit_count
+FROM orders o
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND o.seller_org_id = sqlc.arg(seller_org_id)::bigint
+  AND o.buyer_org_id = sqlc.arg(buyer_org_id)::bigint
+  AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+  AND (sqlc.narg(q)::text IS NULL OR o.order_no ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY o.created_at DESC, o.id DESC
+LIMIT sqlc.arg(row_limit);
+
+-- name: GetOrderByUUIDInBrand :one
+SELECT * FROM orders WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
+
+-- name: GetOrderRefByID :one
+SELECT id, uuid, order_no FROM orders WHERE id = sqlc.arg(id);
+
+-- TEC-1085: the units assigned to an order with what the buyer still holds
+-- of each: a serial unit is returnable when the buyer holds it in stock, a
+-- fixed barcode up to the smaller of the order quantity and the buyer's
+-- quantity on hand.
+-- name: ListOrderReturnUnits :many
+SELECT u.uuid AS unit_uuid, u.barcode, u.unit_kind,
+       p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type,
+       oiu.quantity, oiu.meters,
+       COALESCE(ucs.holder_org_id = sqlc.arg(buyer_org_id)::bigint AND ucs.status IN ('available', 'placed'), FALSE)::bool AS held,
+       COALESCE((SELECT SUM(h.quantity_on_hand) FROM fixed_barcode_holdings h
+                  WHERE h.unit_id = u.id AND h.holder_org_id = sqlc.arg(buyer_org_id)::bigint), 0)::bigint AS held_quantity
+FROM order_item_units oiu
+JOIN order_items oi ON oi.id = oiu.order_item_id
+JOIN units u ON u.id = oiu.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN unit_current_state ucs ON ucs.unit_id = u.id
+WHERE oi.order_id = sqlc.arg(order_id)::bigint
+ORDER BY p.name, u.barcode, oiu.id;

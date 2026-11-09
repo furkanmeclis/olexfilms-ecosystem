@@ -10,6 +10,9 @@ const api = vi.hoisted(() => ({
   targets: vi.fn(),
   create: vi.fn(),
   transition: vi.fn(),
+  returnSources: vi.fn(),
+  returnOrders: vi.fn(),
+  returnOrderUnits: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
 const stockApi = vi.hoisted(() => ({ listUnits: vi.fn() }));
@@ -56,6 +59,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
 import { Permission } from "@/config/permissions";
 import type { StockTransfer } from "@/features/transfers/services/transfers.service";
 
+import { OrderReturnsCard } from "./order-returns-card";
 import { TransferDetailPage } from "./transfer-detail-page";
 import { TransferFormPage } from "./transfer-form-page";
 
@@ -85,6 +89,9 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  api.returnSources.mockResolvedValue({ items: [] });
+  api.returnOrders.mockResolvedValue({ items: [] });
+  api.returnOrderUnits.mockResolvedValue({ items: [] });
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -443,6 +450,151 @@ describe("Stock picker (TEC-870)", () => {
     expect(stockApi.listUnits).not.toHaveBeenCalled();
     expect(
       container.querySelector('[data-testid="transfer-scan"]'),
+    ).not.toBeNull();
+  });
+});
+
+describe("Returns for a child, linked to an order (TEC-1085)", () => {
+  const orderUnit = (barcode: string, returnable: number) => ({
+    unit_uuid: `u-${barcode}`,
+    barcode,
+    unit_kind: "serial",
+    product: { uuid: "p-1", sku: "P1", name: "Film", unit_type: "piece" },
+    quantity: null,
+    meters: null,
+    returnable,
+  });
+
+  it("opens a return for a child with the order's units", async () => {
+    state.grants = new Set([Permission.TransfersApprove]);
+    api.returnSources.mockResolvedValue({ items: [org("Bayi A")] });
+    api.returnOrders.mockResolvedValue({
+      items: [
+        {
+          uuid: "o-1",
+          order_no: "ORD-1",
+          status: "received",
+          currency: "TRY",
+          unit_count: 2,
+          created_at: "2026-10-02T10:00:00Z",
+        },
+      ],
+    });
+    api.returnOrderUnits.mockResolvedValue({
+      items: [orderUnit("OLX-5", 1), orderUnit("OLX-6", 0)],
+    });
+    api.create.mockResolvedValue(
+      transfer({ kind: "return", role: "parent", status: "approved" }),
+    );
+    await render(
+      createElement(TransferFormPage, {
+        slug: "s",
+        kind: "return",
+        initialFromOrg: "Bayi A-uuid",
+        initialOrder: "o-1",
+      }),
+    );
+    // Without transfers.request the own parent is not asked for.
+    expect(api.targets).not.toHaveBeenCalled();
+    expect(api.returnOrders).toHaveBeenCalledWith("Bayi A-uuid");
+    expect(api.returnOrderUnits).toHaveBeenCalledWith("o-1", "Bayi A-uuid");
+    const rows = [
+      ...container.querySelectorAll('[data-testid="return-order-unit"]'),
+    ];
+    expect(rows).toHaveLength(2);
+    const box = (i: number) =>
+      rows[i]?.querySelector('[role="checkbox"]') as HTMLButtonElement;
+    expect(box(1).disabled).toBe(true);
+    expect(rows[1]?.textContent).toContain("transfers.return.not_held");
+    await click(box(0));
+    await click(container.querySelector('[data-testid="transfer-submit"]'));
+    await flush();
+    expect(api.create).toHaveBeenCalledWith({
+      kind: "return",
+      from_org_uuid: "Bayi A-uuid",
+      order_uuid: "o-1",
+      to_org_uuid: "me-uuid",
+      items: [{ barcode: "OLX-5" }],
+    });
+  });
+
+  it("shows the order and the opener on the detail", async () => {
+    state.grants = new Set([Permission.TransfersApprove]);
+    api.get.mockResolvedValue(
+      transfer({
+        kind: "return",
+        role: "parent",
+        status: "approved",
+        opened_by_parent: true,
+        order: { uuid: "o-1", order_no: "ORD-1" },
+        available_transitions: ["shipped", "received", "cancelled"],
+      }),
+    );
+    await render(createElement(TransferDetailPage, { slug: "s", uuid: "t-1" }));
+    const link = container.querySelector('[data-testid="transfer-order"]');
+    expect(link?.textContent).toBe("ORD-1");
+    expect(link?.getAttribute("href")).toBe("/t/s/orders/o-1");
+    expect(
+      container.querySelector('[data-testid="transfer-opened-by-parent"]'),
+    ).not.toBeNull();
+    const buttons = [...container.querySelectorAll("[data-transition]")].map(
+      (b) => b.getAttribute("data-transition"),
+    );
+    expect(buttons).toEqual(["shipped", "received", "cancelled"]);
+  });
+
+  it("lists the order's returns and links the seller to a new one", async () => {
+    state.grants = new Set([Permission.TransfersApprove]);
+    api.list.mockResolvedValue({
+      items: [transfer({ kind: "return", status: "received" })],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    });
+    await render(
+      createElement(OrderReturnsCard, {
+        slug: "s",
+        order: {
+          uuid: "o-1",
+          status: "received",
+          role: "seller",
+          buyer: { uuid: "b-1" },
+        },
+      }),
+    );
+    expect(api.list).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "return", order_uuid: "o-1" }),
+    );
+    expect(
+      container.querySelector('[data-testid="order-returns-list"]')
+        ?.textContent,
+    ).toContain("TRF-00000001");
+    expect(
+      container
+        .querySelector('[data-testid="order-return-create"]')
+        ?.getAttribute("href"),
+    ).toBe("/t/s/transfers/returns/new?from=b-1&order=o-1");
+  });
+
+  it("has no create link on a cancelled order", async () => {
+    state.grants = new Set([Permission.TransfersApprove]);
+    api.list.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
+    await render(
+      createElement(OrderReturnsCard, {
+        slug: "s",
+        order: {
+          uuid: "o-1",
+          status: "cancelled",
+          role: "seller",
+          buyer: { uuid: "b-1" },
+        },
+      }),
+    );
+    expect(
+      container.querySelector('[data-testid="order-return-create"]'),
+    ).toBeNull();
+    expect(
+      container.querySelector('[data-testid="order-returns-empty"]'),
     ).not.toBeNull();
   });
 });

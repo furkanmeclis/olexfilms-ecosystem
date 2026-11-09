@@ -22,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { ReturnOrderPicker } from "@/features/transfers/components/return-order-picker";
 import { TransferStockPicker } from "@/features/transfers/components/transfer-stock-picker";
 import {
   addLine,
@@ -51,23 +52,40 @@ import { usePermission } from "@/providers/permission-provider";
  * stock.read the units on hand are listed with their barcodes and can be
  * ticked in instead of scanned (TransferStockPicker). With kind="return"
  * (TEC-223) the units go back to the direct parent, the only target.
+ *
+ * TEC-1085: a parent with transfers.approve may open the return in the name
+ * of a direct child (it starts approved), and either side may link it to
+ * the order the parent sold the units on; the order's units are offered
+ * for picking. initialFromOrg / initialOrder preselect both (the order
+ * page's "Create return").
  */
+const OWN = "own";
+
 export function TransferFormPage({
   slug,
   kind = "sibling",
+  initialFromOrg = "",
+  initialOrder = "",
 }: {
   slug: string;
   kind?: StockTransferKind;
+  initialFromOrg?: string;
+  initialOrder?: string;
 }) {
   const isReturn = kind === "return";
   const { t } = useLocale();
   const { can } = usePermission();
   const router = useRouter();
   const qc = useQueryClient();
-  const canCreate = can(Permission.TransfersRequest);
+  const canRequest = can(Permission.TransfersRequest);
+  const canOpenForChild = isReturn && can(Permission.TransfersApprove);
+  const canCreate = canRequest || canOpenForChild;
   // TEC-870: the units on hand are listed for picking when the viewer may
   // read its own stock; scanning stays available either way.
   const org = useActiveOrganization(slug);
+  const [fromOrg, setFromOrg] = useState(initialFromOrg);
+  const [orderUuid, setOrderUuid] = useState(initialOrder);
+  const forChild = isReturn && fromOrg !== "";
   const canPick = can(Permission.StockRead) && !!org?.uuid;
   const [target, setTarget] = useState("");
   const [scan, setScan] = useState("");
@@ -81,12 +99,27 @@ export function TransferFormPage({
   const targets = useQuery({
     queryKey: isReturn ? transferKeys.targetsOf(kind) : transferKeys.targets,
     queryFn: () => transfersService.targets(isReturn ? kind : undefined),
-    enabled: canCreate,
+    enabled: canRequest,
   });
+  const sources = useQuery({
+    queryKey: transferKeys.returnSources,
+    queryFn: () => transfersService.returnSources(),
+    enabled: canOpenForChild,
+  });
+  const children = sources.data?.items ?? [];
+  const ownParent = targets.data?.items[0];
 
-  // A return has one possible target: the parent the server lists.
-  const chosen = isReturn ? (targets.data?.items[0]?.uuid ?? "") : target;
-  const body = buildCreateBody(chosen, lines, note, kind);
+  // A return has one possible target: the parent the server lists, or the
+  // active organization itself for a return opened for a child.
+  const chosen = isReturn
+    ? forChild
+      ? (org?.uuid ?? "")
+      : (ownParent?.uuid ?? "")
+    : target;
+  const body = buildCreateBody(chosen, lines, note, kind, {
+    fromOrgUuid: forChild ? fromOrg : undefined,
+    orderUuid: isReturn ? orderUuid : undefined,
+  });
   const picked = useMemo(() => new Set(lines.map((l) => l.barcode)), [lines]);
   const mutation = useMutation({
     mutationFn: () => {
@@ -96,7 +129,13 @@ export function TransferFormPage({
     onSuccess: (created) => {
       void qc.invalidateQueries({ queryKey: transferKeys.all });
       toast.success(
-        t(isReturn ? "transfers.return.success" : "transfers.form.success"),
+        t(
+          forChild
+            ? "transfers.return.success_parent"
+            : isReturn
+              ? "transfers.return.success"
+              : "transfers.form.success",
+        ),
       );
       router.push(routes.tenant.transfers.detail(slug, created.uuid));
     },
@@ -144,6 +183,14 @@ export function TransferFormPage({
 
   const siblings = targets.data?.items ?? [];
 
+  const changeSource = (v: string) => {
+    // Another giver: its orders and units differ.
+    setFromOrg(v);
+    setOrderUuid("");
+    setLines([]);
+    setLineError(null);
+  };
+
   const onPick = (row: Parameters<typeof toggleUnitLine>[1]) => {
     setLines((ls) => toggleUnitLine(ls, row));
     setLineError(null);
@@ -168,6 +215,45 @@ export function TransferFormPage({
             <p className="text-destructive text-sm">
               {t("common.error_generic")}
             </p>
+          ) : isReturn && canOpenForChild && children.length > 0 ? (
+            <>
+              <Label htmlFor="return-source">
+                {t("transfers.return.source")}
+              </Label>
+              <Select
+                value={
+                  fromOrg !== "" ? fromOrg : canRequest && ownParent ? OWN : ""
+                }
+                onValueChange={(v) => changeSource(v === OWN ? "" : v)}
+              >
+                <SelectTrigger
+                  id="return-source"
+                  data-testid="return-source"
+                  className="w-full sm:w-96"
+                >
+                  <SelectValue
+                    placeholder={t("transfers.return.source_placeholder")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {canRequest && ownParent ? (
+                    <SelectItem value={OWN}>
+                      {t("transfers.return.source_own", {
+                        parent: ownParent.name,
+                      })}
+                    </SelectItem>
+                  ) : null}
+                  {children.map((o) => (
+                    <SelectItem key={o.uuid} value={o.uuid}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {t("transfers.return.source_hint")}
+              </p>
+            </>
           ) : !targets.isLoading && siblings.length === 0 ? (
             <p
               className="text-muted-foreground text-sm"
@@ -219,9 +305,21 @@ export function TransferFormPage({
         </CardContent>
       </Card>
 
+      {isReturn && (forChild || ownParent) ? (
+        <ReturnOrderPicker
+          fromOrgUuid={fromOrg}
+          orderUuid={orderUuid}
+          onOrderChange={setOrderUuid}
+          picked={picked}
+          onToggle={onPick}
+          enabled={forChild ? canOpenForChild : canRequest}
+        />
+      ) : null}
+
       {canPick ? (
         <TransferStockPicker
-          orgUuid={org?.uuid ?? ""}
+          key={forChild ? fromOrg : "own"}
+          orgUuid={forChild ? fromOrg : (org?.uuid ?? "")}
           picked={picked}
           onToggle={onPick}
         />
@@ -381,7 +479,11 @@ export function TransferFormPage({
               onClick={() => mutation.mutate()}
             >
               {t(
-                isReturn ? "transfers.return.submit" : "transfers.form.submit",
+                forChild
+                  ? "transfers.return.submit_parent"
+                  : isReturn
+                    ? "transfers.return.submit"
+                    : "transfers.form.submit",
               )}
             </Button>
           </div>

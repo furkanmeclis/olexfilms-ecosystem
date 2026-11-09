@@ -20,8 +20,8 @@ var ListSort = apiquery.SortSpec{
 }
 
 // ParseListFilter reads kind, direction, status (all CSV), created_from /
-// created_to, organization_uuid (CSV: sender or receiver), q, sort, limit
-// and offset. Errors are *apiquery.ValidationError (400).
+// created_to, organization_uuid (CSV: sender or receiver), order_uuid
+// (TEC-1085), q, sort, limit and offset. Errors are *apiquery.ValidationError (400).
 func ParseListFilter(values url.Values) (ListFilter, error) {
 	q := apiquery.Parse(values)
 	f := ListFilter{Q: q.Q, Limit: q.Limit, Offset: q.Offset}
@@ -50,6 +50,15 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 		}
 		f.OrganizationUUIDs = append(f.OrganizationUUIDs, id)
 	}
+	if raw := values.Get("order_uuid"); raw != "" {
+		id, perr := uuid.Parse(raw)
+		if perr != nil {
+			return f, &apiquery.ValidationError{Details: []apiquery.Detail{{
+				Field: "order_uuid", Message: "must be a uuid", Code: "invalid",
+			}}}
+		}
+		f.OrderUUID = &id
+	}
 	if f.Sort, err = apiquery.ResolveSort(q.Sort, ListSort); err != nil {
 		return f, err
 	}
@@ -61,4 +70,11 @@ func tsArg(t *time.Time) pgtype.Timestamptz {
 		return pgtype.Timestamptz{}
 	}
 	return pgtype.Timestamptz{Time: *t, Valid: true}
+}
+
+func uuidArg(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
 }

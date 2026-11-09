@@ -11,6 +11,9 @@ export type StockTransferKind = Schemas["StockTransferKind"];
 export type StockTransferItem = Schemas["StockTransferItem"];
 export type StockTransferCreateInput = Schemas["StockTransferCreateInput"];
 export type TransferOrgRef = Schemas["OrderOrgRef"];
+/** TEC-1085: an order a return may refer to, and its units. */
+export type StockReturnOrder = Schemas["StockReturnOrder"];
+export type StockReturnOrderUnit = Schemas["StockReturnOrderUnit"];
 
 /** List direction: the active organization's side of the request. */
 export type TransferDirection = "outgoing" | "incoming" | "approval";
@@ -22,6 +25,8 @@ export type TransferDirection = "outgoing" | "incoming" | "approval";
  */
 export type TransferListQuery = ServerListQuery & {
   direction?: TransferDirection;
+  /** TEC-1085: the returns linked to this order. */
+  order_uuid?: string;
 };
 
 /** An organization in the caller's organizations.read scope. */
@@ -53,6 +58,32 @@ export const transfersService = {
       "GET",
       "/v1/stock-transfers/targets",
       kind ? { query: { kind } } : undefined,
+    );
+  },
+  /** TEC-1085: direct children the active organization opens returns for. */
+  returnSources() {
+    return platformRequest<{ items: TransferOrgRef[] }>(
+      "GET",
+      "/v1/stock-transfers/return-sources",
+    );
+  },
+  /**
+   * TEC-1085: orders a return may refer to; fromOrgUuid is the child of a
+   * return opened for it, empty for the active organization's own return.
+   */
+  returnOrders(fromOrgUuid?: string) {
+    return platformRequest<{ items: StockReturnOrder[] }>(
+      "GET",
+      "/v1/stock-transfers/return-orders",
+      fromOrgUuid ? { query: { from_org_uuid: fromOrgUuid } } : undefined,
+    );
+  },
+  /** TEC-1085: the units of an order offered for the return. */
+  returnOrderUnits(orderUuid: string, fromOrgUuid?: string) {
+    return platformRequest<{ items: StockReturnOrderUnit[] }>(
+      "GET",
+      `/v1/stock-transfers/return-orders/${enc(orderUuid)}/units`,
+      fromOrgUuid ? { query: { from_org_uuid: fromOrgUuid } } : undefined,
     );
   },
   /** Party filter options: organizations in the organizations.read scope. */
@@ -93,4 +124,9 @@ export const transferKeys = {
   organizations: ["stock-transfers", "organizations"] as const,
   targetsOf: (kind: StockTransferKind) =>
     ["stock-transfers", "targets", kind] as const,
+  returnSources: ["stock-transfers", "return-sources"] as const,
+  returnOrders: (fromOrgUuid: string) =>
+    ["stock-transfers", "return-orders", fromOrgUuid] as const,
+  returnOrderUnits: (orderUuid: string, fromOrgUuid: string) =>
+    ["stock-transfers", "return-order-units", orderUuid, fromOrgUuid] as const,
 };

@@ -40,6 +40,10 @@ var (
 	// organization's direct parent, or the active organization has no
 	// parent to return to (TEC-223).
 	ErrNotParent = errors.New("transfers: a return goes to the direct parent only")
+	// ErrNotChild: a return opened for another organization names one that
+	// is not a direct dealer / distributor child of the active
+	// organization (TEC-1085).
+	ErrNotChild = errors.New("transfers: a return is opened only for a direct child")
 	// ErrInvalidTransition: the request's status does not allow the move.
 	ErrInvalidTransition = errors.New("transfers: invalid status transition")
 	// ErrStockUnavailable: a unit left the giver's stock or the ledger
@@ -64,6 +68,9 @@ const (
 	CodeUnitNotAvailable  = "TRANSFER_UNIT_NOT_AVAILABLE"
 	CodeUnitReserved      = "TRANSFER_UNIT_RESERVED"
 	CodeInsufficientStock = "TRANSFER_INSUFFICIENT_STOCK"
+	// CodeOrderMismatch (TEC-1085): the order of a return was not sold by
+	// the parent to the giver, or is a draft / cancelled order.
+	CodeOrderMismatch = "TRANSFER_ORDER_MISMATCH"
 )
 
 // Organization types (organizations.type).
@@ -260,24 +267,62 @@ type ItemInput struct {
 // CreateInput is a new request of the active organization (the giver).
 // Kind is sibling (default) or return; a return goes to the direct parent
 // and ToOrgUUID, when set, must name it.
+//
+// TEC-1085: FromOrgUUID names a direct child the active organization (the
+// parent, with transfers.approve) opens the return for; the return then
+// starts approved. OrderUUID links a return to the order the parent sold
+// the units on.
 type CreateInput struct {
-	Kind      string
-	ToOrgUUID string
-	Note      *string
-	Items     []ItemInput
+	Kind        string
+	ToOrgUUID   string
+	FromOrgUUID string
+	OrderUUID   string
+	Note        *string
+	Items       []ItemInput
 }
 
-// Create opens a transfer request from the active organization to a sibling.
+// Create opens a transfer request from the active organization to a
+// sibling, a return to its parent, or (TEC-1085) a return of a child to the
+// active organization.
 func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (TransferView, error) {
-	if c.Org.InternalID == 0 || !c.can(rbac.PermTransfersRequest) {
+	if c.Org.InternalID == 0 {
 		return TransferView{}, ErrForbidden
 	}
+	var childID, orderID uuid.UUID
+	if raw := strings.TrimSpace(in.FromOrgUUID); raw != "" {
+		var err error
+		if childID, err = uuid.Parse(raw); err != nil {
+			return TransferView{}, invalid("from_org_uuid", "must be a UUID")
+		}
+		if childID == c.Org.UUID {
+			childID = uuid.Nil
+		}
+	}
+	if raw := strings.TrimSpace(in.OrderUUID); raw != "" {
+		var err error
+		if orderID, err = uuid.Parse(raw); err != nil {
+			return TransferView{}, invalid("order_uuid", "must be a UUID")
+		}
+	}
+	onBehalf := childID != uuid.Nil
 	kind := strings.TrimSpace(in.Kind)
 	if kind == "" {
 		kind = KindSibling
+		if onBehalf || orderID != uuid.Nil {
+			kind = KindReturn
+		}
 	}
 	if !IsKind(kind) {
 		return TransferView{}, invalid("kind", "must be sibling or return")
+	}
+	if kind != KindReturn && (onBehalf || orderID != uuid.Nil) {
+		return TransferView{}, invalid("kind", "only a return is opened for a child or linked to an order")
+	}
+	if onBehalf && !c.can(rbac.PermTransfersApprove) {
+		return TransferView{}, ErrForbidden
+	}
+	if !onBehalf && !c.can(rbac.PermTransfersRequest) {
+		return TransferView{}, ErrForbidden
 	}
 	var toID uuid.UUID
 	if raw := strings.TrimSpace(in.ToOrgUUID); raw != "" || kind == KindSibling {
@@ -298,9 +343,22 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 		if err != nil {
 			return fmt.Errorf("transfers: organization: %w", err)
 		}
+		if onBehalf {
+			if from, err = s.returnChild(ctx, q, from, childID); err != nil {
+				return err
+			}
+		}
 		target, parent, err := s.resolveTarget(ctx, q, kind, from, toID)
 		if err != nil {
 			return err
+		}
+		var order pgtype.Int8
+		if orderID != uuid.Nil {
+			o, err := returnOrder(ctx, q, from.BrandID, orderID, target.ID, from.ID)
+			if err != nil {
+				return err
+			}
+			order = pgtype.Int8{Int64: o.ID, Valid: true}
 		}
 		brand, err := q.GetBrandByID(ctx, from.BrandID)
 		if err != nil {
@@ -309,7 +367,7 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 		r, err := q.InsertTransferRequest(ctx, db.InsertTransferRequestParams{
 			FromOrgID: from.ID, BrandID: from.BrandID, ToOrgID: target.ID, ApproverOrgID: parent,
 			Currency: strings.TrimSpace(brand.Currency), Reason: textOrNull(in.Note), RequestedByUserID: c.actor(),
-			Kind: kind,
+			Kind: kind, OrderID: order, OpenedByParent: onBehalf,
 		})
 		if err != nil {
 			return fmt.Errorf("transfers: create: %w", err)
@@ -331,6 +389,21 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Transfe
 			}); err != nil {
 				return fmt.Errorf("transfers: create item: %w", err)
 			}
+		}
+		if onBehalf {
+			// TEC-1085: the parent is the decider, so its return starts
+			// approved with the prices frozen; the child is told.
+			total, err := s.freezePrices(ctx, q, r)
+			if err != nil {
+				return err
+			}
+			if r, err = q.DecideTransferRequest(ctx, db.DecideTransferRequestParams{
+				ID: r.ID, Status: StatusApproved, Total: total, ActorUserID: c.actor(),
+			}); err != nil {
+				return fmt.Errorf("transfers: approve: %w", err)
+			}
+			created = r
+			return s.emit(ctx, tx, events.TransfersApproved, r, "", c)
 		}
 		created = r
 		return s.emit(ctx, tx, events.TransfersRequested, r, "", c)
@@ -410,7 +483,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 		if r.Status == to {
 			return nil
 		}
-		gs, ok := lookupKindTransition(r.Kind, r.Status, to)
+		gs, ok := lookupRequestTransition(r.Kind, r.OpenedByParent, r.Status, to)
 		if !ok {
 			return ErrInvalidTransition
 		}
@@ -437,6 +510,16 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 				r, err = q.ShipTransferRequest(ctx, db.ShipTransferRequestParams{ID: r.ID, ActorUserID: c.actor()})
 			}
 		case StatusReceived:
+			if from == StatusApproved {
+				// TEC-1085: the parent ships and receives its own return
+				// in one step.
+				if err = s.ship(ctx, q, tx, c, r); err == nil {
+					r, err = q.ShipTransferRequest(ctx, db.ShipTransferRequestParams{ID: r.ID, ActorUserID: c.actor()})
+				}
+				if err != nil {
+					break
+				}
+			}
 			if err = s.receive(ctx, q, tx, c, r); err == nil {
 				r, err = q.ReceiveTransferRequest(ctx, db.ReceiveTransferRequestParams{ID: r.ID, ActorUserID: c.actor()})
 			}

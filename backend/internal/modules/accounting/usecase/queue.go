@@ -77,6 +77,14 @@ type QueueReturn struct {
 	ProcessedAt *time.Time   `json:"processed_at"`
 	ProcessedBy *string      `json:"processed_by"`
 	Note        *string      `json:"note"`
+	// Order (TEC-1085): the order the return refers to, or null.
+	Order *QueueReturnOrder `json:"order"`
+}
+
+// QueueReturnOrder names the order of a queued return (TEC-1085).
+type QueueReturnOrder struct {
+	UUID    uuid.UUID `json:"uuid"`
+	OrderNo string    `json:"order_no"`
 }
 
 // ParseQueueReturnFilter reads processed (true|false), q, sort, limit, offset.
@@ -164,8 +172,13 @@ func (s *Service) ListQueueReturns(ctx context.Context, c Caller, f QueueReturnF
 	out := make([]QueueReturn, 0, len(rows))
 	for _, r := range rows {
 		sender := r.SenderUuid
+		var order *QueueReturnOrder
+		if r.OrderUuid.Valid {
+			order = &QueueReturnOrder{UUID: uuid.UUID(r.OrderUuid.Bytes), OrderNo: r.OrderNo.String}
+		}
 		out = append(out, QueueReturn{
-			UUID: r.Uuid, TransferNo: r.TransferNo,
+			Order: order,
+			UUID:  r.Uuid, TransferNo: r.TransferNo,
 			Sender:    Counterparty{Type: "organization", UUID: &sender, Name: r.SenderName, OrgType: r.SenderType},
 			ItemCount: r.ItemCount, Currency: r.Currency, Total: strPtr(r.Total),
 			ReceivedAt: tsPtr(r.ReceivedAt), CreatedAt: r.CreatedAt.Time,

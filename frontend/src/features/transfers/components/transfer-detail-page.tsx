@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight } from "lucide-react";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -191,6 +192,27 @@ export function TransferDetailPage({
             <Field label={t("transfers.detail.role")}>
               {t(`transfers.role.${r.role}`)}
             </Field>
+            {r.order ? (
+              <Field label={t("transfers.detail.order")}>
+                <Link
+                  href={routes.tenant.orders.detail(slug, r.order.uuid)}
+                  className="hover:underline"
+                  dir="ltr"
+                  data-testid="transfer-order"
+                >
+                  {r.order.order_no}
+                </Link>
+              </Field>
+            ) : null}
+            {r.opened_by_parent ? (
+              <Field label={t("transfers.detail.opened_by")}>
+                <span data-testid="transfer-opened-by-parent">
+                  {t("transfers.detail.opened_by_parent", {
+                    parent: r.parent.name,
+                  })}
+                </span>
+              </Field>
+            ) : null}
             {canSeePrices ? (
               <Field label={t("transfers.detail.total")}>
                 {r.total ? (

@@ -18,6 +18,7 @@ import (
 const (
 	CodeNotSibling        = "TRANSFER_NOT_SIBLING"
 	CodeNotParent         = "TRANSFER_NOT_PARENT"
+	CodeNotChild          = "TRANSFER_NOT_CHILD"
 	CodeInvalidTransition = "TRANSFER_INVALID_TRANSITION"
 	CodeStockUnavailable  = "TRANSFER_STOCK_UNAVAILABLE"
 )
@@ -56,6 +57,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, tr.ErrNotParent):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeNotParent,
 			"Stock can be returned only to the direct parent organization")
+	case errors.Is(err, tr.ErrNotChild):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeNotChild,
+			"A return can be opened only for a direct child organization")
 	case errors.Is(err, tr.ErrInvalidTransition):
 		response.Conflict(w, r, CodeInvalidTransition, "The transfer status does not allow this transition")
 	case errors.Is(err, tr.ErrRateNotFound):
@@ -135,10 +139,12 @@ type itemBody struct {
 }
 
 type createBody struct {
-	Kind      string     `json:"kind"`
-	ToOrgUUID string     `json:"to_org_uuid"`
-	Note      *string    `json:"note"`
-	Items     []itemBody `json:"items"`
+	Kind        string     `json:"kind"`
+	ToOrgUUID   string     `json:"to_org_uuid"`
+	FromOrgUUID string     `json:"from_org_uuid"`
+	OrderUUID   string     `json:"order_uuid"`
+	Note        *string    `json:"note"`
+	Items       []itemBody `json:"items"`
 }
 
 // Create (POST /v1/stock-transfers): a request of the active organization.
@@ -152,7 +158,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		items = append(items, tr.ItemInput{Barcode: it.Barcode, Quantity: it.Quantity})
 	}
 	v, err := h.svc.Create(r.Context(), caller(r), tr.CreateInput{
-		Kind: body.Kind, ToOrgUUID: body.ToOrgUUID, Note: body.Note, Items: items,
+		Kind: body.Kind, ToOrgUUID: body.ToOrgUUID, FromOrgUUID: body.FromOrgUUID, OrderUUID: body.OrderUUID,
+		Note: body.Note, Items: items,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -182,4 +189,47 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, v)
+}
+
+// ReturnSources (GET /v1/stock-transfers/return-sources): the direct
+// children the active organization may open a return for (TEC-1085).
+func (h *Handler) ReturnSources(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.ReturnSources(r.Context(), caller(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+// ReturnOrders (GET /v1/stock-transfers/return-orders?from_org_uuid&q): the
+// orders a return may refer to (TEC-1085).
+func (h *Handler) ReturnOrders(w http.ResponseWriter, r *http.Request) {
+	qv := r.URL.Query()
+	items, err := h.svc.ReturnOrders(r.Context(), caller(r), qv.Get("from_org_uuid"), qv.Get("q"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+// ReturnOrderUnits (GET /v1/stock-transfers/return-orders/{uuid}/units
+// ?from_org_uuid): the units of the order offered for the return (TEC-1085).
+func (h *Handler) ReturnOrderUnits(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Order not found")
+		return
+	}
+	items, err := h.svc.ReturnOrderUnits(r.Context(), caller(r), r.URL.Query().Get("from_org_uuid"), id)
+	if errors.Is(err, tr.ErrNotFound) {
+		response.NotFound(w, r, "Order not found")
+		return
+	}
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
