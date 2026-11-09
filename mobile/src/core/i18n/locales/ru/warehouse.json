@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "Все склады",
   "eod.pdf_ios_only": "PDF отчёта нельзя отправить с этого устройства; отправьте его с iPhone или из веб-панели.",
   "counts.defaults_summary": "Настройки: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Дополнительно"
+  "counts.advanced": "Дополнительно",
+  "m.transfers_out": "Исходящие",
+  "m.transfers_in": "Входящие",
+  "m.this_warehouse_units": "Единицы на этом складе",
+  "m.product_totals": "Итоги по товарам"
 }

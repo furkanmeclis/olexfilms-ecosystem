@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "Tutti i magazzini",
   "eod.pdf_ios_only": "Il PDF del report non si può condividere su questo dispositivo; condividilo da un iPhone o dal pannello web.",
   "counts.defaults_summary": "Impostazioni: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Avanzate"
+  "counts.advanced": "Avanzate",
+  "m.transfers_out": "In uscita",
+  "m.transfers_in": "In entrata",
+  "m.this_warehouse_units": "Unità in questo magazzino",
+  "m.product_totals": "Totali per prodotto"
 }

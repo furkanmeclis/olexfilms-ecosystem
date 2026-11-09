@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "所有仓库",
   "eod.pdf_ios_only": "此设备无法分享报告 PDF；请在 iPhone 或网页后台分享。",
   "counts.defaults_summary": "设置：{{scope}}，{{method}}，{{visibility}}。",
-  "counts.advanced": "高级"
+  "counts.advanced": "高级",
+  "m.transfers_out": "调出",
+  "m.transfers_in": "调入",
+  "m.this_warehouse_units": "本仓库单元",
+  "m.product_totals": "产品汇总"
 }

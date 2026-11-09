@@ -692,5 +692,9 @@
   "eod.generate_all_warehouses": "All warehouses",
   "eod.pdf_ios_only": "The report PDF cannot be shared on this device; share it from an iPhone or the web panel.",
   "counts.defaults_summary": "Settings: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Advanced"
+  "counts.advanced": "Advanced",
+  "m.transfers_out": "Outgoing",
+  "m.transfers_in": "Incoming",
+  "m.this_warehouse_units": "Units in this warehouse",
+  "m.product_totals": "Product totals"
 }

@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "Bütün anbarlar",
   "eod.pdf_ios_only": "Hesabatın PDF-i bu cihazda paylaşıla bilməz; iPhone-dan və ya veb paneldən paylaşın.",
   "counts.defaults_summary": "Ayarlar: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Ətraflı"
+  "counts.advanced": "Ətraflı",
+  "m.transfers_out": "Gedən",
+  "m.transfers_in": "Gələn",
+  "m.this_warehouse_units": "Bu anbardakı vahidlər",
+  "m.product_totals": "Məhsul cəmləri"
 }

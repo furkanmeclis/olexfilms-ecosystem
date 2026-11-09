@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "جميع المستودعات",
   "eod.pdf_ios_only": "لا يمكن مشاركة ملف PDF للتقرير من هذا الجهاز؛ شاركه من iPhone أو من لوحة الويب.",
   "counts.defaults_summary": "الإعدادات: {{scope}}، {{method}}، {{visibility}}.",
-  "counts.advanced": "متقدم"
+  "counts.advanced": "متقدم",
+  "m.transfers_out": "صادرة",
+  "m.transfers_in": "واردة",
+  "m.this_warehouse_units": "الوحدات في هذا المستودع",
+  "m.product_totals": "إجماليات المنتجات"
 }

@@ -692,5 +692,9 @@
   "eod.generate_all_warehouses": "Tüm depolar",
   "eod.pdf_ios_only": "Rapor PDF'i bu cihazda paylaşılamaz; iPhone'dan ya da web panelinden paylaşabilirsiniz.",
   "counts.defaults_summary": "Ayarlar: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Gelişmiş"
+  "counts.advanced": "Gelişmiş",
+  "m.transfers_out": "Giden",
+  "m.transfers_in": "Gelen",
+  "m.this_warehouse_units": "Bu depodaki birimler",
+  "m.product_totals": "Ürün toplamları"
 }

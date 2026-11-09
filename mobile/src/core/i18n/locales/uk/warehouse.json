@@ -559,5 +559,9 @@
   "eod.generate_all_warehouses": "Усі склади",
   "eod.pdf_ios_only": "PDF звіту не можна надіслати з цього пристрою; надішліть його з iPhone або з вебпанелі.",
   "counts.defaults_summary": "Налаштування: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Додатково"
+  "counts.advanced": "Додатково",
+  "m.transfers_out": "Вихідні",
+  "m.transfers_in": "Вхідні",
+  "m.this_warehouse_units": "Одиниці на цьому складі",
+  "m.product_totals": "Підсумки за товарами"
 }
