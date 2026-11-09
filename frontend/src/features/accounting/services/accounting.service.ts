@@ -13,6 +13,12 @@ export type FinanceAccount = Schemas["FinanceAccount"];
 export type FinanceAccountCreateInput = Schemas["FinanceAccountCreateInput"];
 export type FinanceAccountUpdateInput = Schemas["FinanceAccountUpdateInput"];
 export type CariAccount = Schemas["CariAccount"];
+/** TEC-1070: billing details of a cari organization. */
+export type CariBilling = Schemas["CariBilling"];
+export type CariBillingInput = Schemas["CariBillingInput"];
+/** TEC-1070: accounting queue counters and returns. */
+export type AccountingQueueSummary = Schemas["AccountingQueueSummary"];
+export type AccountingQueueReturn = Schemas["AccountingQueueReturn"];
 export type FinanceEntry = Schemas["FinanceEntry"];
 export type FinanceSettlementInput = Schemas["FinanceSettlementInput"];
 export type FinanceEntryInput = Schemas["FinanceEntryInput"];
@@ -179,6 +185,54 @@ const path = (base: string, uuid: string) =>
  * (accounting.read scope), so the UI never sends another book's uuid.
  */
 export const accountingService = {
+  /** GET /v1/accounting/queue/summary (TEC-1070). */
+  queueSummary() {
+    return platformRequest<AccountingQueueSummary>(
+      "GET",
+      "/v1/accounting/queue/summary",
+    );
+  },
+
+  /** GET /v1/accounting/queue/returns (TEC-1070). */
+  listQueueReturns(params: ListQuery = {}) {
+    return platformRequest<AccountingPage<AccountingQueueReturn>>(
+      "GET",
+      "/v1/accounting/queue/returns",
+      { query: listQuery(params) },
+    );
+  },
+
+  markReturnProcessed(uuid: string, note?: string) {
+    return platformRequest<void>(
+      "POST",
+      `${path("/v1/accounting/queue/returns", uuid)}/processed`,
+      { body: note ? { note } : {} },
+    );
+  },
+
+  unmarkReturnProcessed(uuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `${path("/v1/accounting/queue/returns", uuid)}/processed`,
+    );
+  },
+
+  /** GET/PUT /v1/accounting/cari/{uuid}/billing (TEC-1070). */
+  getCariBilling(uuid: string) {
+    return platformRequest<CariBilling>(
+      "GET",
+      `${path("/v1/accounting/cari", uuid)}/billing`,
+    );
+  },
+
+  updateCariBilling(uuid: string, body: CariBillingInput) {
+    return platformRequest<CariBilling>(
+      "PUT",
+      `${path("/v1/accounting/cari", uuid)}/billing`,
+      { body },
+    );
+  },
+
   listCategories() {
     return platformRequest<{ items: AccountingCategory[] }>(
       "GET",

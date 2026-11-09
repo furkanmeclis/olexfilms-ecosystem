@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   ShieldAlert,
   ShieldCheck,
+  Undo2,
   UserRound,
   Users,
   Wrench,
@@ -707,6 +708,27 @@ export function tenantNav(slug: string) {
         permission: permissions.accounting.read,
         feature: "accounting",
         items: [
+          {
+            // TEC-1070: accounting queue (orders to invoice, returns),
+            // legacy olexfilms-warehouse "Muhasebe kuyruğu"; same gate as
+            // /v1/accounting/queue (accounting.read), center / distributor.
+            id: "accounting-queue",
+            titleKey: "accounting.nav_queue",
+            href: routes.tenant.accounting.queue(slug),
+            icon: ListChecks,
+            permission: permissions.accounting.read,
+            feature: "accounting",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "accounting-returns",
+            titleKey: "accounting.nav_returns",
+            href: `${routes.tenant.accounting.queue(slug)}?tab=returns`,
+            icon: Undo2,
+            permission: permissions.accounting.read,
+            feature: "accounting",
+            orgTypes: ["center", "distributor"],
+          },
           {
             id: "accounting-accounts",
             titleKey: "accounting.nav_accounts",

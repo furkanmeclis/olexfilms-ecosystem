@@ -49,4 +49,9 @@ export const accountingKeys = {
     ["accounting", org, "disputes", params] as const,
   dispute: (org: string, uuid: string) =>
     ["accounting", org, "dispute", uuid] as const,
+  queueSummary: (org: string) => ["accounting", org, "queue-summary"] as const,
+  queueReturns: (org: string, params: unknown) =>
+    ["accounting", org, "queue-returns", params] as const,
+  billing: (org: string, cari: string) =>
+    ["accounting", org, "billing", cari] as const,
 };

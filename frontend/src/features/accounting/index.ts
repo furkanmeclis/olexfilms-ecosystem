@@ -6,3 +6,6 @@ export { DisputesPage } from "@/features/accounting/components/disputes-page";
 export { EntriesPage } from "@/features/accounting/components/entries-page";
 export { StatementPage } from "@/features/accounting/components/statement-page";
 export { resolveAccountingAccess } from "@/features/accounting/lib/access";
+export { AccountingDashboard } from "@/features/accounting/components/accounting-dashboard";
+export { AccountingQueuePage } from "@/features/accounting/components/accounting-queue-page";
+export { isAccountingHomeRole } from "@/features/accounting/lib/home-role";
