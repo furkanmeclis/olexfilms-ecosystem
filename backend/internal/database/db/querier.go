@@ -369,6 +369,7 @@ type Querier interface {
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
 	CountWarehouseMembers(ctx context.Context, arg CountWarehouseMembersParams) (int64, error)
+	CountWarehouseProductStockRows(ctx context.Context, arg CountWarehouseProductStockRowsParams) (int64, error)
 	CountWarehouseTraceUnits(ctx context.Context, arg CountWarehouseTraceUnitsParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
@@ -2065,6 +2066,7 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	ListFixedBarcodeQuantitiesByWarehouse(ctx context.Context, arg ListFixedBarcodeQuantitiesByWarehouseParams) ([]ListFixedBarcodeQuantitiesByWarehouseRow, error)
 	// Warehouse locations of the seller holding a fixed barcode, largest first
 	// (TEC-1028: with warehouse_id, only that warehouse's).
 	ListFixedUnitLocations(ctx context.Context, arg ListFixedUnitLocationsParams) ([]ListFixedUnitLocationsRow, error)
@@ -2937,6 +2939,14 @@ type Querier interface {
 	// List contract: sort keys name, email, created_at (id tiebreak); q on
 	// name, surname, email.
 	ListWarehouseMembers(ctx context.Context, arg ListWarehouseMembersParams) ([]ListWarehouseMembersRow, error)
+	// TEC-1090 (TEC-1069): product totals of one warehouse, summed over its
+	// locations (bin_product_stocks). quantity counts pieces, rolls and fixed
+	// barcode quantities like the organization list; roll_count is the serial
+	// roll units in stock there (remaining meters above zero); meters the
+	// meters left on them. No prices. in_stock / q / product / category and the
+	// sort keys follow ListOrganizationProductStockRows; the product id is the
+	// tiebreak (one row per product).
+	ListWarehouseProductStockRows(ctx context.Context, arg ListWarehouseProductStockRowsParams) ([]ListWarehouseProductStockRowsRow, error)
 	// ---------------------------------------------------------------------------
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
@@ -3581,6 +3591,12 @@ type Querier interface {
 	// Customers: a customer belongs to the organizations it is linked to
 	// (customer_organizations); type comes from customer_profiles.
 	ReportCustomerTrend(ctx context.Context, arg ReportCustomerTrendParams) ([]ReportCustomerTrendRow, error)
+	// Active dealers inside the scope with no counted order in the range
+	// (all_time: none at all); last_order_at is their latest counted order
+	// ever (null: never ordered). Oldest activity first, never-ordered first.
+	// parent_id narrows to the direct dealers of a managed reach (a
+	// distributor's own customers).
+	ReportInactiveBuyers(ctx context.Context, arg ReportInactiveBuyersParams) ([]ReportInactiveBuyersRow, error)
 	ReportMeasurementCounts(ctx context.Context, arg ReportMeasurementCountsParams) (ReportMeasurementCountsRow, error)
 	// Measurements (NexPTG results) by measured_at.
 	ReportMeasurementTrend(ctx context.Context, arg ReportMeasurementTrendParams) ([]ReportMeasurementTrendRow, error)
@@ -3596,6 +3612,12 @@ type Querier interface {
 	// Orders: the caller reaches an order as its owner (organization_id) or
 	// its buyer, like ListOrders side=all.
 	ReportOrderTrend(ctx context.Context, arg ReportOrderTrendParams) ([]ReportOrderTrendRow, error)
+	// TEC-1090 (TEC-1068, TEC-1073): network reports by organization. An
+	// order counts once it left draft and was not cancelled (draft, cancelling
+	// and cancelled are out); the scope narrows like the other order reports
+	// (seller or buyer inside org_ids). The active organization's own
+	// purchases are not a buyer row (self_org_id).
+	ReportOrdersByBuyer(ctx context.Context, arg ReportOrdersByBuyerParams) ([]ReportOrdersByBuyerRow, error)
 	ReportRecentServices(ctx context.Context, arg ReportRecentServicesParams) ([]ReportRecentServicesRow, error)
 	ReportServiceOverview(ctx context.Context, arg ReportServiceOverviewParams) (ReportServiceOverviewRow, error)
 	ReportServiceStatuses(ctx context.Context, arg ReportServiceStatusesParams) ([]ReportServiceStatusesRow, error)
@@ -3609,6 +3631,10 @@ type Querier interface {
 	// of the timestamp in the caller's timezone, gaps are filled by the
 	// usecase.
 	ReportServiceTrend(ctx context.Context, arg ReportServiceTrendParams) ([]ReportServiceTrendRow, error)
+	// Services completed in the range per organization (same basis as the
+	// other service rankings). The center's own row carries its service point
+	// (TEC-1003) so a client can label it apart from the dealers.
+	ReportServicesByOrg(ctx context.Context, arg ReportServicesByOrgParams) ([]ReportServicesByOrgRow, error)
 	ReportStockTotals(ctx context.Context, arg ReportStockTotalsParams) (ReportStockTotalsRow, error)
 	// Stock: a snapshot of the holding organizations in reach (serial units by
 	// status from unit_current_state, quantities from organization_product_stocks).

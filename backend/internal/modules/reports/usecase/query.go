@@ -41,6 +41,9 @@ type Input struct {
 	RangeTo     string
 	Granularity string
 	Limit       string
+	// AllTime is all_time=true|false (orders.inactive_buyers only):
+	// true ignores the period and lists dealers that never ordered.
+	AllTime string
 	// Locale is the ?locale= override (empty: Fallback).
 	Locale string
 	// Fallback is the request locale and timezone (K10 chain).
@@ -57,6 +60,7 @@ type query struct {
 	to          time.Time
 	granularity string
 	limit       int32
+	allTime     bool
 	locale      i18n.Locale
 	tz          *time.Location
 }
@@ -107,6 +111,20 @@ func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
 	}
 	if !d.Granular && gran != "" {
 		return query{}, invalid("granularity", "unsupported", "this report has no granularity")
+	}
+	switch raw := strings.TrimSpace(in.AllTime); {
+	case raw == "":
+	case !d.AllTime:
+		return query{}, invalid("all_time", "unsupported", "this report has no all_time")
+	case raw == "true":
+		if period != "" || rawFrom != "" || rawTo != "" {
+			return query{}, invalid("all_time", "conflict", "all_time and period/range_from/range_to are exclusive")
+		}
+		q.allTime = true
+		return q, nil
+	case raw == "false":
+	default:
+		return query{}, invalid("all_time", "invalid", "all_time must be true or false")
 	}
 	if !d.Periodic {
 		return q, nil

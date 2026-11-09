@@ -109,6 +109,9 @@ type OrderView struct {
 	// CreatedBySeller: the center opened the order for the dealer
 	// (TEC-1024); it started approved.
 	CreatedBySeller bool `json:"created_by_seller"`
+	// CreatedBy: the user who opened the order (TEC-1090); null for a
+	// system or migrated order.
+	CreatedBy *CreatorRef `json:"created_by"`
 	// SellerWarehouse: the seller warehouse the order falls into
 	// (TEC-1028; seller side only, null before approval or without one;
 	// list rows carry it too since TEC-1054).
@@ -295,6 +298,11 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	if err := s.withOnBehalfReceive(ctx, q, c, o, &v); err != nil {
 		return OrderView{}, err
 	}
+	one := []OrderView{v}
+	if err := withCreators(ctx, q, []db.Order{o}, one); err != nil {
+		return OrderView{}, err
+	}
+	v = one[0]
 	// The seller warehouse is the seller's own business (TEC-1028).
 	if o.SellerWarehouseID.Valid && partyOf(c, o) == PartySeller {
 		w, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: o.SellerWarehouseID.Int64, OrganizationID: o.SellerOrgID})
@@ -511,6 +519,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		out = append(out, v)
 	}
 	if err := s.withFacts(ctx, s.q, c, rows, out); err != nil {
+		return nil, 0, err
+	}
+	if err := withCreators(ctx, s.q, rows, out); err != nil {
 		return nil, 0, err
 	}
 	return out, total, nil

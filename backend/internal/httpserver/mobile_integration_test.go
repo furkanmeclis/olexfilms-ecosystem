@@ -450,6 +450,10 @@ func TestIntegrationMobilePanelMirror(t *testing.T) {
 		{"/v1/mobile/panel/campaigns", http.StatusForbidden, "FEATURE_DISABLED"},
 		{"/v1/mobile/panel/ai/usage", http.StatusNotFound, "NOT_FOUND"},
 		{"/v1/mobile/panel/ai/usage/summary", http.StatusNotFound, "NOT_FOUND"},
+		// TEC-1090: contracts reach their handler (bad uuid: 400 from it),
+		// the template editor stays closed on the mirror.
+		{"/v1/mobile/panel/contracts/not-a-uuid", http.StatusBadRequest, ""},
+		{"/v1/mobile/panel/contract-templates/variables", http.StatusNotFound, "NOT_FOUND"},
 	} {
 		code, env, _ = it.doMobile("GET", tc.path, mobile.AccessToken, "1", nil)
 		if code != tc.code || (tc.err != "" && errCode(env) != tc.err) {

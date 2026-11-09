@@ -76,6 +76,10 @@ const (
 	ReportDealersPerformance   = "dealers.performance"
 	ReportDealersTopByWarranty = "dealers.top_by_warranty"
 	ReportActivitiesRecent     = "activities.recent"
+	// TEC-1090: network rankings by organization.
+	ReportOrdersByBuyer       = "orders.by_buyer"
+	ReportOrdersInactiveBuyer = "orders.inactive_buyers"
+	ReportServicesByOrg       = "services.by_org"
 )
 
 // Definition is one catalog entry.
@@ -98,6 +102,12 @@ type Definition struct {
 	Network bool
 	// UserScoped reports support own / assigned grants (created_by).
 	UserScoped bool
+	// Seller reports look at the buyers below the active organization
+	// (TEC-1090): closed to a dealer like Network ones, but a managed
+	// reach (a distributor's own sales) is enough.
+	Seller bool
+	// AllTime reports accept all_time=true instead of a period.
+	AllTime bool
 }
 
 // Definitions is the catalog in display order.
@@ -118,6 +128,9 @@ var Definitions = []Definition{
 	{Key: ReportDealersPerformance, Kind: KindTable, Module: features.ModulePerformance, Permission: rbac.PermPerformanceRead, Periodic: true, Limited: true},
 	{Key: ReportDealersTopByWarranty, Kind: KindRanking, Module: features.ModuleServices, Permission: rbac.PermWarrantiesRead, Periodic: true, Limited: true, Network: true},
 	{Key: ReportActivitiesRecent, Kind: KindTable, Module: features.ModuleServices, Permission: rbac.PermServicesRead, Limited: true, UserScoped: true},
+	{Key: ReportOrdersByBuyer, Kind: KindRanking, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true, Limited: true, Seller: true},
+	{Key: ReportOrdersInactiveBuyer, Kind: KindTable, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true, Limited: true, Seller: true, AllTime: true},
+	{Key: ReportServicesByOrg, Kind: KindRanking, Module: features.ModuleServices, Permission: rbac.PermServicesRead, Periodic: true, Limited: true, Network: true},
 }
 
 // networkDef gates the overview's dealer count cards.
@@ -193,6 +206,9 @@ func (s *Service) access(ctx context.Context, c Caller, d Definition) (scopefilt
 	if f.Scope == rbac.ScopeCustomer || (f.UserOnly() && !d.UserScoped) {
 		return scopefilter.Filter{}, ErrForbidden
 	}
+	if d.Seller && c.Org.OrgType == "dealer" {
+		return scopefilter.Filter{}, ErrForbidden
+	}
 	if d.Network {
 		if c.Org.OrgType == "dealer" {
 			return scopefilter.Filter{}, ErrForbidden
@@ -235,6 +251,8 @@ type CatalogItem struct {
 	DefaultPeriod *string  `json:"default_period"`
 	Granularities []string `json:"granularities"`
 	Limited       bool     `json:"limited"`
+	// AllTime: the report accepts all_time=true (TEC-1090).
+	AllTime bool `json:"all_time"`
 }
 
 // Catalog lists the reports open to the caller: a report whose module is
@@ -251,7 +269,7 @@ func (s *Service) Catalog(ctx context.Context, c Caller, locale i18n.Locale) ([]
 		}
 		item := CatalogItem{
 			Key: d.Key, Kind: d.Kind, Title: translate(locale, "title."+d.Key), Periodic: d.Periodic,
-			Periods: []string{}, Granularities: []string{}, Limited: d.Limited,
+			Periods: []string{}, Granularities: []string{}, Limited: d.Limited, AllTime: d.AllTime,
 		}
 		if d.Module != "" {
 			m := d.Module
@@ -273,16 +291,18 @@ func (s *Service) Catalog(ctx context.Context, c Caller, locale i18n.Locale) ([]
 // Envelope is the shared shape of every report response: the same keys in
 // every report (null / empty when a report does not use them).
 type Envelope struct {
-	Report      string           `json:"report"`
-	Kind        string           `json:"kind"`
-	Title       string           `json:"title"`
-	Locale      string           `json:"locale"`
-	Timezone    string           `json:"timezone"`
-	Scope       string           `json:"scope"`
-	Period      *string          `json:"period"`
-	RangeFrom   *string          `json:"range_from"`
-	RangeTo     *string          `json:"range_to"`
-	Granularity *string          `json:"granularity"`
+	Report      string  `json:"report"`
+	Kind        string  `json:"kind"`
+	Title       string  `json:"title"`
+	Locale      string  `json:"locale"`
+	Timezone    string  `json:"timezone"`
+	Scope       string  `json:"scope"`
+	Period      *string `json:"period"`
+	RangeFrom   *string `json:"range_from"`
+	RangeTo     *string `json:"range_to"`
+	Granularity *string `json:"granularity"`
+	// AllTime: the report was asked with all_time=true (no period).
+	AllTime     bool             `json:"all_time"`
 	GeneratedAt time.Time        `json:"generated_at"`
 	Series      []Series         `json:"series"`
 	Columns     []Column         `json:"columns"`
@@ -347,7 +367,8 @@ func (s *Service) envelope(d Definition, q query, f scopefilter.Filter) Envelope
 		Locale: string(q.locale), Timezone: q.tz.String(), Scope: string(f.Scope),
 		GeneratedAt: s.now().UTC(), Series: []Series{}, Columns: []Column{}, Rows: []map[string]any{},
 	}
-	if d.Periodic {
+	env.AllTime = q.allTime
+	if d.Periodic && !q.allTime {
 		period, from, to := q.period, q.fromDate.Format(dateLayout), q.toDate.Format(dateLayout)
 		env.Period, env.RangeFrom, env.RangeTo = &period, &from, &to
 	}

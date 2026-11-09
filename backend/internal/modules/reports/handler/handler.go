@@ -33,6 +33,7 @@ func input(r *http.Request) usecase.Input {
 	return usecase.Input{
 		Period: v.Get("period"), RangeFrom: v.Get("range_from"), RangeTo: v.Get("range_to"),
 		Granularity: v.Get("granularity"), Limit: v.Get("limit"), Locale: v.Get("locale"),
+		AllTime:  v.Get("all_time"),
 		Fallback: i18n.FromContext(r.Context()),
 	}
 }

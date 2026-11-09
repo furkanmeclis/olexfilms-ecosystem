@@ -93,7 +93,11 @@ func TestIntegrationOrdersCenterCreatesForDealer(t *testing.T) {
 	var o orderView
 	var extra struct {
 		CreatedBySeller bool `json:"created_by_seller"`
-		Lines           []struct {
+		CreatedBy       *struct {
+			UUID string `json:"uuid"`
+			Name string `json:"name"`
+		} `json:"created_by"`
+		Lines []struct {
 			PriceMissing bool `json:"price_missing"`
 		} `json:"items"`
 	}
@@ -124,6 +128,34 @@ func TestIntegrationOrdersCenterCreatesForDealer(t *testing.T) {
 	if row := it.orderRow(o.UUID, center.BrandID); !row.CreatedBySeller || !row.CreatedByUserID.Valid ||
 		row.CreatedByUserID.Int64 != staff.ID {
 		t.Fatalf("row = created_by_seller %v created_by %v", row.CreatedBySeller, row.CreatedByUserID)
+	}
+	// TEC-1090: the detail and the list name the creator from the same column.
+	if extra.CreatedBy == nil || extra.CreatedBy.UUID != staff.Uuid.String() || extra.CreatedBy.Name == "" {
+		t.Fatalf("detail created_by = %+v", extra.CreatedBy)
+	}
+	code, env = it.do("GET", "/v1/orders?side=seller&limit=100", hostOlex, staffTok, nil)
+	if code != http.StatusOK {
+		t.Fatalf("list = %d %s", code, errCode(env))
+	}
+	var page struct {
+		Items []struct {
+			UUID      string `json:"uuid"`
+			CreatedBy *struct {
+				UUID string `json:"uuid"`
+			} `json:"created_by"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(env.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	listed := false
+	for _, item := range page.Items {
+		if item.UUID == o.UUID {
+			listed = item.CreatedBy != nil && item.CreatedBy.UUID == staff.Uuid.String()
+		}
+	}
+	if !listed {
+		t.Fatalf("list created_by missing for %s", o.UUID)
 	}
 
 	// 2. A typed unit price wins.

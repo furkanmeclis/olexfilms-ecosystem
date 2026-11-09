@@ -48,6 +48,9 @@ func RegisterRoutes(
 	// TEC-1066: in-stock totals per warehouse of the active organization
 	// (warehouse home; counts only, no prices).
 	mux.Handle("GET /v1/stock/warehouse-summary", read(h.WarehouseSummary))
+	// TEC-1090 (TEC-1069): product totals of one warehouse (no prices).
+	mux.Handle("GET /v1/stock/warehouses/{uuid}/products", scoped(h.WarehouseStock, rbac.PermStockRead,
+		middleware.RequireFeature(checker, features.ModuleWarehouse)))
 
 	// TEC-157 reclassification: the holding organization requests
 	// (stock.write), the center approves (stock.reclassify, sensitive:

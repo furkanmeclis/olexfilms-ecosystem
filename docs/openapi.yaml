@@ -188,7 +188,11 @@ tags:
       tenant/organizations, tenant/modules, tenant/pricing, delivery-methods,
       certificate-warnings and auth/step-up/password, auth/step-up/totp
       (TEC-961: a mobile session earns the same per-user step-up grant; the
-      step-up status and passkey routes are not mirrored). Prefixes match whole
+      step-up status and passkey routes are not mirrored), contracts
+      (TEC-1090: contract read / PDF / customer OTP / signatures / media /
+      void with their own module and contracts.* checks; the template editor
+      is not mirrored), tenant/pending-recipients (TEC-1063) and
+      accounting/queue (TEC-1071). Prefixes match whole
       segments and descendants; all others return 404 `NOT_FOUND`. Mirror
       paths are not duplicated here.
 
@@ -11312,6 +11316,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeStockProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/warehouses/{uuid}/products:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockWarehouseProducts
+      summary: Product totals of a warehouse (TEC-1090)
+      description: >-
+        Needs `stock.read` and the warehouse module; the warehouse belongs to
+        the active organization (404 otherwise). One row per product summed
+        over the warehouse's locations (`bin_product_stocks`): quantity
+        (pieces, rolls and fixed barcode quantities, as the organization
+        stock), meters left on the rolls and roll_count (serial roll units
+        in stock there with meters left). No prices. Same filters (status
+        in_stock / out_of_stock, product_uuid, category_uuid, q) and sort
+        (product default, sku, category, quantity, meters, updated_at) as
+        the organization stock.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/StockProductUUIDFilter"
+        - $ref: "#/components/parameters/StockCategoryUUIDFilter"
+        - $ref: "#/components/parameters/StockStatusFilter"
+      responses:
+        "200":
+          description: Warehouse product totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockWarehouseProductPage"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -33806,14 +33853,19 @@ paths:
         orders.status_distribution, orders.plotter_cut, customers.trend,
         stock.summary, warranties.summary, measurements.summary,
         dealers.performance (performance module), dealers.top_by_warranty
-        (subtree / brand reach only), activities.recent. orders.plotter_cut
+        (subtree / brand reach only), activities.recent, orders.by_buyer,
+        orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand
+        reach only). orders.plotter_cut
         (TEC-1058, table): the order lines marked "sent plotter cut" of the
         orders shipped in the period (orders cancelled after shipping left
         out), seller or buyer in reach; series plotter_lines /
         plotter_quantity / plotter_meters are the monthly totals (point key
         = first day of the month), rows the month (YYYY-MM) x product
         breakdown (product_uuid, product, sku, unit_type, line_count,
-        quantity, meters). Periodic reports take period
+        quantity, meters). orders.by_buyer rows carry total / currency only with
+        pricing.purchase.read or pricing.sale.read (else null and no total
+        column). orders.inactive_buyers takes all_time=true instead of a
+        period (dealers that never ordered). Periodic reports take period
         (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive
         dates, at most 731 days, period=custom); time series take
         granularity (day, week, month; default by range). Rankings and
@@ -33835,6 +33887,13 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 50 }
+        - name: all_time
+          in: query
+          description: >-
+            TEC-1090, orders.inactive_buyers only: true ignores the period
+            and lists active dealers that never ordered. Exclusive with
+            period / range_from / range_to.
+          schema: { type: boolean }
         - $ref: "#/components/parameters/ReportLocale"
       responses:
         "200":
@@ -41722,6 +41781,32 @@ components:
             offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    StockWarehouseProduct:
+      description: TEC-1090 warehouse product totals row (StockProduct plus roll_count).
+      allOf:
+        - $ref: "#/components/schemas/StockProduct"
+        - type: object
+          required: [roll_count]
+          properties:
+            roll_count: { type: integer, description: Serial roll units in stock in the warehouse with meters left }
+
+    EnvelopeStockWarehouseProductPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockWarehouseProduct" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     WarehouseCode:
       type: string
       pattern: "^[A-Za-z0-9_]{1,32}$"
@@ -47558,6 +47643,13 @@ components:
         created_by_seller:
           type: boolean
           description: The center opened the order for the dealer; it started approved (TEC-1024)
+        created_by:
+          description: >-
+            TEC-1090: the user who opened the order (list and detail, same
+            source); null for a system or migrated order.
+          oneOf:
+            - $ref: "#/components/schemas/OrderCreatorRef"
+            - type: "null"
         seller_warehouse:
           description: >-
             TEC-1028: the seller warehouse the order falls into (set at
@@ -47988,6 +48080,13 @@ components:
         code: { type: string, example: MERKEZ }
         name: { type: string, example: AFM Florya Merkez }
         is_primary: { type: boolean }
+
+    OrderCreatorRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string, example: Ayşe Yılmaz }
 
     OrderCreateInput:
       type: object
@@ -53075,6 +53174,7 @@ components:
         default_period: { type: [string, "null"] }
         granularities: { type: array, items: { type: string } }
         limited: { type: boolean }
+        all_time: { type: boolean, description: "TEC-1090: the report takes all_time=true instead of a period" }
 
     EnvelopeReportCatalog:
       type: object
@@ -53115,7 +53215,10 @@ components:
       properties:
         key: { type: string }
         label: { type: string }
-        type: { type: string, enum: [string, integer, number, datetime] }
+        type:
+          type: string
+          enum: [string, integer, number, datetime, money]
+          description: money is a decimal string with two digits (TEC-1090, orders.by_buyer total)
 
     ReportEnvelope:
       type: object
@@ -53135,6 +53238,7 @@ components:
         range_from: { type: [string, "null"], format: date }
         range_to: { type: [string, "null"], format: date }
         granularity: { type: [string, "null"], enum: [day, week, month, null] }
+        all_time: { type: boolean, description: "TEC-1090: asked with all_time=true (period / range are null)" }
         generated_at: { type: string, format: date-time }
         series:
           type: array
