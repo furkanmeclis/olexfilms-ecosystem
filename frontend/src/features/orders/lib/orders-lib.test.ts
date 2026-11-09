@@ -106,6 +106,29 @@ describe("orderActions (role and status)", () => {
     expect(orderActions(o)[1].reasonRequired).toBe(true);
   });
 
+  it("seller shipped to a memberless pool recipient: receive on its behalf (TEC-1062)", () => {
+    expect(
+      kinds(
+        order({
+          role: "seller",
+          status: "shipped",
+          receive_on_behalf: true,
+          available_transitions: ["delivered", "received", "cancelling"],
+        }),
+      ),
+    ).toEqual(["deliver", "receive_on_behalf", "request_cancel"]);
+    // The buyer's own receive keeps its label.
+    expect(
+      kinds(
+        order({
+          role: "buyer",
+          status: "shipped",
+          available_transitions: ["received"],
+        }),
+      ),
+    ).toEqual(["receive"]);
+  });
+
   it("buyer submitted: cancel, not reject", () => {
     expect(
       kinds(

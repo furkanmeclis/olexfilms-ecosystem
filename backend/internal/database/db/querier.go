@@ -1642,6 +1642,10 @@ type Querier interface {
 	// A customer is a users row with a customer profile or an organization link
 	// (K11).
 	IsCustomerUser(ctx context.Context, userID int64) (bool, error)
+	// TEC-1062 decision: the center may receive an order on behalf of a
+	// recipient of its pool (state pending or retail) that has no active
+	// member to do it, so the K9 cari row is booked.
+	IsMemberlessPoolRecipient(ctx context.Context, arg IsMemberlessPoolRecipientParams) (bool, error)
 	// Time of the newest message of one sender type (NULL = none).
 	LastConversationMessageAtBySender(ctx context.Context, arg LastConversationMessageAtBySenderParams) (pgtype.Timestamptz, error)
 	// The watermark of the latest successful run of a kind that set one. The

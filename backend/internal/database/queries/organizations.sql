@@ -345,6 +345,9 @@ WHERE o.deleted_at IS NULL
   AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
   AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
+  -- TEC-1062: pickers leave the pending organizations (waiting pool
+  -- recipients, unapproved registrations) out; the order form asks for them.
+  AND (sqlc.narg(exclude_status)::text IS NULL OR o.status <> sqlc.narg(exclude_status)::text)
 ORDER BY o.type ASC, o.name ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 

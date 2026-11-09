@@ -34,7 +34,7 @@ function useDealers(enabled: boolean) {
     queryKey: ['tenant', 'organizations', 'dealers'],
     enabled,
     staleTime: 5 * 60_000,
-    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200 } } })),
+    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200, include_pending: true } } })),
     select: (d) => (d.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name })) as Dealer[],
   });
 }

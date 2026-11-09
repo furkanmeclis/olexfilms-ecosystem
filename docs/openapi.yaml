@@ -6163,7 +6163,8 @@ paths:
         request brand. `q` (TEC-210) searches the name and the dealer code
         (slug); when Meilisearch is up the organizations index answers it
         inside the same scope (hits are reloaded from Postgres), otherwise
-        SQL.
+        SQL. Organizations in status `pending` (TEC-1062: the center's
+        waiting pool recipients) are left out unless `include_pending=true`.
       security:
         - bearerAuth: []
       parameters:
@@ -6171,6 +6172,12 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/OrganizationType"
+        - name: include_pending
+          in: query
+          description: >-
+            TEC-1062. true also lists the pending organizations (the center's
+            order form picks pool recipients as buyers); default false.
+          schema: { type: boolean }
         - name: q
           in: query
           description: Part of the organization name or dealer code (slug).
@@ -46551,6 +46558,11 @@ components:
         to_status: { $ref: "#/components/schemas/OrderStatus" }
         reason: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
+        on_behalf_of_buyer:
+          type: boolean
+          description: >-
+            TEC-1062. The seller received the order for a pool recipient
+            without members (received rows only; omitted otherwise).
 
     OrderRateSnapshot:
       type: object
@@ -46669,6 +46681,13 @@ components:
           type: array
           description: Statuses the caller may move the order to
           items: { $ref: "#/components/schemas/OrderStatus" }
+        receive_on_behalf:
+          type: boolean
+          description: >-
+            TEC-1062 (detail responses only). `received` in
+            available_transitions is the seller (orders.ship or orders.write)
+            receiving for a pending or retail pool recipient without active
+            members, so the K9 cari rows are booked; omitted otherwise.
         items:
           type: array
           description: Lines (detail responses only)

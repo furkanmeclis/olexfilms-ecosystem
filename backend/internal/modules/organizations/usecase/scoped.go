@@ -19,6 +19,10 @@ type ScopedListInput struct {
 	Q      string
 	Limit  int32
 	Offset int32
+	// ExcludePending leaves the organizations in status pending out
+	// (TEC-1062: the waiting pool recipients show only in the center's
+	// order form, not in the other organization pickers).
+	ExcludePending bool
 }
 
 // ListInScope lists the organizations an organizations.read filter reaches
@@ -46,6 +50,9 @@ func (s *Service) ListInScope(ctx context.Context, f scopefilter.Filter, in Scop
 		Q:           scopedQuery(in.Q),
 		LimitCount:  in.Limit,
 		OffsetCount: in.Offset,
+	}
+	if in.ExcludePending {
+		p.ExcludeStatus = pgtype.Text{String: "pending", Valid: true}
 	}
 	var (
 		rows    []db.ListOrganizationsInScopeRow

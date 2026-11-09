@@ -74,6 +74,8 @@ type HistoryView struct {
 	ToStatus   string    `json:"to_status"`
 	Reason     *string   `json:"reason"`
 	CreatedAt  time.Time `json:"created_at"`
+	// OnBehalfOfBuyer: the seller received for the buyer (TEC-1062).
+	OnBehalfOfBuyer bool `json:"on_behalf_of_buyer,omitempty"`
 }
 
 // OrderView is an order as the API returns it.
@@ -120,9 +122,12 @@ type OrderView struct {
 	CreatedAt           time.Time          `json:"created_at"`
 	UpdatedAt           time.Time          `json:"updated_at"`
 	// AvailableTransitions are the statuses the caller may move the order to.
-	AvailableTransitions []string      `json:"available_transitions"`
-	Items                []ItemView    `json:"items,omitempty"`
-	History              []HistoryView `json:"history,omitempty"`
+	AvailableTransitions []string `json:"available_transitions"`
+	// ReceiveOnBehalf: received in AvailableTransitions is the seller
+	// receiving for a memberless pool recipient (TEC-1062; detail only).
+	ReceiveOnBehalf bool          `json:"receive_on_behalf,omitempty"`
+	Items           []ItemView    `json:"items,omitempty"`
+	History         []HistoryView `json:"history,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
 	Invoices []OrderInvoiceView `json:"invoices,omitempty"`
 	// Split is set on an assignment that cut the meters off a roll as a
@@ -235,6 +240,9 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	if err != nil {
 		return OrderView{}, err
 	}
+	if err := s.withOnBehalfReceive(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
 	// The seller warehouse is the seller's own business (TEC-1028).
 	if o.SellerWarehouseID.Valid && partyOf(c, o) == PartySeller {
 		w, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: o.SellerWarehouseID.Int64, OrganizationID: o.SellerOrgID})
@@ -293,6 +301,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	for _, h := range hist {
 		v.History = append(v.History, HistoryView{
 			FromStatus: textPtr(h.FromStatus), ToStatus: h.ToStatus, Reason: textPtr(h.Reason), CreatedAt: h.CreatedAt.Time,
+			OnBehalfOfBuyer: historyOnBehalf(h.Metadata),
 		})
 	}
 	return v, nil

@@ -168,6 +168,36 @@ func (q *Queries) GetPendingRecipientForUpdate(ctx context.Context, arg GetPendi
 	return i, err
 }
 
+const isMemberlessPoolRecipient = `-- name: IsMemberlessPoolRecipient :one
+SELECT EXISTS (
+    SELECT 1 FROM pending_recipients pr
+    WHERE pr.recipient_org_id = $1
+      AND pr.organization_id = $2
+      AND pr.state IN ('pending', 'retail')
+      AND NOT EXISTS (
+          SELECT 1 FROM organization_members om
+          JOIN users u ON u.id = om.user_id
+          WHERE om.organization_id = pr.recipient_org_id
+            AND u.status = 'active' AND u.deleted_at IS NULL
+      )
+)::bool
+`
+
+type IsMemberlessPoolRecipientParams struct {
+	RecipientOrgID int64 `json:"recipient_org_id"`
+	CenterOrgID    int64 `json:"center_org_id"`
+}
+
+// TEC-1062 decision: the center may receive an order on behalf of a
+// recipient of its pool (state pending or retail) that has no active
+// member to do it, so the K9 cari row is booked.
+func (q *Queries) IsMemberlessPoolRecipient(ctx context.Context, arg IsMemberlessPoolRecipientParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isMemberlessPoolRecipient, arg.RecipientOrgID, arg.CenterOrgID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listPendingRecipients = `-- name: ListPendingRecipients :many
 SELECT pr.id, pr.kind, pr.state, pr.note, pr.created_at, pr.resolved_at,
        o.uuid AS recipient_uuid, o.slug AS recipient_slug, o.name AS recipient_name,
