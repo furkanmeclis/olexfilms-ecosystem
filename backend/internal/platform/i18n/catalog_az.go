@@ -274,6 +274,7 @@ var azCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Alış qiyməti",
 	"catalog.products.recommended_price":               "Tövsiyə olunan satış qiyməti",
 	"catalog.products.uses_fixed_barcode":              "Sabit barkod",
+	"catalog.products.dealer_orderable":                "Diler sifarişinə açıq",
 	"catalog.services.name":                            "Xidmətin adı",
 	"catalog.services.category":                        "Kateqoriya",
 	"catalog.services.code":                            "Xidmət kodu",

@@ -5451,7 +5451,9 @@ export interface paths {
         };
         /**
          * Products of the active brand
-         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20): an Olex organization never lists a Glorian product. `q` matches name or SKU. Sortable (`sort`, one primary field, id tiebreak): sku, name, category (category name), unit_type, warranty_duration_months, micron_thickness (empty values last), active, created_at, updated_at. Default `name` (TEC-369). Unknown field or a bad filter value → 400.
+         * @description Needs `catalog.read`. Filtered by the brand of the active organization (K1/K20): an Olex organization never lists a Glorian product. `q` matches name or SKU. Sortable (`sort`, one primary field, id tiebreak): sku, name, category (category name), unit_type, warranty_duration_months, micron_thickness (empty values last), active, dealer_orderable, created_at, updated_at. Default `name` (TEC-369). Unknown field or a bad filter value → 400.
+         *
+         *     TEC-1061: a non-center organization (distributor, dealer) never lists a product with `dealer_orderable=false`, whatever filter it sends; the order catalog of web and mobile reads this list. The center lists every product and may filter on `dealer_orderable`.
          */
         get: operations["listCatalogProducts"];
         put?: never;
@@ -13166,7 +13168,7 @@ export interface paths {
         put?: never;
         /**
          * Open a draft order of the active organization to its parent (K6)
-         * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
+         * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. A product the center closed to dealer orders (`dealer_orderable=false`, TEC-1061) is 400 with detail code PRODUCT_NOT_ORDERABLE; an order the center opens with `buyer_org_uuid` may hold it. Needs orders.write.
          *
          *     TEC-1024: with `buyer_org_uuid` the active organization must be the center (otherwise 403) and the buyer an active dealer directly under it in the same brand (otherwise 400 on `buyer_org_uuid`). The order is opened by the center as seller and starts `approved` (prices locked, rate frozen, `created_by_seller` true), so the warehouse flow (preparing -> unit assignment -> ready -> shipped -> received) continues unchanged; the dealer's members holding orders.read are notified (ORDER_CREATED_BY_SELLER). Prices never block on this path: an item's `unit_price` (>= 0) wins (price_source `manual`), else the dealer's purchase price, else 0 with price_source `missing` and `price_missing` true.
          *
@@ -22597,6 +22599,8 @@ export interface components {
             unit_type: components["schemas"]["CatalogUnitType"];
             uses_fixed_barcode: boolean;
             active: boolean;
+            /** @description TEC-1061: false keeps the product out of dealer / distributor orders (plexi sets, samples): hidden from their catalog list and refused in their orders (PRODUCT_NOT_ORDERABLE). The center may still add it to an order it opens for a dealer. */
+            dealer_orderable: boolean;
             /** @description Reserved for the F2 Glorian catalog sync (read-only) */
             external_id: string | null;
             /** @description Fields locked by the F2 Glorian sync (read-only) */
@@ -22610,7 +22614,7 @@ export interface components {
             /** @description Every current image key, in the new order */
             keys: string[];
         };
-        /** @description POST needs category_uuid, sku and name (unit_type defaults to piece, active to true). PATCH changes only the fields it names. */
+        /** @description POST needs category_uuid, sku and name (unit_type defaults to piece, active and dealer_orderable to true). PATCH changes only the fields it names. */
         CatalogProductInput: {
             /** Format: uuid */
             category_uuid?: string;
@@ -22624,6 +22628,7 @@ export interface components {
             unit_type?: components["schemas"]["CatalogUnitType"];
             uses_fixed_barcode?: boolean;
             active?: boolean;
+            dealer_orderable?: boolean;
         };
         EnvelopeCatalogCategory: {
             /** @enum {boolean} */
@@ -41885,6 +41890,8 @@ export interface operations {
                 /** @description CSV of `piece`, `roll_meter`. */
                 unit_type?: string;
                 uses_fixed_barcode?: boolean;
+                /** @description TEC-1061: open (true) or closed (false) to dealer orders. Ignored for non-center organizations, which always get only open products. */
+                dealer_orderable?: boolean;
                 warranty_duration_months_min?: number;
                 warranty_duration_months_max?: number;
                 micron_thickness_min?: number;
@@ -42036,6 +42043,8 @@ export interface operations {
                         unit_type?: string;
                         /** @enum {string} */
                         uses_fixed_barcode?: "true" | "false";
+                        /** @enum {string} */
+                        dealer_orderable?: "true" | "false";
                         warranty_duration_months_min?: string;
                         warranty_duration_months_max?: string;
                         micron_thickness_min?: string;

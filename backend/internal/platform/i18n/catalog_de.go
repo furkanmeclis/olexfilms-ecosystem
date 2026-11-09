@@ -274,6 +274,7 @@ var deCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Einkaufspreis",
 	"catalog.products.recommended_price":               "Empfohlener Verkaufspreis",
 	"catalog.products.uses_fixed_barcode":              "Fester Barcode",
+	"catalog.products.dealer_orderable":                "Für Händlerbestellungen freigegeben",
 	"catalog.services.name":                            "Leistungsname",
 	"catalog.services.category":                        "Kategorie",
 	"catalog.services.code":                            "Leistungscode",

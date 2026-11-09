@@ -274,6 +274,7 @@ var ruCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Закупочная цена",
 	"catalog.products.recommended_price":               "Рекомендуемая цена продажи",
 	"catalog.products.uses_fixed_barcode":              "Фиксированный штрихкод",
+	"catalog.products.dealer_orderable":                "Доступен для заказов дилеров",
 	"catalog.services.name":                            "Название услуги",
 	"catalog.services.category":                        "Категория",
 	"catalog.services.code":                            "Код услуги",

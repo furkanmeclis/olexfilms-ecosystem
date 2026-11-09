@@ -95,14 +95,34 @@ func (a *CatalogProductsAdapter) BulkActions() []bulkengine.BulkActionDef {
 				{Key: ParamCategoryUUID, Kind: "uuid", Required: true, LabelKey: "bulk.params.category"},
 			},
 		},
+		// TEC-1061: open / close products to dealer and distributor orders.
+		{
+			ID: ActionEnableDealerOrder, LabelKey: "bulk.actions.catalog_products.enable_dealer_order",
+			Permission: rbac.PermCatalogWrite, Reversible: true,
+		},
+		{
+			ID: ActionDisableDealerOrder, LabelKey: "bulk.actions.catalog_products.disable_dealer_order",
+			Permission: rbac.PermCatalogWrite, Destructive: true, Reversible: true,
+			ConfirmKey: "bulk.confirm.catalog_products.disable_dealer_order",
+		},
 	}
 }
 
 // ActionSetCategory / ParamCategoryUUID: catalog.products set_category.
+// ActionEnableDealerOrder / ActionDisableDealerOrder set
+// products.dealer_orderable (TEC-1061); FieldDealerOrderable is the key of
+// their snapshot.
 const (
-	ActionSetCategory = "set_category"
-	ParamCategoryUUID = "category_uuid"
+	ActionSetCategory        = "set_category"
+	ParamCategoryUUID        = "category_uuid"
+	ActionEnableDealerOrder  = "enable_dealer_order"
+	ActionDisableDealerOrder = "disable_dealer_order"
+	FieldDealerOrderable     = "dealer_orderable"
 )
+
+func isDealerOrderAction(action string) bool {
+	return action == ActionEnableDealerOrder || action == ActionDisableDealerOrder
+}
 
 func (a *CatalogProductsAdapter) ResolveTargets(_ context.Context, _ string, target bulkengine.BulkTarget) ([]string, error) {
 	return idsOnly(target)
@@ -122,6 +142,9 @@ func (a *CatalogProductsAdapter) center(ctx context.Context) (db.Organization, e
 func (a *CatalogProductsAdapter) ApplyItem(ctx context.Context, action, entityUUID string) (bulkengine.BulkItemResult, error) {
 	if action == ActionSetCategory {
 		return a.setCategory(ctx, entityUUID)
+	}
+	if isDealerOrderAction(action) {
+		return a.setDealerOrderable(ctx, entityUUID, action == ActionEnableDealerOrder)
 	}
 	var want bool
 	switch action {
@@ -160,6 +183,40 @@ func (a *CatalogProductsAdapter) ApplyItem(ctx context.Context, action, entityUU
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "locked"}, nil
 	}
 	if _, err := a.q.SetProductActiveByUUID(ctx, db.SetProductActiveByUUIDParams{Active: want, Uuid: id, BrandID: org.BrandID}); err != nil {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: err.Error()}, nil
+	}
+	return res, nil
+}
+
+// setDealerOrderable opens or closes one product to dealer orders
+// (TEC-1061). It is a local field, so a synced product is never locked.
+func (a *CatalogProductsAdapter) setDealerOrderable(ctx context.Context, entityUUID string, want bool) (bulkengine.BulkItemResult, error) {
+	org, err := a.center(ctx)
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	id, err := uuid.Parse(entityUUID)
+	if err != nil {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "invalid uuid"}, nil
+	}
+	p, err := a.q.GetProductByUUID(ctx, db.GetProductByUUIDParams{Uuid: id, BrandID: org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: "not found"}, nil
+	}
+	if err != nil {
+		return bulkengine.BulkItemResult{}, err
+	}
+	res := bulkengine.BulkItemResult{
+		EntityUUID: entityUUID, EntityType: "product", OK: true, Op: "update",
+		Previous: map[string]any{FieldDealerOrderable: p.DealerOrderable},
+		Applied:  map[string]any{FieldDealerOrderable: want},
+	}
+	if p.DealerOrderable == want {
+		return res, nil
+	}
+	if _, err := a.q.SetProductDealerOrderableByUUID(ctx, db.SetProductDealerOrderableByUUIDParams{
+		DealerOrderable: want, Uuid: id, BrandID: org.BrandID,
+	}); err != nil {
 		return bulkengine.BulkItemResult{EntityUUID: entityUUID, OK: false, Error: err.Error()}, nil
 	}
 	return res, nil
@@ -251,6 +308,9 @@ func (a *CatalogProductsAdapter) CurrentState(ctx context.Context, action string
 		}
 		return map[string]any{ParamCategoryUUID: cat}, nil
 	}
+	if isDealerOrderAction(action) {
+		return map[string]any{FieldDealerOrderable: p.DealerOrderable}, nil
+	}
 	return map[string]any{"active": p.Active}, nil
 }
 
@@ -274,6 +334,16 @@ func (a *CatalogProductsAdapter) RevertItem(ctx context.Context, action string, 
 			return err
 		}
 		_, err = a.q.SetProductCategoryByUUID(ctx, db.SetProductCategoryByUUIDParams{CategoryID: cat.ID, Uuid: id, BrandID: org.BrandID})
+		return err
+	}
+	if isDealerOrderAction(action) {
+		prev, ok := previous[FieldDealerOrderable].(bool)
+		if !ok {
+			return fmt.Errorf("missing product snapshot")
+		}
+		_, err = a.q.SetProductDealerOrderableByUUID(ctx, db.SetProductDealerOrderableByUUIDParams{
+			DealerOrderable: prev, Uuid: id, BrandID: org.BrandID,
+		})
 		return err
 	}
 	prev, ok := previous["active"].(bool)

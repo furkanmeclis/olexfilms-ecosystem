@@ -63,7 +63,7 @@ func (q *Queries) CountStockReclassificationsScoped(ctx context.Context, arg Cou
 
 const getProductByIDAnyBrand = `-- name: GetProductByIDAnyBrand :one
 
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct FROM products WHERE id = $1
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products WHERE id = $1
 `
 
 // TEC-157 (F1-02e): reclassification requests (barcode kept, product
@@ -97,12 +97,13 @@ func (q *Queries) GetProductByIDAnyBrand(ctx context.Context, id int64) (Product
 		&i.RollWidthCm,
 		&i.MinCutMeters,
 		&i.WastePct,
+		&i.DealerOrderable,
 	)
 	return i, err
 }
 
 const getProductByUUIDAnyBrand = `-- name: GetProductByUUIDAnyBrand :one
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct FROM products WHERE uuid = $1
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products WHERE uuid = $1
 `
 
 func (q *Queries) GetProductByUUIDAnyBrand(ctx context.Context, argUuid uuid.UUID) (Product, error) {
@@ -132,6 +133,7 @@ func (q *Queries) GetProductByUUIDAnyBrand(ctx context.Context, argUuid uuid.UUI
 		&i.RollWidthCm,
 		&i.MinCutMeters,
 		&i.WastePct,
+		&i.DealerOrderable,
 	)
 	return i, err
 }

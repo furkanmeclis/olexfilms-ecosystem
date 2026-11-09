@@ -327,6 +327,16 @@ func (s *Service) ListProducts(ctx context.Context, org orgctx.Scope, f model.Pr
 	if f.Sort.Key == "" {
 		f.Sort = apiquery.ResolvedSort{Key: model.ProductSort.Default.Field, Desc: model.ProductSort.Default.Desc}
 	}
+	if org.OrgType != OrgTypeCenter {
+		// TEC-1061: a dealer or distributor never lists a product the center
+		// closed to dealer orders, whatever filter it sends (the order
+		// catalog of web and mobile reads this list).
+		if f.DealerOrderable != nil && !*f.DealerOrderable {
+			return []model.Product{}, 0, nil
+		}
+		open := true
+		f.DealerOrderable = &open
+	}
 	params := productListParams(org.BrandID, categoryIDs, f)
 	rows, err := s.store.ListProducts(ctx, params)
 	if err != nil {
@@ -357,7 +367,7 @@ func (s *Service) CreateProduct(ctx context.Context, org orgctx.Scope, in model.
 	if err := checkUploadedKeys(nil, in.Images); err != nil {
 		return model.Product{}, err
 	}
-	p := productFields{UnitType: model.UnitPiece, Active: true, Images: []model.Image{}}
+	p := productFields{UnitType: model.UnitPiece, Active: true, DealerOrderable: true, Images: []model.Image{}}
 	p.apply(in)
 	cat, err := s.validateProduct(ctx, org.BrandID, &p, in.CategoryUUID, true)
 	if err != nil {
@@ -369,6 +379,7 @@ func (s *Service) CreateProduct(ctx context.Context, org orgctx.Scope, in model.
 		Sku: p.SKU, Name: p.Name, DescriptionMd: p.DescriptionMD,
 		WarrantyDurationMonths: int4Arg(p.Warranty), MicronThickness: numericArg(p.Micron),
 		Images: images, UnitType: p.UnitType, UsesFixedBarcode: p.UsesFixedBarcode, Active: p.Active,
+		DealerOrderable: pgtype.Bool{Bool: p.DealerOrderable, Valid: true},
 	})
 	if err != nil {
 		return model.Product{}, mapDBError(err)
@@ -577,6 +588,7 @@ type productFields struct {
 	Images                   []model.Image
 	UnitType                 string
 	UsesFixedBarcode, Active bool
+	DealerOrderable          bool
 }
 
 func fieldsOf(row db.Product) productFields {
@@ -585,6 +597,7 @@ func fieldsOf(row db.Product) productFields {
 		Warranty: int4Ptr(row.WarrantyDurationMonths), Micron: numericPtr(row.MicronThickness),
 		Images: decodeImages(row.Images), UnitType: row.UnitType,
 		UsesFixedBarcode: row.UsesFixedBarcode, Active: row.Active,
+		DealerOrderable: row.DealerOrderable,
 	}
 }
 
@@ -616,6 +629,9 @@ func (p *productFields) apply(in model.ProductInput) {
 	if in.Active != nil {
 		p.Active = *in.Active
 	}
+	if in.DealerOrderable != nil {
+		p.DealerOrderable = *in.DealerOrderable
+	}
 }
 
 func (p productFields) updateParams(id, brandID, categoryID int64) db.UpdateProductParams {
@@ -625,6 +641,7 @@ func (p productFields) updateParams(id, brandID, categoryID int64) db.UpdateProd
 		Sku: p.SKU, Name: p.Name, DescriptionMd: p.DescriptionMD,
 		WarrantyDurationMonths: int4Arg(p.Warranty), MicronThickness: numericArg(p.Micron),
 		Images: images, UnitType: p.UnitType, UsesFixedBarcode: p.UsesFixedBarcode, Active: p.Active,
+		DealerOrderable: p.DealerOrderable,
 	}
 }
 
@@ -747,7 +764,7 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 		SKU: r.Sku, Name: r.Name, DescriptionMD: r.DescriptionMd,
 		WarrantyDurationMonths: int4Ptr(r.WarrantyDurationMonths), MicronThickness: numericPtr(r.MicronThickness),
 		Images: decodeImages(r.Images), UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
-		Active: r.Active, ExternalID: ext, LockedFields: locked,
+		Active: r.Active, DealerOrderable: r.DealerOrderable, ExternalID: ext, LockedFields: locked,
 		Roll: model.RollSettings{
 			DefaultMeters: numericPtr(r.DefaultRollMeters), WidthCm: numericPtr(r.RollWidthCm),
 			MinCutMeters: numericPtr(r.MinCutMeters), WastePct: numericPtr(r.WastePct),

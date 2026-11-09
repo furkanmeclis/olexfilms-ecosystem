@@ -9961,8 +9961,14 @@ paths:
         matches name or SKU. Sortable (`sort`, one primary field, id
         tiebreak): sku, name, category (category name), unit_type,
         warranty_duration_months, micron_thickness (empty values last), active,
-        created_at, updated_at. Default `name` (TEC-369). Unknown field or a
-        bad filter value → 400.
+        dealer_orderable, created_at, updated_at. Default `name` (TEC-369).
+        Unknown field or a bad filter value → 400.
+
+
+        TEC-1061: a non-center organization (distributor, dealer) never lists
+        a product with `dealer_orderable=false`, whatever filter it sends; the
+        order catalog of web and mobile reads this list. The center lists
+        every product and may filter on `dealer_orderable`.
       security:
         - bearerAuth: []
       parameters:
@@ -9983,6 +9989,12 @@ paths:
           schema: { type: string }
         - name: uses_fixed_barcode
           in: query
+          schema: { type: boolean }
+        - name: dealer_orderable
+          in: query
+          description: >-
+            TEC-1061: open (true) or closed (false) to dealer orders. Ignored
+            for non-center organizations, which always get only open products.
           schema: { type: boolean }
         - name: warranty_duration_months_min
           in: query
@@ -10163,6 +10175,7 @@ paths:
                     category_uuid: { type: string, description: "CSV of category uuids" }
                     unit_type: { type: string, description: "CSV of piece, roll_meter" }
                     uses_fixed_barcode: { type: string, enum: ["true", "false"] }
+                    dealer_orderable: { type: string, enum: ["true", "false"] }
                     warranty_duration_months_min: { type: string }
                     warranty_duration_months_max: { type: string }
                     micron_thickness_min: { type: string }
@@ -25288,7 +25301,10 @@ paths:
         are the buyer's effective purchase price from the pricing module
         (K8); price fields sent by the client are ignored. A product without
         a price in the order currency is 400 with detail code
-        PRICE_NOT_FOUND. Needs orders.write.
+        PRICE_NOT_FOUND. A product the center closed to dealer orders
+        (`dealer_orderable=false`, TEC-1061) is 400 with detail code
+        PRODUCT_NOT_ORDERABLE; an order the center opens with
+        `buyer_org_uuid` may hold it. Needs orders.write.
 
 
         TEC-1024: with `buyer_org_uuid` the active organization must be the
@@ -40454,6 +40470,7 @@ components:
         - unit_type
         - uses_fixed_barcode
         - active
+        - dealer_orderable
         - external_id
         - locked_fields
         - roll
@@ -40479,6 +40496,13 @@ components:
         unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
         uses_fixed_barcode: { type: boolean }
         active: { type: boolean }
+        dealer_orderable:
+          type: boolean
+          description: >-
+            TEC-1061: false keeps the product out of dealer / distributor
+            orders (plexi sets, samples): hidden from their catalog list and
+            refused in their orders (PRODUCT_NOT_ORDERABLE). The center may
+            still add it to an order it opens for a dealer.
         external_id:
           type: [string, "null"]
           description: Reserved for the F2 Glorian catalog sync (read-only)
@@ -40505,7 +40529,8 @@ components:
       additionalProperties: false
       description: >-
         POST needs category_uuid, sku and name (unit_type defaults to piece,
-        active to true). PATCH changes only the fields it names.
+        active and dealer_orderable to true). PATCH changes only the fields it
+        names.
       properties:
         category_uuid: { type: string, format: uuid }
         sku: { type: string, minLength: 1, maxLength: 64 }
@@ -40524,6 +40549,7 @@ components:
         unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
         uses_fixed_barcode: { type: boolean }
         active: { type: boolean }
+        dealer_orderable: { type: boolean }
 
     EnvelopeCatalogCategory:
       type: object

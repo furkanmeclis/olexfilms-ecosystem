@@ -76,8 +76,11 @@ type Product struct {
 	UnitType               string      `json:"unit_type"`
 	UsesFixedBarcode       bool        `json:"uses_fixed_barcode"`
 	Active                 bool        `json:"active"`
-	ExternalID             *string     `json:"external_id"`
-	LockedFields           []string    `json:"locked_fields"`
+	// DealerOrderable (TEC-1061): false keeps the product out of dealer /
+	// distributor orders (plexi sets, samples); the center still sees it.
+	DealerOrderable bool     `json:"dealer_orderable"`
+	ExternalID      *string  `json:"external_id"`
+	LockedFields    []string `json:"locked_fields"`
 	// Roll (TEC-1008): roll defaults; any product may hold rolls (a box
 	// counted as a piece is converted to a roll of DefaultMeters).
 	Roll      RollSettings `json:"roll"`
@@ -113,6 +116,7 @@ type ProductInput struct {
 	UnitType               *string    `json:"unit_type"`
 	UsesFixedBarcode       *bool      `json:"uses_fixed_barcode"`
 	Active                 *bool      `json:"active"`
+	DealerOrderable        *bool      `json:"dealer_orderable"`
 
 	// WarrantySet / MicronSet mark that the PATCH body named the field, so an
 	// explicit null clears it. Filled by the handler, never from JSON.
@@ -135,7 +139,8 @@ var ProductSort = apiquery.SortSpec{
 	Columns: apiquery.SortColumns{
 		"sku": "sku", "name": "name", "category": "category", "unit_type": "unit_type",
 		"warranty_duration_months": "warranty_duration_months", "micron_thickness": "micron_thickness",
-		"active": "active", "created_at": "created_at", "updated_at": "updated_at",
+		"active": "active", "dealer_orderable": "dealer_orderable",
+		"created_at": "created_at", "updated_at": "updated_at",
 	},
 	Default: apiquery.SortField{Field: "name"},
 }
@@ -157,6 +162,7 @@ type ProductFilter struct {
 	Active           *bool
 	UnitTypes        []string
 	UsesFixedBarcode *bool
+	DealerOrderable  *bool
 	Warranty         apiquery.NumberRange
 	Micron           apiquery.NumberRange
 	Created          apiquery.TimeRange

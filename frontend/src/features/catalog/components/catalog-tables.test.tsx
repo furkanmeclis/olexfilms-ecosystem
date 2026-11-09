@@ -213,6 +213,7 @@ describe("ProductsPage", () => {
         { id: "unit_type", value: ["roll_meter"] },
         { id: "active", value: false },
         { id: "uses_fixed_barcode", value: true },
+        { id: "dealer_orderable", value: false },
         { id: "warranty_duration_months", value: [12, 60] },
         { id: "created_at", value: ["2026-01-01", "2026-02-01"] },
       ]);
@@ -232,6 +233,7 @@ describe("ProductsPage", () => {
       unit_type: "roll_meter",
       active: "false",
       uses_fixed_barcode: "true",
+      dealer_orderable: "false",
       warranty_duration_months_min: "12",
       warranty_duration_months_max: "60",
       created_from: "2026-01-01",
@@ -264,7 +266,13 @@ describe("ProductsPage", () => {
     expect(menu?.resource).toBe("catalog.products");
     expect(
       (menu?.actions as { id: string }[]).map((action) => action.id),
-    ).toEqual(["activate", "deactivate", "set_category"]);
+    ).toEqual([
+      "activate",
+      "deactivate",
+      "set_category",
+      "enable_dealer_order",
+      "disable_dealer_order",
+    ]);
     expect(menu?.paramOptions).toEqual({
       category_uuid: [
         { value: "c1", label: "c1" },

@@ -50,6 +50,7 @@ function product(images: CatalogProduct["images"]): CatalogProduct {
     unit_type: "piece",
     uses_fixed_barcode: false,
     active: true,
+    dealer_orderable: true,
     external_id: null,
     locked_fields: [],
     roll: {

@@ -274,6 +274,7 @@ var ukCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Закупівельна ціна",
 	"catalog.products.recommended_price":               "Рекомендована ціна продажу",
 	"catalog.products.uses_fixed_barcode":              "Фіксований штрихкод",
+	"catalog.products.dealer_orderable":                "Доступний для замовлень дилерів",
 	"catalog.services.name":                            "Назва послуги",
 	"catalog.services.category":                        "Категорія",
 	"catalog.services.code":                            "Код послуги",

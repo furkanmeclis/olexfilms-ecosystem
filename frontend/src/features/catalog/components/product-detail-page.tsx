@@ -54,7 +54,7 @@ export function ProductDetailPage({
   const { t, format } = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { catalog, pricing } = useCatalogAccess(slug);
+  const { catalog, pricing, orgType } = useCatalogAccess(slug);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const product = useQuery({
@@ -174,6 +174,18 @@ export function ProductDetailPage({
                 tone={p.active ? "success" : "default"}
               />
             </Field>
+            {orgType === "center" ? (
+              <Field label={t("catalog.fields.dealer_orderable")}>
+                <StatusChip
+                  label={
+                    p.dealer_orderable
+                      ? t("catalog.dealer_orderable.open")
+                      : t("catalog.dealer_orderable.closed")
+                  }
+                  tone={p.dealer_orderable ? "success" : "warning"}
+                />
+              </Field>
+            ) : null}
             <Field label={t("catalog.fields.updated_at")}>
               {format.dateTime(p.updated_at)}
             </Field>

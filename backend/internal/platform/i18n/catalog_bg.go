@@ -274,6 +274,7 @@ var bgCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Покупна цена",
 	"catalog.products.recommended_price":               "Препоръчителна продажна цена",
 	"catalog.products.uses_fixed_barcode":              "Фиксиран баркод",
+	"catalog.products.dealer_orderable":                "Отворен за поръчки от дилъри",
 	"catalog.services.name":                            "Име на услугата",
 	"catalog.services.category":                        "Категория",
 	"catalog.services.code":                            "Код на услугата",

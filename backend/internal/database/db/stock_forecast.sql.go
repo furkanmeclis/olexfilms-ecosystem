@@ -1094,7 +1094,7 @@ func (q *Queries) ListStockForecastOrganizations(ctx context.Context, organizati
 }
 
 const listStockForecastProductsForOrg = `-- name: ListStockForecastProductsForOrg :many
-SELECT DISTINCT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct
+SELECT DISTINCT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable
 FROM products p
 WHERE p.brand_id = $1
   AND p.active
@@ -1162,6 +1162,7 @@ func (q *Queries) ListStockForecastProductsForOrg(ctx context.Context, arg ListS
 			&i.RollWidthCm,
 			&i.MinCutMeters,
 			&i.WastePct,
+			&i.DealerOrderable,
 		); err != nil {
 			return nil, err
 		}

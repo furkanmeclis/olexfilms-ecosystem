@@ -116,6 +116,7 @@
   "codes.ORDER_NOT_FULLY_ASSIGNED": "请先完整分配每一行。",
   "codes.ORDER_STOCK_UNAVAILABLE": "此次发货的库存变动被拒绝。",
   "codes.PRICE_NOT_FOUND": "该产品没有订单币种的价格。",
+  "codes.PRODUCT_NOT_ORDERABLE": "该产品不对经销商订购开放；只有总部可以为您将其加入订单。",
   "codes.RATE_NOT_FOUND": "没有可锁定的订单币种汇率。",
   "codes.CUSTOMER_ANONYMIZED": "该客户已匿名化，无法更改。",
   "codes.CUSTOMER_INACTIVE": "客户账户未激活。",

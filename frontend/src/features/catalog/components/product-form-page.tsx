@@ -200,6 +200,11 @@ export function ProductFormPage({
                 label={t("catalog.fields.active")}
                 disabled={locked.has("is_active")}
               />
+              <AppSwitch
+                name="dealer_orderable"
+                label={t("catalog.fields.dealer_orderable")}
+                description={t("catalog.products.dealer_orderable_hint")}
+              />
             </FormSection>
 
             <FormSection

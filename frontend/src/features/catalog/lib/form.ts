@@ -105,6 +105,7 @@ export function productFormSchema(t: Translate) {
       .string()
       .max(20000, t("catalog.validation.too_long", { max: 20000 })),
     active: z.boolean(),
+    dealer_orderable: z.boolean(),
   });
 }
 
@@ -128,6 +129,7 @@ export function productDefaults(p?: CatalogProduct | null): ProductFormValues {
         : String(p.micron_thickness),
     description_md: p?.description_md ?? "",
     active: p?.active ?? true,
+    dealer_orderable: p?.dealer_orderable ?? true,
   };
 }
 
@@ -150,5 +152,6 @@ export function productInput(v: ProductFormValues): CatalogProductInput {
     micron_thickness: micron === "" ? null : Number(micron),
     description_md: v.description_md,
     active: v.active,
+    dealer_orderable: v.dealer_orderable,
   };
 }

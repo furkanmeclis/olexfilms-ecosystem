@@ -79,14 +79,17 @@ WHERE brand_id = sqlc.arg(brand_id)
 INSERT INTO products (
     organization_id, brand_id, category_id, sku, name, description_md,
     warranty_duration_months, micron_thickness, images, unit_type,
-    uses_fixed_barcode, active, external_id, connection_id, locked_fields
+    uses_fixed_barcode, active, external_id, connection_id, locked_fields,
+    dealer_orderable
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(category_id), sqlc.arg(sku),
     sqlc.arg(name), sqlc.arg(description_md), sqlc.narg(warranty_duration_months),
     sqlc.narg(micron_thickness), sqlc.arg(images), sqlc.arg(unit_type),
     sqlc.arg(uses_fixed_barcode), sqlc.arg(active), sqlc.narg(external_id),
-    sqlc.narg(connection_id), sqlc.narg(locked_fields)
+    sqlc.narg(connection_id), sqlc.narg(locked_fields),
+    -- TEC-1061: NULL keeps the column default (open to dealer orders).
+    COALESCE(sqlc.narg(dealer_orderable)::bool, true)
 )
 RETURNING *;
 
@@ -115,7 +118,8 @@ SET category_id = sqlc.arg(category_id),
     images = sqlc.arg(images),
     unit_type = sqlc.arg(unit_type),
     uses_fixed_barcode = sqlc.arg(uses_fixed_barcode),
-    active = sqlc.arg(active)
+    active = sqlc.arg(active),
+    dealer_orderable = sqlc.arg(dealer_orderable)
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
 
@@ -144,6 +148,7 @@ WHERE p.brand_id = sqlc.arg(brand_id)
     OR p.unit_type = ANY (sqlc.narg(unit_types)::text[])
   )
   AND (sqlc.narg(uses_fixed_barcode)::bool IS NULL OR p.uses_fixed_barcode = sqlc.narg(uses_fixed_barcode)::bool)
+  AND (sqlc.narg(dealer_orderable)::bool IS NULL OR p.dealer_orderable = sqlc.narg(dealer_orderable)::bool)
   AND (sqlc.narg(warranty_min)::float8 IS NULL OR p.warranty_duration_months >= sqlc.narg(warranty_min)::float8)
   AND (sqlc.narg(warranty_max)::float8 IS NULL OR p.warranty_duration_months <= sqlc.narg(warranty_max)::float8)
   AND (sqlc.narg(micron_min)::float8 IS NULL OR p.micron_thickness >= sqlc.narg(micron_min)::float8)
@@ -177,10 +182,10 @@ ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'micron_thickness' THEN p.micron_thickness END ASC NULLS LAST,
   CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'micron_thickness' THEN p.micron_thickness END DESC NULLS LAST,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active END
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active WHEN 'dealer_orderable' THEN p.dealer_orderable END
   END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool THEN
-    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active END
+    CASE sqlc.arg(sort_key)::text WHEN 'active' THEN p.active WHEN 'dealer_orderable' THEN p.dealer_orderable END
   END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
     CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN p.created_at WHEN 'updated_at' THEN p.updated_at END
@@ -205,6 +210,7 @@ WHERE p.brand_id = sqlc.arg(brand_id)
     OR p.unit_type = ANY (sqlc.narg(unit_types)::text[])
   )
   AND (sqlc.narg(uses_fixed_barcode)::bool IS NULL OR p.uses_fixed_barcode = sqlc.narg(uses_fixed_barcode)::bool)
+  AND (sqlc.narg(dealer_orderable)::bool IS NULL OR p.dealer_orderable = sqlc.narg(dealer_orderable)::bool)
   AND (sqlc.narg(warranty_min)::float8 IS NULL OR p.warranty_duration_months >= sqlc.narg(warranty_min)::float8)
   AND (sqlc.narg(warranty_max)::float8 IS NULL OR p.warranty_duration_months <= sqlc.narg(warranty_max)::float8)
   AND (sqlc.narg(micron_min)::float8 IS NULL OR p.micron_thickness >= sqlc.narg(micron_min)::float8)
@@ -325,5 +331,12 @@ ORDER BY sort, name, id;
 UPDATE products
 SET default_roll_meters = sqlc.narg(default_roll_meters), roll_width_cm = sqlc.narg(roll_width_cm),
     min_cut_meters = sqlc.narg(min_cut_meters), waste_pct = sqlc.narg(waste_pct)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
+-- name: SetProductDealerOrderableByUUID :one
+-- TEC-1061: bulk engine adapter (one product, logged + undoable).
+UPDATE products
+SET dealer_orderable = sqlc.arg(dealer_orderable)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;

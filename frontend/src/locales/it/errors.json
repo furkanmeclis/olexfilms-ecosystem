@@ -116,6 +116,7 @@
   "codes.ORDER_NOT_FULLY_ASSIGNED": "Prima ogni riga deve essere assegnata completamente.",
   "codes.ORDER_STOCK_UNAVAILABLE": "Il movimento di magazzino per questa spedizione è stato rifiutato.",
   "codes.PRICE_NOT_FOUND": "Nessun prezzo per questo prodotto nella valuta dell'ordine.",
+  "codes.PRODUCT_NOT_ORDERABLE": "Questo prodotto non è ordinabile dai rivenditori; solo la sede centrale può aggiungerlo a un ordine per te.",
   "codes.RATE_NOT_FOUND": "Nessun tasso di cambio disponibile da congelare per la valuta dell'ordine.",
   "codes.CUSTOMER_ANONYMIZED": "Il cliente è anonimizzato e non può essere modificato.",
   "codes.CUSTOMER_INACTIVE": "L'account cliente non è attivo.",

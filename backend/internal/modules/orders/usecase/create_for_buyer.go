@@ -130,7 +130,9 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return fmt.Errorf("orders: brand: %w", err)
 		}
-		lines, err := resolveLines(ctx, q, seller.BrandID, in.Items)
+		// TEC-1061: the center may add products closed to dealer orders
+		// (plexi set gifts, samples).
+		lines, err := resolveLines(ctx, q, seller.BrandID, in.Items, lineRules{})
 		if err != nil {
 			return err
 		}

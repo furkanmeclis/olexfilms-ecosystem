@@ -274,6 +274,7 @@ var esCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Precio de compra",
 	"catalog.products.recommended_price":               "Precio de venta recomendado",
 	"catalog.products.uses_fixed_barcode":              "Código de barras fijo",
+	"catalog.products.dealer_orderable":                "Disponible para pedidos de concesionarios",
 	"catalog.services.name":                            "Nombre del servicio",
 	"catalog.services.category":                        "Categoría",
 	"catalog.services.code":                            "Código del servicio",

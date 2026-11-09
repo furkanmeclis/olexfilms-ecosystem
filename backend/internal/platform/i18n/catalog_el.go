@@ -274,6 +274,7 @@ var elCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Τιμή αγοράς",
 	"catalog.products.recommended_price":               "Προτεινόμενη τιμή πώλησης",
 	"catalog.products.uses_fixed_barcode":              "Σταθερό barcode",
+	"catalog.products.dealer_orderable":                "Διαθέσιμο για παραγγελίες αντιπροσώπων",
 	"catalog.services.name":                            "Όνομα υπηρεσίας",
 	"catalog.services.category":                        "Κατηγορία",
 	"catalog.services.code":                            "Κωδικός υπηρεσίας",

@@ -116,6 +116,7 @@
   "codes.ORDER_NOT_FULLY_ASSIGNED": "Önce her kalem tamamen karşılanmalı.",
   "codes.ORDER_STOCK_UNAVAILABLE": "Bu sevkiyat için stok hareketi reddedildi.",
   "codes.PRICE_NOT_FOUND": "Bu ürün için sipariş para biriminde fiyat yok.",
+  "codes.PRODUCT_NOT_ORDERABLE": "Bu ürün bayi siparişine kapalı; yalnızca merkez sizin adınıza siparişe ekleyebilir.",
   "codes.RATE_NOT_FOUND": "Sipariş para birimi için dondurulacak kur bulunamadı.",
   "codes.CUSTOMER_ANONYMIZED": "Müşteri anonimleştirilmiş, değiştirilemez.",
   "codes.CUSTOMER_INACTIVE": "Müşteri hesabı aktif değil.",
