@@ -305,22 +305,27 @@ WHERE o.brand_id = $1
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($11::uuid[])))
   AND ($12::numeric IS NULL OR o.total >= $12::numeric)
   AND ($13::numeric IS NULL OR o.total <= $13::numeric)
+  AND (COALESCE(cardinality($14::uuid[]), 0) = 0
+       OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
+                                    WHERE sw.organization_id = o.seller_org_id
+                                      AND sw.uuid = ANY ($14::uuid[])))
 `
 
 type CountOrdersFilteredParams struct {
-	BrandID         int64              `json:"brand_id"`
-	SellerOrgID     pgtype.Int8        `json:"seller_org_id"`
-	BuyerOrgID      pgtype.Int8        `json:"buyer_org_id"`
-	OrgIds          []int64            `json:"org_ids"`
-	Statuses        []string           `json:"statuses"`
-	InvoiceStatuses []string           `json:"invoice_statuses"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
-	Q               pgtype.Text        `json:"q"`
-	SellerUuids     []uuid.UUID        `json:"seller_uuids"`
-	BuyerUuids      []uuid.UUID        `json:"buyer_uuids"`
-	TotalMin        pgtype.Numeric     `json:"total_min"`
-	TotalMax        pgtype.Numeric     `json:"total_max"`
+	BrandID              int64              `json:"brand_id"`
+	SellerOrgID          pgtype.Int8        `json:"seller_org_id"`
+	BuyerOrgID           pgtype.Int8        `json:"buyer_org_id"`
+	OrgIds               []int64            `json:"org_ids"`
+	Statuses             []string           `json:"statuses"`
+	InvoiceStatuses      []string           `json:"invoice_statuses"`
+	CreatedFrom          pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore        pgtype.Timestamptz `json:"created_before"`
+	Q                    pgtype.Text        `json:"q"`
+	SellerUuids          []uuid.UUID        `json:"seller_uuids"`
+	BuyerUuids           []uuid.UUID        `json:"buyer_uuids"`
+	TotalMin             pgtype.Numeric     `json:"total_min"`
+	TotalMax             pgtype.Numeric     `json:"total_max"`
+	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
 }
 
 func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error) {
@@ -338,6 +343,7 @@ func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilter
 		arg.BuyerUuids,
 		arg.TotalMin,
 		arg.TotalMax,
+		arg.SellerWarehouseUuids,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -1299,6 +1305,85 @@ func (q *Queries) ListActiveReservationsByItem(ctx context.Context, orderItemID 
 	return items, nil
 }
 
+const listOrderFacts = `-- name: ListOrderFacts :many
+SELECT o.id AS order_id,
+       COALESCE((SELECT SUM(i.quantity) FROM order_items i WHERE i.order_id = o.id), 0)::bigint AS total_quantity,
+       (SELECT SUM(i.meters) FROM order_items i WHERE i.order_id = o.id)::numeric AS total_meters,
+       (SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id)::bigint AS line_count,
+       w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       w.is_primary AS warehouse_is_primary,
+       (CASE WHEN la.to_status IS NULL OR la.from_status IS NULL THEN 'created'
+             ELSE la.to_status END)::text AS last_action,
+       COALESCE(la.created_at, o.created_at)::timestamptz AS last_at,
+       u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM orders o
+LEFT JOIN warehouses w ON w.id = o.seller_warehouse_id
+LEFT JOIN LATERAL (
+    SELECT h.actor_user_id, h.from_status, h.to_status, h.created_at
+    FROM order_status_history h
+    WHERE h.order_id = o.id AND h.actor_user_id IS NOT NULL
+    ORDER BY h.created_at DESC, h.id DESC
+    LIMIT 1
+) la ON TRUE
+LEFT JOIN users u ON u.id = COALESCE(la.actor_user_id, o.created_by_user_id)
+WHERE o.id = ANY ($1::bigint[])
+`
+
+type ListOrderFactsRow struct {
+	OrderID            int64              `json:"order_id"`
+	TotalQuantity      int64              `json:"total_quantity"`
+	TotalMeters        pgtype.Numeric     `json:"total_meters"`
+	LineCount          int64              `json:"line_count"`
+	WarehouseUuid      pgtype.UUID        `json:"warehouse_uuid"`
+	WarehouseCode      pgtype.Text        `json:"warehouse_code"`
+	WarehouseName      pgtype.Text        `json:"warehouse_name"`
+	WarehouseIsPrimary pgtype.Bool        `json:"warehouse_is_primary"`
+	LastAction         string             `json:"last_action"`
+	LastAt             pgtype.Timestamptz `json:"last_at"`
+	ActorUuid          pgtype.UUID        `json:"actor_uuid"`
+	ActorName          pgtype.Text        `json:"actor_name"`
+	ActorSurname       pgtype.Text        `json:"actor_surname"`
+}
+
+// TEC-1054: list facts of a page of orders: the line amounts (pieces and
+// roll meters apart), the seller warehouse and the last actor. The last
+// actor is the user of the latest status change with an actor, else the
+// creator; last_action is that change's new status, or "created" for the
+// first row (no from status) and for an order without an actor row.
+func (q *Queries) ListOrderFacts(ctx context.Context, orderIds []int64) ([]ListOrderFactsRow, error) {
+	rows, err := q.db.Query(ctx, listOrderFacts, orderIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrderFactsRow{}
+	for rows.Next() {
+		var i ListOrderFactsRow
+		if err := rows.Scan(
+			&i.OrderID,
+			&i.TotalQuantity,
+			&i.TotalMeters,
+			&i.LineCount,
+			&i.WarehouseUuid,
+			&i.WarehouseCode,
+			&i.WarehouseName,
+			&i.WarehouseIsPrimary,
+			&i.LastAction,
+			&i.LastAt,
+			&i.ActorUuid,
+			&i.ActorName,
+			&i.ActorSurname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrderItemUnitsByItem = `-- name: ListOrderItemUnitsByItem :many
 SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at FROM order_item_units
 WHERE order_item_id = $1
@@ -1559,46 +1644,51 @@ WHERE o.brand_id = $1
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($11::uuid[])))
   AND ($12::numeric IS NULL OR o.total >= $12::numeric)
   AND ($13::numeric IS NULL OR o.total <= $13::numeric)
-  AND ($14::uuid[] IS NULL OR o.uuid = ANY ($14::uuid[]))
+  AND (COALESCE(cardinality($14::uuid[]), 0) = 0
+       OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
+                                    WHERE sw.organization_id = o.seller_org_id
+                                      AND sw.uuid = ANY ($14::uuid[])))
+  AND ($15::uuid[] IS NULL OR o.uuid = ANY ($15::uuid[]))
 ORDER BY
-  CASE WHEN NOT $15::bool THEN CASE $16::text WHEN 'order_no' THEN o.order_no END END ASC,
-  CASE WHEN $15::bool THEN CASE $16::text WHEN 'order_no' THEN o.order_no END END DESC,
-  CASE WHEN NOT $15::bool THEN CASE $16::text WHEN 'status' THEN
+  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'order_no' THEN o.order_no END END ASC,
+  CASE WHEN $16::bool THEN CASE $17::text WHEN 'order_no' THEN o.order_no END END DESC,
+  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END ASC,
-  CASE WHEN $15::bool THEN CASE $16::text WHEN 'status' THEN
+  CASE WHEN $16::bool THEN CASE $17::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END DESC,
-  CASE WHEN NOT $15::bool THEN CASE $16::text WHEN 'total' THEN o.total END END ASC,
-  CASE WHEN $15::bool THEN CASE $16::text WHEN 'total' THEN o.total END END DESC,
-  CASE WHEN NOT $15::bool THEN CASE $16::text WHEN 'created_at' THEN o.created_at END END ASC,
-  CASE WHEN $15::bool THEN CASE $16::text WHEN 'created_at' THEN o.created_at END END DESC,
-  CASE WHEN $15::bool THEN o.id END DESC,
+  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'total' THEN o.total END END ASC,
+  CASE WHEN $16::bool THEN CASE $17::text WHEN 'total' THEN o.total END END DESC,
+  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'created_at' THEN o.created_at END END ASC,
+  CASE WHEN $16::bool THEN CASE $17::text WHEN 'created_at' THEN o.created_at END END DESC,
+  CASE WHEN $16::bool THEN o.id END DESC,
   o.id ASC
-LIMIT $18 OFFSET $17
+LIMIT $19 OFFSET $18
 `
 
 type ListOrdersFilteredParams struct {
-	BrandID         int64              `json:"brand_id"`
-	SellerOrgID     pgtype.Int8        `json:"seller_org_id"`
-	BuyerOrgID      pgtype.Int8        `json:"buyer_org_id"`
-	OrgIds          []int64            `json:"org_ids"`
-	Statuses        []string           `json:"statuses"`
-	InvoiceStatuses []string           `json:"invoice_statuses"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
-	Q               pgtype.Text        `json:"q"`
-	SellerUuids     []uuid.UUID        `json:"seller_uuids"`
-	BuyerUuids      []uuid.UUID        `json:"buyer_uuids"`
-	TotalMin        pgtype.Numeric     `json:"total_min"`
-	TotalMax        pgtype.Numeric     `json:"total_max"`
-	Uuids           []uuid.UUID        `json:"uuids"`
-	SortDesc        bool               `json:"sort_desc"`
-	SortKey         string             `json:"sort_key"`
-	RowOffset       int32              `json:"row_offset"`
-	RowLimit        int32              `json:"row_limit"`
+	BrandID              int64              `json:"brand_id"`
+	SellerOrgID          pgtype.Int8        `json:"seller_org_id"`
+	BuyerOrgID           pgtype.Int8        `json:"buyer_org_id"`
+	OrgIds               []int64            `json:"org_ids"`
+	Statuses             []string           `json:"statuses"`
+	InvoiceStatuses      []string           `json:"invoice_statuses"`
+	CreatedFrom          pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore        pgtype.Timestamptz `json:"created_before"`
+	Q                    pgtype.Text        `json:"q"`
+	SellerUuids          []uuid.UUID        `json:"seller_uuids"`
+	BuyerUuids           []uuid.UUID        `json:"buyer_uuids"`
+	TotalMin             pgtype.Numeric     `json:"total_min"`
+	TotalMax             pgtype.Numeric     `json:"total_max"`
+	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
+	Uuids                []uuid.UUID        `json:"uuids"`
+	SortDesc             bool               `json:"sort_desc"`
+	SortKey              string             `json:"sort_key"`
+	RowOffset            int32              `json:"row_offset"`
+	RowLimit             int32              `json:"row_limit"`
 }
 
 // TEC-373 (DT-BE-5): the order list. One query serves every side:
@@ -1623,6 +1713,7 @@ func (q *Queries) ListOrdersFiltered(ctx context.Context, arg ListOrdersFiltered
 		arg.BuyerUuids,
 		arg.TotalMin,
 		arg.TotalMax,
+		arg.SellerWarehouseUuids,
 		arg.Uuids,
 		arg.SortDesc,
 		arg.SortKey,

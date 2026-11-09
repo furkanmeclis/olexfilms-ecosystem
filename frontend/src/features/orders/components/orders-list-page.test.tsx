@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { act, createElement, type ReactElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Order } from "@/features/orders/services/orders.service";
@@ -63,6 +64,15 @@ vi.mock("@/hooks/use-debounce", () => ({
 vi.mock("@/features/orders/services/orders.service", async (orig) => ({
   ...(await orig<object>()),
   ordersService: api,
+}));
+vi.mock("@/features/warehouse/services/warehouse.service", async (orig) => ({
+  ...(await orig<object>()),
+  warehouseService: {
+    listWarehouses: () =>
+      Promise.resolve({
+        items: [{ uuid: "w1", name: "Ana depo", active: true }],
+      }),
+  },
 }));
 vi.mock("@/features/io/components/export-menu", () => ({
   ExportMenu: (props: Record<string, unknown>) => {
@@ -194,6 +204,12 @@ function order(over: Partial<Order> = {}): Order {
     tracking_url: null,
     has_shipping_document: false,
     has_receipt_document: false,
+    total_quantity: 1,
+    total_meters: null,
+    line_count: 1,
+    live_try_rate: null,
+    live_total_try: null,
+    last_activity: null,
     created_at: "2026-10-01T08:00:00Z",
     updated_at: "2026-10-01T08:00:00Z",
     available_transitions: [],
@@ -208,6 +224,72 @@ function rowActions(o: Order): string[] {
   }>;
   return cell({ row: { original: o } }).props.actions.map((a) => a.id);
 }
+
+describe("OrdersListPage (TEC-1054 list facts)", () => {
+  const cellHtml = (id: string, o: Order) => {
+    const cell = column(id)?.cell as (ctx: unknown) => ReactElement;
+    return renderToStaticMarkup(cell({ row: { original: o } }));
+  };
+
+  it("filters by the own warehouses and shows amount and handler", async () => {
+    state.grants.add("warehouse.read");
+    await render();
+    const wh = column("seller_warehouse");
+    expect(wh?.meta?.param).toBe("seller_warehouse");
+    expect(wh?.enableColumnFilter).toBe(true);
+    expect(wh?.meta?.filterOptions).toEqual([
+      { value: "w1", label: "Ana depo" },
+    ]);
+    await act(async () => {
+      lastTable().state?.onColumnFiltersChange?.([
+        { id: "seller_warehouse", value: ["w1"] },
+      ]);
+    });
+    await flush();
+    expect(lastQuery()?.seller_warehouse).toBe("w1");
+    const o = order({
+      total_quantity: 4,
+      total_meters: "12.50",
+      last_activity: {
+        action: "preparing",
+        at: "2026-10-01T09:00:00Z",
+        user: { uuid: "u1", name: "Melike Murat" },
+      },
+    });
+    expect(cellHtml("total_quantity", o)).toContain("4");
+    expect(cellHtml("total_quantity", o)).toContain(
+      "orders.list.quantity_meters",
+    );
+    const handler = cellHtml("handled_by", o);
+    expect(handler).toContain("Melike Murat");
+    expect(handler).toContain("orders.status.preparing");
+  });
+
+  it("shows the live TRY amount only with a price grant and a foreign currency", async () => {
+    const usd = order({ currency: "USD", live_total_try: "4200.00" });
+    // TEC-1050: without a price grant the whole total column is gone.
+    state.grants.delete("pricing.sale.read");
+    await render();
+    expect(column("total")).toBeUndefined();
+    state.grants.add("pricing.purchase.read");
+    await render();
+    expect(cellHtml("total", usd)).toContain("order-live-try");
+    expect(
+      cellHtml("total", order({ currency: "TRY", live_total_try: "10.00" })),
+    ).not.toContain("order-live-try");
+  });
+
+  it("has no warehouse column on the outgoing tab", async () => {
+    await render();
+    await act(async () => {
+      (
+        container.querySelector("[data-testid=side-buyer]") as HTMLElement
+      ).click();
+    });
+    await flush();
+    expect(column("seller_warehouse")).toBeUndefined();
+  });
+});
 
 describe("OrdersListPage (TEC-374 DataTable)", () => {
   it("maps column filters and sort to the list params", async () => {

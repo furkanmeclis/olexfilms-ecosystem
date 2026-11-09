@@ -56,3 +56,28 @@ func TestParseListFilter(t *testing.T) {
 		t.Fatalf("list values = %v", got)
 	}
 }
+
+// TEC-1054: seller_warehouse is a CSV of uuids that keeps the list on SQL;
+// the live TRY total is total × today's rate, empty without a rate.
+func TestListSellerWarehouseAndLiveTotal(t *testing.T) {
+	f, err := ParseListFilter(url.Values{
+		"seller_warehouse": {"6f1f9c2e-6b0e-4d0f-9d55-6d2a1d7b0c11,7f1f9c2e-6b0e-4d0f-9d55-6d2a1d7b0c12"}, "q": {"x"},
+	})
+	if err != nil || len(f.SellerWarehouseUUIDs) != 2 || !f.sqlOnly() {
+		t.Fatalf("filter = %+v, %v", f, err)
+	}
+	var ve *apiquery.ValidationError
+	if _, err := ParseListFilter(url.Values{"seller_warehouse": {"nope"}}); !errors.As(err, &ve) {
+		t.Fatalf("want validation error, got %v", err)
+	}
+	if got := ListValues(map[string]string{"seller_warehouse": "a"}); got.Get("seller_warehouse") != "a" {
+		t.Fatalf("export keeps seller_warehouse: %v", got)
+	}
+	rate := "34.5678"
+	if got := liveTotal("100.50", &rate); got == nil || *got != "3474.06" {
+		t.Fatalf("live total = %v", got)
+	}
+	if liveTotal("100.50", nil) != nil {
+		t.Fatal("no rate must give no live total")
+	}
+}

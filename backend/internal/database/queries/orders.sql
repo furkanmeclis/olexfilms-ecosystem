@@ -163,6 +163,10 @@ WHERE o.brand_id = sqlc.arg(brand_id)
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
   AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
   AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric)
+  AND (COALESCE(cardinality(sqlc.narg(seller_warehouse_uuids)::uuid[]), 0) = 0
+       OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
+                                    WHERE sw.organization_id = o.seller_org_id
+                                      AND sw.uuid = ANY (sqlc.narg(seller_warehouse_uuids)::uuid[])))
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'order_no' THEN o.order_no END END ASC,
@@ -204,7 +208,39 @@ WHERE o.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(buyer_uuids)::uuid[]), 0) = 0
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
   AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
-  AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric);
+  AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric)
+  AND (COALESCE(cardinality(sqlc.narg(seller_warehouse_uuids)::uuid[]), 0) = 0
+       OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
+                                    WHERE sw.organization_id = o.seller_org_id
+                                      AND sw.uuid = ANY (sqlc.narg(seller_warehouse_uuids)::uuid[])));
+
+-- TEC-1054: list facts of a page of orders: the line amounts (pieces and
+-- roll meters apart), the seller warehouse and the last actor. The last
+-- actor is the user of the latest status change with an actor, else the
+-- creator; last_action is that change's new status, or "created" for the
+-- first row (no from status) and for an order without an actor row.
+-- name: ListOrderFacts :many
+SELECT o.id AS order_id,
+       COALESCE((SELECT SUM(i.quantity) FROM order_items i WHERE i.order_id = o.id), 0)::bigint AS total_quantity,
+       (SELECT SUM(i.meters) FROM order_items i WHERE i.order_id = o.id)::numeric AS total_meters,
+       (SELECT COUNT(*) FROM order_items i WHERE i.order_id = o.id)::bigint AS line_count,
+       w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       w.is_primary AS warehouse_is_primary,
+       (CASE WHEN la.to_status IS NULL OR la.from_status IS NULL THEN 'created'
+             ELSE la.to_status END)::text AS last_action,
+       COALESCE(la.created_at, o.created_at)::timestamptz AS last_at,
+       u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
+FROM orders o
+LEFT JOIN warehouses w ON w.id = o.seller_warehouse_id
+LEFT JOIN LATERAL (
+    SELECT h.actor_user_id, h.from_status, h.to_status, h.created_at
+    FROM order_status_history h
+    WHERE h.order_id = o.id AND h.actor_user_id IS NOT NULL
+    ORDER BY h.created_at DESC, h.id DESC
+    LIMIT 1
+) la ON TRUE
+LEFT JOIN users u ON u.id = COALESCE(la.actor_user_id, o.created_by_user_id)
+WHERE o.id = ANY (sqlc.arg(order_ids)::bigint[]);
 
 -- ---------------------------------------------------------------------------
 -- Order lines.

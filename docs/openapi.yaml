@@ -25243,6 +25243,13 @@ paths:
           in: query
           description: Comma separated buyer organization uuids (any of).
           schema: { type: string }
+        - name: seller_warehouse
+          in: query
+          description: >-
+            TEC-1054. Comma separated seller warehouse uuids (any of): the
+            orders falling into these warehouses (the warehouse preparation
+            list). A bad uuid → 400.
+          schema: { type: string }
         - name: total_min
           in: query
           description: Inclusive lower bound of the order total.
@@ -46830,9 +46837,39 @@ components:
         - has_receipt_document
         - created_by_seller
         - invoice_status
+        - total_quantity
+        - total_meters
+        - line_count
+        - live_try_rate
+        - live_total_try
+        - last_activity
       properties:
         uuid: { type: string, format: uuid }
         order_no: { type: string, example: ORD-00000001 }
+        total_quantity:
+          type: integer
+          format: int64
+          description: TEC-1054. Sum of the piece lines' quantities (roll lines are in total_meters)
+        total_meters:
+          type: [string, "null"]
+          example: "12.50"
+          description: TEC-1054. Sum of the roll lines' meters; null without a roll line
+        line_count: { type: integer, format: int64, description: Number of lines (TEC-1054) }
+        live_try_rate:
+          type: [string, "null"]
+          description: >-
+            TEC-1054. Today's order currency → TRY rate ("1" for a TRY
+            order); null without a stored rate. Display only: the books use
+            try_rate, frozen at approval.
+        live_total_try:
+          type: [string, "null"]
+          example: "4200.00"
+          description: TEC-1054. total × live_try_rate, rounded to cents; null without a rate
+        last_activity:
+          description: TEC-1054. The latest recorded step of the order and the user who took it
+          oneOf:
+            - $ref: "#/components/schemas/OrderLastActivity"
+            - type: "null"
         invoice_status: { $ref: "#/components/schemas/OrderInvoiceStatus" }
         invoices:
           type: array
@@ -46845,8 +46882,8 @@ components:
           description: >-
             TEC-1028: the seller warehouse the order falls into (set at
             approval: the warehouse picked on creation, else the seller's
-            primary warehouse). Seller side only, detail responses; null
-            otherwise.
+            primary warehouse). Seller side only (list rows too since
+            TEC-1054); null otherwise.
           oneOf:
             - $ref: "#/components/schemas/OrderSellerWarehouse"
             - type: "null"
@@ -46919,6 +46956,28 @@ components:
           description: The method's tracking URL template filled with tracking_no
         has_shipping_document: { type: boolean, description: The shipping note PDF is stored }
         has_receipt_document: { type: boolean, description: The buyer's delivery receipt is stored }
+
+    OrderLastActivity:
+      type: object
+      description: >-
+        TEC-1054: the latest recorded step of an order. action is created
+        or the status the order moved to; user is the user who took it
+        (the creator for created), null for a system or migrated step.
+      required: [action, at, user]
+      properties:
+        action: { type: string, example: preparing }
+        at: { type: string, format: date-time }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+
+    OrderUserRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string, description: First name and surname }
 
     OrderRollSplit:
       type: object
