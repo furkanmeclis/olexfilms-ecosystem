@@ -30,6 +30,7 @@ export type ServiceStatus = Schemas["ServiceStatus"];
 export type ServiceStatusLog = Schemas["ServiceStatusLog"];
 export type ServiceImage = Schemas["ServiceImage"];
 export type ServiceWarranty = Schemas["ServiceWarranty"];
+export type ServiceListStats = Schemas["ServiceListStats"];
 
 /**
  * GET /v1/services params (TEC-183, TEC-377): limit / offset, one sort field
@@ -68,6 +69,12 @@ export const serviceWizardService = {
   listServices(params: ServiceListQuery) {
     return platformRequest<Page<Service>>("GET", "/v1/services", {
       query: params,
+    });
+  },
+  /** TEC-1075: summary cards above the list (same scope as the list). */
+  listStats(organizationUuid?: string | null) {
+    return platformRequest<ServiceListStats>("GET", "/v1/services/stats", {
+      query: organizationUuid ? { organization_uuid: organizationUuid } : {},
     });
   },
   getService(uuid: string) {
@@ -167,6 +174,8 @@ export const serviceWizardKeys = {
   all: ["service-wizard"] as const,
   list: (params: ServiceListQuery) =>
     ["service-wizard", "list", params] as const,
+  listStats: (organizationUuid: string | null) =>
+    ["service-wizard", "list-stats", organizationUuid] as const,
   service: (uuid: string) => ["service-wizard", "service", uuid] as const,
   customers: (q: string) => ["service-wizard", "customers", q] as const,
   vehicles: (customerUuid: string) =>

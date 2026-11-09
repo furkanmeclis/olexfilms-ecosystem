@@ -369,5 +369,14 @@
   "network_scope.network": "Цялата мрежа",
   "wizard.performer": "Изпълнител",
   "wizard.performer_own": "{{name}} (нашият сервизен пункт)",
-  "wizard.performer_hint": "Ако изберете дилър, услугата се открива на негово име и действието се записва."
+  "wizard.performer_hint": "Ако изберете дилър, услугата се открива на негово име и действието се записва.",
+  "list.stats.total": "Общо услуги",
+  "list.stats.total_hint": "Включително {{cancelled}} отменени",
+  "list.stats.this_month": "Открити този месец",
+  "list.stats.this_month_hint": "От началото на месеца",
+  "list.stats.in_progress": "В процес",
+  "list.stats.in_progress_hint": "Чакащи, в обработка, готови · {{draft}} чернови",
+  "list.stats.completed": "Завършени",
+  "list.stats.active_warranties": "Активни гаранции",
+  "list.stats.warranties_hint": "Общо {{total}} гаранции"
 }

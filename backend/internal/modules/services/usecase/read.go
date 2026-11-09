@@ -147,11 +147,15 @@ type CertificateUser struct {
 
 // ServiceView is a service as the API returns it.
 type ServiceView struct {
-	UUID             uuid.UUID        `json:"uuid"`
-	ServiceNo        string           `json:"service_no"`
-	Status           string           `json:"status"`
-	StatusLabel      string           `json:"status_label"`
-	Organization     OrgRef           `json:"organization"`
+	UUID         uuid.UUID `json:"uuid"`
+	ServiceNo    string    `json:"service_no"`
+	Status       string    `json:"status"`
+	StatusLabel  string    `json:"status_label"`
+	Organization OrgRef    `json:"organization"`
+	// AppliedBy names who applied the service (TEC-1075): the center's
+	// service point name (AFM Florya) for the center's own services, else
+	// the organization name.
+	AppliedBy        string           `json:"applied_by"`
 	Customer         CustomerRef      `json:"customer"`
 	VehicleUUID      uuid.UUID        `json:"vehicle_uuid"`
 	CarBrand         Ref              `json:"car_brand"`
@@ -243,6 +247,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		UUID: svc.Uuid, ServiceNo: svc.ServiceNo, Status: svc.Status,
 		StatusLabel:  i18n.Translate(loc, StatusLabelKey(svc.Status)),
 		Organization: OrgRef{UUID: refs.OrganizationUuid, Name: refs.OrganizationName, Type: refs.OrganizationType},
+		AppliedBy:    refs.AppliedByName,
 		Customer:     cust, VehicleUUID: refs.VehicleUuid,
 		CarBrand: Ref{UUID: refs.CarBrandUuid, Name: refs.CarBrandName},
 		CarModel: Ref{UUID: refs.CarModelUuid, Name: refs.CarModelName},

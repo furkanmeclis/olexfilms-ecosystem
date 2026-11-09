@@ -369,5 +369,14 @@
   "network_scope.network": "Bütün şəbəkə",
   "wizard.performer": "İcra edən",
   "wizard.performer_own": "{{name}} (öz xidmət nöqtəmiz)",
-  "wizard.performer_hint": "Diler seçsəniz, xidmət onun adına açılır və əməliyyat qeydə alınır."
+  "wizard.performer_hint": "Diler seçsəniz, xidmət onun adına açılır və əməliyyat qeydə alınır.",
+  "list.stats.total": "Ümumi xidmət",
+  "list.stats.total_hint": "{{cancelled}} ləğv daxil",
+  "list.stats.this_month": "Bu ay açılan",
+  "list.stats.this_month_hint": "Ayın əvvəlindən bəri",
+  "list.stats.in_progress": "Davam edən",
+  "list.stats.in_progress_hint": "Gözləyən, emalda, hazır · {{draft}} qaralama",
+  "list.stats.completed": "Tamamlanan",
+  "list.stats.active_warranties": "Aktiv zəmanət",
+  "list.stats.warranties_hint": "Cəmi {{total}} zəmanət"
 }

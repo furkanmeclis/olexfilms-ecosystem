@@ -23297,6 +23297,39 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/services/stats:
+    get:
+      tags: [Services]
+      operationId: getServiceListStats
+      summary: Summary cards of the service list
+      description: >-
+        TEC-1075. services.read, same scope as GET /v1/services (organization,
+        subtree, brand, own). Totals per status, the services opened this
+        calendar month (request time zone, K10 default Europe/Istanbul) and
+        the warranty counts of those services (legacy hub
+        ServiceOverviewStatsWidget). `organization_uuid` narrows like the
+        list filter (the center's own / network switch).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: CSV of organization UUIDs (inside the scope).
+          schema: { type: string }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceListStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/services/service-no-availability:
     get:
       tags: [Services]
@@ -45280,6 +45313,7 @@ components:
         - status
         - status_label
         - organization
+        - applied_by
         - customer
         - vehicle_uuid
         - car_brand
@@ -45310,6 +45344,12 @@ components:
         status: { $ref: "#/components/schemas/ServiceStatus" }
         status_label: { type: string }
         organization: { $ref: "#/components/schemas/ServiceOrgRef" }
+        applied_by:
+          type: string
+          description: >-
+            TEC-1075: who applied the service. The center's service point
+            name (e.g. AFM Florya) for the center's own services when its
+            service point is on, else the organization name.
         customer: { $ref: "#/components/schemas/ServiceCustomerRef" }
         vehicle_uuid: { type: string, format: uuid }
         car_brand: { $ref: "#/components/schemas/ServiceRef" }
@@ -45430,6 +45470,34 @@ components:
         service_no: { type: string, description: "The trimmed number" }
         valid: { type: boolean, description: "The number has the allowed shape" }
         available: { type: boolean, description: "Valid and not held by another service, warranty code or alias" }
+
+    ServiceListStats:
+      type: object
+      required: [total, this_month, month_start, by_status, warranties, active_warranties]
+      properties:
+        total: { type: integer, format: int64 }
+        this_month: { type: integer, format: int64, description: Opened since month_start }
+        month_start: { type: string, format: date-time }
+        by_status:
+          type: object
+          required: [draft, pending, processing, ready, completed, cancelled]
+          properties:
+            draft: { type: integer, format: int64 }
+            pending: { type: integer, format: int64 }
+            processing: { type: integer, format: int64 }
+            ready: { type: integer, format: int64 }
+            completed: { type: integer, format: int64 }
+            cancelled: { type: integer, format: int64 }
+        warranties: { type: integer, format: int64 }
+        active_warranties: { type: integer, format: int64, description: Active and not past end_at }
+
+    EnvelopeServiceListStats:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceListStats" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServiceNoAvailability:
       type: object
