@@ -9,17 +9,20 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 
 | No | İş | Not |
 | --- | --- | --- |
-| 000166 | TEC-1047 / TEC-1052 | yalnız gerekirse |
+| 000166 | TEC-1047 / TEC-1052 | KULLANILMADI (boşluk) |
 | 000167 | TEC-1050 | yalnız gerekirse |
-| 000168 | TEC-1052 | 000166'yı TEC-1047 kullanırsa |
+| 000168 | TEC-1052 | KULLANILMADI (boşluk) |
 | 000169 | TEC-1062 | bekleme havuzu |
+| 000170 | TEC-1054 / TEC-1060 | yalnız gerekirse |
+
+Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
 ## 1. Hata ve kritikler
 
 | Madde | Linear | PR | CI | Migration | Durum / not |
 | --- | --- | --- | --- | --- | --- |
-| 7.5 Web+API sabit barkodlu ürün siparişe eklenemiyor | TEC-1047 | | | | ⏳ |
-| 5.2 + 5.10 Web+API depo seçimi, bildirim, aramasız ürün listesi, KALEMLER | TEC-1052 | | | | ⏳ (TEC-1047 dalı üzerine) |
+| 7.5 Web+API sabit barkodlu ürün siparişe eklenemiyor | TEC-1047 | [#508](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/508) | 🟢 | — | kök neden: hazırlamada adetsiz okutma 400, tekrar okutma 409, öneri yalnız konumlu adet; üçü düzeltildi |
+| 5.2 + 5.10 Web+API depo seçimi, bildirim, aramasız ürün listesi, KALEMLER | TEC-1052 | [#510](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/510) | 🟢 | — | #508 üstünde; `self_prepare` ("ben hazırlayacağım") eklendi; ürün popülerlik sıralaması üründe yok, ada göre |
 | 5.4 Web+API depo fiyat görmesin | TEC-1050 | | | | ⏳ |
 | 7 Mobil depo değişince birimler | TEC-1049 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 kök neden: depo seçimi hiçbir listeye gitmiyordu; sipariş listesi depo filtresi backend'de yok → TEC-1054 |
 | 7.5 Mobil | TEC-1048 | [#509](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/509) | 🟢 | — | 🟢 mobil UI engeli yok; depo hazırlamada adet/SKU okutma düzeltildi |
@@ -30,13 +33,13 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 5 Web+API sipariş listesi alanları | TEC-1054 | | | | ⏸ |
+| 5 Web+API sipariş listesi alanları | TEC-1054 | | | 000170? | ⏳ #510 üstünde |
 | 5 + 5.1 Mobil | TEC-1055 | | | | ⏸ |
 | 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | | | | ⏸ |
 | 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | | ⏸ |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
-| 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | | ⏸ |
+| 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | 000170? | ⏳ TEC-1054 üstünde |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | | | | ⏸ |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | | | 000169 | ⏳ |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
