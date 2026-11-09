@@ -29,6 +29,7 @@
   "names.center_accounting": "Счетоводство на централата",
   "names.center_social": "Социални мрежи на централата",
   "names.center_service": "Сервизен персонал на центъра",
+  "names.center_sales": "Търговски представител",
   "names.distributor_owner": "Собственик на дистрибутор",
   "names.distributor_staff": "Персонал на дистрибутор",
   "names.distributor_warehouse_staff": "Складов персонал на дистрибутор",
@@ -59,5 +60,19 @@
   "toast.updated": "Ролята е обновена",
   "toast.deleted": "Ролята е изтрита",
   "labels.custom": "Персонализирана",
-  "fields.created_at": "Създадена"
+  "fields.created_at": "Създадена",
+  "descriptions.center_owner": "Всички отдели на центъра (персонал, склад, счетоводство, социални мрежи, сервизна точка) в една роля.",
+  "descriptions.center_staff": "Услуги, клиенти, поръчки и дилърска мрежа; не вижда цени.",
+  "descriptions.center_warehouse": "Склад, наличности и експедиция; не вижда цени.",
+  "descriptions.center_accounting": "Счетоводство, цени (покупни и продажни) и е-фактури.",
+  "descriptions.center_social": "Лийдове, кампании и социални мрежи.",
+  "descriptions.center_service": "Собствената сервизна точка на центъра: услуги, клиенти, гаранции и срещи; не вижда цени, без склад и счетоводство.",
+  "descriptions.center_sales": "Дилърски поръчки, продажни цени и отстъпки, дилъри, услуги и клиенти (четене) и отчети; без покупни цени, склад и счетоводство.",
+  "descriptions.distributor_owner": "Цени, счетоводство, склад и дилърска мрежа на дистрибутора.",
+  "descriptions.distributor_staff": "Услуги и дилъри от подмрежата.",
+  "descriptions.distributor_warehouse_staff": "Склад и експедиция, вижда дилърите само за четене; не вижда цени.",
+  "descriptions.distributor_accounting": "Счетоводство, цени и отметка „Фактурирано“ на поръчките.",
+  "descriptions.dealer_owner": "Крайни цени, счетоводство и наличности на дилъра.",
+  "descriptions.dealer_staff": "Услугите на дилъра и собствените записи; не вижда цени и счетоводство.",
+  "descriptions.dealer_accounting": "Счетоводство и цени на дилъра."
 }

@@ -29,6 +29,7 @@
   "names.center_accounting": "محاسبة المركز",
   "names.center_social": "التواصل الاجتماعي للمركز",
   "names.center_service": "موظفو خدمة المركز",
+  "names.center_sales": "مندوب مبيعات",
   "names.distributor_owner": "مالك الموزّع",
   "names.distributor_staff": "موظفو الموزّع",
   "names.distributor_warehouse_staff": "موظفو مستودع الموزّع",
@@ -59,5 +60,19 @@
   "toast.updated": "حُدّث الدور",
   "toast.deleted": "حُذف الدور",
   "labels.custom": "مخصص",
-  "fields.created_at": "تاريخ الإنشاء"
+  "fields.created_at": "تاريخ الإنشاء",
+  "descriptions.center_owner": "جميع أقسام المركز (الموظفون، المستودع، المحاسبة، التواصل الاجتماعي، نقطة الخدمة) في دور واحد.",
+  "descriptions.center_staff": "الخدمات والعملاء والطلبات وشبكة الوكلاء؛ لا يرى الأسعار.",
+  "descriptions.center_warehouse": "المستودع والمخزون والشحن؛ لا يرى الأسعار.",
+  "descriptions.center_accounting": "المحاسبة والأسعار (الشراء والبيع) والفواتير الإلكترونية.",
+  "descriptions.center_social": "العملاء المحتملون والحملات ووسائل التواصل الاجتماعي.",
+  "descriptions.center_service": "نقطة الخدمة الخاصة بالمركز: الخدمات والعملاء والضمانات والمواعيد؛ لا يرى الأسعار، ولا مستودع أو محاسبة.",
+  "descriptions.center_sales": "طلبات الوكلاء وأسعار البيع والخصومات والوكلاء والخدمات والعملاء (قراءة) والتقارير؛ دون أسعار الشراء أو المستودع أو المحاسبة.",
+  "descriptions.distributor_owner": "أسعار الموزع ومحاسبته ومستودعه وشبكة وكلائه.",
+  "descriptions.distributor_staff": "خدمات ووكلاء الشبكة الفرعية.",
+  "descriptions.distributor_warehouse_staff": "المستودع والشحن، ويطّلع على الوكلاء للقراءة فقط؛ لا يرى الأسعار.",
+  "descriptions.distributor_accounting": "المحاسبة والأسعار وعلامة «تمت الفوترة» على الطلبات.",
+  "descriptions.dealer_owner": "الأسعار النهائية للوكيل ومحاسبته ومخزونه.",
+  "descriptions.dealer_staff": "خدمات الوكيل وسجلاته الخاصة؛ لا يرى الأسعار أو المحاسبة.",
+  "descriptions.dealer_accounting": "محاسبة الوكيل والأسعار."
 }

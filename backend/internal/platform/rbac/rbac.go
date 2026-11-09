@@ -10,6 +10,7 @@ const (
 	RoleCenterAccounting = "center_accounting"
 	RoleCenterSocial     = "center_social"
 	RoleCenterService    = "center_service"
+	RoleCenterSales      = "center_sales" // TEC-1089: sales representative
 
 	RoleDistributorOwner          = "distributor_owner"
 	RoleDistributorStaff          = "distributor_staff"
@@ -335,7 +336,9 @@ const (
 
 	// TEC-501 (000124): e-Invoice (UBL-TR) archive, numbering and settings.
 	// The center accounting team reads and manages brand invoices; settings
-	// stay super_admin-only.
+	// stay super_admin-only. TEC-1089 (000176): distributor accounting holds
+	// einvoice.manage at managed scope for the manual "invoiced" mark of its
+	// own sales (TEC-1030); the e-invoice module itself stays center-only.
 	PermEinvoiceRead     = "einvoice.read"
 	PermEinvoiceManage   = "einvoice.manage"
 	PermEinvoiceSettings = "einvoice.settings"
@@ -399,7 +402,7 @@ func DefaultMemberRole(orgType, memberRole string) string {
 // counterparts. Center roles map to themselves; other roles have none.
 func CenterRoleFor(slug string) (string, bool) {
 	switch slug {
-	case RoleCenterOwner, RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService:
+	case RoleCenterOwner, RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService, RoleCenterSales:
 		return slug, true
 	case RoleDistributorOwner, RoleDistributorStaff, RoleDealerOwner:
 		return RoleCenterStaff, true

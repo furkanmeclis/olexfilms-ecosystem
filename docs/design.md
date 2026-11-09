@@ -109,8 +109,8 @@ Müşteri (global user) ── hizmet alır: herhangi bir bayi/distribütör/mer
 
 | Organizasyon | Roller | Not |
 | --- | --- | --- |
-| Merkez | `super_admin`, `center_staff`, `center_warehouse`, `center_accounting`, `center_social`, `center_service` | center_staff modül bazında izin paketi alır. center_social lead, kampanya ve sosyal modüllere erişir, tüm sistem verisini görür; gelecek sosyal modüller için rezerve. center_service (TEC-1003) merkezin hizmet noktası personelidir: dealer_staff paketi, managed scope (yalnız merkezin kendi kayıtları); depo, fiyat, muhasebe, ağ yok. |
-| Distribütör | `owner`, `staff`, `warehouse_staff`, `accounting` | subtree scope: kendi ağacındaki bayileri görür |
+| Merkez | `super_admin`, `center_staff`, `center_warehouse`, `center_accounting`, `center_social`, `center_service`, `center_sales` | center_staff modül bazında izin paketi alır. center_social lead, kampanya ve sosyal modüllere erişir, tüm sistem verisini görür; gelecek sosyal modüller için rezerve. center_service (TEC-1003) merkezin hizmet noktası personelidir: dealer_staff paketi, managed scope (yalnız merkezin kendi kayıtları); depo, fiyat, muhasebe, ağ yok. center_sales (TEC-1089, satış temsilcisi): bayi siparişi açar, düzenler, onaylar ve iptal eder (`orders.write/approve/cancel`), satış fiyatı ve iskontoyu görür/yönetir (`pricing.sale.read/write`), bayi, hizmet, müşteri ve raporları okur; alış fiyatı (marj), depo, sevkiyat ve muhasebe yazma yok. |
+| Distribütör | `owner`, `staff`, `warehouse_staff`, `accounting` | subtree scope: kendi ağacındaki bayileri görür. warehouse_staff bayileri salt okunur görür (`organizations.read`), fiyat görmez; accounting siparişe "Faturalandı" işareti koyar (`einvoice.read` + `einvoice.manage` managed, TEC-1089) |
 | Bayi | `owner`, `staff`, `accounting` | staff hizmet açar, fiyat ve muhasebe görmez |
 | Müşteri | `customer` | telefon OTP |
 | Filo | `fleet` | e-posta + şifre, salt okunur |

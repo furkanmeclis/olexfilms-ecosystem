@@ -362,3 +362,36 @@ func TestNormalizePrice(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1089: price visibility by role. The center sales representative sees
+// the sale and recommended prices but not the purchase price (no margin);
+// the center service point staff sees no price at all.
+func TestPriceViewByRole(t *testing.T) {
+	f := newFake()
+	svc := New(f)
+	seed(t, svc, f)
+	ctx := context.Background()
+
+	sales := viewerFor(centerID, OrgCenter, rbac.RoleCenterSales)
+	if !sales.SaleRead || !sales.SaleWrite || sales.PurchaseRead {
+		t.Fatalf("center_sales viewer = %+v", sales)
+	}
+	view, err := svc.ProductView(ctx, sales, productUUID)
+	if err != nil || len(view.Prices) != 1 {
+		t.Fatalf("center sales view: %+v %v", view, err)
+	}
+	eq(t, "center sales sale", view.Prices[0].SalePrice, "80.5")
+	eq(t, "center sales recommended", view.Prices[0].RecommendedSalePrice, "150")
+	if js := jsonOf(t, view); strings.Contains(js, "purchase_price") {
+		t.Fatalf("center sales view leaks the purchase price: %s", js)
+	}
+
+	service := viewerFor(centerID, OrgCenter, rbac.RoleCenterService)
+	if service.SaleRead || service.PurchaseRead || service.RecommendedRead {
+		t.Fatalf("center_service viewer = %+v", service)
+	}
+	sv, err := svc.ProductView(ctx, service, productUUID)
+	if err != nil || len(sv.Prices) != 0 {
+		t.Fatalf("center service view: %s %v", jsonOf(t, sv), err)
+	}
+}

@@ -29,6 +29,7 @@
   "names.center_accounting": "Λογιστήριο κέντρου",
   "names.center_social": "Κοινωνικά δίκτυα κέντρου",
   "names.center_service": "Προσωπικό σέρβις κέντρου",
+  "names.center_sales": "Αντιπρόσωπος πωλήσεων",
   "names.distributor_owner": "Ιδιοκτήτης διανομέα",
   "names.distributor_staff": "Προσωπικό διανομέα",
   "names.distributor_warehouse_staff": "Προσωπικό αποθήκης διανομέα",
@@ -59,5 +60,19 @@
   "toast.updated": "Ο ρόλος ενημερώθηκε",
   "toast.deleted": "Ο ρόλος διαγράφηκε",
   "labels.custom": "Προσαρμοσμένος",
-  "fields.created_at": "Δημιουργήθηκε"
+  "fields.created_at": "Δημιουργήθηκε",
+  "descriptions.center_owner": "Όλα τα τμήματα του κέντρου (προσωπικό, αποθήκη, λογιστήριο, social media, σημείο εξυπηρέτησης) σε έναν ρόλο.",
+  "descriptions.center_staff": "Υπηρεσίες, πελάτες, παραγγελίες και δίκτυο αντιπροσώπων· δεν βλέπει τιμές.",
+  "descriptions.center_warehouse": "Αποθήκη, απόθεμα και αποστολές· δεν βλέπει τιμές.",
+  "descriptions.center_accounting": "Λογιστήριο, τιμές (αγοράς και πώλησης) και ηλεκτρονικά τιμολόγια.",
+  "descriptions.center_social": "Leads, καμπάνιες και social media.",
+  "descriptions.center_service": "Το σημείο εξυπηρέτησης του κέντρου: υπηρεσίες, πελάτες, εγγυήσεις και ραντεβού· δεν βλέπει τιμές, χωρίς αποθήκη και λογιστήριο.",
+  "descriptions.center_sales": "Παραγγελίες αντιπροσώπων, τιμές πώλησης και εκπτώσεις, αντιπρόσωποι, υπηρεσίες και πελάτες (ανάγνωση) και αναφορές· χωρίς τιμές αγοράς, αποθήκη και λογιστήριο.",
+  "descriptions.distributor_owner": "Τιμές, λογιστήριο, αποθήκη και δίκτυο αντιπροσώπων του διανομέα.",
+  "descriptions.distributor_staff": "Υπηρεσίες και αντιπρόσωποι του υποδικτύου.",
+  "descriptions.distributor_warehouse_staff": "Αποθήκη και αποστολές, βλέπει τους αντιπροσώπους μόνο για ανάγνωση· δεν βλέπει τιμές.",
+  "descriptions.distributor_accounting": "Λογιστήριο, τιμές και η σήμανση «Τιμολογήθηκε» στις παραγγελίες.",
+  "descriptions.dealer_owner": "Τελικές τιμές, λογιστήριο και απόθεμα του αντιπροσώπου.",
+  "descriptions.dealer_staff": "Οι υπηρεσίες του αντιπροσώπου και οι δικές του εγγραφές· δεν βλέπει τιμές ή λογιστήριο.",
+  "descriptions.dealer_accounting": "Λογιστήριο και τιμές του αντιπροσώπου."
 }

@@ -8,7 +8,10 @@ import { FormFieldShell } from "@/components/forms";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { OrganizationType } from "@/features/organizations/services/organizations.service";
-import { roleDisplayName } from "@/features/roles/lib/role-display";
+import {
+  roleDisplayDescription,
+  roleDisplayName,
+} from "@/features/roles/lib/role-display";
 import { rolesService } from "@/features/roles/services/roles.service";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -61,24 +64,38 @@ export function OrganizationMemberRolesField({
         {isLoading ? (
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         ) : null}
-        {roles.map((role) => (
-          <div key={role.slug} className="flex items-start gap-2">
-            <Checkbox
-              id={`member-role-${role.slug}`}
-              checked={selected.has(role.slug)}
-              onCheckedChange={(checked) => toggle(role.slug, checked === true)}
-            />
-            <Label
-              htmlFor={`member-role-${role.slug}`}
-              className="cursor-pointer leading-snug font-normal"
-            >
-              <span className="font-medium">{roleDisplayName(role, t)}</span>
-              <span className="text-muted-foreground ms-2 font-mono text-xs">
-                {role.slug}
-              </span>
-            </Label>
-          </div>
-        ))}
+        {roles.map((role) => {
+          const description = roleDisplayDescription(role, t);
+          return (
+            <div key={role.slug} className="flex items-start gap-2">
+              <Checkbox
+                id={`member-role-${role.slug}`}
+                checked={selected.has(role.slug)}
+                onCheckedChange={(checked) =>
+                  toggle(role.slug, checked === true)
+                }
+              />
+              <Label
+                htmlFor={`member-role-${role.slug}`}
+                className="cursor-pointer flex-col items-start gap-0.5 leading-snug font-normal"
+              >
+                <span>
+                  <span className="font-medium">
+                    {roleDisplayName(role, t)}
+                  </span>
+                  <span className="text-muted-foreground ms-2 font-mono text-xs">
+                    {role.slug}
+                  </span>
+                </span>
+                {description ? (
+                  <span className="text-muted-foreground text-xs">
+                    {description}
+                  </span>
+                ) : null}
+              </Label>
+            </div>
+          );
+        })}
       </div>
     </FormFieldShell>
   );

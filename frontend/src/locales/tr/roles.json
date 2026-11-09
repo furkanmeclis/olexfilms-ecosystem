@@ -29,6 +29,7 @@
   "names.center_accounting": "Merkez muhasebe",
   "names.center_social": "Merkez sosyal medya",
   "names.center_service": "Merkez servis personeli",
+  "names.center_sales": "Satış temsilcisi",
   "names.distributor_owner": "Distribütör sahibi",
   "names.distributor_staff": "Distribütör personeli",
   "names.distributor_warehouse_staff": "Distribütör depo personeli",
@@ -59,5 +60,19 @@
   "toast.updated": "Rol güncellendi",
   "toast.deleted": "Rol silindi",
   "labels.custom": "Özel",
-  "fields.created_at": "Oluşturulma"
+  "fields.created_at": "Oluşturulma",
+  "descriptions.center_owner": "Merkezin tüm departmanları (personel, depo, muhasebe, sosyal medya, hizmet noktası) tek rolde.",
+  "descriptions.center_staff": "Hizmetler, müşteriler, siparişler ve bayi ağı; fiyat görmez.",
+  "descriptions.center_warehouse": "Depo, stok ve sevkiyat; fiyat görmez.",
+  "descriptions.center_accounting": "Muhasebe, fiyatlar (alış ve satış) ve e-fatura.",
+  "descriptions.center_social": "Lead, kampanya ve sosyal medya.",
+  "descriptions.center_service": "Merkezin kendi hizmet noktası: hizmet, müşteri, garanti ve randevu; fiyat görmez, depo ve muhasebe yok.",
+  "descriptions.center_sales": "Bayi siparişleri, satış fiyatı ve iskontolar, bayiler, hizmet ve müşteri (okuma), raporlar; alış fiyatı, depo ve muhasebe yok.",
+  "descriptions.distributor_owner": "Distribütörün fiyatları, muhasebesi, deposu ve bayi ağı.",
+  "descriptions.distributor_staff": "Alt ağın hizmetleri ve bayileri.",
+  "descriptions.distributor_warehouse_staff": "Depo ve sevkiyat, bayileri salt okunur görür; fiyat görmez.",
+  "descriptions.distributor_accounting": "Muhasebe, fiyatlar ve siparişlere \"Faturalandı\" işareti.",
+  "descriptions.dealer_owner": "Bayinin nihai fiyatları, muhasebesi ve stoku.",
+  "descriptions.dealer_staff": "Bayinin hizmetleri ve kendi kayıtları; fiyat ve muhasebe görmez.",
+  "descriptions.dealer_accounting": "Bayi muhasebesi ve fiyatlar."
 }

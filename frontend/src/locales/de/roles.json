@@ -29,6 +29,7 @@
   "names.center_accounting": "Buchhaltung Zentrale",
   "names.center_social": "Social Media Zentrale",
   "names.center_service": "Servicepersonal Zentrale",
+  "names.center_sales": "Vertriebsmitarbeiter",
   "names.distributor_owner": "Inhaber Vertriebspartner",
   "names.distributor_staff": "Mitarbeiter Vertriebspartner",
   "names.distributor_warehouse_staff": "Lagermitarbeiter Vertriebspartner",
@@ -59,5 +60,19 @@
   "toast.updated": "Rolle aktualisiert",
   "toast.deleted": "Rolle gelöscht",
   "labels.custom": "Benutzerdefiniert",
-  "fields.created_at": "Erstellt"
+  "fields.created_at": "Erstellt",
+  "descriptions.center_owner": "Alle Abteilungen der Zentrale (Personal, Lager, Buchhaltung, Social Media, Servicepunkt) in einer Rolle.",
+  "descriptions.center_staff": "Services, Kunden, Bestellungen und das Händlernetz; sieht keine Preise.",
+  "descriptions.center_warehouse": "Lager, Bestand und Versand; sieht keine Preise.",
+  "descriptions.center_accounting": "Buchhaltung, Preise (Einkauf und Verkauf) und E-Rechnungen.",
+  "descriptions.center_social": "Leads, Kampagnen und Social Media.",
+  "descriptions.center_service": "Eigener Servicepunkt der Zentrale: Services, Kunden, Garantien und Termine; sieht keine Preise, kein Lager und keine Buchhaltung.",
+  "descriptions.center_sales": "Händlerbestellungen, Verkaufspreise und Rabatte, Händler, Services und Kunden (lesen) und Berichte; keine Einkaufspreise, kein Lager und keine Buchhaltung.",
+  "descriptions.distributor_owner": "Preise, Buchhaltung, Lager und Händlernetz des Distributors.",
+  "descriptions.distributor_staff": "Services und Händler des Teilnetzes.",
+  "descriptions.distributor_warehouse_staff": "Lager und Versand, sieht die Händler schreibgeschützt; sieht keine Preise.",
+  "descriptions.distributor_accounting": "Buchhaltung, Preise und die Markierung „Fakturiert“ an Bestellungen.",
+  "descriptions.dealer_owner": "Endpreise, Buchhaltung und Bestand des Händlers.",
+  "descriptions.dealer_staff": "Services des Händlers und eigene Datensätze; sieht keine Preise und keine Buchhaltung.",
+  "descriptions.dealer_accounting": "Buchhaltung und Preise des Händlers."
 }

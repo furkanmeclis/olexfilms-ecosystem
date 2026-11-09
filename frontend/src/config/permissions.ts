@@ -316,6 +316,7 @@ export const Role = {
   CenterAccounting: "center_accounting",
   CenterSocial: "center_social",
   CenterService: "center_service",
+  CenterSales: "center_sales",
   DistributorOwner: "distributor_owner",
   DistributorStaff: "distributor_staff",
   DistributorWarehouseStaff: "distributor_warehouse_staff",
