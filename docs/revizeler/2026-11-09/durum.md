@@ -19,7 +19,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 | 000174 | TEC-1058 | order_items.plotter_cut |
 | 000175 | TEC-1076 | yalnız gerekirse |
-| 000176 | RV-Karar rol izinleri | center_sales rolü, dist. depo/muhasebe izinleri |
+| 000176 | TEC-1089 [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | center_sales rolü, dist. depo/muhasebe izinleri |
 | 000177 | RV-Karar iade | stock_transfer_requests.order_id (planlı) |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
@@ -91,6 +91,15 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | --- | --- | --- | --- | --- | --- |
 | Metraj Web+API `KOD-3M` | TEC-1078 | [#520](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/520) | 🟢 | — | #508 üstünde; `-3M`, `-2.5M`, `-3M-2`; birim geçmişinde parçalar, `family=` filtresi |
 | Metraj Mobil | TEC-1079 | | | | ⏸ |
+
+## Karar uygulamaları
+
+| Konu | Linear | PR | CI | Migration | Not |
+| --- | --- | --- | --- | --- | --- |
+| Rol izinleri (center_sales, dist. depo/muhasebe) | TEC-1089 | [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | 🟢 | 000176 | satış temsilcisi: fiyat+iskonto, onay/iptal; alış fiyatı yok. **Zorbey'i bu role ata** |
+| İade siparişe bağlı + merkez bayi adına iade | TEC-1085 | | | 000177 | ⏳ #523 üstünde |
+| Muhasebe takip (faturalandı sevkte, menüde katalog gizli) | TEC-1070 | | | — | ⏳ |
+| KRİTİK takip, hizmet listesi Ağ, arama gizleme | TEC-1062/1075/1061 | | | — | ⏳ |
 
 ## Karar gerektirenler (kodlama yok)
 
