@@ -39,5 +39,6 @@
   "group.business": "İşletme",
   "group.assistant": "Yapay zekâ",
   "group.other": "Diğer",
-  "group.account": "Hesap ve ayarlar"
+  "group.account": "Hesap ve ayarlar",
+  "measure": "Ölçüm"
 }

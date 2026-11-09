@@ -27,6 +27,8 @@ export type MenuItem = {
   built?: SpaceKind[];
   /** Organization types the backend serves the screen to (e.g. e-invoices: the brand center only). */
   orgTypes?: OrgType[];
+  /** Shown only while the viewer flag is on (e.g. measuring when it left the tab bar). */
+  when?: 'measureInMenu';
 };
 
 /** Account rows: not module screens; each opens its own place (see the screen). */
@@ -56,6 +58,8 @@ export const ITEMS: MenuItem[] = [
     built: [],
     orgTypes: ['center'],
   },
+  // TEC-1068: center sales staff measure from the menu (their tab bar has Orders instead).
+  { key: 'measure', icon: 'gauge', group: 'operations', permission: 'services.write', spaces: [], built: [], orgTypes: ['center'], when: 'measureInMenu' },
   { key: 'appointments', icon: 'appointment', group: 'operations', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
   { key: 'occupancy', icon: 'calendar', group: 'operations', permission: 'appointments.read', spaces: ['admin'], built: ['admin'] },
   // Alone in operations (e.g. center accounting, no approvals row): next to the business rows.
@@ -152,6 +156,8 @@ export type MenuViewer = {
   warehouse: boolean;
   /** More than one organization to switch between. */
   multiOrg: boolean;
+  /** Center sales staff: measuring left the tab bar for the menu (TEC-1068). */
+  measureInMenu?: boolean;
 };
 
 export function can(viewer: Pick<MenuViewer, 'isSuperAdmin' | 'permissions'>, p?: string | string[]): boolean {
@@ -165,6 +171,7 @@ export function itemVisible(i: MenuItem, v: MenuViewer): boolean {
     shows &&
     can(v, i.permission) &&
     v.moduleOn(i.key) &&
+    (!i.when || !!v[i.when]) &&
     (!i.orgTypes || (!!v.orgType && (i.orgTypes as string[]).includes(v.orgType)))
   );
 }

@@ -39,5 +39,6 @@
   "group.business": "Business",
   "group.assistant": "AI",
   "group.other": "Other",
-  "group.account": "Account and settings"
+  "group.account": "Account and settings",
+  "measure": "Measure"
 }

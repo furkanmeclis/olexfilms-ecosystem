@@ -26,5 +26,6 @@
   "group.business": "Azienda",
   "group.assistant": "IA",
   "group.other": "Altro",
-  "group.account": "Account e impostazioni"
+  "group.account": "Account e impostazioni",
+  "measure": "Misurazione"
 }

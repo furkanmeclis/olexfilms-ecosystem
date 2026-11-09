@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,8 +8,10 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { formatDigits } from '@/core/digits';
 import { useModuleFilter } from '@/core/modules';
-import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
+import { activeMembership, isCenterWorkplace, isSalesWorkplace, useCan } from '@/core/spaces';
+import { SalesBoard, ServicesBoard } from '@/features/center-home/boards';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
+import { Segmented } from '@/features/warehouse/parts';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
 import { APPROVAL_PERMISSIONS } from '@/features/menu/groups';
 import { usePendingOrderCount } from '@/features/warehouse/orders-api';
@@ -28,6 +31,8 @@ function greetingKey(hour: number) {
   return 'home:greeting_evening';
 }
 
+type Board = 'sales' | 'services';
+
 /** `permission`: any of them shows the shortcut. */
 type Action = { key: string; icon: IconName; href: Href; permission?: string | string[] };
 
@@ -36,14 +41,15 @@ type Action = { key: string; icon: IconName; href: Href; permission?: string | s
  * TEC-1016), where service intake comes first and the admin screens live in
  * the menu; a distributor opens it in the `admin` space with its own tabs.
  */
-function actionsFor(workplace: boolean): Action[] {
+function actionsFor(workplace: boolean, sales = false): Action[] {
   if (workplace) {
+    // TEC-1068: sales staff have Orders in the tab bar and measure from the menu.
     return [
       { key: 'new_service', icon: 'add', href: '/bayi/services/new' as Href, permission: 'services.write' },
-      { key: 'measure', icon: 'gauge', href: '/bayi/measure' as Href, permission: 'services.write' },
+      { key: 'measure', icon: 'gauge', href: (sales ? '/bayi/menu/measure' : '/bayi/measure') as Href, permission: 'services.write' },
       { key: 'approvals', icon: 'warrantyClaim', href: '/bayi/menu/approvals' as Href, permission: APPROVAL_PERMISSIONS },
       { key: 'network', icon: 'network', href: '/bayi/menu/network' as Href, permission: 'organizations.read' },
-      { key: 'orders', icon: 'cart', href: '/bayi/menu/orders' as Href, permission: 'orders.read' },
+      { key: 'orders', icon: 'cart', href: (sales ? '/bayi/orders' : '/bayi/menu/orders') as Href, permission: 'orders.read' },
       { key: 'reports', icon: 'chart', href: '/bayi/menu/reports' as Href },
     ];
   }
@@ -69,18 +75,32 @@ export function AdminHomeScreen() {
   const moduleOn = useModuleFilter();
   // Orders waiting for the center's warehouse, as a badge on the Orders shortcut (TEC-1025).
   const pendingOrders = usePendingOrderCount(isCenterWorkplace(me) && perms.has('orders.read'));
-  const actions = actionsFor(isCenterWorkplace(me)).filter(
+  const actions = actionsFor(isCenterWorkplace(me), isSalesWorkplace(me)).filter(
     (a) => (!a.permission || me?.user.is_super_admin || [a.permission].flat().some((p) => perms.has(p))) && moduleOn(a.key),
   );
+
+  // Center workplace boards: sales for the sales staff (TEC-1068), the
+  // network's services for the center (TEC-1073); a switch when both apply.
+  const workplace = isCenterWorkplace(me);
+  const sales = isSalesWorkplace(me) && moduleOn('orders');
+  const boards: Board[] = workplace ? [...(sales ? (['sales'] as const) : []), ...(canServices ? (['services'] as const) : [])] : [];
+  const [board, setBoard] = useState<Board | null>(null);
+  const shownBoard = board && boards.includes(board) ? board : boards[0];
+  const ordersBase = sales ? '/bayi/orders' : '/bayi/menu/orders';
 
   const overview = useReport('overview', { period });
   const trend = useReport('services.trend', { period, enabled: canServices });
   const cards = overview.data?.series.find((s) => s.key === 'cards');
   const trendSeries = trend.data?.series.find((s) => s.key === 'created');
 
+  const qc = useQueryClient();
   const refresh = () => {
     void overview.refetch();
     if (canServices) void trend.refetch();
+    if (boards.length) {
+      void qc.invalidateQueries({ queryKey: ['center-home'] });
+      void qc.invalidateQueries({ queryKey: ['reports', 'report'] });
+    }
   };
 
   return (
@@ -148,6 +168,16 @@ export function AdminHomeScreen() {
             </Pressable>
           ))}
         </View>
+
+        {boards.length > 1 ? (
+          <Segmented
+            value={shownBoard}
+            onChange={setBoard}
+            options={boards.map((b) => ({ value: b, label: t(`home.board_${b}`) }))}
+          />
+        ) : null}
+        {shownBoard === 'sales' ? <SalesBoard period={period} ordersBase={ordersBase} /> : null}
+        {shownBoard === 'services' ? <ServicesBoard period={period} /> : null}
       </Screen>
     </>
   );

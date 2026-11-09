@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "Bu anbardakı vahidlər",
   "m.product_totals": "Məhsul cəmləri",
   "orders.assign.fixed_none": "Anbarda {{name}} üçün sabit barkod stoku tapılmadı.",
-  "orders.assign.fixed_qty_auto": "Sabit barkod sayı (dəyişməsəniz sətirin çatışmayan miqdarı)"
+  "orders.assign.fixed_qty_auto": "Sabit barkod sayı (dəyişməsəniz sətirin çatışmayan miqdarı)",
+  "m.warehouse_all": "Bütün anbarlar",
+  "m.warehouse_totals_partial": "Bu anbarın yalnız ilk {{count}} vahidi toplandı; miqdarlar natamam ola bilər."
 }

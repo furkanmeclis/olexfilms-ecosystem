@@ -698,5 +698,7 @@
   "m.this_warehouse_units": "Units in this warehouse",
   "m.product_totals": "Product totals",
   "orders.assign.fixed_none": "No fixed barcode stock of {{name}} was found in the warehouse.",
-  "orders.assign.fixed_qty_auto": "Fixed barcode quantity (unchanged: what the line still needs)"
+  "orders.assign.fixed_qty_auto": "Fixed barcode quantity (unchanged: what the line still needs)",
+  "m.warehouse_all": "All warehouses",
+  "m.warehouse_totals_partial": "Only the first {{count}} units of this warehouse were added up; amounts may be incomplete."
 }

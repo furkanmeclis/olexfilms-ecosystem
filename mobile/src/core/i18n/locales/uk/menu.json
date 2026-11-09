@@ -26,5 +26,6 @@
   "group.business": "Компанія",
   "group.assistant": "ШІ",
   "group.other": "Інше",
-  "group.account": "Обліковий запис і налаштування"
+  "group.account": "Обліковий запис і налаштування",
+  "measure": "Вимірювання"
 }

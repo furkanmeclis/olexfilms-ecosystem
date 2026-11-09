@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "Unités de cet entrepôt",
   "m.product_totals": "Totaux par produit",
   "orders.assign.fixed_none": "Aucun stock à code-barres fixe de {{name}} trouvé dans l'entrepôt.",
-  "orders.assign.fixed_qty_auto": "Quantité code-barres fixe (inchangée : ce qui manque à la ligne)"
+  "orders.assign.fixed_qty_auto": "Quantité code-barres fixe (inchangée : ce qui manque à la ligne)",
+  "m.warehouse_all": "Tous les entrepôts",
+  "m.warehouse_totals_partial": "Seules les {{count}} premières unités de cet entrepôt ont été additionnées ; les quantités peuvent être incomplètes."
 }

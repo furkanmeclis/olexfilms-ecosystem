@@ -26,5 +26,6 @@
   "group.business": "经营",
   "group.assistant": "AI",
   "group.other": "其他",
-  "group.account": "账户与设置"
+  "group.account": "账户与设置",
+  "measure": "测量"
 }

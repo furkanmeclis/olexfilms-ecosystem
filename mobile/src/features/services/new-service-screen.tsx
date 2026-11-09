@@ -13,7 +13,7 @@ import { readJSON, storage, writeJSON } from '@/core/storage';
 import { PlateBadge } from '@/features/customer-space/home-parts';
 import { EditVehicleSheet } from '@/features/customers/edit-sheets';
 import { type PickerOption, PickerSheet } from '@/features/picker-sheet';
-import { VehiclePartPicker } from '@/features/vehicle-parts';
+import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { confirmAction } from '@/ui/confirm';
@@ -24,6 +24,7 @@ import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
 import { useLeaveGuard } from '@/ui/use-leave-guard';
 
+import { ServiceContractCard, useContractRequiredAlert } from './contract-card';
 import { customerSubtitle, customerTitle } from './customer-name';
 import { IntakePhotos, intakeKey } from './intake-photos';
 import { formatNumber, type Service, type ServiceStatus, serviceTone, useLinks, type Vehicle, vehicleLabel } from './lib';
@@ -39,7 +40,9 @@ import {
   finishButtonKey,
   finishChoices,
   type GateCtx,
+  highlightedParts,
   initialParts,
+  itemPartRows,
   isBlocking,
   isWizardStep,
   leaveBlocker,
@@ -93,6 +96,7 @@ export function NewServiceScreen() {
   const links = useLinks();
   const qc = useQueryClient();
   const canWrite = useCan('services.write');
+  const partLabel = usePartLabel();
 
   const [createdUuid, setCreatedUuid] = useState<string | null>(null);
   const uuid = params.uuid ?? createdUuid ?? '';
@@ -246,9 +250,15 @@ export function NewServiceScreen() {
         Alert.alert(t('action_failed'), t('complete_needs_items'));
         return;
       }
+      // TEC-1083: the chosen status needs a signed intake contract (signed on the web for now).
+      if (isApiError(e, 'CONTRACT_REQUIRED')) {
+        contractRequired();
+        return;
+      }
       Alert.alert(t('action_failed'), errorText(e));
     },
   });
+  const contractRequired = useContractRequiredAlert(uuid);
 
   const continueFromCustomer = () => {
     setStepError(null);
@@ -461,9 +471,15 @@ export function NewServiceScreen() {
               onRemove={confirmRemove}
             />
             {parts.length ? (
-              <Text variant="footnote" tone="muted">
-                {t('wizard.parts_applied', { count: parts.length })}
-              </Text>
+              // TEC-1077: the regions picked once on the parts step; each product is assigned to them.
+              <Pressable accessibilityRole="button" onPress={() => go('parts')} className="gap-0.5 px-1 active:opacity-70">
+                <Text variant="footnote" tone="muted">
+                  {t('wizard.parts_applied', { count: parts.length })}
+                </Text>
+                <Text variant="footnote" numberOfLines={3}>
+                  {parts.map(partLabel).join(', ')}
+                </Text>
+              </Pressable>
             ) : null}
             <StepActions
               error={stepError}
@@ -477,6 +493,7 @@ export function NewServiceScreen() {
             form={form}
             onForm={patchForm}
             parts={parts}
+            contract={<ServiceContractCard s={s} onChanged={onWrite} />}
             choice={finishTo ?? s.status}
             onChoice={setChoice}
             error={stepError}
@@ -758,6 +775,7 @@ function ItemsCard({
   onRemove: (item: string, name: string) => void;
 }) {
   const { t, i18n } = useTranslation('dealer');
+  const partLabel = usePartLabel();
   const items = s.items ?? [];
   return (
     <View className="gap-2">
@@ -789,11 +807,19 @@ function ItemsCard({
                     it.barcode,
                     it.kind === 'partial' && it.meters ? t('meters_value', { value: it.meters }) : null,
                     it.quantity ? t('quantity_value', { value: formatNumber(it.quantity, i18n.language) }) : null,
-                    it.applied_parts.length ? t('parts_count', { count: it.applied_parts.length }) : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
+                {/* TEC-1077: where the product goes, by name. */}
+                {it.applied_parts.length ? (
+                  <View className="flex-row items-center gap-1">
+                    <Icon name="vehicle" tone="primary" size={13} />
+                    <Text variant="footnote" tone="primary" numberOfLines={2} className="min-w-0 flex-1">
+                      {it.applied_parts.map(partLabel).join(', ')}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               {editable ? (
                 <Pressable
@@ -831,6 +857,7 @@ function SummaryStep({
   form,
   onForm,
   parts,
+  contract,
   choice,
   onChoice,
   error,
@@ -843,6 +870,8 @@ function SummaryStep({
   form: SummaryForm;
   onForm: (p: Partial<SummaryForm>) => void;
   parts: string[];
+  /** Intake contract card (TEC-1083): status, prepare, sign on the web. */
+  contract: React.ReactNode;
   choice: ServiceStatus;
   onChoice: (c: ServiceStatus) => void;
   error: string | null;
@@ -873,6 +902,10 @@ function SummaryStep({
           />
         </View>
       </ServiceHero>
+
+      <ItemPartsSummary s={s} />
+
+      {contract}
 
       {s.service_no_editable !== false ? (
         <ServiceNoField value={form.serviceNo} onChange={(serviceNo) => onForm({ serviceNo })} current={s.service_no} />
@@ -948,6 +981,48 @@ function SummaryStep({
         loading={busy}
         nextTitle={t(finishButtonKey(s.status, choice), { status: t(`service_status.${choice}`) })}
       />
+    </View>
+  );
+}
+
+/**
+ * Summary of which product goes on which region (TEC-1077): the body with
+ * the regions of the tapped product highlighted (every product's at first),
+ * and one row per product with its regions by name.
+ */
+function ItemPartsSummary({ s }: { s: Service }) {
+  const { t } = useTranslation('dealer');
+  const partLabel = usePartLabel();
+  const rows = itemPartRows(s.items);
+  const [focus, setFocus] = useState<string | null>(null);
+  if (!rows.some((r) => r.parts.length)) return null;
+  const shown = highlightedParts(rows, focus);
+  return (
+    <View className="gap-2">
+      <Text variant="caption" tone="muted" className="px-1">
+        {t('wizard.item_parts_title')}
+      </Text>
+      <VehiclePartPicker value={shown} readOnly showLabels={false} />
+      <Section>
+        {rows.map((r, i) => {
+          const on = focus === r.uuid;
+          return (
+            <Pressable
+              key={r.uuid}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              onPress={() => setFocus(on ? null : r.uuid)}
+              className={cn('gap-0.5 px-4 py-3 active:bg-muted', i < rows.length - 1 && 'border-b border-border', on && 'bg-primary/5')}>
+              <Text variant="body" className={cn(on && 'font-semibold')} numberOfLines={2}>
+                {r.name}
+              </Text>
+              <Text variant="footnote" tone={r.parts.length ? 'primary' : 'muted'} numberOfLines={3}>
+                {r.parts.length ? r.parts.map(partLabel).join(', ') : t('wizard.item_no_parts')}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </Section>
     </View>
   );
 }

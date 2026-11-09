@@ -565,5 +565,7 @@
   "m.this_warehouse_units": "本仓库单元",
   "m.product_totals": "产品汇总",
   "orders.assign.fixed_none": "仓库中未找到 {{name}} 的固定条码库存。",
-  "orders.assign.fixed_qty_auto": "固定条码数量（不修改则为该行缺少的数量）"
+  "orders.assign.fixed_qty_auto": "固定条码数量（不修改则为该行缺少的数量）",
+  "m.warehouse_all": "全部仓库",
+  "m.warehouse_totals_partial": "仅汇总了该仓库的前 {{count}} 个单元，数量可能不完整。"
 }
