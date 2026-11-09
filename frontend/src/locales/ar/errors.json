@@ -116,6 +116,7 @@
   "codes.ORDER_NOT_FULLY_ASSIGNED": "يجب تعيين كل البنود بالكامل أولًا.",
   "codes.ORDER_STOCK_UNAVAILABLE": "تم رفض حركة المخزون لهذه الشحنة.",
   "codes.PRICE_NOT_FOUND": "لا يوجد سعر لهذا المنتج بعملة الطلب.",
+  "codes.PRODUCT_NOT_ORDERABLE": "هذا المنتج غير متاح لطلبات الوكلاء؛ يمكن للمركز فقط إضافته إلى طلب نيابةً عنك.",
   "codes.RATE_NOT_FOUND": "لا يتوفر سعر صرف لتثبيته لعملة الطلب.",
   "codes.CUSTOMER_ANONYMIZED": "هوية العميل مجهّلة ولا يمكن تغييره.",
   "codes.CUSTOMER_INACTIVE": "حساب العميل غير نشط.",

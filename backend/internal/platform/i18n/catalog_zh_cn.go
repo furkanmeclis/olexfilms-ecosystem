@@ -274,6 +274,7 @@ var zhCNCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "采购价",
 	"catalog.products.recommended_price":               "建议销售价",
 	"catalog.products.uses_fixed_barcode":              "固定条码",
+	"catalog.products.dealer_orderable":                "允许经销商订购",
 	"catalog.services.name":                            "服务名称",
 	"catalog.services.category":                        "类别",
 	"catalog.services.code":                            "服务编码",

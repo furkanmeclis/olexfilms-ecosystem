@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
@@ -107,5 +109,64 @@ func TestReorderCategoriesSubset(t *testing.T) {
 	}
 	if _, err := svc.ReorderCategories(ctx, distributor, []uuid.UUID{a}); !errors.Is(err, ErrCenterOnly) {
 		t.Fatalf("distributor reorder err = %v", err)
+	}
+}
+
+// listStore records the list / count parameters.
+type listStore struct {
+	fakeStore
+	list  []db.ListProductsParams
+	count []db.CountProductsParams
+}
+
+func (l *listStore) ListProducts(_ context.Context, arg db.ListProductsParams) ([]db.Product, error) {
+	l.list = append(l.list, arg)
+	return []db.Product{}, nil
+}
+
+func (l *listStore) CountProducts(_ context.Context, arg db.CountProductsParams) (int64, error) {
+	l.count = append(l.count, arg)
+	return 0, nil
+}
+
+// TEC-1061: a non-center organization only lists products open to dealer
+// orders; asking for closed ones gives nothing. The center filters freely.
+func TestListProductsDealerOrderableScope(t *testing.T) {
+	f, err := ParseProductFilter(url.Values{"dealer_orderable": {"false"}})
+	if err != nil || f.DealerOrderable == nil || *f.DealerOrderable {
+		t.Fatalf("parse dealer_orderable = %v %v", f.DealerOrderable, err)
+	}
+	if _, err := ParseProductFilter(url.Values{"dealer_orderable": {"maybe"}}); err == nil {
+		t.Fatal("bad dealer_orderable must fail")
+	}
+
+	st := &listStore{}
+	s := New(st, nil)
+	if _, _, err := s.ListProducts(context.Background(), center, f); err != nil {
+		t.Fatal(err)
+	}
+	if got := st.list[0].DealerOrderable; !got.Valid || got.Bool {
+		t.Fatalf("center filter = %+v", got)
+	}
+	if _, _, err := s.ListProducts(context.Background(), center, model.ProductFilter{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := st.list[1].DealerOrderable; got.Valid {
+		t.Fatalf("center without filter = %+v", got)
+	}
+
+	for name, org := range map[string]orgctx.Scope{"distributor": distributor, "dealer": dealer} {
+		st := &listStore{}
+		s := New(st, nil)
+		if _, _, err := s.ListProducts(context.Background(), org, model.ProductFilter{}); err != nil {
+			t.Fatal(err)
+		}
+		if got := st.list[0].DealerOrderable; !got.Valid || !got.Bool || !st.count[0].DealerOrderable.Bool {
+			t.Fatalf("%s default = %+v", name, got)
+		}
+		items, total, err := s.ListProducts(context.Background(), org, f)
+		if err != nil || len(items) != 0 || total != 0 || len(st.list) != 1 {
+			t.Fatalf("%s asking closed = %v %d %v (queries %d)", name, items, total, err, len(st.list))
+		}
 	}
 }

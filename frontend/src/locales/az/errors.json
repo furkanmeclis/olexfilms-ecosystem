@@ -116,6 +116,7 @@
   "codes.ORDER_NOT_FULLY_ASSIGNED": "Əvvəlcə hər sətir tam qarşılanmalıdır.",
   "codes.ORDER_STOCK_UNAVAILABLE": "Bu göndəriş üçün anbar hərəkəti rədd edildi.",
   "codes.PRICE_NOT_FOUND": "Bu məhsul üçün sifariş valyutasında qiymət yoxdur.",
+  "codes.PRODUCT_NOT_ORDERABLE": "Bu məhsul diler sifarişinə bağlıdır; onu yalnız mərkəz sizin adınıza sifarişə əlavə edə bilər.",
   "codes.RATE_NOT_FOUND": "Sifariş valyutası üçün dondurulacaq məzənnə tapılmadı.",
   "codes.CUSTOMER_ANONYMIZED": "Müştəri anonimləşdirilib, dəyişdirilə bilməz.",
   "codes.CUSTOMER_INACTIVE": "Müştəri hesabı aktiv deyil.",

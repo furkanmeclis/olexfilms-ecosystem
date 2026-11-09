@@ -62,6 +62,10 @@ func (e *ValidationError) Error() string { return e.Field + ": " + e.Message }
 // CodePriceNotFound marks a line without an effective purchase price.
 const CodePriceNotFound = "PRICE_NOT_FOUND"
 
+// CodeProductNotOrderable marks a line whose product the center closed to
+// dealer / distributor orders (TEC-1061, products.dealer_orderable).
+const CodeProductNotOrderable = "PRODUCT_NOT_ORDERABLE"
+
 func invalid(field, msg string) error { return &ValidationError{Field: field, Message: msg} }
 
 // Organization types (organizations.type).
@@ -218,8 +222,19 @@ func textOrNull(p *string) pgtype.Text {
 	return pgtype.Text{String: v, Valid: true}
 }
 
+// lineRules tells resolveLines who places the order (TEC-1061).
+type lineRules struct {
+	// dealerOrder: the buyer orders for itself (dealer / distributor), so a
+	// product closed to dealer orders is refused. The center's order for a
+	// dealer (createForBuyer) leaves it false.
+	dealerOrder bool
+	// keep: product ids already on the order; a draft may keep a line whose
+	// product was closed after it was added.
+	keep map[int64]bool
+}
+
 // resolveLines validates the requested lines against the brand catalog.
-func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []ItemInput) ([]line, error) {
+func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []ItemInput, rules lineRules) ([]line, error) {
 	if len(items) == 0 {
 		return nil, invalid("items", "at least one line is required")
 	}
@@ -240,6 +255,12 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 		}
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
+		}
+		if rules.dealerOrder && !p.DealerOrderable && !rules.keep[p.ID] {
+			return nil, &ValidationError{
+				Field: field + ".product_uuid", Code: CodeProductNotOrderable,
+				Message: "product is not open to dealer orders",
+			}
 		}
 		if seen[p.ID] {
 			return nil, invalid(field+".product_uuid", "each product may appear once")
@@ -399,7 +420,7 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 		if err != nil {
 			return fmt.Errorf("orders: brand: %w", err)
 		}
-		lines, err := resolveLines(ctx, q, buyer.BrandID, in.Items)
+		lines, err := resolveLines(ctx, q, buyer.BrandID, in.Items, lineRules{dealerOrder: true})
 		if err != nil {
 			return err
 		}
@@ -451,7 +472,7 @@ func (s *Service) CreateOrAppendDraft(ctx context.Context, c Caller, in CreateIn
 		if err != nil {
 			return fmt.Errorf("orders: brand: %w", err)
 		}
-		lines, err := resolveLines(ctx, q, buyer.BrandID, in.Items)
+		lines, err := resolveLines(ctx, q, buyer.BrandID, in.Items, lineRules{dealerOrder: true})
 		if err != nil {
 			return err
 		}
@@ -589,13 +610,17 @@ func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUI
 		if err != nil {
 			return fmt.Errorf("orders: buyer: %w", err)
 		}
-		lines, err := resolveLines(ctx, q, o.BrandID, items)
-		if err != nil {
-			return err
-		}
 		old, err := q.LockOrderItems(ctx, o.ID)
 		if err != nil {
 			return fmt.Errorf("orders: lines: %w", err)
+		}
+		keep := make(map[int64]bool, len(old))
+		for _, it := range old {
+			keep[it.ProductID] = true
+		}
+		lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{dealerOrder: true, keep: keep})
+		if err != nil {
+			return err
 		}
 		for _, it := range old {
 			if _, err := q.DeleteOrderItem(ctx, it.ID); err != nil {

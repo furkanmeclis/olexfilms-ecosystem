@@ -3755,6 +3755,8 @@ type Querier interface {
 	// Renumbers the categories in the given id order (10, 20, ...) in one
 	// statement; rows whose value does not change are skipped.
 	SetProductCategorySorts(ctx context.Context, arg SetProductCategorySortsParams) (int64, error)
+	// TEC-1061: bulk engine adapter (one product, logged + undoable).
+	SetProductDealerOrderableByUUID(ctx context.Context, arg SetProductDealerOrderableByUUIDParams) (Product, error)
 	SetProductSaleFinanceEntry(ctx context.Context, arg SetProductSaleFinanceEntryParams) (ProductSale, error)
 	// Bulk activate/deactivate within one brand.
 	SetProductsActive(ctx context.Context, arg SetProductsActiveParams) (int64, error)

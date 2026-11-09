@@ -35,6 +35,7 @@ func ParseCategoryFilter(values url.Values) (model.CategoryFilter, error) {
 
 // ParseProductFilter reads the product list parameters: q, sort,
 // category_uuid (CSV), active, unit_type (CSV), uses_fixed_barcode,
+// dealer_orderable,
 // warranty_duration_months_min/_max, micron_thickness_min/_max and
 // created_from/_to. Errors are *apiquery.ValidationError (400).
 func ParseProductFilter(values url.Values) (model.ProductFilter, error) {
@@ -45,6 +46,9 @@ func ParseProductFilter(values url.Values) (model.ProductFilter, error) {
 		return f, err
 	}
 	if f.UsesFixedBarcode, err = apiquery.Bool(values, "uses_fixed_barcode"); err != nil {
+		return f, err
+	}
+	if f.DealerOrderable, err = apiquery.Bool(values, "dealer_orderable"); err != nil {
 		return f, err
 	}
 	if f.UnitTypes, err = apiquery.EnumList(values, "unit_type", model.UnitPiece, model.UnitRollMeter); err != nil {
@@ -111,8 +115,8 @@ func timeArg(t *time.Time) pgtype.Timestamptz {
 func productListParams(brandID int64, categoryIDs []int64, f model.ProductFilter) db.ListProductsParams {
 	return db.ListProductsParams{
 		BrandID: brandID, CategoryIds: categoryIDs, Active: boolArg(f.Active), UnitTypes: f.UnitTypes,
-		UsesFixedBarcode: boolArg(f.UsesFixedBarcode),
-		WarrantyMin:      float8Arg(f.Warranty.Min), WarrantyMax: float8Arg(f.Warranty.Max),
+		UsesFixedBarcode: boolArg(f.UsesFixedBarcode), DealerOrderable: boolArg(f.DealerOrderable),
+		WarrantyMin: float8Arg(f.Warranty.Min), WarrantyMax: float8Arg(f.Warranty.Max),
 		MicronMin: float8Arg(f.Micron.Min), MicronMax: float8Arg(f.Micron.Max),
 		CreatedFrom: timeArg(f.Created.From), CreatedBefore: timeArg(f.Created.Before),
 		Q:        textArg(f.Q),
@@ -124,7 +128,7 @@ func productListParams(brandID int64, categoryIDs []int64, f model.ProductFilter
 func productCountParams(p db.ListProductsParams) db.CountProductsParams {
 	return db.CountProductsParams{
 		BrandID: p.BrandID, CategoryIds: p.CategoryIds, Active: p.Active, UnitTypes: p.UnitTypes,
-		UsesFixedBarcode: p.UsesFixedBarcode, WarrantyMin: p.WarrantyMin, WarrantyMax: p.WarrantyMax,
+		UsesFixedBarcode: p.UsesFixedBarcode, DealerOrderable: p.DealerOrderable, WarrantyMin: p.WarrantyMin, WarrantyMax: p.WarrantyMax,
 		MicronMin: p.MicronMin, MicronMax: p.MicronMax, CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore,
 		Q: p.Q,
 	}

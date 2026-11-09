@@ -83,6 +83,7 @@ func (a *IOAdapter) ExportColumns() []ioengine.Column {
 		{Key: "micron_thickness", LabelKey: "catalog.products.micron_thickness", Type: ioengine.ColumnTypeString, AlignRight: true},
 		{Key: "uses_fixed_barcode", LabelKey: "catalog.products.uses_fixed_barcode", Type: ioengine.ColumnTypeBoolean},
 		{Key: "active", LabelKey: "catalog.products.is_active", Type: ioengine.ColumnTypeBoolean},
+		{Key: "dealer_orderable", LabelKey: "catalog.products.dealer_orderable", Type: ioengine.ColumnTypeBoolean},
 		{Key: "description_md", LabelKey: "catalog.products.description", Type: ioengine.ColumnTypeString},
 		{
 			Key: ColumnPurchasePrice, LabelKey: "catalog.products.purchase_price", Type: ioengine.ColumnTypeString,
@@ -102,7 +103,7 @@ func (a *IOAdapter) ExportColumns() []ioengine.Column {
 // ProductListKeys are the product list parameters the export carries
 // (TEC-369: the same filters, q and sort as GET /v1/catalog/products).
 var ProductListKeys = []string{
-	"q", "sort", "active", "category_uuid", "unit_type", "uses_fixed_barcode",
+	"q", "sort", "active", "category_uuid", "unit_type", "uses_fixed_barcode", "dealer_orderable",
 	"warranty_duration_months_min", "warranty_duration_months_max",
 	"micron_thickness_min", "micron_thickness_max", "created_from", "created_to",
 }
@@ -211,7 +212,8 @@ func exportRow(p model.Product) map[string]any {
 	return map[string]any{
 		"uuid": p.UUID.String(), "sku": p.SKU, "name": p.Name, "category": p.Category.Name,
 		"unit_type": p.UnitType, "warranty_duration_months": warranty, "micron_thickness": micron,
-		"uses_fixed_barcode": p.UsesFixedBarcode, "active": p.Active, "description_md": p.DescriptionMD,
+		"uses_fixed_barcode": p.UsesFixedBarcode, "active": p.Active, "dealer_orderable": p.DealerOrderable,
+		"description_md": p.DescriptionMD,
 	}
 }
 
@@ -233,6 +235,7 @@ func (a *IOAdapter) ImportSchema() []ioengine.ImportField {
 		{Key: "uses_fixed_barcode", LabelKey: "catalog.products.uses_fixed_barcode", Type: ioengine.ColumnTypeBoolean, DefaultHint: "false",
 			HintKey: "catalog.products.import_hint.uses_fixed_barcode"},
 		{Key: "active", LabelKey: "catalog.products.is_active", Type: ioengine.ColumnTypeBoolean, DefaultHint: "true"},
+		{Key: "dealer_orderable", LabelKey: "catalog.products.dealer_orderable", Type: ioengine.ColumnTypeBoolean, DefaultHint: "true"},
 		{Key: "description_md", LabelKey: "catalog.products.description", Type: ioengine.ColumnTypeString},
 	}
 }
@@ -432,7 +435,9 @@ func importInput(get func(string) string, categoryUUID uuid.UUID) (model.Product
 		}
 		in.MicronThickness = &f
 	}
-	for key, dst := range map[string]**bool{"uses_fixed_barcode": &in.UsesFixedBarcode, "active": &in.Active} {
+	for key, dst := range map[string]**bool{
+		"uses_fixed_barcode": &in.UsesFixedBarcode, "active": &in.Active, "dealer_orderable": &in.DealerOrderable,
+	} {
 		v := get(key)
 		if v == "" {
 			continue

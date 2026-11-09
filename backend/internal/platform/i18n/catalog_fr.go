@@ -274,6 +274,7 @@ var frCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "Prix d'achat",
 	"catalog.products.recommended_price":               "Prix de vente recommandé",
 	"catalog.products.uses_fixed_barcode":              "Code-barres fixe",
+	"catalog.products.dealer_orderable":                "Ouvert aux commandes des revendeurs",
 	"catalog.services.name":                            "Nom de la prestation",
 	"catalog.services.category":                        "Catégorie",
 	"catalog.services.code":                            "Code de la prestation",

@@ -3,12 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  Ban,
   CircleCheck,
   CircleOff,
   Eye,
   FolderTree,
   ImageOff,
   Pencil,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,6 +93,22 @@ export const PRODUCT_BULK_ACTIONS: BulkActionDef[] = [
     ],
     icon: FolderTree,
   },
+  // TEC-1061: open / close products to dealer and distributor orders.
+  {
+    id: "enable_dealer_order",
+    label_key: "bulk.actions.catalog_products.enable_dealer_order",
+    permission: permissions.catalog.write,
+    reversible: true,
+    icon: ShoppingCart,
+  },
+  {
+    id: "disable_dealer_order",
+    label_key: "bulk.actions.catalog_products.disable_dealer_order",
+    permission: permissions.catalog.write,
+    reversible: true,
+    confirm_key: "bulk.confirm.catalog_products.disable_dealer_order",
+    icon: Ban,
+  },
 ];
 
 function ProductCover({ product }: { product: CatalogProduct }) {
@@ -125,7 +143,9 @@ export function ProductsPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { catalog } = useCatalogAccess(slug);
+  const { catalog, orgType } = useCatalogAccess(slug);
+  // TEC-1061: dealers and distributors only ever list open products.
+  const isCenter = orgType === "center";
   const categories = useCategoryOptions(catalog.canRead);
   const categoryOptions = useMemo(
     () => categories.options.map((c) => ({ value: c.value, label: c.label })),
@@ -251,6 +271,27 @@ export function ProductsPage({ slug }: { slug: string }) {
             />
           ),
         }),
+        ...(isCenter
+          ? [
+              createColumn<CatalogProduct>({
+                accessorKey: "dealer_orderable",
+                labelKey: "catalog.fields.dealer_orderable",
+                enableSorting: true,
+                filterVariant: "boolean",
+                param: "dealer_orderable",
+                cell: ({ row }) => (
+                  <StatusChip
+                    label={
+                      row.original.dealer_orderable
+                        ? t("catalog.dealer_orderable.open")
+                        : t("catalog.dealer_orderable.closed")
+                    }
+                    tone={row.original.dealer_orderable ? "success" : "warning"}
+                  />
+                ),
+              }),
+            ]
+          : []),
         createColumn<CatalogProduct>({
           accessorKey: "created_at",
           labelKey: "catalog.fields.created_at",
@@ -316,6 +357,7 @@ export function ProductsPage({ slug }: { slug: string }) {
       catalog.canWrite,
       categoryOptions,
       format,
+      isCenter,
       router,
       slug,
       t,

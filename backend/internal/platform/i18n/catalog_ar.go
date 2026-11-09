@@ -274,6 +274,7 @@ var arCatalog = map[string]string{
 	"catalog.products.purchase_price":                  "سعر الشراء",
 	"catalog.products.recommended_price":               "سعر البيع الموصى به",
 	"catalog.products.uses_fixed_barcode":              "باركود ثابت",
+	"catalog.products.dealer_orderable":                "متاح لطلبات الوكلاء",
 	"catalog.services.name":                            "اسم الخدمة",
 	"catalog.services.category":                        "الفئة",
 	"catalog.services.code":                            "رمز الخدمة",

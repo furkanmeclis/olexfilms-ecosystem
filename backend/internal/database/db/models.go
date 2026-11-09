@@ -2539,6 +2539,7 @@ type Product struct {
 	RollWidthCm            pgtype.Numeric     `json:"roll_width_cm"`
 	MinCutMeters           pgtype.Numeric     `json:"min_cut_meters"`
 	WastePct               pgtype.Numeric     `json:"waste_pct"`
+	DealerOrderable        bool               `json:"dealer_orderable"`
 }
 
 type ProductCategory struct {
