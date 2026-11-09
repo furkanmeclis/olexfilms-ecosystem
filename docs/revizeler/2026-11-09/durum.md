@@ -13,10 +13,11 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000167 | TEC-1050 | KULLANILMADI (boşluk) |
 | 000168 | TEC-1052 | KULLANILMADI (boşluk) |
 | 000169 | TEC-1062 | bekleme havuzu |
-| 000170 | TEC-1054 / TEC-1060 | yalnız gerekirse |
+| 000170 | TEC-1060 | activity_events kısmi indeks |
 | 000171 | TEC-1061 | products.dealer_orderable |
 | 000172 | TEC-1070 | cari muhasebe bilgileri (gerekirse) |
 | 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
+| 000174 | TEC-1058 | order_items.plotter_cut |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -36,13 +37,13 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 5 Web+API sipariş listesi alanları | TEC-1054 | | | 000170? | ⏳ #510 üstünde |
+| 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
 | 5 + 5.1 Mobil | TEC-1055 | | | | ⏸ |
-| 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | | | | ⏸ |
+| 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | | | — | ⏳ #518 üstünde |
 | 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
-| 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | | ⏸ |
+| 5.6 Web+API plotter işareti + rapor | TEC-1058 | | | 000174 | ⏳ TEC-1056 üstünde |
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
-| 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | 000170? | ⏳ TEC-1054 üstünde |
+| 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
@@ -102,6 +103,10 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 7.4 mobil Yeni Giriş (ertelendi) | TEC-1087 | 🟡 analiz Linear yorumunda, karar bekliyor |
 | Kapatılabilecek modüller (sunucuda hiçbir şey kapatılmadı) | TEC-1088 | 🟡 analiz Linear yorumunda, karar bekliyor |
 
+## Merge sonrası entegrasyon adımları
+
+- #511 (fiyat gizleme) merge olduktan sonra: #514'ün eklediği `live_try_rate`/`live_total_try` alanları `OrderView.hidePrices()`'a eklenmeli, `orders-list-page.tsx`'teki yerel izin kontrolü `useCanSeePrices()`'a geçmeli. **O zamana kadar bu iki alan API'de fiyat izni olmayan kullanıcıya dönüyor.** Aynısı #517/TEC-1064 yeni fiyat alanları için.
+
 ## Açık sorular
 
 - **K0 (TEC-1080):** AFM Florya ayrı bayi mi olsun? Öneri 1b (yeni bayi org'u aç, eski veri merkezde kalsın) veya 1a (org-merge undo). Kök neden: AFM Florya TEC-1003 ile merkeze birleşti; sipariş alıcısı olarak seçilebilecek org yok, alıcı=satıcı=merkez olunca cari oluşmuyor.
@@ -116,6 +121,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **KRİTİK (TEC-1062):** Cari kaydı yalnız alıcı "teslim alındı" deyince oluşuyor; üyesiz perakende teslim yerinde bunu yapacak kimse yok → cari oluşmaz. Merkez "teslim alındı"yı alıcı adına yapabilsin mi?
 - **KRİTİK (TEC-1062):** pending alıcılar diğer org seçicilerinde (görev, transfer) de görünüyor; filtrelensin mi?
 - **5.7 (TEC-1061):** Siparişe kapalı ürünler global aramada (Meilisearch) hâlâ görünüyor; aramadan da gizlensin mi?
+- **5.4.1 (TEC-1060):** Bayi kendi siparişinin zaman çizelgesinde depocunun adını ve okuttuğu barkodları görüyor; uygun mu?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
