@@ -16,6 +16,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000170 | TEC-1054 / TEC-1060 | yalnız gerekirse |
 | 000171 | TEC-1061 | products.dealer_orderable |
 | 000172 | TEC-1070 | cari muhasebe bilgileri (gerekirse) |
+| 000173 | TEC-1064 | bayi iskontosu, kalem iskonto/hediye |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -43,14 +44,14 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | 5.6 + 5.4.1 Mobil | TEC-1059 | | | | ⏸ |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | | | 000170? | ⏳ TEC-1054 üstünde |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | | | 000171 | ⏳ #510 üstünde |
-| KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | | | 000169 | ⏳ |
+| KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
 | KRİTİK Mobil | TEC-1063 | | | | ⏸ |
 
 ## 3. Fiyatlandırma
 
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
-| 5.3 Web+API USD, iskonto, hediye | TEC-1064 | | | | ⏸ |
+| 5.3 Web+API USD, iskonto, hediye | TEC-1064 | | | 000173 | ⏳ #510 üstünde |
 | 5.3 Mobil | TEC-1065 | | | | ⏸ |
 
 ## 4. Rol ekranları
@@ -112,6 +113,8 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 - **5.7 dist. (TEC-1081):** distribütör bazlı görünürlük ilk geçişte gerekli mi?
 - **5.4 (TEC-1050):** `dealer_staff` ve `center_service` (AFM Florya hizmet personeli) rollerinde `pricing.*` izni yok → artık sipariş tutarı görmüyorlar (design.md "staff fiyat görmez" ile uyumlu). Görmeleri gerekiyorsa rol paketine fiyat okuma izni eklenir (migration).
 - **3 (TEC-1075):** Merkez hizmet listesi varsayılan "Kendi" görünümünde açılıyor; "Ağ" varsayılan olsun mu?
+- **KRİTİK (TEC-1062):** Cari kaydı yalnız alıcı "teslim alındı" deyince oluşuyor; üyesiz perakende teslim yerinde bunu yapacak kimse yok → cari oluşmaz. Merkez "teslim alındı"yı alıcı adına yapabilsin mi?
+- **KRİTİK (TEC-1062):** pending alıcılar diğer org seçicilerinde (görev, transfer) de görünüyor; filtrelensin mi?
 - **7.4 (TEC-1087):** mobil "Yeni giriş" kısayolu yalnız merkez yöneticisine mi gösterilsin?
 
 ## Önerilen merge sırası
