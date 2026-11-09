@@ -267,8 +267,10 @@ describe("OrdersListPage (TEC-1054 list facts)", () => {
 
   it("shows the live TRY amount only with a price grant and a foreign currency", async () => {
     const usd = order({ currency: "USD", live_total_try: "4200.00" });
+    // TEC-1050: without a price grant the whole total column is gone.
+    state.grants.delete("pricing.sale.read");
     await render();
-    expect(cellHtml("total", usd)).not.toContain("order-live-try");
+    expect(column("total")).toBeUndefined();
     state.grants.add("pricing.purchase.read");
     await render();
     expect(cellHtml("total", usd)).toContain("order-live-try");
