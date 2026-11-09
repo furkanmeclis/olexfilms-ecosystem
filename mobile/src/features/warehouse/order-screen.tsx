@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
 
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -60,6 +61,7 @@ export function OrderScreen() {
   const canShip = useCan('orders.ship');
   const canReceive = useCan('orders.receive');
   const canPlace = useCan('warehouse.write');
+  const prices = usePricesVisible();
   const q = useOrder(uuid);
   const o = q.data;
   const { busy, run } = useDocAction<Order>(orderKeys.order(uuid));
@@ -379,7 +381,8 @@ export function OrderScreen() {
                     <Text variant="footnote" tone="muted" className="font-mono">
                       {i.product.sku}
                     </Text>
-                    {i.price_missing ? (
+                    {/* TEC-1051: the warehouse space shows nothing about prices. */}
+                    {prices && i.price_missing ? (
                       <View className="self-start pt-1">
                         <StatusPill tone="problem" label={t('orders.price_missing')} />
                       </View>

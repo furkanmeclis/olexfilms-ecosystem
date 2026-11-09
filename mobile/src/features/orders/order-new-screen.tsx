@@ -11,6 +11,7 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { activeMembership, kindsOf } from '@/core/spaces';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { cn } from '@/ui/cn';
@@ -167,6 +168,8 @@ export function OrderNewScreen() {
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
   const warehouse = kindsOf(me).includes('depo');
+  // TEC-1051: a warehouse role without pricing permissions neither sees nor sets prices.
+  const prices = usePricesVisible();
   const [buyer, setBuyer] = useState<Dealer | null>(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
@@ -188,7 +191,7 @@ export function OrderNewScreen() {
         api.POST('/v1/orders', {
           body: {
             buyer_org_uuid: buyer.uuid,
-            items: toItemInputs(lines, true),
+            items: toItemInputs(lines, prices),
             ...(note.trim() ? { note: note.trim() } : {}),
           },
         }),
@@ -199,7 +202,7 @@ export function OrderNewScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const missing = order.items?.filter((i) => i.price_missing).length ?? 0;
       router.replace((warehouse ? `/depo/jobs/order/${order.uuid}` : `/bayi/menu/orders/${order.uuid}`) as never);
-      if (missing) Alert.alert(t('price_missing_title'), t('price_missing_body', { count: missing }));
+      if (missing && prices) Alert.alert(t('price_missing_title'), t('price_missing_body', { count: missing }));
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('save_failed'), errorMessage(isApiError(e) ? e.code : undefined));
@@ -335,7 +338,7 @@ export function OrderNewScreen() {
                         className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
                       />
                     </View>
-                    {center ? (
+                    {center && prices ? (
                       <View className="flex-row items-center gap-3">
                         <Text variant="callout" tone="muted" className="flex-1">
                           {t('unit_price')}
@@ -377,9 +380,11 @@ export function OrderNewScreen() {
               multiline
               maxLength={NOTE_MAX}
             />
-            <Text variant="footnote" tone="muted">
-              {t(center ? 'price_rule_center' : 'price_rule')}
-            </Text>
+            {prices ? (
+              <Text variant="footnote" tone="muted">
+                {t(center ? 'price_rule_center' : 'price_rule')}
+              </Text>
+            ) : null}
             {center ? (
               <Button
                 title={t('create_for_dealer')}
