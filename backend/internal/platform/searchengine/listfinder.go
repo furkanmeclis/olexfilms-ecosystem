@@ -20,6 +20,9 @@ const (
 	SpecOrders        = "orders"
 	SpecStockUnits    = "stock_units"
 	SpecLeads         = "leads"
+	// SpecProducts is the catalog products index (catalog SearchSpec,
+	// TEC-1061: search hides the ones closed to dealer orders).
+	SpecProducts = "products"
 )
 
 // ListFinder runs a filtered index query for a module list endpoint

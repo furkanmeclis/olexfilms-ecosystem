@@ -340,3 +340,10 @@ UPDATE products
 SET dealer_orderable = sqlc.arg(dealer_orderable)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
+
+-- name: ListDealerClosedProductUUIDs :many
+-- TEC-1061: search hides the products closed to dealer orders from every
+-- organization but the center; the product hits are checked here, so a
+-- stale index document never shows one.
+SELECT uuid FROM products
+WHERE uuid = ANY(sqlc.arg(uuids)::uuid[]) AND NOT dealer_orderable;

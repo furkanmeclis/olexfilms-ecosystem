@@ -636,6 +636,34 @@ func (q *Queries) ListActiveProductCategoryNames(ctx context.Context, brandID in
 	return items, nil
 }
 
+const listDealerClosedProductUUIDs = `-- name: ListDealerClosedProductUUIDs :many
+SELECT uuid FROM products
+WHERE uuid = ANY($1::uuid[]) AND NOT dealer_orderable
+`
+
+// TEC-1061: search hides the products closed to dealer orders from every
+// organization but the center; the product hits are checked here, so a
+// stale index document never shows one.
+func (q *Queries) ListDealerClosedProductUUIDs(ctx context.Context, uuids []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listDealerClosedProductUUIDs, uuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductCategories = `-- name: ListProductCategories :many
 SELECT id, uuid, organization_id, brand_id, name, available_parts, sort, active, created_at, updated_at FROM product_categories
 WHERE brand_id = $1

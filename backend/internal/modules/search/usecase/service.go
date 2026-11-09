@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -26,6 +27,14 @@ type Service struct {
 	tree     scopefilter.TreeReader
 	features FeatureChecker
 	groups   []Group
+	// TEC-1061: products closed to dealer orders (nil = no check).
+	closed ClosedProductLister
+}
+
+// ClosedProductLister returns the given products that are closed to dealer
+// orders (*db.Queries).
+type ClosedProductLister interface {
+	ListDealerClosedProductUUIDs(ctx context.Context, uuids []uuid.UUID) ([]uuid.UUID, error)
 }
 
 // New creates a search service.
@@ -33,7 +42,11 @@ func New(client *searchengine.Client, reg *searchengine.Registry, q *db.Queries,
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{client: client, reg: reg, q: q, log: log}
+	s := &Service{client: client, reg: reg, q: q, log: log}
+	if q != nil {
+		s.closed = q
+	}
+	return s
 }
 
 // Enabled reports whether remote search is available.
@@ -85,12 +98,88 @@ func (s *Service) Search(ctx context.Context, q, spec string, limit int) []searc
 	if len(specs) == 0 {
 		return nil
 	}
-	hits, err := s.client.Search(ctx, specs, q, limit, filters)
+	hits, err := s.client.Search(ctx, specs, q, fetchLimit(specs, limit), filters)
 	if err != nil {
 		s.log.Warn("search_query_failed", "error", err)
 		return nil
 	}
+	return s.VisibleHits(ctx, hits, limit)
+}
+
+// fetchLimit asks the index for more hits when product hits may be
+// dropped afterwards (VisibleHits), so the caller still gets up to limit.
+func fetchLimit(specs []string, limit int) int {
+	if !slices.Contains(specs, searchengine.SpecProducts) {
+		return limit
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	return limit * 2
+}
+
+// VisibleHits keeps at most limit hits and, outside the brand center,
+// drops the products closed to dealer orders (TEC-1061, as the catalog
+// list does). Search and Global run every product hit through it.
+func (s *Service) VisibleHits(ctx context.Context, hits []searchengine.Hit, limit int) []searchengine.Hit {
+	if !slices.ContainsFunc(hits, func(h searchengine.Hit) bool { return h.Spec == searchengine.SpecProducts }) {
+		return trimHits(hits, limit)
+	}
+	if p, ok := authctx.PrincipalFrom(ctx); ok && s.tenantScope(ctx, p).center {
+		return trimHits(hits, limit)
+	}
+	return s.dropClosedProducts(ctx, hits, limit)
+}
+
+func trimHits(hits []searchengine.Hit, limit int) []searchengine.Hit {
+	if limit > 0 && len(hits) > limit {
+		return hits[:limit]
+	}
 	return hits
+}
+
+// dropClosedProducts removes the product hits closed to dealer orders and
+// keeps at most limit hits. The check reads Postgres, so a product closed
+// by a bulk action before its index document is refreshed never shows; on
+// a lookup error every product hit is dropped (fail closed).
+func (s *Service) dropClosedProducts(ctx context.Context, hits []searchengine.Hit, limit int) []searchengine.Hit {
+	var ids []uuid.UUID
+	for _, h := range hits {
+		if h.Spec != searchengine.SpecProducts {
+			continue
+		}
+		if id, err := uuid.Parse(h.ID); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	closed := map[string]bool{}
+	failed := false
+	if len(ids) > 0 {
+		if s.closed == nil {
+			failed = true
+		} else if rows, err := s.closed.ListDealerClosedProductUUIDs(ctx, ids); err != nil {
+			s.log.Warn("search_closed_products_failed", "error", err)
+			failed = true
+		} else {
+			for _, id := range rows {
+				closed[id.String()] = true
+			}
+		}
+	}
+	out := make([]searchengine.Hit, 0, len(hits))
+	for _, h := range hits {
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+		if h.Spec == searchengine.SpecProducts {
+			id, err := uuid.Parse(h.ID)
+			if failed || err != nil || closed[id.String()] {
+				continue
+			}
+		}
+		out = append(out, h)
+	}
+	return out
 }
 
 func (s *Service) allowedSpecs(ctx context.Context, requested string) ([]string, map[string]string) {
@@ -144,6 +233,8 @@ func (s *Service) specsWithFilters(ctx context.Context, specs []searchengine.Spe
 type tenant struct {
 	slug    string
 	brandID int64
+	// center: the active organization is the brand center (TEC-1061).
+	center bool
 }
 
 // tenantScope resolves the active organization. brandID stays 0 when the
@@ -166,7 +257,7 @@ func (s *Service) tenantScope(ctx context.Context, p authctx.Principal) tenant {
 	if row.OrganizationStatus == "suspended" {
 		return tenant{}
 	}
-	out := tenant{slug: strings.TrimSpace(row.OrganizationSlug)}
+	out := tenant{slug: strings.TrimSpace(row.OrganizationSlug), center: row.OrganizationType == "center"}
 	if b, ok := brandctx.From(ctx); ok && b.ID == row.OrganizationBrandID {
 		out.brandID = row.OrganizationBrandID
 	}

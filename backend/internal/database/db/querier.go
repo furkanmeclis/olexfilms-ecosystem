@@ -1912,6 +1912,10 @@ type Querier interface {
 	// at least one organization; anonymized, merged and deleted users never
 	// enter the index. organization_ids / brand_ids drive the scope filter.
 	ListCustomersForIndex(ctx context.Context) ([]ListCustomersForIndexRow, error)
+	// TEC-1061: search hides the products closed to dealer orders from every
+	// organization but the center; the product hits are checked here, so a
+	// stale index document never shows one.
+	ListDealerClosedProductUUIDs(ctx context.Context, uuids []uuid.UUID) ([]uuid.UUID, error)
 	// Fleets linked to the dealers in scope, one row per link. dealer_org_ids
 	// NULL: every dealer of the brand (brand/all scope). Sort: docs/list-contract.md,
 	// keys name | vehicle_count | last_service_at | created_at (the link's),
