@@ -40,5 +40,6 @@
   "group.assistant": "Yapay zekâ",
   "group.other": "Diğer",
   "group.account": "Hesap ve ayarlar",
-  "measure": "Ölçüm"
+  "measure": "Ölçüm",
+  "accounting_queue": "Muhasebe kuyruğu"
 }

@@ -31,6 +31,8 @@ export function useAccountingAccess() {
     parentUuid,
     canReadEinvoices: canReadEinvoices(can, orgType),
     canManageEinvoices: can('einvoice.manage'),
+    /** TEC-1071: marking a queue return processed needs accounting.write. */
+    canWrite: can('accounting.write'),
   };
 }
 
@@ -42,6 +44,7 @@ export function useAccountingLinks() {
     disputes: `/${space}/menu/disputes` as Href,
     dispute: (uuid: string) => `/${space}/menu/disputes/${uuid}` as Href,
     einvoice: (uuid: string) => `/${space}/menu/einvoices/${uuid}` as Href,
+    order: (uuid: string) => `/${space}/menu/orders/${uuid}` as Href,
   };
 }
 

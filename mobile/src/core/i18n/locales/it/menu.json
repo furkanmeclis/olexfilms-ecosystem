@@ -27,5 +27,6 @@
   "group.assistant": "IA",
   "group.other": "Altro",
   "group.account": "Account e impostazioni",
-  "measure": "Misurazione"
+  "measure": "Misurazione",
+  "accounting_queue": "Coda contabile"
 }

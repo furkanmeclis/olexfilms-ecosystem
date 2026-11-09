@@ -27,5 +27,6 @@
   "group.assistant": "IA",
   "group.other": "Otros",
   "group.account": "Cuenta y ajustes",
-  "measure": "Medición"
+  "measure": "Medición",
+  "accounting_queue": "Cola contable"
 }

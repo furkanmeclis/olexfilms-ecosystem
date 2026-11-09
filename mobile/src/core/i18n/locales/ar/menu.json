@@ -27,5 +27,6 @@
   "group.assistant": "الذكاء الاصطناعي",
   "group.other": "أخرى",
   "group.account": "الحساب والإعدادات",
-  "measure": "القياس"
+  "measure": "القياس",
+  "accounting_queue": "قائمة انتظار المحاسبة"
 }

@@ -27,5 +27,6 @@
   "group.assistant": "ШІ",
   "group.other": "Інше",
   "group.account": "Обліковий запис і налаштування",
-  "measure": "Вимірювання"
+  "measure": "Вимірювання",
+  "accounting_queue": "Черга бухгалтерії"
 }

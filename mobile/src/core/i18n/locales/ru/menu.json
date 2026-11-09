@@ -27,5 +27,6 @@
   "group.assistant": "ИИ",
   "group.other": "Другое",
   "group.account": "Аккаунт и настройки",
-  "measure": "Измерение"
+  "measure": "Измерение",
+  "accounting_queue": "Очередь бухгалтерии"
 }
