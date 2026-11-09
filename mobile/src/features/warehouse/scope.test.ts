@@ -11,12 +11,15 @@ import {
   wk,
 } from './scope.ts';
 
-test('showsStockEntries: center manager only (TEC-1087)', () => {
+test('showsStockEntries: center manager and distributor owner, not warehouse staff (TEC-1087)', () => {
   const manager = ['warehouse.write', 'members.write', 'warehouse.read'];
   const staff = ['warehouse.write', 'warehouse.read', 'stock.import'];
   assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'center' }), true);
   assert.equal(showsStockEntries({ permissions: staff, superAdmin: false, orgType: 'center' }), false);
-  assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'distributor' }), false);
+  // The distributor has its own warehouse: its owner loads stock too, its warehouse staff does not.
+  assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'distributor' }), true);
+  assert.equal(showsStockEntries({ permissions: staff, superAdmin: false, orgType: 'distributor' }), false);
+  assert.equal(showsStockEntries({ permissions: manager, superAdmin: false, orgType: 'dealer' }), false);
   assert.equal(showsStockEntries({ permissions: [], superAdmin: true, orgType: undefined }), true);
 });
 

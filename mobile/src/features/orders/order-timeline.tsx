@@ -7,7 +7,7 @@ import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
 import { Text } from '@/ui/text';
 
-import { actionKey, newestFirst, orderAmounts } from './order-summary';
+import { actionKey, newestFirst, orderAmounts, stepParts } from './order-summary';
 
 type S = components['schemas'];
 type TimelineEntry = S['OrderTimelineEntry'];
@@ -55,8 +55,7 @@ export function OrderTimeline({ timeline }: { timeline: TimelineEntry[] | undefi
   if (!rows.length) return null;
   return (
     <>
-      <SectionHeader title={t('timeline.title')} />
-      <View className="gap-0 rounded-lg border border-border bg-card">
+      <SectionHeader title={t('timeline.title')} />      <View className="gap-0 rounded-lg border border-border bg-card">
         {rows.map((s, i) => {
           const amount =
             s.meters != null
@@ -84,6 +83,12 @@ export function OrderTimeline({ timeline }: { timeline: TimelineEntry[] | undefi
                     {detail}
                   </Text>
                 ) : null}
+                {/* TEC-1057 / TEC-1059: the lines an edit changed and the plotter marks, one per row. */}
+                {stepParts(s).map((p, k) => (
+                  <Text key={`${p.key}-${k}`} variant="footnote" tone="muted" numberOfLines={2}>
+                    {t(p.key, p.params)}
+                  </Text>
+                ))}
                 {s.reason ? (
                   <Text variant="footnote" tone="muted" numberOfLines={3}>
                     {s.reason}

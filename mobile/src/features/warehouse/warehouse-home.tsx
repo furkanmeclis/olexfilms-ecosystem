@@ -54,7 +54,7 @@ export function WarehouseHome() {
   const recent = useOrders('prepare', orders, scope);
   const recentOrders = (recent.data?.pages.flatMap((p) => p.items) ?? []).slice(0, HOME_ORDERS);
   const [picking, setPicking] = useState(false);
-  // TEC-1087 (revize 7.4): stock entries are the center management's job; warehouse
+  // TEC-1087 (revize 7.4): stock entries are the center or distributor management's job; warehouse
   // staff see neither the "new entry" shortcut nor the open entry drafts.
   const entries =
     write &&

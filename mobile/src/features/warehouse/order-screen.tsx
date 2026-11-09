@@ -6,6 +6,7 @@ import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput,
 
 import { useCan } from '@/core/spaces';
 import { usePricesVisible } from '@/core/use-prices-visible';
+import { LinePlotter, OrderLinesEditor } from '@/features/orders/order-edit';
 import { creatorOf } from '@/features/orders/order-summary';
 import { OrderTimeline, useAmountText } from '@/features/orders/order-timeline';
 import { Button } from '@/ui/button';
@@ -90,6 +91,7 @@ export function OrderScreen() {
   const [suggestFor, setSuggestFor] = useState<OrderItem | null>(null);
   const [locationsFor, setLocationsFor] = useState<string | null>(null);
   const [shipping, setShipping] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [target, setTarget] = useState<{ uuid: string; code: string } | null>(null);
   const [splitKey] = useState(createRetryKey);
 
@@ -307,6 +309,10 @@ export function OrderScreen() {
                 onPress={() => transition('ready', 'mark_ready')}
               />
             ) : null}
+            {/* TEC-1057: lines are fixed before the order is ready (add, change, remove). */}
+            {o.can_edit_items ? (
+              <Button variant="outline" title={t('orders:edit.button')} icon="edit" onPress={() => setEditing(true)} />
+            ) : null}
             {can('shipped') ? (
               <Button size="lg" title={t('orders.actions.ship.button')} icon={<Icon name="truck" tone="primary-foreground" />} onPress={() => setShipping(true)} />
             ) : null}
@@ -440,6 +446,9 @@ export function OrderScreen() {
                   </View>
                 </View>
 
+                {/* TEC-1059: "sent plotter cut", information only. */}
+                <LinePlotter order={o} item={i} />
+
                 {i.units.map((u) => (
                   <View key={u.unit_uuid} className="flex-row items-center gap-2 border-t border-border pt-1.5">
                     <Text variant="footnote" className="flex-1 font-mono" numberOfLines={1}>
@@ -499,6 +508,8 @@ export function OrderScreen() {
 
         <OrderTimeline timeline={o.timeline} />
       </Screen>
+
+      <OrderLinesEditor order={o} visible={editing} onClose={() => setEditing(false)} />
 
       <ContinuousScanner
         visible={scanning === 'assign'}

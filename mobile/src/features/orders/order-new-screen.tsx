@@ -26,6 +26,7 @@ import { useWarehouses } from '@/features/warehouse/api';
 import { WarehouseField } from '@/features/warehouse/warehouse-picker';
 
 import { useCart } from './cart';
+import { PlotterSwitch } from './order-edit';
 import { cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
 
 const CATALOG = '/bayi/menu/catalog/products';
@@ -166,7 +167,7 @@ function DealerSheet({
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
-  const { lines, note, setAmount, setPrice, remove, setNote, clear } = useCart();
+  const { lines, note, setAmount, setPrice, setPlotter, remove, setNote, clear } = useCart();
   const me = useSession((s) => s.me);
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
@@ -396,6 +397,10 @@ export function OrderNewScreen() {
                           className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
                         />
                       </View>
+                    ) : null}
+                    {/* TEC-1059: the center tells the line went out plotter cut (information only). */}
+                    {center ? (
+                      <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => setPlotter(l.product_uuid, v)} />
                     ) : null}
                     {err ? (
                       <Text variant="footnote" tone="danger">

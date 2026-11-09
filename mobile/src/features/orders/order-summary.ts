@@ -18,7 +18,46 @@ const STATUSES = [
 ] as const;
 
 /** Timeline actions that are not a status (OrderTimelineEntry.action, TEC-1060). */
-const STEP_ACTIONS = ['created', 'unit_assigned', 'unit_unassigned', 'updated'] as const;
+const STEP_ACTIONS = ['created', 'unit_assigned', 'unit_unassigned', 'updated', 'plotter_marked'] as const;
+
+/**
+ * TEC-1059: the seller's sales or warehouse staff (orders.write or
+ * orders.ship) switch a line's "sent plotter cut" mark on any order that is
+ * not a draft or cancelled, also after shipping. The buyer marks lines only
+ * in its own draft form.
+ */
+export function canMarkPlotter(
+  order: { role: string; status: string },
+  can: { write: boolean; ship: boolean },
+): boolean {
+  return order.role === 'seller' && order.status !== 'draft' && order.status !== 'cancelled' && (can.write || can.ship);
+}
+
+type LineChange ={ product: string; before: string | null; after: string | null; plotter_cut?: boolean };
+
+/** One translated part of a timeline step: the key under `orders:` and its parameters. */
+export type StepPart = { key: string; params?: Record<string, string> };
+
+/**
+ * What a step changed, as translation parts (TEC-1057 / TEC-1059): the new
+ * plotter mark of a plotter_marked step, then each line an edit added,
+ * removed or changed and its plotter mark when that changed.
+ */
+export function stepParts(step: { action: string; plotter_cut?: boolean; changes?: readonly LineChange[] }): StepPart[] {
+  const parts: StepPart[] = [];
+  if (step.action === 'plotter_marked' && step.plotter_cut != null) {
+    parts.push({ key: step.plotter_cut ? 'plotter.marked_on' : 'plotter.marked_off' });
+  }
+  for (const c of step.changes ?? []) {
+    if (c.before == null && c.after != null) parts.push({ key: 'change.added', params: { product: c.product, after: c.after } });
+    else if (c.after == null && c.before != null) parts.push({ key: 'change.removed', params: { product: c.product, before: c.before } });
+    else if (c.before !== c.after) {
+      parts.push({ key: 'change.changed', params: { product: c.product, before: c.before ?? '', after: c.after ?? '' } });
+    }
+    if (c.plotter_cut != null) parts.push({ key: c.plotter_cut ? 'plotter.change_on' : 'plotter.change_off', params: { product: c.product } });
+  }
+  return parts;
+}
 
 /**
  * Translation key of a timeline / last activity action: a status the order

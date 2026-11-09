@@ -23,12 +23,20 @@ export type CartLine = {
   amount: string;
   /** Center orders only: a manual unit price; empty lets the server price the line. */
   unit_price?: string;
+  /** TEC-1059: "sent plotter cut" (information only); undefined is not sent. */
+  plotter_cut?: boolean;
 };
 
 export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid';
 export type CartErrors = { form?: 'empty' | 'too_many'; lines: Record<string, LineError> };
 
-export type ItemInput = { product_uuid: string; quantity?: number; meters?: string; unit_price?: string };
+export type ItemInput = {
+  product_uuid: string;
+  quantity?: number;
+  meters?: string;
+  unit_price?: string;
+  plotter_cut?: boolean;
+};
 
 export const isRoll = (unitType: string) => unitType === 'roll_meter';
 
@@ -75,6 +83,7 @@ export function toItemInputs(lines: CartLine[], withPrice = false): ItemInput[] 
       : { product_uuid: line.product_uuid, quantity: Number(v) };
     const price = normalizeAmount(line.unit_price ?? '');
     if (withPrice && price) item.unit_price = price;
+    if (line.plotter_cut !== undefined) item.plotter_cut = line.plotter_cut;
     return item;
   });
 }
@@ -98,4 +107,77 @@ export function addLine(lines: CartLine[], product: { uuid: string; sku: string;
     ...lines,
     { product_uuid: product.uuid, sku: product.sku, name: product.name, unit_type: product.unit_type, amount: isRoll(product.unit_type) ? '' : '1' },
   ];
+}
+
+/** One line of an order being edited (TEC-1057): a cart line plus what is already assigned to it. */
+export type EditLine = CartLine & { assigned: number };
+
+type EditableItem = {
+  product: { uuid: string; sku: string; name: string; unit_type: string };
+  quantity: number | null;
+  meters: string | null;
+  assigned: string;
+  plotter_cut: boolean;
+};
+
+/**
+ * The editor starts from the order's lines: the amount as stored, the
+ * assigned amount and, for the seller (`withPlotter`), the plotter mark so it
+ * is sent back; without it the mark is left out of the request.
+ */
+export function linesFromItems(items: readonly EditableItem[], withPlotter: boolean): EditLine[] {
+  return items.map((i) => {
+    const assigned = Number(i.assigned);
+    const line: EditLine = {
+      product_uuid: i.product.uuid,
+      sku: i.product.sku,
+      name: i.product.name,
+      unit_type: i.product.unit_type,
+      amount: i.meters != null ? i.meters : String(i.quantity ?? ''),
+      assigned: Number.isFinite(assigned) ? assigned : 0,
+    };
+    if (withPlotter) line.plotter_cut = i.plotter_cut;
+    return line;
+  });
+}
+
+/**
+ * Product uuids of the edited lines typed below what is already assigned
+ * (the API answers 409 ORDER_LINE_BELOW_ASSIGNED; unassign first). An empty
+ * or non-numeric amount is the line's own error, not this one.
+ */
+export function linesBelowAssigned(lines: readonly EditLine[]): Set<string> {
+  const out = new Set<string>();
+  for (const l of lines) {
+    if (!(l.assigned > 0)) continue;
+    const raw = normalizeAmount(l.amount);
+    const v = Number(raw);
+    if (raw !== '' && Number.isFinite(v) && v < l.assigned - 1e-9) out.add(l.product_uuid);
+  }
+  return out;
+}
+
+/** Adds a product to the edit once; a new line has nothing assigned and, for the seller, no plotter mark. */
+export function addEditLine(
+  lines: EditLine[],
+  product: { uuid: string; sku: string; name: string; unit_type: string },
+  withPlotter: boolean,
+): EditLine[] {
+  const next = addLine(lines, product);
+  if (next === lines) return lines;
+  const added = next[next.length - 1]!;
+  return [...lines, { ...added, assigned: 0, ...(withPlotter ? { plotter_cut: false } : {}) }];
+}
+
+/** Whether the edit changes anything against the order: a line added or removed, an amount or a plotter mark. */
+export function editChanged(before: readonly EditLine[], after: readonly EditLine[]): boolean {
+  if (before.length !== after.length) return true;
+  const old = new Map(before.map((l) => [l.product_uuid, l]));
+  return after.some((l) => {
+    const o = old.get(l.product_uuid);
+    if (!o || o.plotter_cut !== l.plotter_cut) return true;
+    const a = Number(normalizeAmount(o.amount));
+    const b = Number(normalizeAmount(l.amount));
+    return !(Number.isFinite(a) && Number.isFinite(b) && a === b);
+  });
 }
