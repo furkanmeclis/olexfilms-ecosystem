@@ -41,11 +41,11 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 5 Web+API sipariş listesi alanları | TEC-1054 | [#514](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/514) | 🟢 | — | #510 üstünde; depo, adet/metre, USD + anlık TL, ilgilenen; `seller_warehouse` filtresi |
-| 5 + 5.1 Mobil | TEC-1055 | | | — | ⏳ mobil paket 2 (#518 + #509 üstünde) |
+| 5 + 5.1 Mobil | TEC-1055 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) | 🟢 | — | kartta depo/adet/USD+TL/görevli; direkt ürün listesi; marka+SKU+stok |
 | 5.5 + 5.9 Web+API sipariş düzenleme | TEC-1056 | [#521](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/521) | 🟢 | — | #518 üstünde; sevk öncesi satış+depo düzenler, atanmış altına 409 |
 | 5.5 + 5.9 Mobil | TEC-1057 | | | | ⏸ |
 | 5.6 Web+API plotter işareti + rapor | TEC-1058 | [#524](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/524) | 🟢 | 000174 | #521 üstünde; kalem anahtarı + PATCH, aylık rapor `orders.plotter_cut` |
-| 5.6 + 5.4.1 Mobil | TEC-1059 | | | — | ⏳ hareket geçmişi mobil paket 2'de; plotter TEC-1058 sonrası |
+| 5.6 + 5.4.1 Mobil | TEC-1059 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) (5.4.1) | 🟢 | — | hareket geçmişi tamam; plotter sonraki mobil pakette |
 | 5.4.1 Web+API hareket geçmişi | TEC-1060 | [#518](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/518) | 🟢 | 000170 | #514 üstünde; sipariş/transfer/stok girişi zaman çizelgesi (activity_events) |
 | 5.7 Web+API siparişe açık ürün | TEC-1061 | [#517](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/517) | 🟢 | 000171 | #510 üstünde; kapalı ürün merkez dışı kataloglarda gizli, bayi siparişinde PRODUCT_NOT_ORDERABLE |
 | KRİTİK Web+API yeni teslim yeri / bekleme havuzu | TEC-1062 | [#515](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/515) | 🟢 | 000169 | alıcı = pending dealer org + pending_recipients; Ayarlar > Hesaplar > Bekleme havuzu |
@@ -63,7 +63,7 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Madde | Linear | PR | CI | Migration | Durum |
 | --- | --- | --- | --- | --- | --- |
 | 7.1 Web depo ana sayfası | TEC-1066 | [#519](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/519) | 🟢 | — | #512 üstünde; depo ana sayfası, salt okunur Bayiler sayfası, warehouse-summary ucu |
-| 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | | | — | ⏳ mobil paket 2 (#518 + #509 üstünde) |
+| 7.2 + 7.3 Mobil depo ana sayfa + kart | TEC-1067 | [#526](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/526) | 🟢 | — | depo ana sayfa sayaçları, seçili depo siparişleri (`seller_warehouse`), bayi odaklı kart; TEC-1087 kısayol |
 | 5.8 Mobil satış görevlisi | TEC-1068 | [#525](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/525) | 🟢 | — | alt bar + satış panosu (istemci hesaplı, backend rapor ucu sonraki iş) |
 | 6 Mobil stok depo filtresi | TEC-1069 | [#525](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/525) | 🟢 | — | depo çipleri (1000 birim sınırı; backend toplam ucu sonraki iş) |
 | 8 + 8.1 Web+API muhasebe | TEC-1070 | [#523](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/523) | 🟢 | 000172 | #512 üstünde; muhasebe ana sayfası, kuyruk (faturalanacak/yolda/iadeler), cari fatura bilgileri |
