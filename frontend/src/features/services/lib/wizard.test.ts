@@ -11,21 +11,24 @@ import {
 } from "./wizard";
 
 describe("wizard steps", () => {
-  it("has six steps in order, the contract right before stock", () => {
+  it("has seven steps: products right after the parts, completion last (TEC-1076)", () => {
     expect(WIZARD_STEPS).toEqual([
       "customer_vehicle",
       "photos",
       "parts",
+      "stock",
       "measurement",
       "contract",
-      "stock",
+      "complete",
     ]);
     expect(nextStep("customer_vehicle", wizardSteps(true))).toBe("parts");
     expect(nextStep("customer_vehicle")).toBe("photos");
+    expect(nextStep("parts")).toBe("stock");
+    expect(nextStep("stock")).toBe("measurement");
     expect(nextStep("measurement")).toBe("contract");
-    expect(nextStep("contract")).toBe("stock");
-    expect(nextStep("stock")).toBeNull();
-    expect(previousStep("measurement")).toBe("parts");
+    expect(nextStep("contract")).toBe("complete");
+    expect(nextStep("complete")).toBeNull();
+    expect(previousStep("measurement")).toBe("stock");
     expect(previousStep("customer_vehicle")).toBeNull();
   });
 
@@ -38,8 +41,8 @@ describe("wizard steps", () => {
   it("drops the contract step while the module is off", () => {
     const off = wizardSteps(false);
     expect(off).not.toContain("contract");
-    expect(nextStep("measurement", off)).toBe("stock");
-    expect(previousStep("stock", off)).toBe("measurement");
+    expect(nextStep("measurement", off)).toBe("complete");
+    expect(previousStep("complete", off)).toBe("measurement");
     expect(wizardSteps(true)).toContain("contract");
   });
 
@@ -62,10 +65,12 @@ describe("wizard steps", () => {
   });
 
   it("keeps the steps after the contract closed while it blocks", () => {
-    expect(canOpenStep("stock", true, true)).toBe(false);
+    expect(canOpenStep("complete", true, true)).toBe(false);
     expect(canOpenStep("contract", true, true)).toBe(true);
+    // The products come before the contract, so they stay open.
+    expect(canOpenStep("stock", true, true)).toBe(true);
     expect(canOpenStep("parts", true, true)).toBe(true);
-    expect(canOpenStep("stock", true, true, wizardSteps(false))).toBe(true);
+    expect(canOpenStep("complete", true, true, wizardSteps(false))).toBe(true);
   });
 
   it("blocks only a required, not executed contract", () => {

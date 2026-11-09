@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -136,6 +137,11 @@ func withEvidenceBlocks(tpl, hashLabel string) string {
 		used[k] = true
 	}
 	var b strings.Builder
+	// TEC-1076: the used products and their codes come before the signatures
+	// when the template does not place them itself.
+	if !used["products_html"] {
+		b.WriteString("{{products_html}}")
+	}
 	if !used["signatures_html"] && !used["signature_image"] {
 		b.WriteString("{{signatures_html}}")
 	}
@@ -221,6 +227,17 @@ func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row d
 			vars["company_logo"] = tag
 		}
 	}
+	// TEC-1076: the products used on the service with their codes.
+	vars["products_html"] = ""
+	if row.SubjectType == subjectService {
+		products, err := q.ListContractServiceProducts(ctx, db.ListContractServiceProductsParams{
+			ServiceID: row.SubjectID, OrganizationID: row.OrganizationID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		vars["products_html"] = productsHTML(loc, products)
+	}
 	// TEC-499: intake photo grid (angle name + capture time, no EXIF
 	// location); separate from the contract's own media_html.
 	vars["intake_photos_html"] = ""
@@ -260,6 +277,62 @@ func (s *Service) signaturesHTML(ctx context.Context, loc i18n.Locale, signers [
 	}
 	b.WriteString(`</div>`)
 	return b.String()
+}
+
+// productsHTML is the {{products_html}} table of a service contract
+// (TEC-1076): each used product with its code (SKU), unit barcode and the
+// vehicle parts it is applied to. Empty without products.
+func productsHTML(loc i18n.Locale, rows []db.ListContractServiceProductsRow) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	t := func(key string) string { return html.EscapeString(i18n.Translate(loc, key)) }
+	var b strings.Builder
+	b.WriteString(`<section class="doc-products"><h2>`)
+	b.WriteString(t("contracts.pdf.products"))
+	b.WriteString(`</h2><table><thead><tr><th>#</th><th>`)
+	b.WriteString(t("warranty.certificate.product"))
+	b.WriteString(`</th><th>`)
+	b.WriteString(t("contracts.pdf.product_code"))
+	b.WriteString(`</th><th>`)
+	b.WriteString(t("warranty.certificate.barcode"))
+	b.WriteString(`</th><th>`)
+	b.WriteString(t("services.pdf.parts"))
+	b.WriteString(`</th></tr></thead><tbody>`)
+	for i, r := range rows {
+		b.WriteString(`<tr><td>`)
+		b.WriteString(strconv.Itoa(i + 1))
+		b.WriteString(`</td><td>`)
+		b.WriteString(html.EscapeString(r.ProductName))
+		b.WriteString(`</td><td dir="ltr">`)
+		b.WriteString(html.EscapeString(r.Sku))
+		b.WriteString(`</td><td dir="ltr">`)
+		b.WriteString(html.EscapeString(r.Barcode))
+		b.WriteString(`</td><td>`)
+		b.WriteString(html.EscapeString(strings.Join(partLabels(loc, r.AppliedParts), ", ")))
+		b.WriteString(`</td></tr>`)
+	}
+	b.WriteString(`</tbody></table></section>`)
+	return b.String()
+}
+
+// partLabels translates applied part keys (services.parts.<key>); an
+// unknown key is printed as is, a malformed list as nothing.
+func partLabels(loc i18n.Locale, raw []byte) []string {
+	var parts []string
+	if len(raw) == 0 || json.Unmarshal(raw, &parts) != nil {
+		return nil
+	}
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		key := "services.parts." + part
+		if l := i18n.Translate(loc, key); l != key {
+			out = append(out, l)
+		} else {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func (s *Service) mediaHTML(ctx context.Context, loc i18n.Locale, media []db.ContractMedium) string {

@@ -41,9 +41,10 @@ const STEPS: readonly WizardStep[] = [
   "customer_vehicle",
   "photos",
   "parts",
+  "stock",
   "measurement",
   "contract",
-  "stock",
+  "complete",
 ];
 
 type Props = {
@@ -130,7 +131,7 @@ describe("WizardBottomBar (TEC-865)", () => {
     const nav = $('[data-testid="wizard-bar"] nav');
     expect(nav?.getAttribute("aria-label")).toBe("services.wizard.bar.label");
     expect($('[data-testid="wizard-progress"]')?.textContent).toContain(
-      'services.wizard.bar.progress {"current":3,"total":6}',
+      'services.wizard.bar.progress {"current":3,"total":7}',
     );
     expect($('[data-testid="wizard-progress"]')?.textContent).toContain(
       "services.wizard.steps.parts",
@@ -182,7 +183,8 @@ describe("WizardBottomBar (TEC-865)", () => {
     const onSelect = vi.fn();
     render({ contractLocked: true, onSelect });
     expect(step("contract").disabled).toBe(false);
-    expect(step("stock").disabled).toBe(true);
+    expect(step("complete").disabled).toBe(true);
+    expect(step("stock").disabled).toBe(false);
     click(step("measurement"));
     expect(onSelect).toHaveBeenCalledWith("measurement");
 
@@ -195,8 +197,9 @@ describe("WizardBottomBar (TEC-865)", () => {
   it("marks the steps before the current one done", () => {
     render({ current: "measurement" });
     expect(step("parts").querySelector("svg")).not.toBeNull();
-    expect(step("measurement").textContent).toBe("4");
-    expect(step("stock").textContent).toBe("6");
+    expect(step("stock").querySelector("svg")).not.toBeNull();
+    expect(step("measurement").textContent).toBe("5");
+    expect(step("complete").textContent).toBe("7");
   });
 });
 

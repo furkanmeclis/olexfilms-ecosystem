@@ -1229,9 +1229,9 @@ func (s *Server) Start() error {
 		if err := notifusecase.SyncCatalog(ctx, s.queries); err != nil {
 			s.log.Warn("notification_catalog_sync_failed", "error", err)
 		}
-		// TEC-499: {{intake_photos_html}} in the system contract templates.
+		// TEC-499 / TEC-1076: {{intake_photos_html}} and {{products_html}} in the system contract templates.
 		if s.documents != nil {
-			if _, err := s.documents.EnsureContractIntakePhotos(ctx); err != nil {
+			if _, err := s.documents.EnsureContractBlocks(ctx); err != nil {
 				s.log.Warn("contract_template_sync_failed", "error", err)
 			}
 		}

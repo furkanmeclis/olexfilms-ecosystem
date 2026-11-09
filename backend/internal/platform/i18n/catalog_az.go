@@ -302,7 +302,9 @@ var azCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "İmzalar",
 	"contracts.pdf.signed_at":                          "İmzalanma vaxtı",
 	"contracts.pdf.otp_verified":                       "OTP ilə təsdiqlənib",
-	"contracts.pdf.attachments":                        "Fotolar və qoşmalar",
+	"contracts.pdf.attachments":                        "Zədə / qeyd fotoşəkilləri",
+	"contracts.pdf.products":                           "İstifadə olunan məhsullar",
+	"contracts.pdf.product_code":                       "Məhsul kodu",
 	"contracts.pdf.footer":                             "Bu sənəd sadə elektron imza ilə yaradılıb.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Müqavilə {{no}}",

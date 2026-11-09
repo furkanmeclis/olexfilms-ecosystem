@@ -302,7 +302,9 @@ var zhCNCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "签名",
 	"contracts.pdf.signed_at":                          "签署时间",
 	"contracts.pdf.otp_verified":                       "已通过 OTP 验证",
-	"contracts.pdf.attachments":                        "照片与附件",
+	"contracts.pdf.attachments":                        "损伤 / 备注照片",
+	"contracts.pdf.products":                           "所用产品",
+	"contracts.pdf.product_code":                       "产品代码",
 	"contracts.pdf.footer":                             "本文件以简单电子签名方式生成。",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "合同 {{no}}",

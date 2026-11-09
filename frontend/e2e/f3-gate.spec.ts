@@ -75,18 +75,36 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   await expect(page).toHaveURL(
     new RegExp(`/t/${SLUG}/services/${SERVICE_UUID}/wizard$`),
   );
-  // The module adds the contract step between measurement and stock.
+  // The module adds the contract step between measurement and the last
+  // step (TEC-1076: parts, products, measurement, contract, complete).
   await expect(
     page.getByTestId("wizard-stepper").locator("button[data-step]"),
-  ).toHaveCount(5);
+  ).toHaveCount(6);
 
   // Parts.
   await expect(page.getByTestId("parts-step")).toBeVisible();
-  await page.getByTestId("parts-detailed-toggle").click();
   await page.locator('path[data-part="body_kaput"]').click();
   await page.locator('path[data-part="body_on_tampon"]').click();
   await expect(page.getByTestId("parts-count")).toContainText("2");
   await page.getByTestId("parts-next").click();
+
+  // Products right after the parts (TEC-1076): 6 m from the roll on the
+  // two parts.
+  await expect(page.getByTestId("stock-step")).toBeVisible();
+  await page
+    .locator('[data-unit="OLX-ROLL-001"]')
+    .getByTestId("pick-unit")
+    .click();
+  await page.locator('input[name="meters"]').fill("6");
+  await page.getByTestId("add-unit-submit").click();
+  await expect(page.getByTestId("service-item")).toHaveCount(1);
+  expect(api.bodies[`POST ${svc}/items`]?.[0]).toMatchObject({
+    barcode: "OLX-ROLL-001",
+    kind: "partial",
+    meters: 6,
+    applied_parts: ["body_kaput", "body_on_tampon"],
+  });
+  await page.getByTestId("stock-next").click();
 
   // 2. Measurement: "yes" lists the VIN's reports; pick the suggested
   // "before" one.
@@ -113,7 +131,7 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
     has_measurement: true,
   });
 
-  // 3. Contract: required, so "Next" and the stock step stay closed.
+  // 3. Contract: required, so "Next" and the last step stay closed.
   const step = page.getByTestId("contract-step");
   // TEC-865: the step's actions sit in the floating wizard bar.
   const next = page.getByTestId("wizard-actions").getByTestId("contract-next");
@@ -125,7 +143,7 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   await expect(step.getByTestId("contract-required")).toBeVisible();
   await expect(next).toBeDisabled();
   await expect(
-    page.getByTestId("wizard-stepper").locator('button[data-step="stock"]'),
+    page.getByTestId("wizard-stepper").locator('button[data-step="complete"]'),
   ).toBeDisabled();
 
   await step.getByTestId("contract-create").click();
@@ -170,21 +188,9 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   await expect(next).toBeEnabled();
   await next.click();
 
-  // 4. Stock: 6 m from the roll on the two parts, then complete.
-  await expect(page.getByTestId("stock-step")).toBeVisible();
-  await page
-    .locator('[data-unit="OLX-ROLL-001"]')
-    .getByTestId("pick-unit")
-    .click();
-  await page.locator('input[name="meters"]').fill("6");
-  await page.getByTestId("add-unit-submit").click();
+  // 4. Last step: the summary, the service number and the completion.
+  await expect(page.getByTestId("complete-step")).toBeVisible();
   await expect(page.getByTestId("service-item")).toHaveCount(1);
-  expect(api.bodies[`POST ${svc}/items`]?.[0]).toMatchObject({
-    barcode: "OLX-ROLL-001",
-    kind: "partial",
-    meters: 6,
-    applied_parts: ["body_kaput", "body_on_tampon"],
-  });
   await page.getByTestId("complete-service").click();
   await expect(page).toHaveURL(
     new RegExp(`/t/${SLUG}/services/${SERVICE_UUID}$`),

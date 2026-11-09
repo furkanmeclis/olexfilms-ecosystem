@@ -302,7 +302,9 @@ var bgCatalog = map[string]string{
 	"contracts.pdf.signatures":                         "Подписи",
 	"contracts.pdf.signed_at":                          "Подписан на",
 	"contracts.pdf.otp_verified":                       "Потвърден с OTP",
-	"contracts.pdf.attachments":                        "Снимки и прикачени файлове",
+	"contracts.pdf.attachments":                        "Снимки на щети / бележки",
+	"contracts.pdf.products":                           "Използвани продукти",
+	"contracts.pdf.product_code":                       "Продуктов код",
 	"contracts.pdf.footer":                             "Този документ е създаден с обикновен електронен подпис.",
 	// TEC-526: executed contract PDF chrome (title, OTP proof table, signer roles).
 	"contracts.pdf.title":                "Договор {{no}}",

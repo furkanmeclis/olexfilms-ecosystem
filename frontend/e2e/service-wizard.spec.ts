@@ -18,7 +18,7 @@ test.beforeEach(async ({ context, baseURL }) => {
   await signIn(context, baseURL ?? "");
 });
 
-test("wizard: customer/vehicle → parts → VIN → stock → complete → detail", async ({
+test("wizard: customer/vehicle → parts → stock → VIN → complete → detail", async ({
   page,
 }) => {
   const api = await mockApi(page);
@@ -47,26 +47,15 @@ test("wizard: customer/vehicle → parts → VIN → stock → complete → deta
     has_measurement: false,
   });
 
-  // Step 2: parts on the SVG drawing, inside "detailed selection"
-  // (collapsed by default, TEC-864).
+  // Step 2: parts on the SVG drawing (always shown, TEC-1076).
   await expect(page.getByTestId("parts-step")).toBeVisible();
-  await page.getByTestId("parts-detailed-toggle").click();
   await page.locator('path[data-part="body_kaput"]').click();
   await expect(page.getByTestId("parts-count")).toContainText("1");
   await page.getByTestId("parts-next").click();
 
-  // Step 3: measurement needs the VIN.
-  await expect(page.getByTestId("measurement-step")).toBeVisible();
-  await page.getByTestId("measurement-yes").click();
-  await page.locator('input[name="vin"]').fill("wvwzzz1jz3w386752");
-  await page.getByTestId("measurement-save").click();
+  // Step 3: the products right after the parts: 4.5 m from the roll,
+  // applied to the picked part.
   await expect(page.getByTestId("stock-step")).toBeVisible();
-  expect(api.bodies[`PATCH /v1/services/${SERVICE_UUID}`]?.at(-1)).toEqual({
-    vin: "WVWZZZ1JZ3W386752",
-    has_measurement: true,
-  });
-
-  // Step 4: 4.5 m from the roll, applied to the picked part.
   await page
     .locator('[data-unit="OLX-ROLL-001"]')
     .getByTestId("pick-unit")
@@ -82,8 +71,24 @@ test("wizard: customer/vehicle → parts → VIN → stock → complete → deta
     meters: 4.5,
     applied_parts: ["body_kaput"],
   });
+  await page.getByTestId("stock-next").click();
 
-  // Complete: the wizard lands on the detail page.
+  // Step 4: measurement needs the VIN.
+  await expect(page.getByTestId("measurement-step")).toBeVisible();
+  await page.getByTestId("measurement-yes").click();
+  await page.locator('input[name="vin"]').fill("wvwzzz1jz3w386752");
+  await page.getByTestId("measurement-save").click();
+  expect(api.bodies[`PATCH /v1/services/${SERVICE_UUID}`]?.at(-1)).toEqual({
+    vin: "WVWZZZ1JZ3W386752",
+    has_measurement: true,
+  });
+
+  // Last step: the service number (TEC-1076) and the completion; the
+  // wizard lands on the detail page.
+  await expect(page.getByTestId("complete-step")).toBeVisible();
+  await expect(page.locator('input[name="service_no"]')).toHaveValue(
+    "DSE2E00001",
+  );
   await page.getByTestId("complete-service").click();
   await expect(page).toHaveURL(
     new RegExp(`/t/${SLUG}/services/${SERVICE_UUID}$`),

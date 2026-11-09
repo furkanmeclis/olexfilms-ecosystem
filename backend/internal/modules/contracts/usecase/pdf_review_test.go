@@ -122,7 +122,7 @@ func TestExecutedContractPDFChromeFollowsContractLocale(t *testing.T) {
 	for _, want := range []string{
 		`<html lang="tr" dir="ltr">`, "<title>Sözleşme " + strconv.FormatInt(row.ContractNo, 10) + "</title>",
 		"İmzacı", "Maskeli telefon", "Doğrulama zamanı", "KVKK bildirim sürümü", "İçerik SHA-256",
-		"Müşteri", "Personel", "Görseller ve ekler",
+		"Müşteri", "Personel", "Hasar / not fotoğrafları",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("tr rendered HTML missing %q:\n%s", want, html)

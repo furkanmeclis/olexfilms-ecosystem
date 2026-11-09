@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { CompleteStep } from "@/features/services/components/complete-step";
 import { ContractStep } from "@/features/services/components/contract-step";
 import { CustomerVehicleStep } from "@/features/services/components/customer-vehicle-step";
 import { MeasurementStep } from "@/features/services/components/measurement-step";
@@ -61,6 +62,8 @@ import { usePermission } from "@/providers/permission-provider";
  * photos follow step 1; a missing required angle keeps the later steps
  * closed, and a 422 PHOTO_STANDARD_INCOMPLETE from the contract or the
  * completion brings the photos back with the missing angles marked.
+ * TEC-1076: the products follow the parts, the service number and the
+ * completion are the last step (complete).
  */
 export function ServiceWizardPage({
   slug,
@@ -171,7 +174,7 @@ export function ServiceWizardPage({
     ? step
     : step === "photos"
       ? "parts"
-      : "stock";
+      : "complete";
   if (
     hasService &&
     !canOpenStep(shown, hasService, false, steps, photosLocked)
@@ -281,6 +284,15 @@ export function ServiceWizardPage({
         selectedParts={selectedParts}
         onChanged={stored}
         onBack={() => goBack("stock")}
+        onNext={() => goNext("stock")}
+      />
+    );
+  } else if (shown === "complete") {
+    body = (
+      <CompleteStep
+        service={current}
+        onChanged={stored}
+        onBack={() => goBack("complete")}
         onCompleted={(saved) => {
           stored(saved);
           storeParts(saved.uuid, null);

@@ -45,7 +45,7 @@ describe("car parts (TEC-182)", () => {
     expect(togglePart(["body_kaput"], "body_kaput")).toEqual([]);
   });
 
-  it("applies a preset to its own group only and toggles it off", () => {
+  it("adds a preset to the selection and toggles it off (TEC-1076)", () => {
     const all = [
       "body_kaput",
       "body_on_tampon",
@@ -61,6 +61,7 @@ describe("car parts (TEC-182)", () => {
     );
     expect(next.sort()).toEqual(
       [
+        "body_tavan",
         "window_on_cam",
         "body_sag_on_camurluk",
         "body_kaput",
@@ -68,9 +69,9 @@ describe("car parts (TEC-182)", () => {
       ].sort(),
     );
     expect(isPresetActive(next, preset("front_three"), all)).toBe(true);
-    expect(applyPreset(next, preset("front_three"), all)).toEqual([
-      "window_on_cam",
-    ]);
+    expect(applyPreset(next, preset("front_three"), all).sort()).toEqual(
+      ["body_tavan", "window_on_cam"].sort(),
+    );
   });
 
   it("skips preset parts that are not available", () => {

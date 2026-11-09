@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Info, ScanBarcode, Search, Trash2 } from "lucide-react";
+import { Info, ScanBarcode, Search, Trash2 } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,13 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { permissions } from "@/config/permissions";
+import { CarPartDrawing } from "@/features/services/components/car-part-picker";
 import {
-  CertificateWarningBand,
-  blockingCertificateWarnings,
-  completionBlockedReason,
-} from "@/features/certificates/components/certificate-status";
-import { isKnownPart, partsForItem } from "@/features/services/lib/car-parts";
+  isKnownPart,
+  partsForItem,
+  togglePart,
+} from "@/features/services/lib/car-parts";
 import {
   normalizeMeters,
   stockErrorKey,
@@ -33,23 +32,22 @@ import {
   type ServiceStockUnit,
 } from "@/features/services/services/service-wizard.service";
 import { useDebounce } from "@/hooks/use-debounce";
-import { missingAnglesFromError } from "@/features/photo-standard/lib/photo-standard";
 import { isApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
-import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
 
 export type StockStepProps = {
   service: Service;
-  /** Parts picked in step 2; each item gets those of its category. */
+  /**
+   * Parts picked in step 2: each new item starts with those of its category
+   * and the dealer narrows them per product (TEC-1076).
+   */
   selectedParts: readonly string[];
   onChanged: (service: Service) => void;
   onBack: () => void;
-  onCompleted: (service: Service) => void;
-  showCertificateWarnings?: boolean;
-  /** TEC-500: completion refused for missing intake photo angles. */
-  onPhotosIncomplete?: (missing: string[]) => void;
+  onNext: () => void;
 };
 
 function useErrorText() {
@@ -87,7 +85,16 @@ function AddUnitForm({
       : null;
   const quantityError =
     mode === "fixed" ? validateQuantity(quantity, unit.quantity_on_hand) : null;
-  const parts = partsForItem(selectedParts, unit.product.available_parts);
+  // TEC-1076 (revize 9.2): the product is picked after the application
+  // areas; it starts with every picked part of its category and the dealer
+  // narrows them to where this product goes (e.g. windshield vs. sides).
+  const allowed = partsForItem(selectedParts, unit.product.available_parts);
+  const [parts, setParts] = useState<string[]>(allowed);
+  const partLabel = (part: string) =>
+    isKnownPart(part) ? t(`services.parts.names.${part}`) : part;
+  const togglePartOf = (part: string) => {
+    if (allowed.includes(part)) setParts((prev) => togglePart(prev, part));
+  };
   // Exceeding the stock is shown as soon as it is typed.
   const showMeters =
     metersError && (submitted || metersError === "exceeds")
@@ -250,10 +257,55 @@ function AddUnitForm({
         </div>
       ) : null}
 
-      <p className="text-muted-foreground text-sm" data-testid="item-parts">
-        {parts.length > 0
-          ? t("services.stock.parts_applied", { count: parts.length })
-          : t("services.stock.parts_none")}
+      {allowed.length > 0 ? (
+        <fieldset className="space-y-3" data-testid="item-parts-picker">
+          <legend className="text-sm font-medium">
+            {t("services.stock.parts_assign")}
+          </legend>
+          <div className="grid gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <CarPartDrawing
+              className="max-w-xl"
+              selected={parts}
+              canPick={(part) => allowed.includes(part)}
+              onToggle={togglePartOf}
+              label={t("services.stock.parts_assign")}
+              partLabel={partLabel}
+            />
+            <ul className="space-y-1.5">
+              {allowed.map((part) => {
+                const checkId = `${id}-part-${part}`;
+                return (
+                  <li key={part} className="flex items-center gap-2">
+                    <Checkbox
+                      id={checkId}
+                      checked={parts.includes(part)}
+                      data-item-part={part}
+                      onCheckedChange={() => togglePartOf(part)}
+                    />
+                    <label htmlFor={checkId} className="text-sm">
+                      {partLabel(part)}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </fieldset>
+      ) : null}
+      <p
+        className={cn(
+          "text-sm",
+          allowed.length > 0 && parts.length === 0
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-muted-foreground",
+        )}
+        data-testid="item-parts"
+      >
+        {allowed.length === 0
+          ? t("services.stock.parts_none")
+          : parts.length > 0
+            ? t("services.stock.parts_applied", { count: parts.length })
+            : t("services.stock.parts_unassigned")}
       </p>
 
       {serverError ? (
@@ -286,7 +338,7 @@ function AddUnitForm({
   );
 }
 
-function ItemRow({
+export function ItemRow({
   item,
   editable,
   onRemove,
@@ -294,8 +346,8 @@ function ItemRow({
 }: {
   item: ServiceItem;
   editable: boolean;
-  onRemove: () => void;
-  removing: boolean;
+  onRemove?: () => void;
+  removing?: boolean;
 }) {
   const { t } = useLocale();
   const amount =
@@ -328,7 +380,7 @@ function ItemRow({
           </div>
         ) : null}
       </div>
-      {editable ? (
+      {editable && onRemove ? (
         <Button
           type="button"
           variant="ghost"
@@ -346,24 +398,22 @@ function ItemRow({
 }
 
 /**
- * Step 4: products and stock (TEC-182). Units of the service organization
- * come from the stock picker (TEC-180): a scanner (or typed barcode) plus
- * Enter looks the unit up exactly, the search lists by product name, SKU or
- * barcode. A roll takes meters (at most what is left) or the whole roll, a
- * fixed barcode pieces. The last step also completes the service when the
- * caller holds services.complete (stock is consumed by the backend).
+ * Products and stock (TEC-182). Units of the service organization come from
+ * the stock picker (TEC-180): a scanner (or typed barcode) plus Enter looks
+ * the unit up exactly, the search lists by product name, SKU or barcode. A
+ * roll takes meters (at most what is left) or the whole roll, a fixed
+ * barcode pieces. TEC-1076: the step follows the parts right away and each
+ * product gets its own application areas; the completion moved to the last
+ * step (complete-step.tsx).
  */
 export function StockStep({
   service,
   selectedParts,
   onChanged,
   onBack,
-  onCompleted,
-  showCertificateWarnings = true,
-  onPhotosIncomplete,
+  onNext,
 }: StockStepProps) {
   const { t } = useLocale();
-  const { can } = usePermission();
   const queryClient = useQueryClient();
   const errorText = useErrorText();
   const scanId = useId();
@@ -412,28 +462,6 @@ export function StockStep({
       void refreshStock();
     },
     onError: (error: unknown) => appToast.error(errorText(error)),
-  });
-
-  const canComplete =
-    can(permissions.services.complete) &&
-    service.available_transitions.includes("completed") &&
-    (!showCertificateWarnings ||
-      blockingCertificateWarnings(service).length === 0);
-  const certificateBlock = showCertificateWarnings
-    ? completionBlockedReason(service)
-    : null;
-  const complete = useMutation({
-    mutationFn: () =>
-      serviceWizardService.transition(service.uuid, "completed"),
-    onSuccess: (saved) => {
-      appToast.success(t("services.complete.done", { no: saved.service_no }));
-      onCompleted(saved);
-    },
-    onError: (error: unknown) => {
-      appToast.error(errorText(error));
-      const missing = missingAnglesFromError(error);
-      if (missing && onPhotosIncomplete) onPhotosIncomplete(missing);
-    },
   });
 
   const onScan = (e: FormEvent) => {
@@ -624,43 +652,13 @@ export function StockStep({
         )}
       </section>
 
-      {!can(permissions.services.complete) ? (
-        <p
-          className="text-muted-foreground text-sm"
-          data-testid="complete-hint"
-        >
-          {t("services.complete.no_permission")}
-        </p>
-      ) : null}
-      <CertificateWarningBand
-        service={service}
-        compact
-        enabled={showCertificateWarnings}
-      />
-      {certificateBlock ? (
-        <p
-          className="text-muted-foreground text-sm"
-          data-testid="complete-hint"
-        >
-          {t(certificateBlock)}
-        </p>
-      ) : null}
-
       <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
-        {can(permissions.services.complete) ? (
-          <Button
-            type="button"
-            data-testid="complete-service"
-            disabled={!canComplete || items.length === 0 || complete.isPending}
-            onClick={() => complete.mutate()}
-          >
-            <CheckCircle2 className="size-4" />
-            {t("services.complete.button")}
-          </Button>
-        ) : null}
+        <Button type="button" data-testid="stock-next" onClick={onNext}>
+          {t("services.wizard.next")}
+        </Button>
       </WizardActions>
     </div>
   );

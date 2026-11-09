@@ -10,6 +10,8 @@ const api = vi.hoisted(() => ({
   addItem: vi.fn(),
   removeItem: vi.fn(),
   transition: vi.fn(),
+  updateService: vi.fn(),
+  serviceNoAvailability: vi.fn(),
 }));
 const catalog = vi.hoisted(() => ({ listCategories: vi.fn() }));
 const granted = vi.hoisted(() => ({ set: new Set<string>() }));
@@ -62,6 +64,7 @@ import type {
 import { ApiError } from "@/lib/api/errors";
 
 import { CarPartPicker } from "./car-part-picker";
+import { CompleteStep } from "./complete-step";
 import { PartsStep } from "./parts-step";
 import { ServiceWizardPage } from "./service-wizard-page";
 import { StockStep } from "./stock-step";
@@ -187,6 +190,7 @@ const service = (over: Partial<Service> = {}): Service => ({
   updated_at: "2026-10-01T00:00:00Z",
   editable: true,
   items_editable: true,
+  service_no_editable: true,
   available_transitions: ["pending", "completed"],
   is_warranty_reapply: false,
   items: [],
@@ -284,7 +288,7 @@ describe("Step 2: SVG part picker", () => {
     expect(onChange).toHaveBeenLastCalledWith(["window_on_cam", "body_kaput"]);
   });
 
-  it("applies a preset to its own group", async () => {
+  it("adds a preset to the selection (TEC-1076)", async () => {
     const onChange = vi.fn();
     await render(
       createElement(CarPartPicker, {
@@ -294,10 +298,14 @@ describe("Step 2: SVG part picker", () => {
       }),
     );
     await click($('[data-preset="hood_only"]'));
-    expect(onChange).toHaveBeenLastCalledWith(["window_on_cam", "body_kaput"]);
+    expect(onChange).toHaveBeenLastCalledWith([
+      "body_tavan",
+      "window_on_cam",
+      "body_kaput",
+    ]);
   });
 
-  it("offers group presets and keeps the detailed picker collapsed (TEC-864)", async () => {
+  it("offers group presets and always shows the drawing (TEC-864, TEC-1076)", async () => {
     const onChange = vi.fn();
     const available = [
       "body_kaput",
@@ -315,15 +323,15 @@ describe("Step 2: SVG part picker", () => {
     // Only body presets: the category has no windows.
     expect($('[data-preset-group="window"]')).toBeNull();
     expect($('[data-preset="windshield"]')).toBeNull();
-    // Hood preset is active, so the detailed section starts closed.
     expect($('[data-preset="hood_only"]')?.getAttribute("aria-pressed")).toBe(
       "true",
     );
-    const detailed = $('[data-testid="parts-detailed"]');
-    expect(detailed?.getAttribute("data-state")).toBe("closed");
-    expect($('[data-testid="parts-detailed-toggle"]')?.textContent).toContain(
-      "services.parts.detailed",
-    );
+    // The drawing is not hidden behind a "detailed selection" toggle.
+    expect($('[data-testid="car-part-drawing"]')).not.toBeNull();
+    expect($('[data-testid="parts-detailed-toggle"]')).toBeNull();
+    expect(
+      $('path[data-part="body_kaput"]')?.getAttribute("aria-checked"),
+    ).toBe("true");
 
     await click($('[data-preset="front_four"]'));
     expect(onChange).toHaveBeenLastCalledWith([
@@ -332,25 +340,48 @@ describe("Step 2: SVG part picker", () => {
       "body_sol_on_camurluk",
       "body_sag_on_camurluk",
     ]);
-
-    await click($('[data-testid="parts-detailed-toggle"]'));
-    expect(
-      $('[data-testid="parts-detailed"]')?.getAttribute("data-state"),
-    ).toBe("open");
   });
 
-  it("opens the detailed picker for a hand-picked selection", async () => {
+  it("combines front two windows and the windshield (revize 9.1)", async () => {
+    const onChange = vi.fn();
     await render(
       createElement(CarPartPicker, {
-        available: ["body_kaput", "body_tavan", "window_on_cam"],
-        selected: ["body_tavan"],
-        onChange: vi.fn(),
+        available: [
+          "window_on_cam",
+          "window_sol_on_kapi",
+          "window_sag_on_kapi",
+          "window_arka_cam",
+        ],
+        selected: ["window_sol_on_kapi", "window_sag_on_kapi"],
+        onChange,
       }),
     );
     expect(
-      $('[data-testid="parts-detailed"]')?.getAttribute("data-state"),
-    ).toBe("open");
-    expect($('[data-preset-group="window"]')).not.toBeNull();
+      $('[data-preset="front_two_windows"]')?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    await click($('[data-preset="windshield"]'));
+    expect(onChange).toHaveBeenLastCalledWith([
+      "window_sol_on_kapi",
+      "window_sag_on_kapi",
+      "window_on_cam",
+    ]);
+  });
+
+  it("lists the picked parts as removable chips", async () => {
+    const onChange = vi.fn();
+    await render(
+      createElement(CarPartPicker, {
+        available: ["body_kaput", "window_on_cam"],
+        selected: ["body_kaput", "window_on_cam"],
+        onChange,
+      }),
+    );
+    const chips = $$("[data-selected-part]").map((c) =>
+      c.getAttribute("data-selected-part"),
+    );
+    expect(chips).toEqual(["body_kaput", "window_on_cam"]);
+    await click($('[data-selected-part="body_kaput"] button'));
+    expect(onChange).toHaveBeenLastCalledWith(["window_on_cam"]);
   });
 
   it("takes the options from the category available_parts", async () => {
@@ -392,18 +423,13 @@ describe("Step 2: SVG part picker", () => {
 });
 
 describe("Step 4: products and stock", () => {
-  function renderStock(
-    svc: Service,
-    parts: string[] = [],
-    showCertificateWarnings = true,
-  ) {
+  function renderStock(svc: Service, parts: string[] = []) {
     const props = {
       service: svc,
       selectedParts: parts,
       onChanged: vi.fn(),
       onBack: vi.fn(),
-      onCompleted: vi.fn(),
-      showCertificateWarnings,
+      onNext: vi.fn(),
     };
     return render(createElement(StockStep, props)).then(() => props);
   }
@@ -437,6 +463,47 @@ describe("Step 4: products and stock", () => {
       applied_parts: ["body_kaput"],
     });
     expect(props.onChanged).toHaveBeenCalledWith(saved);
+  });
+
+  it("assigns the product to some of the picked areas (TEC-1076)", async () => {
+    api.listStockUnits.mockResolvedValue({ items: [rollUnit] });
+    api.addItem.mockResolvedValue(service({ items: [item()] }));
+    await renderStock(service(), ["body_kaput", "body_tavan", "window_on_cam"]);
+    await click($('[data-testid="pick-unit"]'));
+    // Only the picked parts of the product's category, all on by default.
+    const checks = $$("[data-item-part]").map((c) => [
+      c.getAttribute("data-item-part"),
+      c.getAttribute("data-state"),
+    ]);
+    expect(checks).toEqual([
+      ["body_kaput", "checked"],
+      ["body_tavan", "checked"],
+    ]);
+    const form = $('[data-testid="add-unit-form"]');
+    expect(
+      form
+        ?.querySelector('path[data-part="window_on_cam"]')
+        ?.getAttribute("aria-disabled"),
+    ).toBe("true");
+    // The drawing toggles the product's areas too.
+    await click(form?.querySelector('path[data-part="body_tavan"]'));
+    expect($('[data-item-part="body_tavan"]')?.getAttribute("data-state")).toBe(
+      "unchecked",
+    );
+    await click($('[data-testid="whole-roll"]'));
+    await submit($('[data-testid="add-unit-form"]'));
+    expect(api.addItem).toHaveBeenCalledWith(
+      "s1",
+      expect.objectContaining({ applied_parts: ["body_kaput"] }),
+    );
+  });
+
+  it("moves on with the next button", async () => {
+    api.listStockUnits.mockResolvedValue({ items: [] });
+    const props = await renderStock(service({ items: [item()] }));
+    expect($('[data-testid="complete-service"]')).toBeNull();
+    await click($('[data-testid="stock-next"]'));
+    expect(props.onNext).toHaveBeenCalledTimes(1);
   });
 
   it("adds pieces of a fixed barcode within the pieces on hand", async () => {
@@ -512,13 +579,25 @@ describe("Step 4: products and stock", () => {
     expect(api.removeItem).toHaveBeenCalledWith("s1", "i1");
     expect(props.onChanged).toHaveBeenCalledWith(after);
   });
+});
+
+describe("Last step: service number and completion (TEC-1076)", () => {
+  function renderComplete(svc: Service, showCertificateWarnings = true) {
+    const props = {
+      service: svc,
+      onChanged: vi.fn(),
+      onBack: vi.fn(),
+      onCompleted: vi.fn(),
+      showCertificateWarnings,
+    };
+    return render(createElement(CompleteStep, props)).then(() => props);
+  }
 
   it("completes the service only with services.complete", async () => {
-    api.listStockUnits.mockResolvedValue({ items: [] });
     const done = service({ status: "completed", items_editable: false });
     api.transition.mockResolvedValue(done);
 
-    const noPerm = await renderStock(service({ items: [item()] }));
+    const noPerm = await renderComplete(service({ items: [item()] }));
     expect($('[data-testid="complete-service"]')).toBeNull();
     expect($('[data-testid="complete-hint"]')).not.toBeNull();
     expect(noPerm.onCompleted).not.toHaveBeenCalled();
@@ -526,7 +605,7 @@ describe("Step 4: products and stock", () => {
     act(() => root.unmount());
     root = createRoot(container);
     granted.set.add("services.complete");
-    const props = await renderStock(service({ items: [item()] }));
+    const props = await renderComplete(service({ items: [item()] }));
     await click($('[data-testid="complete-service"]'));
     expect(api.transition).toHaveBeenCalledWith("s1", "completed");
     expect(props.onCompleted).toHaveBeenCalledWith(done);
@@ -534,8 +613,7 @@ describe("Step 4: products and stock", () => {
 
   it("does not complete a service without items", async () => {
     granted.set.add("services.complete");
-    api.listStockUnits.mockResolvedValue({ items: [] });
-    await renderStock(service({ items: [] }));
+    await renderComplete(service({ items: [] }));
     expect(
       ($('[data-testid="complete-service"]') as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -543,8 +621,7 @@ describe("Step 4: products and stock", () => {
 
   it("disables completion and explains the pending approval certificate warning", async () => {
     granted.set.add("services.complete");
-    api.listStockUnits.mockResolvedValue({ items: [] });
-    await renderStock(
+    await renderComplete(
       service({
         items: [item()],
         certificate_warnings: [
@@ -571,8 +648,7 @@ describe("Step 4: products and stock", () => {
 
   it("hides certificate warning controls while the certificates module is off", async () => {
     granted.set.add("services.complete");
-    api.listStockUnits.mockResolvedValue({ items: [] });
-    await renderStock(
+    await renderComplete(
       service({
         items: [item()],
         certificate_warnings: [
@@ -583,16 +659,96 @@ describe("Step 4: products and stock", () => {
           },
         ],
       } as Partial<Service>),
-      [],
       false,
     );
     expect($("[data-testid=certificate-warning-band]")).toBeNull();
     expect($('[data-testid="complete-service"]')).not.toBeNull();
   });
+
+  it("enters the service number here and saves it before completing", async () => {
+    granted.set.add("services.complete");
+    api.serviceNoAvailability.mockResolvedValue({ available: true });
+    const renamed = service({ items: [item()], service_no: "OLX12345" });
+    api.updateService.mockResolvedValue(renamed);
+    const done = service({ status: "completed", service_no: "OLX12345" });
+    api.transition.mockResolvedValue(done);
+    const props = await renderComplete(service({ items: [item()] }));
+    const input = $('input[name="service_no"]') as HTMLInputElement;
+    expect(input.value).toBe("DSAB12CD34");
+    expect($('[data-testid="summary-parts"]')?.textContent).toContain(
+      "services.parts.names.body_kaput",
+    );
+    await type(input, "https://olexfilms.app/warranty/OLX12345");
+    await click($('[data-testid="complete-service"]'));
+    expect(api.updateService).toHaveBeenCalledWith("s1", {
+      service_no: "OLX12345",
+    });
+    expect(props.onChanged).toHaveBeenCalledWith(renamed);
+    expect(api.transition).toHaveBeenCalledWith("s1", "completed");
+    expect(props.onCompleted).toHaveBeenCalledWith(done);
+  });
+
+  it("keeps the generated number when it is left alone", async () => {
+    granted.set.add("services.complete");
+    api.transition.mockResolvedValue(service({ status: "completed" }));
+    await renderComplete(service({ items: [item()] }));
+    await click($('[data-testid="complete-service"]'));
+    expect(api.updateService).not.toHaveBeenCalled();
+    expect(api.transition).toHaveBeenCalledWith("s1", "completed");
+  });
+
+  it("refuses an invalid or taken number", async () => {
+    granted.set.add("services.complete");
+    api.serviceNoAvailability.mockResolvedValue({ available: false });
+    await renderComplete(service({ items: [item()] }));
+    await type($('input[name="service_no"]'), "a b");
+    await click($('[data-testid="complete-service"]'));
+    expect(toast.error).toHaveBeenCalledWith("services.service_no.invalid");
+    expect(api.updateService).not.toHaveBeenCalled();
+
+    api.updateService.mockRejectedValue(
+      new ApiError({ status: 409, code: "SERVICE_NO_TAKEN", message: "taken" }),
+    );
+    await type($('input[name="service_no"]'), "OLX99999");
+    await click($('[data-testid="complete-service"]'));
+    expect(toast.error).toHaveBeenLastCalledWith("services.service_no.taken");
+    expect(api.transition).not.toHaveBeenCalled();
+  });
+
+  it("saves the number without services.complete and warns about a signed contract", async () => {
+    const renamed = service({ items: [item()], service_no: "OLX12345" });
+    api.updateService.mockResolvedValue(renamed);
+    api.serviceNoAvailability.mockResolvedValue({ available: true });
+    const props = await renderComplete(
+      service({
+        items: [item()],
+        contract: { status: "executed" },
+      } as Partial<Service>),
+    );
+    expect($('[data-testid="complete-service"]')).toBeNull();
+    const saveBtn = $('[data-testid="service-no-save"]') as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(true);
+    await type($('input[name="service_no"]'), "OLX12345");
+    expect($('[data-testid="service-no-contract-hint"]')).not.toBeNull();
+    await click($('[data-testid="service-no-save"]'));
+    expect(api.updateService).toHaveBeenCalledWith("s1", {
+      service_no: "OLX12345",
+    });
+    expect(props.onChanged).toHaveBeenCalledWith(renamed);
+  });
+
+  it("locks the number of a completed service", async () => {
+    await renderComplete(
+      service({ items: [item()], service_no_editable: false }),
+    );
+    expect(($('input[name="service_no"]') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+  });
 });
 
 describe("Wizard flow: parts, roll and pieces, completion", () => {
-  it("applies the step 2 parts to the items and completes", async () => {
+  it("applies the step 2 parts to the items and completes on the last step", async () => {
     window.sessionStorage.clear();
     granted.set = new Set([
       "services.write",
@@ -687,6 +843,9 @@ describe("Wizard flow: parts, roll and pieces, completion", () => {
     });
     expect($$('[data-testid="service-item"]')).toHaveLength(2);
 
+    // TEC-1076: the completion (and the service number) is the last step.
+    await click($('[data-step="complete"]'));
+    expect($('[data-testid="complete-step"]')).not.toBeNull();
     await click($('[data-testid="complete-service"]'));
     expect(api.transition).toHaveBeenCalledWith("s1", "completed");
     expect(router.push).toHaveBeenCalledWith("/t/acme/services/s1");
