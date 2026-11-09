@@ -37,6 +37,34 @@ organizasyon bağlamı (`RequireOrganization`). Rapor anahtarları:
 | `dealers.performance` | table | performance | performance.read | ✓ (range_to ayı) | – | ✓ |
 | `dealers.top_by_warranty` | ranking | services | warranties.read (subtree/brand/all) | ✓ | – | ✓ |
 | `activities.recent` | table | services | services.read | – (son N) | – | ✓ |
+| `orders.by_buyer` | ranking | orders | orders.read (bayi hariç; managed yeterli) | ✓ | – | ✓ |
+| `orders.inactive_buyers` | table | orders | orders.read (bayi hariç; managed yeterli) | ✓ veya `all_time=true` | – | ✓ |
+| `services.by_org` | ranking | services | services.read (subtree/brand/all) | ✓ | – | ✓ |
+
+### TEC-1090: bayi raporları (mobil ana ekranlar)
+
+* `orders.by_buyer` — dönemde siparişi olan alıcı organizasyonlar, en çok sipariş veren önce
+  (eşitlikte tutar, sonra ad). Sayılan sipariş: taslak, iptal ediliyor ve iptal dışındaki her
+  durum; tarih `created_at`. Satır: `organization_uuid`, `organization`, `organization_type`,
+  `city`, `order_count`, `total`, `currency`, `last_order_at`. **Fiyat kuralı:** `total` /
+  `currency` yalnız `pricing.purchase.read` veya `pricing.sale.read` izniyle dolu; izin yoksa
+  `null` ve `total` kolonu `columns`'da yer almaz (mobil TEC-1051 kuralıyla aynı). Aktif
+  organizasyonun kendi alımları satır olmaz. Seri `order_count` (nokta anahtarı organizasyon
+  uuid'i).
+* `orders.inactive_buyers` — kapsamdaki aktif bayilerden (`type=dealer`, `status=active`,
+  silinmemiş) seçili dönemde sayılan siparişi olmayanlar; `all_time=true` ile (dönem
+  parametreleriyle birlikte verilemez, 400) hiç siparişi olmayanlar. Satır: `organization_uuid`,
+  `organization`, `city`, `last_order_at` (hiç yoksa `null`). Sıra: hiç sipariş vermeyenler,
+  sonra en eski son sipariş. `cards` serisindeki `inactive_dealers` toplam sayıdır (satırlar
+  `limit` ile kesilir). Merkez/marka kapsamı tüm markadaki bayileri, distribütör (managed) kendi
+  doğrudan bayilerini görür. `all_time=true` yanıtında `period`/`range_*` `null`, `all_time`
+  `true`.
+* `services.by_org` — dönemde tamamlanan hizmetler organizasyon başına (diğer hizmet
+  sıralamalarıyla aynı temel: `completed_at`). Satır: `organization_uuid`, `organization`
+  (merkezin hizmet noktası açıksa onun adı), `organization_name`, `organization_type`,
+  `is_service_point` (merkezin kendi hizmetleri: ayrı satır), `city`, `services_count`.
+* Ortak zarfa `all_time` (boolean) eklendi; `catalog` öğelerinde `all_time` raporun bu
+  parametreyi alıp almadığını söyler. Yeni kolon tipi: `money` (iki haneli ondalık string).
 
 ## 2. Ortak zarf
 

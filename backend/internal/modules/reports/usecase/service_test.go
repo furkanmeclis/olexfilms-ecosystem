@@ -275,10 +275,12 @@ func TestReportsFollowScope(t *testing.T) {
 		ReportDealersTopByWarranty:       func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportActivitiesRecent:           func(e Envelope) float64 { return float64(len(e.Rows)) },
 		ReportOverview:                   func(e Envelope) float64 { return card(e, "services_completed") },
+		ReportOrdersByBuyer:              func(e Envelope) float64 { return sumSeries(e, "") },
+		ReportServicesByOrg:              func(e Envelope) float64 { return sumSeries(e, "") },
 	}
 	for _, d := range Definitions {
-		if d.Key == ReportDealersPerformance {
-			continue // TestDealersPerformanceScope
+		if d.Key == ReportDealersPerformance || d.Key == ReportOrdersInactiveBuyer {
+			continue // TestDealersPerformanceScope, TestNetworkReportsTEC1090
 		}
 		get, ok := total[d.Key]
 		if !ok {
@@ -291,7 +293,7 @@ func TestReportsFollowScope(t *testing.T) {
 					in.Limit = "50"
 				}
 				env, err := s.Report(f.ctx, cl.c, d.Key, in)
-				if d.Network && cl.name == "dealer" {
+				if (d.Network || d.Seller) && cl.name == "dealer" {
 					if !errors.Is(err, ErrForbidden) {
 						t.Fatalf("network report for a dealer: err = %v, want ErrForbidden", err)
 					}
@@ -446,7 +448,7 @@ func TestEnvelopeShapeSameForEveryReport(t *testing.T) {
 	f := newFixture(t)
 	s := f.svc(featureMap{})
 	center := f.caller(t, f.center, rbac.RoleCenterStaff, rbac.RoleCenterWarehouse)
-	want := []string{"columns", "generated_at", "granularity", "kind", "locale", "period", "range_from", "range_to", "report", "rows", "scope", "series", "timezone", "title"}
+	want := []string{"all_time", "columns", "generated_at", "granularity", "kind", "locale", "period", "range_from", "range_to", "report", "rows", "scope", "series", "timezone", "title"}
 	for _, d := range Definitions {
 		t.Run(d.Key, func(t *testing.T) {
 			in := in30

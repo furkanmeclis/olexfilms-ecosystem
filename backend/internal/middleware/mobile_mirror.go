@@ -34,6 +34,15 @@ var MobilePanelMirrorPrefixes = []string{
 	"dealer-prices", "product-sales", "purchases", "suppliers",
 	// TEC-959: dealer fleet management, service subscriptions and staff cards.
 	"fleets", "service-subscriptions", "staff-profiles",
+	// TEC-1090 (TEC-1083): intake contracts in the mobile service steps —
+	// read, PDF, customer OTP, customer and staff signatures, media, void.
+	// The contract routes keep their own gates (intake_contracts module,
+	// contracts.read / contracts.write / contracts.void); the template
+	// editor stays under /v1/platform and /v1/contract-templates (web only).
+	"contracts",
+	// TEC-1063 / TEC-1071 (routes in #515 / #523): the pending delivery
+	// recipients of a new order and the accounting queue.
+	"tenant/pending-recipients", "accounting/queue",
 	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
 

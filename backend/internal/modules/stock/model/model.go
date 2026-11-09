@@ -292,6 +292,14 @@ type ProductStock struct {
 	UpdatedAt     time.Time              `json:"updated_at"`
 }
 
+// WarehouseProductStock is one product of a warehouse (TEC-1090,
+// TEC-1069): the product stock row summed over the warehouse's locations
+// plus the roll units in stock there. No prices.
+type WarehouseProductStock struct {
+	ProductStock
+	RollCount int32 `json:"roll_count"`
+}
+
 // Stock status filter values.
 const (
 	StatusInStock    = "in_stock"

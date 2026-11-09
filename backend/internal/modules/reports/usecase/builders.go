@@ -215,6 +215,12 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 			"accepted": counts.AcceptedCount, "vin_pending": counts.VinPendingCount,
 		})
 		env.Series = []Series{cards, status, q.timeSeries("measurements", values)}
+	case ReportOrdersByBuyer:
+		return s.ordersByBuyer(ctx, c, q, a, env)
+	case ReportOrdersInactiveBuyer:
+		return s.inactiveBuyers(ctx, c, f, q, a, env)
+	case ReportServicesByOrg:
+		return s.servicesByOrg(ctx, q, a, env)
 	case ReportDealersPerformance:
 		return s.dealersPerformance(ctx, c, f, q, env)
 	case ReportDealersTopByWarranty:

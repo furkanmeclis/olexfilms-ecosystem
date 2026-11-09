@@ -196,6 +196,29 @@ func (h *Handler) WarehouseSummary(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
+// WarehouseStock serves GET /v1/stock/warehouses/{uuid}/products (TEC-1090).
+func (h *Handler) WarehouseStock(w http.ResponseWriter, r *http.Request) {
+	f, ok := filterFrom(w, r)
+	if !ok {
+		return
+	}
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	in, ok := stockFilter(w, r)
+	if !ok {
+		return
+	}
+	items, total, err := h.svc.WarehouseStock(r.Context(), f, orgctx.MustScope(r.Context()).InternalID, id, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
+}
+
 // LocationStock serves GET /v1/stock/locations/{uuid}/products.
 func (h *Handler) LocationStock(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, func(f scopefilter.Filter, id uuid.UUID, in model.StockFilter) ([]model.ProductStock, int64, error) {

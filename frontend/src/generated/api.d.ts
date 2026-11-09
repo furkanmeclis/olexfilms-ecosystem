@@ -6180,6 +6180,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/warehouses/{uuid}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Product totals of a warehouse (TEC-1090)
+         * @description Needs `stock.read` and the warehouse module; the warehouse belongs to the active organization (404 otherwise). One row per product summed over the warehouse's locations (`bin_product_stocks`): quantity (pieces, rolls and fixed barcode quantities, as the organization stock), meters left on the rolls and roll_count (serial roll units in stock there with meters left). No prices. Same filters (status in_stock / out_of_stock, product_uuid, category_uuid, q) and sort (product default, sku, category, quantity, meters, updated_at) as the organization stock.
+         */
+        get: operations["listStockWarehouseProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/warehouses/{uuid}/units": {
         parameters: {
             query?: never;
@@ -17694,7 +17717,7 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent, orders.by_buyer, orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand reach only). orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). orders.by_buyer rows carry total / currency only with pricing.purchase.read or pricing.sale.read (else null and no total column). orders.inactive_buyers takes all_time=true instead of a period (dealers that never ordered). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
          */
         get: operations["getReport"];
         put?: never;
@@ -23360,6 +23383,23 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description TEC-1090 warehouse product totals row (StockProduct plus roll_count). */
+        StockWarehouseProduct: components["schemas"]["StockProduct"] & {
+            /** @description Serial roll units in stock in the warehouse with meters left */
+            roll_count: number;
+        };
+        EnvelopeStockWarehouseProductPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockWarehouseProduct"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         /** @description Upper-cased on save; the hyphen is the full_code separator. */
         WarehouseCode: string;
         Warehouse: {
@@ -27880,6 +27920,8 @@ export interface components {
             invoices?: components["schemas"]["OrderInvoice"][];
             /** @description The center opened the order for the dealer; it started approved (TEC-1024) */
             created_by_seller: boolean;
+            /** @description TEC-1090: the user who opened the order (list and detail, same source); null for a system or migrated order. */
+            created_by?: components["schemas"]["OrderCreatorRef"] | null;
             /** @description TEC-1028: the seller warehouse the order falls into (set at approval: the warehouse picked on creation, else the seller's primary warehouse). Seller side only (list rows too since TEC-1054); null otherwise. */
             seller_warehouse?: components["schemas"]["OrderSellerWarehouse"] | null;
             status: components["schemas"]["OrderStatus"];
@@ -28223,6 +28265,12 @@ export interface components {
             /** @example AFM Florya Merkez */
             name: string;
             is_primary: boolean;
+        };
+        OrderCreatorRef: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example Ayşe Yılmaz */
+            name: string;
         };
         OrderCreateInput: {
             note?: string;
@@ -32504,6 +32552,8 @@ export interface components {
             default_period: string | null;
             granularities: string[];
             limited: boolean;
+            /** @description TEC-1090: the report takes all_time=true instead of a period */
+            all_time?: boolean;
         };
         EnvelopeReportCatalog: {
             /** @enum {boolean} */
@@ -32528,8 +32578,11 @@ export interface components {
         ReportColumn: {
             key: string;
             label: string;
-            /** @enum {string} */
-            type: "string" | "integer" | "number" | "datetime";
+            /**
+             * @description money is a decimal string with two digits (TEC-1090, orders.by_buyer total)
+             * @enum {string}
+             */
+            type: "string" | "integer" | "number" | "datetime" | "money";
         };
         /** @description Shared envelope of every report: the same keys in all reports; period / range / granularity are null when a report does not take them, columns / rows are empty outside tables. */
         ReportEnvelope: {
@@ -32548,6 +32601,8 @@ export interface components {
             range_to: string | null;
             /** @enum {string|null} */
             granularity: "day" | "week" | "month" | null;
+            /** @description TEC-1090: asked with all_time=true (period / range are null) */
+            all_time?: boolean;
             /** Format: date-time */
             generated_at: string;
             series: components["schemas"]["ReportSeries"][];
@@ -43634,6 +43689,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockWarehouseProducts: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                product_uuid?: components["parameters"]["StockProductUUIDFilter"];
+                category_uuid?: components["parameters"]["StockCategoryUUIDFilter"];
+                /** @description `in_stock`: quantity or meters above zero; `out_of_stock`: both zero. */
+                status?: components["parameters"]["StockStatusFilter"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse product totals */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockWarehouseProductPage"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -64740,6 +64832,8 @@ export interface operations {
                 range_to?: components["parameters"]["ReportRangeTo"];
                 granularity?: "day" | "week" | "month";
                 limit?: number;
+                /** @description TEC-1090, orders.inactive_buyers only: true ignores the period and lists active dealers that never ordered. Exclusive with period / range_from / range_to. */
+                all_time?: boolean;
                 /** @description Label locale (default the request locale chain, K10). */
                 locale?: components["parameters"]["ReportLocale"];
             };

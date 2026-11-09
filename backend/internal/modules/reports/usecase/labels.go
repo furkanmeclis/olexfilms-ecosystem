@@ -31,6 +31,9 @@ var labels = map[string]label{
 	"title.dealers.performance":          {"Bayi performansı", "Dealer performance", "Представяне на дилърите", "Händlerleistung", "Απόδοση αντιπροσώπων", "Ефективність дилерів", "Эффективность дилеров", "Performance des concessionnaires", "Rendimiento de concesionarios", "Prestazioni dei concessionari", "经销商绩效", "Diler performansı", "أداء الوكلاء"},
 	"title.dealers.top_by_warranty":      {"Garantiye göre en iyi bayiler", "Top dealers by warranty", "Водещи дилъри по гаранции", "Top-Händler nach Garantien", "Κορυφαίοι αντιπρόσωποι κατά εγγυήσεις", "Найкращі дилери за гарантіями", "Лучшие дилеры по гарантиям", "Meilleurs concessionnaires par garanties", "Mejores concesionarios por garantías", "Migliori concessionari per garanzie", "按质保排名的经销商", "Zəmanətə görə ən yaxşı dilerlər", "أفضل الوكلاء حسب الضمانات"},
 	"title.activities.recent":            {"Son hizmetler", "Recent services", "Последни услуги", "Neueste Serviceaufträge", "Πρόσφατες υπηρεσίες", "Останні послуги", "Последние услуги", "Prestations récentes", "Servicios recientes", "Servizi recenti", "最近的服务", "Son xidmətlər", "أحدث الخدمات"},
+	"title.orders.by_buyer":              {"Bayiye göre siparişler", "Orders by dealer", "Поръчки по дилър", "Bestellungen nach Händler", "Παραγγελίες ανά αντιπρόσωπο", "Замовлення за дилерами", "Заказы по дилерам", "Commandes par concessionnaire", "Pedidos por concesionario", "Ordini per concessionario", "按经销商统计的订单", "Dilerə görə sifarişlər", "الطلبات حسب الوكيل"},
+	"title.orders.inactive_buyers":       {"Siparişi olmayan bayiler", "Dealers without orders", "Дилъри без поръчки", "Händler ohne Bestellungen", "Αντιπρόσωποι χωρίς παραγγελίες", "Дилери без замовлень", "Дилеры без заказов", "Concessionnaires sans commande", "Concesionarios sin pedidos", "Concessionari senza ordini", "无订单的经销商", "Sifarişi olmayan dilerlər", "وكلاء بلا طلبات"},
+	"title.services.by_org":              {"Bayiye göre hizmetler", "Services by dealer", "Услуги по дилър", "Serviceaufträge nach Händler", "Υπηρεσίες ανά αντιπρόσωπο", "Послуги за дилерами", "Услуги по дилерам", "Prestations par concessionnaire", "Servicios por concesionario", "Servizi per concessionario", "按经销商统计的服务", "Dilerə görə xidmətlər", "الخدمات حسب الوكيل"},
 
 	// Series.
 	"series.created":       {"Oluşturulan", "Created", "Създадени", "Erstellt", "Δημιουργήθηκαν", "Створено", "Создано", "Créées", "Creados", "Creati", "已创建", "Yaradılan", "المُنشأة"},
@@ -38,6 +41,7 @@ var labels = map[string]label{
 	"series.received":      {"Teslim alınan", "Received", "Получени", "Empfangen", "Παραλήφθηκαν", "Отримано", "Получено", "Réceptionnées", "Recibidos", "Ricevuti", "已收货", "Qəbul edilən", "المستلمة"},
 	"series.status":        {"Durum", "Status", "Статус", "Zustand", "Κατάσταση", "Статус", "Статус", "Statut", "Estado", "Stato", "状态", "Vəziyyət", "الحالة"},
 	"series.service_count": {"Hizmet sayısı", "Service count", "Брой услуги", "Anzahl Serviceaufträge", "Αριθμός υπηρεσιών", "Кількість послуг", "Количество услуг", "Nombre de prestations", "Número de servicios", "Numero di servizi", "服务数量", "Xidmət sayı", "عدد الخدمات"},
+	"series.order_count":   {"Sipariş sayısı", "Order count", "Брой поръчки", "Anzahl Bestellungen", "Αριθμός παραγγελιών", "Кількість замовлень", "Количество заказов", "Nombre de commandes", "Número de pedidos", "Numero di ordini", "订单数量", "Sifariş sayı", "عدد الطلبات"},
 	"series.individual":    {"Bireysel", "Individual", "Физически лица", "Privatkunden", "Ιδιώτες", "Фізичні особи", "Физические лица", "Particuliers", "Particulares", "Privati", "个人", "Fərdi", "أفراد"},
 	"series.corporate":     {"Kurumsal", "Corporate", "Юридически лица", "Firmenkunden", "Εταιρικοί", "Юридичні особи", "Юридические лица", "Entreprises", "Empresas", "Aziende", "企业", "Korporativ", "شركات"},
 	"series.cards":         {"Özet", "Summary", "Обобщение", "Zusammenfassung", "Σύνοψη", "Підсумок", "Итог", "Résumé", "Resumen", "Sintesi", "摘要", "Xülasə", "ملخص"},
@@ -85,6 +89,7 @@ var labels = map[string]label{
 	"measurements.status.vin_pending": {"Şasi no bekliyor", "VIN pending", "Очаква VIN", "FIN ausstehend", "Εκκρεμεί VIN", "Очікує VIN", "Ожидает VIN", "VIN en attente", "VIN pendiente", "VIN in attesa", "待补 VIN", "VIN gözlənilir", "بانتظار رقم الهيكل"},
 
 	// Summary cards.
+	"card.inactive_dealers":      {"Siparişi olmayan bayiler", "Dealers without orders", "Дилъри без поръчки", "Händler ohne Bestellungen", "Αντιπρόσωποι χωρίς παραγγελίες", "Дилери без замовлень", "Дилеры без заказов", "Concessionnaires sans commande", "Concesionarios sin pedidos", "Concessionari senza ordini", "无订单的经销商", "Sifarişi olmayan dilerlər", "وكلاء بلا طلبات"},
 	"card.services_created":      {"Açılan hizmetler", "Services opened", "Открити услуги", "Eröffnete Serviceaufträge", "Υπηρεσίες που άνοιξαν", "Відкриті послуги", "Открытые услуги", "Prestations ouvertes", "Servicios abiertos", "Servizi aperti", "新建服务", "Açılan xidmətlər", "الخدمات المفتوحة"},
 	"card.services_completed":    {"Tamamlanan hizmetler", "Services completed", "Завършени услуги", "Abgeschlossene Serviceaufträge", "Ολοκληρωμένες υπηρεσίες", "Завершені послуги", "Завершённые услуги", "Prestations terminées", "Servicios completados", "Servizi completati", "已完成服务", "Tamamlanan xidmətlər", "الخدمات المكتملة"},
 	"card.services_open":         {"Devam eden hizmetler", "Services in progress", "Текущи услуги", "Laufende Serviceaufträge", "Υπηρεσίες σε εξέλιξη", "Послуги в роботі", "Услуги в работе", "Prestations en cours", "Servicios en curso", "Servizi in corso", "进行中的服务", "Davam edən xidmətlər", "الخدمات الجارية"},
@@ -134,6 +139,9 @@ var labels = map[string]label{
 	"column.line_count":          {"Kalem sayısı", "Lines", "Редове", "Positionen", "Γραμμές", "Позиції", "Позиции", "Lignes", "Líneas", "Righe", "明细数", "Sətir sayı", "البنود"},
 	"column.quantity":            {"Adet", "Pieces", "Брой", "Stück", "Τεμάχια", "Штуки", "Штуки", "Pièces", "Unidades", "Pezzi", "件数", "Ədəd", "القطع"},
 	"column.meters":              {"Metre", "Meters", "Метри", "Meter", "Μέτρα", "Метри", "Метры", "Mètres", "Metros", "Metri", "米数", "Metr", "الأمتار"},
+	"column.order_count":         {"Sipariş sayısı", "Orders", "Брой поръчки", "Anzahl Bestellungen", "Αριθμός παραγγελιών", "Кількість замовлень", "Количество заказов", "Nombre de commandes", "Número de pedidos", "Numero di ordini", "订单数量", "Sifariş sayı", "عدد الطلبات"},
+	"column.total":               {"Toplam tutar", "Total amount", "Обща сума", "Gesamtbetrag", "Συνολικό ποσό", "Загальна сума", "Общая сумма", "Montant total", "Importe total", "Importo totale", "总金额", "Ümumi məbləğ", "المبلغ الإجمالي"},
+	"column.last_order_at":       {"Son sipariş", "Last order", "Последна поръчка", "Letzte Bestellung", "Τελευταία παραγγελία", "Останнє замовлення", "Последний заказ", "Dernière commande", "Último pedido", "Ultimo ordine", "最近订单", "Son sifariş", "آخر طلب"},
 }
 
 // translate resolves key for locale; an unknown locale falls back to en and
