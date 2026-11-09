@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import type { StockTransferItem } from "@/features/transfers/services/transfers.service";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 import { useLocale } from "@/providers/locale-provider";
 
 export const TRANSFER_ITEMS_PERSIST_KEY = "tenant-transfer-items-v1";
@@ -52,6 +53,8 @@ export function TransferItemsTable({
   currency: string;
 }) {
   const { t } = useLocale();
+  // TEC-1050: unit price and line total only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const columns = useMemo(
     () =>
       [
@@ -92,31 +95,35 @@ export function TransferItemsTable({
           labelKey: "transfers.form.quantity",
           cell: ({ row }) => <span dir="ltr">{itemAmount(row.original)}</span>,
         }),
-        createColumn<StockTransferItem>({
-          id: "unit_price",
-          accessorFn: (item) => decimalOrNone(item.unit_price),
-          labelKey: "transfers.detail.unit_price",
-          cell: ({ row }) => (
-            <span dir="ltr">
-              {row.original.unit_price
-                ? `${row.original.unit_price} ${currency}`
-                : "—"}
-            </span>
-          ),
-        }),
-        createColumn<StockTransferItem>({
-          id: "line_total",
-          accessorFn: (item) => decimalOrNone(item.line_total),
-          labelKey: "transfers.detail.line_total",
-          defaultHidden: true,
-          cell: ({ row }) => (
-            <span dir="ltr">
-              {row.original.line_total
-                ? `${row.original.line_total} ${currency}`
-                : "—"}
-            </span>
-          ),
-        }),
+        ...(canSeePrices
+          ? [
+              createColumn<StockTransferItem>({
+                id: "unit_price",
+                accessorFn: (item) => decimalOrNone(item.unit_price),
+                labelKey: "transfers.detail.unit_price",
+                cell: ({ row }) => (
+                  <span dir="ltr">
+                    {row.original.unit_price
+                      ? `${row.original.unit_price} ${currency}`
+                      : "—"}
+                  </span>
+                ),
+              }),
+              createColumn<StockTransferItem>({
+                id: "line_total",
+                accessorFn: (item) => decimalOrNone(item.line_total),
+                labelKey: "transfers.detail.line_total",
+                defaultHidden: true,
+                cell: ({ row }) => (
+                  <span dir="ltr">
+                    {row.original.line_total
+                      ? `${row.original.line_total} ${currency}`
+                      : "—"}
+                  </span>
+                ),
+              }),
+            ]
+          : []),
         createColumn<StockTransferItem>({
           id: "state",
           accessorFn: (item) => transferItemState(item),
@@ -134,7 +141,7 @@ export function TransferItemsTable({
           ),
         }),
       ] as ColumnDef<StockTransferItem, unknown>[],
-    [currency, t],
+    [canSeePrices, currency, t],
   );
 
   return (

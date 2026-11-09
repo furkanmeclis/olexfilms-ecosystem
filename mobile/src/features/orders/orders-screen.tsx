@@ -10,6 +10,8 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import type { paths } from '@/core/api/schema';
 import { errorMessage } from '@/core/i18n';
+import { hasAmount } from '@/core/price-visibility';
+import { usePricesVisible } from '@/core/use-prices-visible';
 import { isCenterWorkplace, kindsOf } from '@/core/spaces';
 import {
   CardRow,
@@ -76,6 +78,8 @@ export function OrdersScreen() {
     o.role === 'seller' &&
     kindsOf(me).includes('depo') &&
     (pathname.startsWith('/depo') || (isCenterWorkplace(me) && pathname.startsWith('/bayi')));
+  // TEC-1051: no totals in the warehouse space or for a warehouse role.
+  const prices = usePricesVisible();
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
@@ -142,7 +146,11 @@ export function OrdersScreen() {
                   ? `${item.seller.name} → ${item.buyer.name}`
                   : t(item.role === 'seller' ? 'orders.to' : 'orders.from', { name: other.name })
               }
-              meta={`${f.money(item.total, item.currency)} · ${f.date(item.created_at)}`}
+              meta={
+                prices && hasAmount(item.total)
+                  ? `${f.money(item.total, item.currency)} · ${f.date(item.created_at)}`
+                  : f.date(item.created_at)
+              }
               trailing={<StatusPill label={item.status_label} tone={orderTone(item.status)} />}
               onPress={() => router.push(openInWarehouse(item) ? (`/depo/jobs/order/${item.uuid}` as never) : href(item.uuid))}
             />
@@ -158,6 +166,7 @@ export function OrderDetailScreen() {
   const f = useFormat();
   const qc = useQueryClient();
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
+  const prices = usePricesVisible();
   const q = useQuery({
     queryKey: ['orders', 'detail', uuid],
     queryFn: () => unwrap(api.GET('/v1/orders/{uuid}', { params: { path: { uuid: uuid! } } })),
@@ -208,9 +217,11 @@ export function OrderDetailScreen() {
                 </Text>
                 <StatusPill label={o.status_label} tone={orderTone(o.status)} />
               </View>
-              <Text variant="title" className="tabular-nums">
-                {f.money(o.total, o.currency)}
-              </Text>
+              {prices && hasAmount(o.total) ? (
+                <Text variant="title" className="tabular-nums">
+                  {f.money(o.total, o.currency)}
+                </Text>
+              ) : null}
             </View>
 
             {actions.length ? (
@@ -233,9 +244,13 @@ export function OrderDetailScreen() {
               <InfoRow label={t('orders.buyer')} value={o.buyer.name} />
               <InfoRow label={t('orders.created')} value={f.dateTime(o.created_at)} />
               {o.delivery_method ? <InfoRow label={t('orders.delivery')} value={o.delivery_method.name} /> : null}
-              {o.tracking_no ? <InfoRow label={t('orders.tracking')} value={o.tracking_no} /> : null}
-              <InfoRow label={t('orders.subtotal')} value={f.money(o.subtotal, o.currency)} />
-              <InfoRow label={t('orders.tax')} value={f.money(o.tax_total, o.currency)} last />
+              {o.tracking_no ? <InfoRow label={t('orders.tracking')} value={o.tracking_no} last={!prices} /> : null}
+              {prices ? (
+                <>
+                  <InfoRow label={t('orders.subtotal')} value={f.money(o.subtotal, o.currency)} />
+                  <InfoRow label={t('orders.tax')} value={f.money(o.tax_total, o.currency)} last />
+                </>
+              ) : null}
             </List>
 
             {o.note || o.cancel_reason ? (
@@ -257,7 +272,7 @@ export function OrderDetailScreen() {
                     <Text variant="body" numberOfLines={2}>
                       {it.product.name}
                     </Text>
-                    {it.price_missing ? (
+                    {prices && it.price_missing ? (
                       <View className="self-start">
                         <StatusPill tone="problem" label={t('orders.price_missing')} />
                       </View>
@@ -267,9 +282,11 @@ export function OrderDetailScreen() {
                         {it.product.sku} ·{' '}
                         {it.meters !== null ? t('orders.meters', { value: f.number(it.meters, 2) }) : t('orders.pieces', { count: it.quantity ?? 0 })}
                       </Text>
-                      <Text variant="footnote" className="font-semibold tabular-nums">
-                        {f.money(it.line_total, o.currency)}
-                      </Text>
+                      {prices && hasAmount(it.line_total) ? (
+                        <Text variant="footnote" className="font-semibold tabular-nums">
+                          {f.money(it.line_total, o.currency)}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 ))}

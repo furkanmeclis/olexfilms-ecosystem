@@ -255,13 +255,15 @@ WHERE m.brand_id = sqlc.arg(brand_id)
   AND m.measured_at >= sqlc.arg(range_from)::timestamptz
   AND m.measured_at < sqlc.arg(range_to)::timestamptz;
 
+-- TEC-1072: distributor counts next to the dealer counts (center home).
 -- name: ReportNetworkCounts :one
 SELECT
-    COUNT(*)::bigint AS dealer_count,
-    COUNT(*) FILTER (WHERE o.status = 'active')::bigint AS active_dealer_count
+    COUNT(*) FILTER (WHERE o.type = 'dealer')::bigint AS dealer_count,
+    COUNT(*) FILTER (WHERE o.type = 'dealer' AND o.status = 'active')::bigint AS active_dealer_count,
+    COUNT(*) FILTER (WHERE o.type = 'distributor')::bigint AS distributor_count
 FROM organizations o
 WHERE o.brand_id = sqlc.arg(brand_id)
-  AND o.type = 'dealer'
+  AND o.type IN ('dealer', 'distributor')
   AND o.deleted_at IS NULL
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR o.id = ANY (sqlc.narg(org_ids)::bigint[]));
 

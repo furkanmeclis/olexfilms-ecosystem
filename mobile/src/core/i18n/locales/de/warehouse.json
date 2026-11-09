@@ -559,5 +559,11 @@
   "eod.generate_all_warehouses": "Alle Lager",
   "eod.pdf_ios_only": "Das Berichts-PDF kann auf diesem Gerät nicht geteilt werden; teilen Sie es von einem iPhone oder im Webpanel.",
   "counts.defaults_summary": "Einstellungen: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Erweitert"
+  "counts.advanced": "Erweitert",
+  "m.transfers_out": "Ausgehend",
+  "m.transfers_in": "Eingehend",
+  "m.this_warehouse_units": "Einheiten in diesem Lager",
+  "m.product_totals": "Produktsummen",
+  "orders.assign.fixed_none": "Für {{name}} wurde kein Bestand mit festem Barcode im Lager gefunden.",
+  "orders.assign.fixed_qty_auto": "Menge fester Barcode (unverändert: was der Position noch fehlt)"
 }

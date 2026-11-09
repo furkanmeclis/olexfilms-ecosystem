@@ -298,6 +298,14 @@ SET movement_id = sqlc.arg(movement_id)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
+-- TEC-1047: a fixed barcode scanned again on its line grows the assignment;
+-- the larger quantity moves to a new reservation (the old one is released).
+-- name: UpdateOrderItemUnitQuantity :one
+UPDATE order_item_units
+SET quantity = sqlc.arg(quantity), reservation_id = sqlc.arg(reservation_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- name: DeleteOrderItemUnit :execrows
 DELETE FROM order_item_units
 WHERE id = sqlc.arg(id);

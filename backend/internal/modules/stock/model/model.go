@@ -113,6 +113,60 @@ type UnitHistory struct {
 	Movements MovementPage  `json:"movements"`
 	// Trace (TEC-1006): where the unit came from and went.
 	Trace *UnitTrace `json:"trace"`
+	// Splits (TEC-1078): the roll this unit was cut from and the parts
+	// cut from it (recursively), limited to the viewer's reach.
+	Splits UnitSplits `json:"splits"`
+}
+
+// Split family states of a part (TEC-1078), relative to the organization
+// the family is read for.
+const (
+	FamilyOnHand    = "on_hand"    // available/placed at that organization
+	FamilySold      = "sold"       // available/placed at another organization
+	FamilyUsed      = "used"       // consumed (service) or used up
+	FamilyInTransit = "in_transit" // on the way
+	FamilyOther     = "other"      // label not in stock yet, void
+)
+
+// UnitSplits is the split family around one unit (TEC-1078).
+type UnitSplits struct {
+	// Source: the roll the unit was cut from; null for a roll that was
+	// never cut off another or one outside the viewer's reach.
+	Source *SplitSource `json:"source"`
+	// Parts cut from the unit, then from those parts (depth 1, 2, ...).
+	Parts []SplitPart `json:"parts"`
+}
+
+// SplitSource is the roll a unit was cut from.
+type SplitSource struct {
+	UUID    uuid.UUID `json:"uuid"`
+	Barcode string    `json:"barcode"`
+	// Meters cut off it as this unit.
+	Meters string `json:"meters"`
+}
+
+// SplitPart is one unit cut from the roll.
+type SplitPart struct {
+	UUID    uuid.UUID `json:"uuid"`
+	Barcode string    `json:"barcode"`
+	// Depth 1: cut from the unit itself; 2: from one of its parts, ...
+	Depth         int32  `json:"depth"`
+	SourceBarcode string `json:"source_barcode"`
+	// Meters cut (the part's initial meters) and what is left of it.
+	Meters          string    `json:"meters"`
+	RemainingMeters *string   `json:"remaining_meters"`
+	Status          string    `json:"status"`
+	FamilyStatus    string    `json:"family_status"`
+	OwnerType       *string   `json:"owner_type"`
+	Holder          *OrgRef   `json:"holder"`
+	Order           *OrderRef `json:"order"`
+	SplitAt         time.Time `json:"split_at"`
+}
+
+// OrderRef names an order.
+type OrderRef struct {
+	UUID    uuid.UUID `json:"uuid"`
+	OrderNo string    `json:"order_no"`
 }
 
 // Unit trace sources (TEC-1006).
@@ -262,10 +316,13 @@ type UnitFilter struct {
 	UpdatedFrom   *time.Time
 	UpdatedBefore *time.Time
 	Q             string
-	Sort          apiquery.ResolvedSort
-	SortExplicit  bool
-	Limit         int32
-	Offset        int32
+	// Family (TEC-1078): the split family of this barcode instead of the
+	// on-hand list (the other filters are ignored).
+	Family       string
+	Sort         apiquery.ResolvedSort
+	SortExplicit bool
+	Limit        int32
+	Offset       int32
 }
 
 // UnitPurchasePrice is the purchase price the holding organization pays
@@ -294,6 +351,16 @@ type StockUnitRow struct {
 	Location      *LocationRef       `json:"location"`
 	PurchasePrice *UnitPurchasePrice `json:"purchase_price"`
 	UpdatedAt     time.Time          `json:"updated_at"`
+	// Split family list only (family=<barcode>, TEC-1078): the holder, the
+	// state relative to the listed organization, the depth in the family
+	// (0: the roll), the source barcode, the meters cut and the order that
+	// carried the part.
+	Holder        *OrgRef   `json:"holder,omitempty"`
+	FamilyStatus  string    `json:"family_status,omitempty"`
+	FamilyDepth   *int32    `json:"family_depth,omitempty"`
+	SourceBarcode *string   `json:"source_barcode,omitempty"`
+	SplitMeters   *string   `json:"split_meters,omitempty"`
+	Order         *OrderRef `json:"order,omitempty"`
 }
 
 // StockFilter filters the product stock lists.

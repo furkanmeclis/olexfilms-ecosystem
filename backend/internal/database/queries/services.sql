@@ -270,6 +270,9 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- the car brand / model snapshot) for the API view (TEC-179).
 -- name: GetServiceRefs :one
 SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       -- TEC-1075: who applied the service: the center's service point name
+       -- (AFM Florya) for the center's own services, else the organization.
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS applied_by_name,
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
        u.phone_e164 AS customer_phone, u.status AS customer_status,
        cp.company_name AS customer_company_name,
@@ -578,3 +581,40 @@ WHERE si.brand_id = sqlc.arg(brand_id)
     WHERE c.service_item_id = si.id AND c.replacement_unit_id IS NULL
   )
 ORDER BY si.service_id, pc.sort, pc.name, pc.id;
+
+-- TEC-1075: summary cards above the service list (legacy hub
+-- ServiceOverviewStatsWidget): totals by status and the services opened
+-- since month_start, in the same scope as ListServicesInScope (org_ids NULL
+-- = whole brand, created_by for scope own) and its organization_uuids
+-- filter (the center's own / network switch).
+-- name: ServiceListStats :one
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE services.created_at >= sqlc.arg(month_start)::timestamptz)::bigint AS this_month,
+       COUNT(*) FILTER (WHERE services.status = 'draft')::bigint AS draft,
+       COUNT(*) FILTER (WHERE services.status = 'pending')::bigint AS pending,
+       COUNT(*) FILTER (WHERE services.status = 'processing')::bigint AS processing,
+       COUNT(*) FILTER (WHERE services.status = 'ready')::bigint AS ready,
+       COUNT(*) FILTER (WHERE services.status = 'completed')::bigint AS completed,
+       COUNT(*) FILTER (WHERE services.status = 'cancelled')::bigint AS cancelled
+FROM services
+WHERE services.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR services.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id));
+
+-- TEC-1075: warranty counts of the services ServiceListStats counts.
+-- name: ServiceListWarrantyStats :one
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE w.status = 'active' AND w.end_at > now())::bigint AS active
+FROM warranties w
+JOIN services ON services.id = w.service_id
+WHERE services.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR services.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id));

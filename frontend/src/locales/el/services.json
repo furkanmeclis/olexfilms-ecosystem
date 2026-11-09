@@ -369,5 +369,14 @@
   "network_scope.network": "Όλο το δίκτυο",
   "wizard.performer": "Εκτελείται από",
   "wizard.performer_own": "{{name}} (δικό μας σημείο εξυπηρέτησης)",
-  "wizard.performer_hint": "Αν επιλέξετε αντιπρόσωπο, η υπηρεσία ανοίγει για αυτόν και η ενέργεια καταγράφεται."
+  "wizard.performer_hint": "Αν επιλέξετε αντιπρόσωπο, η υπηρεσία ανοίγει για αυτόν και η ενέργεια καταγράφεται.",
+  "list.stats.total": "Σύνολο υπηρεσιών",
+  "list.stats.total_hint": "Συμπεριλαμβάνονται {{cancelled}} ακυρωμένες",
+  "list.stats.this_month": "Άνοιξαν αυτόν τον μήνα",
+  "list.stats.this_month_hint": "Από την αρχή του μήνα",
+  "list.stats.in_progress": "Σε εξέλιξη",
+  "list.stats.in_progress_hint": "Σε αναμονή, σε επεξεργασία, έτοιμες · {{draft}} πρόχειρα",
+  "list.stats.completed": "Ολοκληρωμένες",
+  "list.stats.active_warranties": "Ενεργές εγγυήσεις",
+  "list.stats.warranties_hint": "Σύνολο {{total}} εγγυήσεις"
 }

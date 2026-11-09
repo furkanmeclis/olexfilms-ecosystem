@@ -1,9 +1,9 @@
 {
-  "nav": "Müşteriler",
+  "nav": "Müşteriler ve Araçlar",
   "nav_list": "Müşteri listesi",
   "nav_new": "Yeni müşteri",
   "loading": "Yükleniyor…",
-  "list.title": "Müşteriler",
+  "list.title": "Müşteriler ve Araçlar",
   "list.description": "Görebildiğiniz organizasyonlara bağlı müşteriler.",
   "list.forbidden": "Bu sayfayı açmak için müşteri okuma yetkisi gerekir.",
   "list.search": "Ara",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Bayi personeli",
   "actions.upgrade.confirm": "Yükselt",
   "actions.upgrade.success": "Müşteri artık {{dealer}} üyesi.",
-  "fields.organization": "Organizasyon"
+  "fields.organization": "Organizasyon",
+  "fields.opened_by": "Açan bayi"
 }

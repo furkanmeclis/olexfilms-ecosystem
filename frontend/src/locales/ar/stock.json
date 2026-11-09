@@ -256,5 +256,18 @@
   "trace.no_service": "لم يُستخدم في خدمة.",
   "trace.source.order": "بطلب",
   "trace.source.stock": "في المخزون",
-  "trace.source.unknown": "المصدر غير معروف"
+  "trace.source.unknown": "المصدر غير معروف",
+  "splits.title": "الأجزاء ({{count}})",
+  "splits.source": "مقطوع من اللفة",
+  "splits.cut": "تم قص {{meters}} م",
+  "splits.empty": "لم تُقص أي أجزاء من هذه الوحدة.",
+  "splits.meters": "{{meters}} م (المتبقي {{remaining}} م)",
+  "splits.roll_left": "{{remaining}} م على اللفة",
+  "family.title": "{{barcode}}: الرمز الرئيسي والأجزاء",
+  "family.description": "كل الأجزاء المقصوصة من اللفة، بما فيها المباعة والمستخدمة.",
+  "family_status.on_hand": "في المخزون",
+  "family_status.sold": "مباع",
+  "family_status.used": "مستخدم",
+  "family_status.in_transit": "قيد النقل",
+  "family_status.other": "أخرى"
 }

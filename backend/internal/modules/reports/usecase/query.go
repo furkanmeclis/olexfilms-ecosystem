@@ -10,9 +10,10 @@ import (
 
 const dateLayout = "2006-01-02"
 
-// Periods are the preset ranges ending today (legacy 7d/30d/90d/12m);
-// "custom" is reported when range_from / range_to are given.
-var Periods = []string{"7d", "30d", "90d", "12m"}
+// Periods are the preset ranges ending today (legacy 7d/30d/90d/12m;
+// TEC-1072 adds today for the center home); "custom" is reported when
+// range_from / range_to are given.
+var Periods = []string{"today", "7d", "30d", "90d", "12m"}
 
 // DefaultPeriod is the period of a request without one.
 const DefaultPeriod = "30d"
@@ -140,6 +141,8 @@ func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
 			period = DefaultPeriod
 		}
 		switch period {
+		case "today":
+			q.fromDate = today
 		case "7d":
 			q.fromDate = today.AddDate(0, 0, -6)
 		case "30d":
@@ -149,7 +152,7 @@ func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
 		case "12m":
 			q.fromDate = time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -11, 0)
 		default:
-			return query{}, invalid("period", "invalid", "period must be one of 7d, 30d, 90d, 12m")
+			return query{}, invalid("period", "invalid", "period must be one of today, 7d, 30d, 90d, 12m")
 		}
 		q.period, q.toDate = period, today
 	}

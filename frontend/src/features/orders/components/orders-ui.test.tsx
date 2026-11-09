@@ -259,7 +259,20 @@ describe("OrderDetailPage: buttons by role and status", () => {
       "orders.ship",
       "orders.receive",
       "orders.cancel",
+      "pricing.purchase.read",
     ]);
+  });
+
+  it("warehouse view: no prices, totals, currency or rate (TEC-1050)", async () => {
+    state.grants = new Set(["orders.read", "orders.ship"]);
+    api.get.mockResolvedValue(
+      order({ role: "seller", status: "approved", available_transitions: [] }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    expect($$("[data-testid=order-item]")).toHaveLength(1);
+    expect($("[data-testid=line-total]")).toBeNull();
+    expect($("[data-testid=order-total]")).toBeNull();
+    expect($("[data-testid=order-rate]")).toBeNull();
   });
 
   it("buyer draft: edit, submit, cancel", async () => {
@@ -380,7 +393,7 @@ describe("OrderDetailPage: buttons by role and status", () => {
           source_barcode: "ROLL-1",
           source_remaining_meters: "38.00",
           new_unit_uuid: "n1",
-          new_barcode: "ROLL-1-S1",
+          new_barcode: "ROLL-1-12M",
           replayed: false,
         },
       }),
@@ -393,8 +406,12 @@ describe("OrderDetailPage: buttons by role and status", () => {
     const body = api.assignUnit.mock.calls.at(-1)![2];
     expect(body).toMatchObject({ barcode: "ROLL-1", meters: "12" });
     expect(typeof body.idempotency_key).toBe("string");
+    // TEC-1078: the meter code and a "Print label" action.
     expect(toast.success).toHaveBeenCalledWith(
-      'orders.assign.split_success {"barcode":"ROLL-1-S1","rest":"38.00"}',
+      'orders.assign.split_success {"barcode":"ROLL-1-12M","rest":"38.00"}',
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "orders.assign.print_label" }),
+      }),
     );
   });
 
@@ -470,6 +487,8 @@ describe("OrderFormPage: validation", () => {
     await render(createElement(OrderFormPage, { slug: "acme" }));
     expect($("[data-testid=save-draft]")).toBeNull();
     expect($("[data-testid=center-order-dealer]")).not.toBeNull();
+    // TEC-1052: "I prepare it myself" needs orders.ship.
+    expect($("[data-testid=center-order-self-prepare]")).toBeNull();
     await act(async () => {
       ($("[data-testid=center-order-create]") as HTMLButtonElement).click();
     });
@@ -477,6 +496,56 @@ describe("OrderFormPage: validation", () => {
     expect($("[data-testid=lines-empty]")?.className).toContain(
       "text-destructive",
     );
+  });
+
+  it("lists the products without typing, paged (TEC-1052)", async () => {
+    catalog.listProducts.mockImplementation(({ offset }: { offset: number }) =>
+      Promise.resolve({
+        items: [
+          offset === 0
+            ? {
+                uuid: "p1",
+                sku: "KIT-1",
+                name: "Bakım kiti",
+                unit_type: "piece",
+              }
+            : { uuid: "p3", sku: "RAG-1", name: "Ragle", unit_type: "piece" },
+        ],
+        total: 2,
+        limit: 20,
+        offset,
+      }),
+    );
+    await render(createElement(OrderFormPage, { slug: "acme" }));
+    await flush();
+    expect(catalog.listProducts).toHaveBeenCalledWith({
+      active: true,
+      limit: 20,
+      offset: 0,
+    });
+    expect($$("[data-testid=product-option]")).toHaveLength(1);
+    await click($("[data-testid=product-more]"));
+    await flush();
+    expect(catalog.listProducts).toHaveBeenCalledWith({
+      active: true,
+      limit: 20,
+      offset: 1,
+    });
+    expect($$("[data-testid=product-option]")).toHaveLength(2);
+    expect($("[data-testid=product-more]")).toBeNull();
+  });
+
+  it("offers 'I prepare it myself' with orders.ship (TEC-1052)", async () => {
+    state.orgType = "center";
+    state.grants = new Set([
+      "orders.read",
+      "orders.write",
+      "orders.ship",
+      "catalog.read",
+    ]);
+    warehouses.listWarehouses.mockRejectedValue(new Error("forbidden"));
+    await render(createElement(OrderFormPage, { slug: "acme" }));
+    expect($("[data-testid=center-order-self-prepare]")).not.toBeNull();
   });
 
   it("offers the center's active warehouses, primary first (TEC-1028)", async () => {
@@ -528,7 +597,8 @@ describe("OrderFormPage: validation", () => {
     expect(catalog.listProducts).toHaveBeenCalledWith({
       q: "ki",
       active: true,
-      limit: 10,
+      limit: 20,
+      offset: 0,
     });
     const adds = $$("[data-testid=product-add]");
     await click(adds[0]);

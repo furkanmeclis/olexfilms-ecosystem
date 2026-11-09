@@ -21,6 +21,7 @@ import (
 // orders.warehouse_new names that warehouse's staff (members holding
 // orders.ship, holders without any membership) but not the actor or the
 // staff of another warehouse. The dealer never sees the warehouse.
+// TEC-1052: a self-prepared order tells no warehouse staff at all.
 func TestIntegrationOrdersSellerWarehouse(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()
@@ -182,6 +183,26 @@ func TestIntegrationOrdersSellerWarehouse(t *testing.T) {
 		AND payload->'data'->>'order_uuid' = $1::text AND payload->'data'->>'warehouse_name' = $2::text`,
 		a.UUID, w1.w.Name); n != 1 {
 		t.Fatalf("warehouse name in payload = %d", n)
+	}
+
+	// TEC-1052: the creator prepares it himself: no warehouse staff (of the
+	// picked warehouse, another one or unrestricted) is told; the history
+	// keeps the choice. A dealer's own order cannot carry the flag.
+	sp, _ := create(map[string]any{
+		"buyer_org_uuid": dealer.Uuid.String(), "seller_warehouse_uuid": w2.w.Uuid.String(),
+		"self_prepare": true, "items": items,
+	})
+	if n := it.countRows(`SELECT COUNT(*) FROM outbox_events WHERE event_name = 'orders.warehouse_new'
+		AND payload->'data'->>'order_uuid' = $1::text`, sp.UUID); n != 0 {
+		t.Fatalf("self-prepared order warehouse_new events = %d", n)
+	}
+	if n := it.countRows(`SELECT COUNT(*) FROM order_status_history h JOIN orders o ON o.id = h.order_id
+		WHERE o.uuid = $1::uuid AND h.metadata->>'self_prepare' = 'true'`, sp.UUID); n != 1 {
+		t.Fatalf("self_prepare in history = %d", n)
+	}
+	code, env = it.do("POST", "/v1/orders", hostOlex, dealerTok, map[string]any{"self_prepare": true, "items": items})
+	if code != http.StatusUnprocessableEntity && code != http.StatusBadRequest {
+		t.Fatalf("dealer self_prepare = %d %s", code, errCode(env))
 	}
 
 	// 2. A picked warehouse: suggestions and pick locations stay in it.

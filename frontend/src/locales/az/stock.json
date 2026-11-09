@@ -256,5 +256,18 @@
   "trace.no_service": "Xidmətdə istifadə olunmayıb.",
   "trace.source.order": "Sifarişlə",
   "trace.source.stock": "Ehtiyatda",
-  "trace.source.unknown": "Mənbə naməlum"
+  "trace.source.unknown": "Mənbə naməlum",
+  "splits.title": "Hissələr ({{count}})",
+  "splits.source": "Kəsildiyi rulon",
+  "splits.cut": "{{meters}} m kəsildi",
+  "splits.empty": "Bu vahiddən hissə kəsilməyib.",
+  "splits.meters": "{{meters}} m (qalıq {{remaining}} m)",
+  "splits.roll_left": "Rulonda {{remaining}} m",
+  "family.title": "{{barcode}}: əsas kod və hissələr",
+  "family.description": "Rulondan kəsilən bütün hissələr, satılan və istifadə olunanlar daxil.",
+  "family_status.on_hand": "Stokda",
+  "family_status.sold": "Satıldı",
+  "family_status.used": "İstifadə olundu",
+  "family_status.in_transit": "Yolda",
+  "family_status.other": "Digər"
 }

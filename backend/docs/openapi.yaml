@@ -10709,7 +10709,12 @@ paths:
         organization are masked (`organization_masked`, owner `masked`, no
         location, reference or reason). Movements are in ledger order
         (oldest first) and paged with `limit`/`offset`. Fixed barcodes list
-        the quantity per owner in `holdings` instead of `current`.
+        the quantity per owner in `holdings` instead of `current`. TEC-1078:
+        `splits` names the roll the unit was cut from (`source`, only when
+        the viewer reaches its holder) and lists every part cut from it,
+        recursively (`parts`, depth 1 = cut from this unit), each only when
+        the viewer reaches its holder; `family_status` is relative to the
+        active organization.
       security:
         - bearerAuth: []
       parameters:
@@ -10811,6 +10816,16 @@ paths:
         An explicit sort, a barcode, location or date filter makes `q`
         search Postgres instead of the index. Labels for selected units:
         GET /v1/stock/labels/units.pdf with one `barcode` per unit.
+        TEC-1078: `family=<barcode>` lists the split family of that barcode
+        in the organization's brand instead (the unit, depth 0, and every
+        part cut from it recursively, wherever it is now), ignoring the
+        other filters, `q` and `sort` (depth, then cut order); each row
+        only when the viewer's `stock.read` reaches its holder (a dealer
+        sees its own parts, never a sibling's). Rows then carry `holder`,
+        `family_status` (on_hand at this organization, sold to another,
+        used, in_transit, other), `family_depth`, `source_barcode`,
+        `split_meters` and `order`; `quantity` is 1 only for on_hand. An
+        unknown barcode is an empty page.
       security:
         - bearerAuth: []
       parameters:
@@ -10825,6 +10840,13 @@ paths:
         - $ref: "#/components/parameters/StockLocationUUIDFilter"
         - $ref: "#/components/parameters/UpdatedFrom"
         - $ref: "#/components/parameters/UpdatedTo"
+        - name: family
+          in: query
+          required: false
+          description: >-
+            TEC-1078: list the split family of this barcode (the roll and
+            every part cut from it) instead of the on-hand units.
+          schema: { type: string, maxLength: 64 }
       responses:
         "200":
           description: Units of the organization
@@ -11381,8 +11403,13 @@ paths:
         `unit_uuid`) must be on hand (available or placed) at the caller's
         active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an
         open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE).
-        The meters leave as a new unit of the same product with the barcode
-        `<roll barcode>-S<n>` at the roll's owner; the roll keeps the rest
+        The meters leave as a new unit of the same product at the roll's
+        owner. TEC-1078: its barcode is `<roll barcode>-<meters>M` (whole
+        meters without decimals `-3M`, otherwise a dot without trailing
+        zeros `-2.5M`); the same length cut again from that roll gets
+        `-3M-2`, `-3M-3`, ...; when that would pass 64 characters the
+        legacy `<roll barcode>-S<n>` is used. Earlier `-S<n>` barcodes stay
+        as they are. The roll keeps the rest
         and is used up at 0 m. Both split movements are written in one
         transaction; product stock totals do not change. Pieces and fixed
         barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than
@@ -12372,7 +12399,8 @@ paths:
         the stock entry flow. Roll products need `meters` (the length of
         each roll); fixed-barcode products get fixed units. The prefix
         defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split
-        barcode `<barcode>-S<n>` never collides with this format. The
+        barcode `<barcode>-<meters>M[-<k>]` (legacy `<barcode>-S<n>`) never
+        collides with this format. The
         response carries every unit and `labels_url`, the batch's label PDF.
         An inactive product answers 422 STOCK_PRODUCT_INACTIVE.
       security:
@@ -13174,10 +13202,12 @@ paths:
         `OFW:LOC:<full_code>` -> a location of the active organization (404
         SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried);
         `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated
-        `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import
+        `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]`
+        (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import
         barcodes; exact, then upper-cased); a bare location full_code when
         `scan.bare_location_code_enabled`; a product SKU of the active brand
-        when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`)
+        when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`,
+        `-<m>M` or `-<m>M-<k>`)
         expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled`
         (prefix `scan.short_code_prefix`, else the brand's default prefix).
         Units follow the caller's `stock.read` reach like the barcode history
@@ -15045,12 +15075,13 @@ paths:
         hits are reloaded from Postgres with the same scope) and falls back to
         the SQL search otherwise. Anonymized customers are never indexed, so
         `status=anonymized` always uses the SQL search. TEC-371: sort
-        (`name`, `email`, `status`, `linked_at`, `first_service_at`;
-        default `-linked_at`, `id` tiebreak), `status` / `type` CSV,
+        (`name`, `email`, `status`, `linked_at`, `first_service_at`,
+        `opened_by` (TEC-1074, opening organization name); default
+        `-linked_at`, `id` tiebreak), `status` / `type` CSV,
         `linked_from`/`linked_to` (first organization link) and
         `organization_uuid` CSV (links to those organizations, inside the
-        scope). An explicit sort or any of the TEC-371 filters keeps a `q`
-        search on SQL.
+        scope); TEC-1074 `opened_by_uuid` CSV. An explicit sort or any of
+        these filters keeps a `q` search on SQL.
       security:
         - bearerAuth: []
       parameters:
@@ -15074,6 +15105,13 @@ paths:
         - name: organization_uuid
           in: query
           description: CSV of organization UUIDs; customers linked to one of them (inside the scope).
+          schema: { type: string }
+        - name: opened_by_uuid
+          in: query
+          description: >-
+            TEC-1074: CSV of organization UUIDs; customers whose opening
+            organization (`opened_by`, first link inside the scope) is one of
+            them.
           schema: { type: string }
         - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
@@ -18533,7 +18571,7 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
+        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-<meters>M[-<k>]` (TEC-1078) or legacy `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`, `-<m>M` or `-<m>M-<k>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
       security:
       - bearerAuth: []
       requestBody:
@@ -23458,6 +23496,39 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/services/stats:
+    get:
+      tags: [Services]
+      operationId: getServiceListStats
+      summary: Summary cards of the service list
+      description: >-
+        TEC-1075. services.read, same scope as GET /v1/services (organization,
+        subtree, brand, own). Totals per status, the services opened this
+        calendar month (request time zone, K10 default Europe/Istanbul) and
+        the warranty counts of those services (legacy hub
+        ServiceOverviewStatsWidget). `organization_uuid` narrows like the
+        list filter (the center's own / network switch).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          description: CSV of organization UUIDs (inside the scope).
+          schema: { type: string }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceListStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/services/service-no-availability:
     get:
       tags: [Services]
@@ -25122,7 +25193,14 @@ paths:
         (inclusive, order currency). The party filters only narrow the
         scoped set, so an organization outside the scope gives an empty
         list. An explicit sort, a date, party or total filter makes `q`
-        search Postgres instead of the index.
+        search Postgres instead of the index. TEC-1050: a caller without a
+        price permission (any of pricing.purchase.read, pricing.sale.read,
+        pricing.sale.write, pricing.recommended.read,
+        pricing.recommended.write; the warehouse roles hold none) gets
+        null money fields, and `total_min` / `total_max` and `sort=total`
+        are ignored for it. The same applies to every order response and
+        to `POST /v1/orders/export` (no currency / subtotal / tax / total
+        columns) and the order slip PDF (prices shown as "—").
       security:
         - bearerAuth: []
       parameters:
@@ -25448,7 +25526,9 @@ paths:
         take meters: without meters (or with the remaining meters) the
         whole roll is assigned; fewer meters first split the roll (TEC-184):
         the meters leave as a new unit with its own barcode
-        (<roll barcode>-S<n>), which is assigned and returned in `split`
+        (TEC-1078: `<roll barcode>-<meters>M`, `-3M-2` for the same length
+        again, legacy `-S<n>` past 64 characters), which is assigned and
+        returned in `split`
         (label printing: TEC-95), while the roll keeps the rest. More meters
         than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An
         `idempotency_key` makes a split assignment retry-safe (a retry
@@ -33215,7 +33295,8 @@ paths:
         warranties.summary, measurements.summary, dealers.performance
         (performance module), dealers.top_by_warranty (subtree / brand
         reach only), activities.recent. Periodic reports take period
-        (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive
+        (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from +
+        range_to (inclusive
         dates, at most 731 days, period=custom); time series take
         granularity (day, week, month; default by range). Rankings and
         tables take limit (1..50, default 10). Parameters a report does
@@ -33754,7 +33835,7 @@ components:
     ReportPeriod:
       name: period
       in: query
-      schema: { type: string, enum: ["7d", "30d", "90d", "12m", custom] }
+      schema: { type: string, enum: [today, "7d", "30d", "90d", "12m", custom] }
     ReportRangeFrom:
       name: range_from
       in: query
@@ -35027,6 +35108,16 @@ components:
         created_at: { type: string, format: date-time }
         linked_at: { type: [string, "null"], format: date-time }
         first_service_at: { type: [string, "null"], format: date-time }
+        opened_by:
+          description: >-
+            TEC-1074: the organization that opened the customer (first
+            organization link inside the caller's scope). List rows only.
+          type: object
+          required: [uuid, name, type]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            type: { type: string, enum: [center, distributor, dealer] }
 
     CustomerDetail:
       allOf:
@@ -40803,7 +40894,7 @@ components:
 
     StockUnitHistory:
       type: object
-      required: [unit, current, holdings, movements, trace]
+      required: [unit, current, holdings, movements, trace, splits]
       properties:
         unit: { $ref: "#/components/schemas/StockUnit" }
         current:
@@ -40828,6 +40919,69 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/StockUnitTrace"
+        splits: { $ref: "#/components/schemas/StockUnitSplits" }
+
+    StockSplitFamilyStatus:
+      type: string
+      description: >-
+        TEC-1078: a split family member relative to the organization the
+        family is read for: on_hand (available/placed there), sold
+        (available/placed at another organization), used (consumed or used
+        up), in_transit, other (label not in stock yet, void).
+      enum: [on_hand, sold, used, in_transit, other]
+
+    StockOrderRef:
+      type: object
+      required: [uuid, order_no]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string }
+
+    StockUnitSplits:
+      type: object
+      description: >-
+        TEC-1078: the split family around a unit. Parts are coded by their
+        meters (`<roll>-3M`, `<roll>-3M-2`, `<roll>-2.5M`; legacy `-S<n>`).
+      required: [source, parts]
+      properties:
+        source:
+          description: The roll this unit was cut from; null when none or outside the viewer's reach.
+          oneOf:
+            - type: object
+              required: [uuid, barcode, meters]
+              properties:
+                uuid: { type: string, format: uuid }
+                barcode: { type: string }
+                meters: { type: string, description: "Meters cut off it as this unit" }
+            - type: "null"
+        parts:
+          type: array
+          items: { $ref: "#/components/schemas/StockSplitPart" }
+
+    StockSplitPart:
+      type: object
+      required: [uuid, barcode, depth, source_barcode, meters, remaining_meters, status,
+        family_status, owner_type, holder, order, split_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        depth: { type: integer, description: "1: cut from the unit itself; 2: from one of its parts, ..." }
+        source_barcode: { type: string }
+        meters: { type: string, description: "Meters cut (decimal string)" }
+        remaining_meters: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/StockUnitStatus" }
+        family_status: { $ref: "#/components/schemas/StockSplitFamilyStatus" }
+        owner_type: { type: [string, "null"] }
+        holder:
+          oneOf:
+            - $ref: "#/components/schemas/StockOrgRef"
+            - type: "null"
+        order:
+          description: Latest order that carried the part; null when none or outside the viewer's reach.
+          oneOf:
+            - $ref: "#/components/schemas/StockOrderRef"
+            - type: "null"
+        split_at: { type: string, format: date-time }
 
     StockProduct:
       type: object
@@ -40966,6 +41120,18 @@ components:
                 source: { type: string, enum: [list, override, distributor] }
             - type: "null"
         updated_at: { type: string, format: date-time }
+        holder:
+          description: "family=<barcode> only (TEC-1078): the current holder."
+          $ref: "#/components/schemas/StockOrgRef"
+        family_status:
+          description: "family=<barcode> only (TEC-1078)."
+          $ref: "#/components/schemas/StockSplitFamilyStatus"
+        family_depth: { type: integer, description: "family=<barcode> only: 0 for the roll, 1+ for parts." }
+        source_barcode: { type: string, description: "family=<barcode> only: the roll a part was cut from." }
+        split_meters: { type: string, description: "family=<barcode> only: meters cut as this part." }
+        order:
+          description: "family=<barcode> only: latest order that carried the part, within the viewer's reach."
+          $ref: "#/components/schemas/StockOrderRef"
 
     EnvelopeStockUnitPage:
       type: object
@@ -45510,6 +45676,7 @@ components:
         - status
         - status_label
         - organization
+        - applied_by
         - customer
         - vehicle_uuid
         - car_brand
@@ -45540,6 +45707,12 @@ components:
         status: { $ref: "#/components/schemas/ServiceStatus" }
         status_label: { type: string }
         organization: { $ref: "#/components/schemas/ServiceOrgRef" }
+        applied_by:
+          type: string
+          description: >-
+            TEC-1075: who applied the service. The center's service point
+            name (e.g. AFM Florya) for the center's own services when its
+            service point is on, else the organization name.
         customer: { $ref: "#/components/schemas/ServiceCustomerRef" }
         vehicle_uuid: { type: string, format: uuid }
         car_brand: { $ref: "#/components/schemas/ServiceRef" }
@@ -45660,6 +45833,34 @@ components:
         service_no: { type: string, description: "The trimmed number" }
         valid: { type: boolean, description: "The number has the allowed shape" }
         available: { type: boolean, description: "Valid and not held by another service, warranty code or alias" }
+
+    ServiceListStats:
+      type: object
+      required: [total, this_month, month_start, by_status, warranties, active_warranties]
+      properties:
+        total: { type: integer, format: int64 }
+        this_month: { type: integer, format: int64, description: Opened since month_start }
+        month_start: { type: string, format: date-time }
+        by_status:
+          type: object
+          required: [draft, pending, processing, ready, completed, cancelled]
+          properties:
+            draft: { type: integer, format: int64 }
+            pending: { type: integer, format: int64 }
+            processing: { type: integer, format: int64 }
+            ready: { type: integer, format: int64 }
+            completed: { type: integer, format: int64 }
+            cancelled: { type: integer, format: int64 }
+        warranties: { type: integer, format: int64 }
+        active_warranties: { type: integer, format: int64, description: Active and not past end_at }
+
+    EnvelopeServiceListStats:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceListStats" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServiceNoAvailability:
       type: object
@@ -46246,9 +46447,11 @@ components:
 
     StatsPeriod:
       type: string
-      enum: [30d, 90d, 12m, all]
+      enum: [today, 7d, 30d, 90d, 12m, all]
       default: 30d
-      description: 30d / 90d days, 12m twelve calendar months, all = all time.
+      description: >-
+        today since midnight in the request time zone (TEC-1072), 7d / 30d /
+        90d days, 12m twelve calendar months, all = all time.
 
     StatsGroup:
       type: string
@@ -46473,7 +46676,7 @@ components:
       properties:
         barcode: { type: string, description: Scanned barcode }
         unit_uuid: { type: string, format: uuid }
-        quantity: { type: integer, minimum: 1, maximum: 1000000, description: Fixed barcodes only (serial pieces are 1) }
+        quantity: { type: integer, minimum: 1, maximum: 1000000, description: "Fixed barcodes only (serial pieces are 1). TEC-1047: optional; without it the rest of the line is taken as far as the stock reaches, and a fixed barcode already on the line grows its assignment" }
         meters:
           type: string
           pattern: '^[0-9]{1,8}(\.[0-9]{1,2})?$'
@@ -46495,17 +46698,17 @@ components:
         quantity: { type: [integer, "null"], description: Pieces (null for roll_meter products) }
         meters: { type: [string, "null"], description: Meters with two decimals (roll_meter products) }
         unit_price:
-          type: string
-          description: Buyer's purchase price (NUMERIC(14,4)); locked at approval
+          type: [string, "null"]
+          description: "Buyer's purchase price (NUMERIC(14,4)); locked at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
           example: "80.0000"
         price_source:
-          type: string
-          enum: [list, override, distributor_dealer, manual, missing]
-          description: manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024)
+          type: [string, "null"]
+          enum: [list, override, distributor_dealer, manual, missing, null]
+          description: "manual = typed by the center, missing = no price (0) on a center-opened order (TEC-1024); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
         price_missing:
           type: boolean
-          description: The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024)
-        line_total: { type: string, example: "240.00" }
+          description: The line has no price (0) — a center-opened order without a typed or purchase price (TEC-1024); false when prices are hidden (TEC-1050)
+        line_total: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         assigned:
           type: string
@@ -46656,14 +46859,15 @@ components:
         seller: { $ref: "#/components/schemas/OrderOrgRef" }
         buyer: { $ref: "#/components/schemas/OrderOrgRef" }
         currency: { type: string, minLength: 3, maxLength: 3, description: Seller brand currency }
-        subtotal: { type: string, example: "240.00" }
-        tax_total: { type: string, example: "0.00" }
-        total: { type: string, example: "240.00" }
+        subtotal: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        tax_total: { type: [string, "null"], example: "0.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        total: { type: [string, "null"], example: "240.00", description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         rate_snapshot:
+          description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)"
           oneOf:
             - $ref: "#/components/schemas/OrderRateSnapshot"
             - type: "null"
-        try_rate: { type: [string, "null"], description: TRY rate frozen at approval }
+        try_rate: { type: [string, "null"], description: "TRY rate frozen at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         cancel_reason: { type: [string, "null"] }
         submitted_at: { type: [string, "null"], format: date-time }
@@ -46976,6 +47180,15 @@ components:
             TEC-1028: the center's active warehouse the order falls into
             (only with buyer_org_uuid, else 400). Omitted: the center's
             primary warehouse.
+        self_prepare:
+          type: boolean
+          description: >-
+            TEC-1052: the creating center user prepares the order himself
+            (only with buyer_org_uuid, else 400; needs orders.ship, else 400;
+            omitted: false).
+            No orders.warehouse_new is written, so no warehouse staff (of the
+            order's warehouse or another) is notified; the status history
+            keeps self_prepare in its metadata.
         items:
           type: array
           minItems: 1
@@ -47393,8 +47606,8 @@ components:
         product: { $ref: "#/components/schemas/OrderProductRef" }
         quantity: { type: [integer, "null"], description: Fixed barcode quantity }
         meters: { type: [string, "null"], description: Remaining meters of a roll when requested }
-        unit_price: { type: [string, "null"], description: Giver's purchase price frozen at approval (K13) }
-        line_total: { type: [string, "null"] }
+        unit_price: { type: [string, "null"], description: "Giver's purchase price frozen at approval (K13); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
+        line_total: { type: [string, "null"], description: "null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         shipped: { type: boolean, description: The transfer_out movement is written }
         received: { type: boolean, description: The transfer_in movement is written }
         restored: { type: boolean, description: The transfer_cancel_restore movement is written }
@@ -47419,7 +47632,7 @@ components:
         receiver: { $ref: "#/components/schemas/OrderOrgRef" }
         parent: { $ref: "#/components/schemas/OrderOrgRef" }
         currency: { type: string }
-        total: { type: [string, "null"], description: Sum of the frozen line totals (null until approval or with an unpriced unit) }
+        total: { type: [string, "null"], description: "Sum of the frozen line totals (null until approval or with an unpriced unit); null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)" }
         note: { type: [string, "null"] }
         decision_note: { type: [string, "null"] }
         cancel_reason: { type: [string, "null"] }

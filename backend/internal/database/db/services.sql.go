@@ -1032,6 +1032,9 @@ func (q *Queries) GetServiceItemCorrectionByItem(ctx context.Context, serviceIte
 
 const getServiceRefs = `-- name: GetServiceRefs :one
 SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       -- TEC-1075: who applied the service: the center's service point name
+       -- (AFM Florya) for the center's own services, else the organization.
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS applied_by_name,
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
        u.phone_e164 AS customer_phone, u.status AS customer_status,
        cp.company_name AS customer_company_name,
@@ -1052,6 +1055,7 @@ type GetServiceRefsRow struct {
 	OrganizationUuid    uuid.UUID   `json:"organization_uuid"`
 	OrganizationName    string      `json:"organization_name"`
 	OrganizationType    string      `json:"organization_type"`
+	AppliedByName       string      `json:"applied_by_name"`
 	CustomerUuid        uuid.UUID   `json:"customer_uuid"`
 	CustomerName        string      `json:"customer_name"`
 	CustomerSurname     string      `json:"customer_surname"`
@@ -1074,6 +1078,7 @@ func (q *Queries) GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsR
 		&i.OrganizationUuid,
 		&i.OrganizationName,
 		&i.OrganizationType,
+		&i.AppliedByName,
 		&i.CustomerUuid,
 		&i.CustomerName,
 		&i.CustomerSurname,
@@ -1989,6 +1994,110 @@ func (q *Queries) LockServiceItems(ctx context.Context, serviceID int64) ([]Serv
 		return nil, err
 	}
 	return items, nil
+}
+
+const serviceListStats = `-- name: ServiceListStats :one
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE services.created_at >= $1::timestamptz)::bigint AS this_month,
+       COUNT(*) FILTER (WHERE services.status = 'draft')::bigint AS draft,
+       COUNT(*) FILTER (WHERE services.status = 'pending')::bigint AS pending,
+       COUNT(*) FILTER (WHERE services.status = 'processing')::bigint AS processing,
+       COUNT(*) FILTER (WHERE services.status = 'ready')::bigint AS ready,
+       COUNT(*) FILTER (WHERE services.status = 'completed')::bigint AS completed,
+       COUNT(*) FILTER (WHERE services.status = 'cancelled')::bigint AS cancelled
+FROM services
+WHERE services.brand_id = $2
+  AND ($3::bigint[] IS NULL OR services.organization_id = ANY ($3::bigint[]))
+  AND (
+    COALESCE(cardinality($4::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($4::uuid[]))
+  )
+  AND ($5::bigint IS NULL OR services.created_by_user_id = $5)
+`
+
+type ServiceListStatsParams struct {
+	MonthStart        pgtype.Timestamptz `json:"month_start"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+}
+
+type ServiceListStatsRow struct {
+	Total      int64 `json:"total"`
+	ThisMonth  int64 `json:"this_month"`
+	Draft      int64 `json:"draft"`
+	Pending    int64 `json:"pending"`
+	Processing int64 `json:"processing"`
+	Ready      int64 `json:"ready"`
+	Completed  int64 `json:"completed"`
+	Cancelled  int64 `json:"cancelled"`
+}
+
+// TEC-1075: summary cards above the service list (legacy hub
+// ServiceOverviewStatsWidget): totals by status and the services opened
+// since month_start, in the same scope as ListServicesInScope (org_ids NULL
+// = whole brand, created_by for scope own) and its organization_uuids
+// filter (the center's own / network switch).
+func (q *Queries) ServiceListStats(ctx context.Context, arg ServiceListStatsParams) (ServiceListStatsRow, error) {
+	row := q.db.QueryRow(ctx, serviceListStats,
+		arg.MonthStart,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.OrganizationUuids,
+		arg.CreatedByUserID,
+	)
+	var i ServiceListStatsRow
+	err := row.Scan(
+		&i.Total,
+		&i.ThisMonth,
+		&i.Draft,
+		&i.Pending,
+		&i.Processing,
+		&i.Ready,
+		&i.Completed,
+		&i.Cancelled,
+	)
+	return i, err
+}
+
+const serviceListWarrantyStats = `-- name: ServiceListWarrantyStats :one
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE w.status = 'active' AND w.end_at > now())::bigint AS active
+FROM warranties w
+JOIN services ON services.id = w.service_id
+WHERE services.brand_id = $1
+  AND ($2::bigint[] IS NULL OR services.organization_id = ANY ($2::bigint[]))
+  AND (
+    COALESCE(cardinality($3::uuid[]), 0) = 0
+    OR services.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($3::uuid[]))
+  )
+  AND ($4::bigint IS NULL OR services.created_by_user_id = $4)
+`
+
+type ServiceListWarrantyStatsParams struct {
+	BrandID           int64       `json:"brand_id"`
+	OrgIds            []int64     `json:"org_ids"`
+	OrganizationUuids []uuid.UUID `json:"organization_uuids"`
+	CreatedByUserID   pgtype.Int8 `json:"created_by_user_id"`
+}
+
+type ServiceListWarrantyStatsRow struct {
+	Total  int64 `json:"total"`
+	Active int64 `json:"active"`
+}
+
+// TEC-1075: warranty counts of the services ServiceListStats counts.
+func (q *Queries) ServiceListWarrantyStats(ctx context.Context, arg ServiceListWarrantyStatsParams) (ServiceListWarrantyStatsRow, error) {
+	row := q.db.QueryRow(ctx, serviceListWarrantyStats,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.OrganizationUuids,
+		arg.CreatedByUserID,
+	)
+	var i ServiceListWarrantyStatsRow
+	err := row.Scan(&i.Total, &i.Active)
+	return i, err
 }
 
 const serviceNoExists = `-- name: ServiceNoExists :one

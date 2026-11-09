@@ -559,5 +559,11 @@
   "eod.generate_all_warehouses": "Всички складове",
   "eod.pdf_ios_only": "PDF на отчета не може да се сподели от това устройство; споделете го от iPhone или от уеб панела.",
   "counts.defaults_summary": "Настройки: {{scope}}, {{method}}, {{visibility}}.",
-  "counts.advanced": "Разширени"
+  "counts.advanced": "Разширени",
+  "m.transfers_out": "Изходящи",
+  "m.transfers_in": "Входящи",
+  "m.this_warehouse_units": "Единици в този склад",
+  "m.product_totals": "Общо по продукти",
+  "orders.assign.fixed_none": "Не е намерена наличност със стандартен баркод за {{name}} в склада.",
+  "orders.assign.fixed_qty_auto": "Количество за стандартен баркод (без промяна: колкото липсва в реда)"
 }

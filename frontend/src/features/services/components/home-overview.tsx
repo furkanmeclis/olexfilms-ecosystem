@@ -33,6 +33,8 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 const PERIOD_LABELS: Record<HomeOverviewPeriod, string> = {
+  today: "dashboard.top_vehicles.period.today",
+  "7d": "dashboard.top_vehicles.period.7d",
   "30d": "dashboard.top_vehicles.period.30d",
   "90d": "dashboard.top_vehicles.period.90d",
   "12m": "dashboard.top_vehicles.period.12m",

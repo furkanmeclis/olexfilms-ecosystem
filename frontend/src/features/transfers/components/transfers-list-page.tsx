@@ -43,6 +43,7 @@ import {
 } from "@/features/transfers/services/transfers.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
+import { useCanSeePrices } from "@/hooks/use-can-see-prices";
 
 export const TRANSFER_PAGE_SIZE = 20;
 export const TRANSFERS_PERSIST_KEY = "tenant-stock-transfers-v1";
@@ -60,6 +61,8 @@ const ALL = "all";
 export function TransfersListPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const { can } = usePermission();
+  // TEC-1050: the total column only with a price grant.
+  const canSeePrices = useCanSeePrices();
   const router = useRouter();
   const qc = useQueryClient();
   const canRead =
@@ -211,20 +214,24 @@ export function TransfersListPage({ slug }: { slug: string }) {
           enableSorting: false,
           cell: ({ row }) => format.number(row.original.item_count),
         }),
-        createColumn<StockTransfer>({
-          accessorKey: "total",
-          labelKey: "transfers.detail.total",
-          enableSorting: false,
-          defaultHidden: true,
-          cell: ({ row }) =>
-            row.original.total ? (
-              <span dir="ltr" className="whitespace-nowrap">
-                {row.original.total} {row.original.currency}
-              </span>
-            ) : (
-              "—"
-            ),
-        }),
+        ...(canSeePrices
+          ? [
+              createColumn<StockTransfer>({
+                accessorKey: "total",
+                labelKey: "transfers.detail.total",
+                enableSorting: false,
+                defaultHidden: true,
+                cell: ({ row }) =>
+                  row.original.total ? (
+                    <span dir="ltr" className="whitespace-nowrap">
+                      {row.original.total} {row.original.currency}
+                    </span>
+                  ) : (
+                    "—"
+                  ),
+              }),
+            ]
+          : []),
         createColumn<StockTransfer>({
           accessorKey: "created_at",
           labelKey: "transfers.columns.created",
@@ -275,7 +282,7 @@ export function TransfersListPage({ slug }: { slug: string }) {
           },
         }),
       ] as ColumnDef<StockTransfer, unknown>[],
-    [format, movePending, orgOptions, router, runMove, slug, t],
+    [canSeePrices, format, movePending, orgOptions, router, runMove, slug, t],
   );
 
   // Column meta drives the params: kind / status / organization (CSV),

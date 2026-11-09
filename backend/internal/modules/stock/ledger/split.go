@@ -105,14 +105,41 @@ func FindSplit(ctx context.Context, q *db.Queries, orgID int64, key string) (*Sp
 	return &SplitResult{Split: s, Source: src, New: nu, Replayed: true}, nil
 }
 
-// SplitBarcode derives the barcode of the n-th split of a roll:
-// <source barcode>-S<n>, the source part shortened to fit VARCHAR(64).
+// SplitBarcode derives the legacy barcode of the n-th split of a roll:
+// <source barcode>-S<n>, the source part shortened to fit VARCHAR(64). It
+// is the fallback of MeterBarcode when the meter code does not fit; earlier
+// -S barcodes stay as they are (barcodes are immutable).
 func SplitBarcode(source string, n int64) string {
 	suffix := "-S" + strconv.FormatInt(n, 10)
 	if len(source)+len(suffix) > maxBarcodeLen {
 		source = source[:maxBarcodeLen-len(suffix)]
 	}
 	return source + suffix
+}
+
+// MeterLabel formats centimeters as the meter part of a split barcode:
+// whole meters without decimals (300 -> "3M"), otherwise a dot and no
+// trailing zeros (250 -> "2.5M", 1205 -> "12.05M") (TEC-1078).
+func MeterLabel(cm int64) string {
+	whole, frac := cm/100, cm%100
+	if frac == 0 {
+		return strconv.FormatInt(whole, 10) + "M"
+	}
+	f := fmt.Sprintf("%02d", frac)
+	f = strings.TrimRight(f, "0")
+	return strconv.FormatInt(whole, 10) + "." + f + "M"
+}
+
+// MeterBarcode derives the k-th candidate barcode of a split of cm meters:
+// <source>-<meters>M for k = 1, <source>-<meters>M-<k> after that (the same
+// length cut twice off one roll). ok is false when the candidate does not
+// fit VARCHAR(64); the caller then falls back to SplitBarcode.
+func MeterBarcode(source string, cm, k int64) (string, bool) {
+	b := source + "-" + MeterLabel(cm)
+	if k > 1 {
+		b += "-" + strconv.FormatInt(k, 10)
+	}
+	return b, len(b) <= maxBarcodeLen
 }
 
 // Split cuts c.Centimeters off a roll in tx: the roll row and its state are
@@ -251,15 +278,27 @@ func (l *Ledger) Split(ctx context.Context, tx pgx.Tx, c SplitCommand) (SplitRes
 }
 
 // createSplitUnit opens the new unit: same issuer, brand and product as the
-// roll, the next free derived barcode, initial = remaining = cm, the roll's
+// roll, the first free derived barcode (meter code, then legacy -S<n>), initial = remaining = cm, the roll's
 // status (its first movement puts it at the roll's owner).
 func (l *Ledger) createSplitUnit(ctx context.Context, q *db.Queries, src db.Unit, status Status, cm int64) (db.Unit, error) {
 	n, err := q.CountStockSplitsBySource(ctx, src.ID)
 	if err != nil {
 		return db.Unit{}, fmt.Errorf("ledger: split count: %w", err)
 	}
+	// Meter code first (<src>-3M, then <src>-3M-2 ...), the legacy -S<n>
+	// when it does not fit or every meter candidate is taken.
+	candidates := make([]string, 0, 200)
+	for k := int64(1); k <= 100; k++ {
+		b, ok := MeterBarcode(src.Barcode, cm, k)
+		if !ok {
+			break
+		}
+		candidates = append(candidates, b)
+	}
 	for i := int64(1); i <= 100; i++ {
-		barcode := SplitBarcode(src.Barcode, n+i)
+		candidates = append(candidates, SplitBarcode(src.Barcode, n+i))
+	}
+	for _, barcode := range candidates {
 		_, err := q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{BrandID: src.BrandID, Barcode: barcode})
 		if err == nil {
 			continue

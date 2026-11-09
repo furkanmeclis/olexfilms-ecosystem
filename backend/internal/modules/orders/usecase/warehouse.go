@@ -105,12 +105,7 @@ func (s *Service) emitWarehouseNew(ctx context.Context, q *db.Queries, tx pgx.Tx
 	if err != nil {
 		return fmt.Errorf("orders: warehouse recipients: %w", err)
 	}
-	notify := make([]int64, 0, len(ids))
-	for _, id := range ids {
-		if id != c.Principal.UserInternal {
-			notify = append(notify, id)
-		}
-	}
+	notify := warehouseNewRecipients(ids, c.Principal.UserInternal)
 	buyer, err := q.GetOrganizationByID(ctx, o.BuyerOrgID)
 	if err != nil {
 		return fmt.Errorf("orders: buyer: %w", err)
@@ -139,4 +134,18 @@ func (s *Service) emitWarehouseNew(ctx context.Context, q *db.Queries, tx pgx.Tx
 		return fmt.Errorf("orders: outbox: %w", err)
 	}
 	return nil
+}
+
+// warehouseNewRecipients drops the actor from the warehouse staff (the
+// ListOrderWarehouseNotifyUserIDs rows: members of the order's warehouse
+// and staff without any warehouse membership, never another warehouse's).
+// A self-prepared order (TEC-1052) writes no orders.warehouse_new at all.
+func warehouseNewRecipients(staff []int64, actor int64) []int64 {
+	notify := make([]int64, 0, len(staff))
+	for _, id := range staff {
+		if id != actor {
+			notify = append(notify, id)
+		}
+	}
+	return notify
 }

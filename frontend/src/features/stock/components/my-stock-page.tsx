@@ -31,6 +31,7 @@ import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ExportMenu } from "@/features/io/components/export-menu";
 import { StockProductsTable } from "@/features/stock/components/stock-products-table";
+import { StockFamilyCard } from "@/features/stock/components/unit-splits-card";
 import {
   CONSUMED_STATUS,
   showPurchasePrice,
@@ -545,6 +546,10 @@ export function MyStockPage({
 
       {dealerPicker}
       {tabs}
+
+      {tab === "stock" && params.q ? (
+        <StockFamilyCard orgUuid={targetUuid} barcode={params.q} slug={slug} />
+      ) : null}
 
       <EntityTable
         columns={columns}

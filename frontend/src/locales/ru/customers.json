@@ -1,9 +1,9 @@
 {
-  "nav": "Клиенты",
+  "nav": "Клиенты и автомобили",
   "nav_list": "Список клиентов",
   "nav_new": "Новый клиент",
   "loading": "Загрузка…",
-  "list.title": "Клиенты",
+  "list.title": "Клиенты и автомобили",
   "list.description": "Клиенты, связанные с доступными вам организациями.",
   "list.forbidden": "Для открытия этой страницы нужно право на просмотр клиентов.",
   "list.search": "Поиск",
@@ -134,5 +134,6 @@
   "actions.upgrade.role_staff": "Сотрудник дилера",
   "actions.upgrade.confirm": "Повысить",
   "actions.upgrade.success": "Клиент теперь участник {{dealer}}.",
-  "fields.organization": "Организация"
+  "fields.organization": "Организация",
+  "fields.opened_by": "Открыл дилер"
 }

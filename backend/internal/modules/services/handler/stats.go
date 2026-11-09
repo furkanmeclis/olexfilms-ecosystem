@@ -5,6 +5,7 @@ import (
 	"time"
 
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
@@ -30,7 +31,7 @@ func (h *Handler) FrequentVehicles(w http.ResponseWriter, r *http.Request) {
 // completed services of the caller's brand. Center / super_admin only.
 func (h *Handler) TopVehicleModels(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
-	out, err := h.svc.TopVehicleModels(r.Context(), caller(r), v.Get("period"), v.Get("group"), time.Now().UTC())
+	out, err := h.svc.TopVehicleModels(r.Context(), caller(r), v.Get("period"), v.Get("group"), requestNow(r))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -42,7 +43,35 @@ func (h *Handler) TopVehicleModels(w http.ResponseWriter, r *http.Request) {
 // active organization's most serviced car models, most used products and
 // latest completed services (dealer home "Analiz").
 func (h *Handler) HomeOverview(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.HomeOverview(r.Context(), caller(r), r.URL.Query().Get("period"), time.Now().UTC())
+	out, err := h.svc.HomeOverview(r.Context(), caller(r), r.URL.Query().Get("period"), requestNow(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// requestNow is the current time in the request time zone (K10, default
+// Europe/Istanbul), so the today period starts at local midnight.
+func requestNow(r *http.Request) time.Time {
+	now := time.Now()
+	if loc, err := time.LoadLocation(i18n.FromContext(r.Context()).Timezone); err == nil {
+		return now.In(loc)
+	}
+	return now.UTC()
+}
+
+// ListStats (GET /v1/services/stats[?organization_uuid=], TEC-1075): the
+// summary cards above the service list, in the list's scope; this_month in
+// the request's time zone (K10 default Europe/Istanbul).
+func (h *Handler) ListStats(w http.ResponseWriter, r *http.Request) {
+	orgs, err := svcuc.UUIDList(r.URL.Query(), svcuc.QueryOrganizationUUID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	tz := i18n.FromContext(r.Context()).Timezone
+	out, err := h.svc.ListStats(r.Context(), caller(r), orgs, svcuc.MonthStart(time.Now(), tz))
 	if err != nil {
 		writeError(w, r, err)
 		return

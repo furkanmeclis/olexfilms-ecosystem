@@ -45,19 +45,20 @@ type AssignedUnitView struct {
 }
 
 // ItemView is one order line. unit_price is the buyer's purchase price,
-// frozen at approval. Assigned is the amount covered by the assigned units
+// frozen at approval. unit_price, price_source and line_total are null for
+// a caller who may not see prices (TEC-1050, Caller.SeesPrices). Assigned is the amount covered by the assigned units
 // (quantity, or meters for roll lines).
 type ItemView struct {
 	UUID        uuid.UUID  `json:"uuid"`
 	Product     ProductRef `json:"product"`
 	Quantity    *int32     `json:"quantity"`
 	Meters      *string    `json:"meters"`
-	UnitPrice   string     `json:"unit_price"`
-	PriceSource string     `json:"price_source"`
+	UnitPrice   *string    `json:"unit_price"`
+	PriceSource *string    `json:"price_source"`
 	// PriceMissing: the line has no price (0) — a center-opened order
 	// with neither a typed nor a purchase price (TEC-1024).
 	PriceMissing bool               `json:"price_missing"`
-	LineTotal    string             `json:"line_total"`
+	LineTotal    *string            `json:"line_total"`
 	Note         *string            `json:"note"`
 	Assigned     string             `json:"assigned"`
 	Units        []AssignedUnitView `json:"units"`
@@ -78,7 +79,9 @@ type HistoryView struct {
 	OnBehalfOfBuyer bool `json:"on_behalf_of_buyer,omitempty"`
 }
 
-// OrderView is an order as the API returns it.
+// OrderView is an order as the API returns it. The money fields (subtotal,
+// tax_total, total, rate_snapshot, try_rate) are null for a caller who may
+// not see prices (TEC-1050, Caller.SeesPrices).
 type OrderView struct {
 	UUID         uuid.UUID       `json:"uuid"`
 	OrderNo      string          `json:"order_no"`
@@ -88,9 +91,9 @@ type OrderView struct {
 	Seller       OrgRef          `json:"seller"`
 	Buyer        OrgRef          `json:"buyer"`
 	Currency     string          `json:"currency"`
-	Subtotal     string          `json:"subtotal"`
-	TaxTotal     string          `json:"tax_total"`
-	Total        string          `json:"total"`
+	Subtotal     *string         `json:"subtotal"`
+	TaxTotal     *string         `json:"tax_total"`
+	Total        *string         `json:"total"`
 	RateSnapshot json.RawMessage `json:"rate_snapshot"`
 	TryRate      *string         `json:"try_rate"`
 	Note         *string         `json:"note"`
@@ -149,6 +152,23 @@ type SplitView struct {
 	Replayed              bool      `json:"replayed"`
 }
 
+// hidePrices clears the money of an order for a caller who may not see
+// prices (TEC-1050). Lines are cleared by ItemView.hidePrices.
+func (v *OrderView) hidePrices() {
+	v.Subtotal, v.TaxTotal, v.Total, v.TryRate = nil, nil, nil, nil
+	v.RateSnapshot = json.RawMessage("null")
+	for i := range v.Items {
+		v.Items[i].hidePrices()
+	}
+}
+
+// hidePrices clears the money of an order line (TEC-1050).
+func (v *ItemView) hidePrices() {
+	v.UnitPrice, v.PriceSource, v.LineTotal, v.PriceMissing = nil, nil, nil, false
+}
+
+func textRef(s string) *string { return &s }
+
 func tsPtr(t pgtype.Timestamptz) *time.Time {
 	if !t.Valid {
 		return nil
@@ -205,7 +225,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		UUID: o.Uuid, OrderNo: o.OrderNo, Status: o.Status,
 		StatusLabel: i18n.Translate(i18n.FromContext(ctx).Locale, StatusLabelKey(o.Status)),
 		Role:        role, Seller: seller, Buyer: buyer, Currency: strings.TrimSpace(o.Currency),
-		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2),
+		Subtotal: textRef(numericText(o.Subtotal, 2)), TaxTotal: textRef(numericText(o.TaxTotal, 2)), Total: textRef(numericText(o.Total, 2)),
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
 		CreatedBySeller: o.CreatedBySeller, InvoiceStatus: o.InvoiceStatus,
 		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
@@ -230,6 +250,9 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		v.RateSnapshot = json.RawMessage(o.RateSnapshot)
 	} else {
 		v.RateSnapshot = json.RawMessage("null")
+	}
+	if !c.SeesPrices() {
+		v.hidePrices()
 	}
 	return v, nil
 }
@@ -278,9 +301,12 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			UUID:      it.Uuid,
 			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
 			Meters:    numericTextPtr(it.Meters, 2),
-			UnitPrice: numericText(it.UnitPrice, 4), PriceSource: it.PriceSource,
+			UnitPrice: textRef(numericText(it.UnitPrice, 4)), PriceSource: textRef(it.PriceSource),
 			PriceMissing: it.PriceSource == PriceSourceMissing,
-			LineTotal:    numericText(it.LineTotal, 2), Note: textPtr(it.Note),
+			LineTotal:    textRef(numericText(it.LineTotal, 2)), Note: textPtr(it.Note),
+		}
+		if !c.SeesPrices() {
+			iv.hidePrices()
 		}
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32
@@ -370,6 +396,14 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 	}
 	if f.TotalMin != nil && f.TotalMax != nil && *f.TotalMin > *f.TotalMax {
 		return nil, 0, invalid("total_min", "must not exceed total_max")
+	}
+	if !c.SeesPrices() {
+		// TEC-1050: the total filter and sort would reveal the hidden
+		// totals; they are ignored for a caller who may not see prices.
+		f.TotalMin, f.TotalMax = nil, nil
+		if f.Sort.Key == ListSort.Columns["total"] {
+			f.Sort, f.SortExplicit = apiquery.ResolvedSort{}, false
+		}
 	}
 	brand := c.Org.BrandID
 	q := pgtype.Text{}

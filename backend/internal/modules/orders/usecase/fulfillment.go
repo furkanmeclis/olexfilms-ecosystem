@@ -17,7 +17,10 @@ package usecase
 //     has is refused (ROLL_METERS_EXCEED_REMAINING).
 //   - fixed barcodes: a quantity; the seller's active reservations of the
 //     barcode never exceed what the seller holds. The check runs under the
-//     unit row lock (the lock ledger.Post takes as well).
+//     unit row lock (the lock ledger.Post takes as well). TEC-1047: without
+//     a quantity (a plain scan) the rest of the line is taken as far as the
+//     stock reaches, and the same barcode scanned again grows its
+//     assignment instead of being refused.
 //
 // preparing -> ready needs every line fully assigned. ready -> shipped posts
 // one order_out per assigned unit (idempotency key
@@ -241,7 +244,11 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 		if u.ProductID != it.ProductID {
 			return invalid("barcode", "the unit is not of the line's product")
 		}
-		if _, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: u.ID}); err == nil {
+		if prev, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: u.ID}); err == nil {
+			// TEC-1047: a fixed barcode scanned again grows its assignment.
+			if u.UnitKind == ledger.KindFixed {
+				return s.growFixedLocked(ctx, q, c, o, it, u, prev, in)
+			}
 			return ErrUnitAlreadyAssigned
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("orders: assignment: %w", err)
@@ -283,14 +290,12 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 			if in.Meters != nil {
 				return invalid("meters", "a fixed barcode is assigned by quantity")
 			}
-			if in.Quantity == nil || *in.Quantity <= 0 || *in.Quantity > MaxQuantity {
-				return invalid("quantity", fmt.Sprintf("must be between 1 and %d", MaxQuantity))
-			}
-			if err := s.checkFixedStock(ctx, q, u, o.SellerOrgID, *in.Quantity); err != nil {
+			n, err := s.fixedQuantity(ctx, q, o, it, u, in.Quantity, 0)
+			if err != nil {
 				return err
 			}
-			qty = pgtype.Int4{Int32: int32(*in.Quantity), Valid: true}
-			amount = new(big.Rat).SetInt64(*in.Quantity)
+			qty = pgtype.Int4{Int32: int32(n), Valid: true}
+			amount = new(big.Rat).SetInt64(n)
 		} else {
 			required, err := q.OrganizationRequiresPlacement(ctx, o.SellerOrgID)
 			if err != nil {
@@ -464,38 +469,137 @@ func checkSerialStock(ctx context.Context, q *db.Queries, u db.Unit, seller int6
 	return nil
 }
 
-// checkFixedStock: the seller's active reservations of the barcode plus qty
-// do not exceed what the seller holds (all its owners). The caller holds
-// the unit row lock.
-func (s *Service) checkFixedStock(ctx context.Context, q *db.Queries, u db.Unit, seller, qty int64) error {
+// fixedStock is what the seller can still reserve of a fixed barcode.
+type fixedStock struct {
+	// free: held at a warehouse location or on the organization, minus the
+	// active reservations; placedFree the same for located holdings only.
+	free, placedFree int64
+	// single: the largest sellable holding of one owner (one assignment
+	// ships from one owner, fixedSource); placedSingle located only.
+	single, placedSingle int64
+	required             bool
+}
+
+// sellableOwner: the owners an order ships a fixed barcode from (not a
+// service or the trash).
+func sellableOwner(ownerType string) bool {
+	return ownerType == string(ledger.OwnerWarehouseLocation) || ownerType == string(ledger.OwnerOrganization)
+}
+
+// loadFixedStock reads the seller's holdings of a fixed barcode under the
+// unit row lock the caller holds.
+func loadFixedStock(ctx context.Context, q *db.Queries, u db.Unit, seller int64) (fixedStock, error) {
 	holdings, err := q.LockFixedBarcodeHoldingsByUnit(ctx, u.ID)
 	if err != nil {
-		return fmt.Errorf("orders: holdings: %w", err)
+		return fixedStock{}, fmt.Errorf("orders: holdings: %w", err)
 	}
+	var st fixedStock
 	var onHand, placed int64
 	for _, h := range holdings {
-		if h.HolderOrgID == seller {
-			onHand += int64(h.QuantityOnHand)
-			if h.OwnerType == string(ledger.OwnerWarehouseLocation) {
-				placed += int64(h.QuantityOnHand)
-			}
+		if h.HolderOrgID != seller || !sellableOwner(h.OwnerType) {
+			continue
+		}
+		n := int64(h.QuantityOnHand)
+		onHand += n
+		st.single = max(st.single, n)
+		if h.OwnerType == string(ledger.OwnerWarehouseLocation) {
+			placed += n
+			st.placedSingle = max(st.placedSingle, n)
 		}
 	}
 	reserved, err := q.SumActiveReservedQuantityByUnit(ctx, db.SumActiveReservedQuantityByUnitParams{
 		UnitID: u.ID, OrganizationID: seller,
 	})
 	if err != nil {
-		return fmt.Errorf("orders: reserved quantity: %w", err)
+		return fixedStock{}, fmt.Errorf("orders: reserved quantity: %w", err)
 	}
-	if reserved+qty > onHand {
-		return ErrInsufficientStock
+	if st.required, err = q.OrganizationRequiresPlacement(ctx, seller); err != nil {
+		return fixedStock{}, err
 	}
-	required, err := q.OrganizationRequiresPlacement(ctx, seller)
+	st.free, st.placedFree = onHand-reserved, placed-reserved
+	return st, nil
+}
+
+// fixedQuantity resolves and checks the quantity of a fixed barcode
+// assignment: the seller's active reservations of the barcode plus the
+// quantity do not exceed what the seller holds, and the whole assignment
+// (already plus the quantity) fits one owner's holding. Without a quantity
+// (a plain scan, TEC-1047) the rest of the line is taken, as far as the
+// stock reaches. The caller holds the unit row lock.
+func (s *Service) fixedQuantity(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, u db.Unit, want *int64, already int64) (int64, error) {
+	if want != nil && (*want <= 0 || *want > MaxQuantity) {
+		return 0, invalid("quantity", fmt.Sprintf("must be between 1 and %d", MaxQuantity))
+	}
+	st, err := loadFixedStock(ctx, q, u, o.SellerOrgID)
+	if err != nil {
+		return 0, err
+	}
+	free, single := st.free, st.single
+	if st.required {
+		free, single = st.placedFree, st.placedSingle
+	}
+	var n int64
+	if want != nil {
+		n = *want
+	} else {
+		done, err := reservedOnLine(ctx, q, it.ID)
+		if err != nil {
+			return 0, err
+		}
+		rest := new(big.Rat).Sub(lineAmount(it), done)
+		if rest.Sign() <= 0 {
+			return 0, ErrOverAssigned
+		}
+		n = min(rest.Num().Int64()/max(rest.Denom().Int64(), 1), free, single-already)
+		if n <= 0 {
+			n = 1 // nothing fits: the checks below name the reason
+		}
+	}
+	switch {
+	case n > st.free:
+		return 0, ErrInsufficientStock
+	case st.required && n > st.placedFree:
+		return 0, ErrLocationPlacementRequired
+	case already+n > single:
+		return 0, fmt.Errorf("%w: no single owner holds %d", ErrInsufficientStock, already+n)
+	}
+	return n, nil
+}
+
+// growFixedLocked adds a quantity to a fixed barcode already on the line
+// (TEC-1047: the same barcode scanned again). The larger quantity moves to
+// a new reservation; the old one is released and kept as history.
+func (s *Service) growFixedLocked(ctx context.Context, q *db.Queries, c Caller, o db.Order, it db.OrderItem, u db.Unit, prev db.OrderItemUnit, in AssignInput) error {
+	if in.Meters != nil {
+		return invalid("meters", "a fixed barcode is assigned by quantity")
+	}
+	n, err := s.fixedQuantity(ctx, q, o, it, u, in.Quantity, int64(prev.Quantity.Int32))
 	if err != nil {
 		return err
 	}
-	if required && reserved+qty > placed {
-		return ErrLocationPlacementRequired
+	done, err := reservedOnLine(ctx, q, it.ID)
+	if err != nil {
+		return err
+	}
+	if new(big.Rat).Add(done, new(big.Rat).SetInt64(n)).Cmp(lineAmount(it)) > 0 {
+		return ErrOverAssigned
+	}
+	if prev.ReservationID.Valid {
+		if _, err := q.ReleaseStockReservation(ctx, prev.ReservationID.Int64); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("orders: release: %w", err)
+		}
+	}
+	total := pgtype.Int4{Int32: prev.Quantity.Int32 + int32(n), Valid: true}
+	res, err := q.CreateStockReservation(ctx, db.CreateStockReservationParams{
+		Quantity: total, CreatedByUserID: c.actor(), UnitID: u.ID, OrderItemID: it.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("orders: reserve: %w", err)
+	}
+	if _, err := q.UpdateOrderItemUnitQuantity(ctx, db.UpdateOrderItemUnitQuantityParams{
+		ID: prev.ID, Quantity: total, ReservationID: pgtype.Int8{Int64: res.ID, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("orders: assign: %w", err)
 	}
 	return nil
 }
@@ -630,7 +734,8 @@ func (s *Service) ship(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, 
 }
 
 // fixedSource picks the seller's owner (location or the organization) that
-// holds the whole quantity, the largest first. One assignment is one
+// holds the whole quantity, the largest first (never a service or the
+// trash, TEC-1047). One assignment is one
 // movement (one idempotency key), so the quantity is not split across
 // owners.
 func fixedSource(ctx context.Context, q *db.Queries, unitID, seller int64, qty int32) (ledger.Owner, error) {
@@ -641,7 +746,7 @@ func fixedSource(ctx context.Context, q *db.Queries, unitID, seller int64, qty i
 	var best *db.FixedBarcodeHolding
 	for i := range holdings {
 		h := &holdings[i]
-		if h.HolderOrgID != seller || h.QuantityOnHand < qty {
+		if h.HolderOrgID != seller || !sellableOwner(h.OwnerType) || h.QuantityOnHand < qty {
 			continue
 		}
 		if best == nil || h.QuantityOnHand > best.QuantityOnHand {
