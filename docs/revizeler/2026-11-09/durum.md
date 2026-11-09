@@ -20,7 +20,7 @@ Durum kısaltmaları: ⏳ çalışıyor · 🟢 CI yeşil · 🔴 CI kırık · 
 | 000174 | TEC-1058 | order_items.plotter_cut |
 | 000175 | TEC-1076 | KULLANILMADI (boşluk) |
 | 000176 | TEC-1089 [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | center_sales rolü, dist. depo/muhasebe izinleri |
-| 000177 | RV-Karar iade | stock_transfer_requests.order_id (planlı) |
+| 000177 | TEC-1085 [#531](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/531) | stock_transfer_requests.order_id + opened_by_parent |
 
 Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **artan sırayla** merge edilmeli (yüksek numara önce uygulanırsa düşük numara prod'da atlanır).
 
@@ -97,8 +97,8 @@ Not: golang-migrate boşluklara izin verir; ancak PR'lar migration numarası **a
 | Konu | Linear | PR | CI | Migration | Not |
 | --- | --- | --- | --- | --- | --- |
 | Rol izinleri (center_sales, dist. depo/muhasebe) | TEC-1089 | [#529](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/529) | 🟢 | 000176 | satış temsilcisi: fiyat+iskonto, onay/iptal; alış fiyatı yok. **Zorbey'i bu role ata** |
-| İade siparişe bağlı + merkez bayi adına iade | TEC-1085 | | | 000177 | ⏳ #523 üstünde |
-| Muhasebe takip (faturalandı sevkte, menüde katalog gizli) | TEC-1070 | | | — | ⏳ |
+| İade siparişe bağlı + merkez bayi adına iade | TEC-1085 | [#531](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/531) | 🟢 | 000177 | #523 üstünde; merkez alt kuruluş adına iade, tek adım teslim alma, sipariş detayında İadeler |
+| Muhasebe takip (faturalandı sevkte, menüde katalog gizli) | TEC-1070 | [#534](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/534) | 🟢 | — | #531 üstünde; faturalı sipariş iptal edilemez (legacy kuralı, karar: kalsın) |
 | KRİTİK takip: alıcı adına teslim alındı, pending gizleme | TEC-1062 | [#532](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/532) | 🟢 | — | #515 üstünde |
 | Hizmet listesi varsayılan Ağ | TEC-1075 | [#528](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/528) | 🟢 | — | #513 üstünde |
 | Kapalı ürün global aramada gizli | TEC-1061 | [#530](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/530) | 🟢 | — | #517 üstünde; reindex gerekmez |
