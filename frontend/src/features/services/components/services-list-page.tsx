@@ -67,7 +67,9 @@ export function ServicesListPage({ slug }: { slug: string }) {
   const router = useRouter();
   const access = resolveServiceListAccess(can);
   const orgFilter = useScopeOrganizationOptions(slug, access.canRead);
-  const network = useNetworkScope(slug, "services");
+  // TEC-1075: the center opens on the whole network (dealer names visible);
+  // a saved own / network choice still wins.
+  const network = useNetworkScope(slug, "services", "network");
   const money = useServiceMoney();
   // TEC-343: the API sends income / profit only to accounting readers.
   const showIncome =

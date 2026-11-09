@@ -11,13 +11,13 @@ export type NetworkScope = "own" | "network";
 
 const storageKey = (key: string) => `network-scope:${key}`;
 
-function readScope(key: string): NetworkScope {
-  if (typeof window === "undefined") return "own";
+function readScope(key: string, fallback: NetworkScope): NetworkScope {
+  if (typeof window === "undefined") return fallback;
   try {
     const v = window.localStorage.getItem(storageKey(key));
-    return v === "network" ? "network" : "own";
+    return v === "network" || v === "own" ? v : fallback;
   } catch {
-    return "own";
+    return fallback;
   }
 }
 
@@ -26,11 +26,20 @@ function readScope(key: string): NetworkScope {
  * its service and warranty lists split into its own records and the whole
  * network. `organizationUuid` narrows the list (organization_uuid) when the
  * scope is "own"; other organizations see no switch.
+ *
+ * `defaultScope` applies until the user picks a side; a saved choice wins
+ * (TEC-1075: the service list opens on "network" so dealer names show).
  */
-export function useNetworkScope(slug: string, key: string) {
+export function useNetworkScope(
+  slug: string,
+  key: string,
+  defaultScope: NetworkScope = "own",
+) {
   const org = useActiveOrganization(slug);
   const visible = org?.type === "center";
-  const [scope, setScope] = useState<NetworkScope>(() => readScope(key));
+  const [scope, setScope] = useState<NetworkScope>(() =>
+    readScope(key, defaultScope),
+  );
   const change = (next: NetworkScope) => {
     setScope(next);
     try {

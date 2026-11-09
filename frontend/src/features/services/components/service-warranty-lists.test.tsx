@@ -18,6 +18,7 @@ const captured = vi.hoisted(() => ({
   rowActions: [] as RowAction[][],
   grants: new Set<string>(),
   orgType: "center" as string | null,
+  orgUuid: undefined as string | undefined,
   push: vi.fn(),
   services: { listServices: vi.fn(), listStats: vi.fn() },
   warranties: { list: vi.fn() },
@@ -50,7 +51,9 @@ vi.mock("@/providers/permission-provider", () => ({
 }));
 vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () =>
-    captured.orgType ? { slug: "acme", type: captured.orgType } : null,
+    captured.orgType
+      ? { slug: "acme", uuid: captured.orgUuid, type: captured.orgType }
+      : null,
 }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
@@ -178,6 +181,7 @@ beforeEach(() => {
   captured.rowActions = [];
   captured.grants = new Set();
   captured.orgType = "center";
+  captured.orgUuid = undefined;
   captured.push.mockReset();
   captured.servicePdf.mockReset();
   captured.certificate.mockReset();
@@ -470,6 +474,36 @@ describe("ServicesListPage stats (TEC-1075)", () => {
     expect(cards?.textContent).toContain("services.list.stats.in_progress8");
     expect(cards?.textContent).toContain(
       "services.list.stats.active_warranties50",
+    );
+  });
+
+  it("opens the center on the whole network, list and cards alike", async () => {
+    captured.grants = new Set([Permission.ServicesRead]);
+    captured.orgUuid = "org-center";
+    await render(createElement(ServicesListPage, { slug: "acme" }));
+    expect(
+      lastCall(captured.services.listServices)?.[0].organization_uuid,
+    ).toBeUndefined();
+    expect(lastCall(captured.services.listStats)?.[0]).toBeNull();
+  });
+
+  it("keeps a saved own choice for the list and the cards", async () => {
+    captured.grants = new Set([Permission.ServicesRead]);
+    captured.orgUuid = "org-center";
+    window.localStorage.setItem("network-scope:services", "own");
+    await render(createElement(ServicesListPage, { slug: "acme" }));
+    expect(
+      lastCall(captured.services.listServices)?.[0].organization_uuid,
+    ).toBe("org-center");
+    expect(lastCall(captured.services.listStats)?.[0]).toBe("org-center");
+  });
+
+  it("leaves the warranty list on own by default", async () => {
+    captured.grants = new Set([Permission.WarrantiesRead]);
+    captured.orgUuid = "org-center";
+    await render(createElement(WarrantiesListPage, { slug: "acme" }));
+    expect(lastCall(captured.warranties.list)?.[0].organization_uuid).toBe(
+      "org-center",
     );
   });
 });
