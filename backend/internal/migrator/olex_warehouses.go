@@ -41,11 +41,14 @@ type WarehousesStep struct {
 	PrimaryCode, PrimaryName string
 }
 
-// The Olex primary warehouse (TEC-1006): the legacy AFM Florya warehouse is
-// the center warehouse ("AFM Florya = merkez depo").
+// The Olex primary warehouse (TEC-1006): the legacy FLORYA warehouse is the
+// center warehouse. TEC-1202: AFM Florya is a dealer of its own now, so the
+// warehouse is named "Merkez Depo"; its code stays FLORYA (the legacy code,
+// unique per organization, kept so units, barcode history and order traces
+// keep pointing at the same warehouse across reruns).
 const (
 	OlexPrimaryWarehouseCode = "FLORYA"
-	OlexPrimaryWarehouseName = "AFM Florya Merkez"
+	OlexPrimaryWarehouseName = "Merkez Depo"
 )
 
 // Name implements Step.

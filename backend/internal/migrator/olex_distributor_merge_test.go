@@ -19,13 +19,16 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 )
 
-// TEC-1003 over the legacy fixture, as on a database the old migrator
-// filled: the dealers sit under a Türkiye distributor (with the TR
-// territory) that sold them the orders. A run with the service point dealer
-// set merges the distributor and the service point dealer (hub dealer 1)
-// into the center; a rerun changes nothing; undoing both merges puts every
-// row back. Everything runs in one rolled back transaction.
-func TestOlexServicePointMerge(t *testing.T) {
+// TEC-1003 / TEC-1202 over the legacy fixture, as on a database the old
+// migrator filled: the dealers sit under a Türkiye distributor (with the TR
+// territory) that sold them the orders. A run merges the distributor into
+// the center (the center is the Türkiye distributor too) and nothing else:
+// hub dealer 1 (AFM Florya in the Olex data) stays a normal dealer under the
+// center with its services, warranties, customers, members (dealer roles)
+// and orders, and the center's service point stays unset. A rerun changes
+// nothing; undoing the merge puts every row back. Everything runs in one
+// rolled back transaction.
+func TestOlexDistributorMergeKeepsDealers(t *testing.T) {
 	e := newOrgsUsersEnv(t)
 	ctx, pool := e.ctx, e.pool
 	hubSys := e.system
@@ -51,9 +54,9 @@ func TestOlexServicePointMerge(t *testing.T) {
 		return n
 	}
 
-	steps := func(servicePoint int64) []Step {
+	steps := func() []Step {
 		return []Step{
-			OrganizationsStep{System: hubSys, ServicePointDealerID: servicePoint},
+			OrganizationsStep{System: hubSys},
 			UsersStep{System: hubSys},
 			CustomersStep{System: hubSys},
 			VehicleCatalogStep{System: hubSys},
@@ -72,14 +75,12 @@ func TestOlexServicePointMerge(t *testing.T) {
 	}
 	e.runner.Pool = tx
 	e.runner.Storage = storage.NewMemory()
-	e.runner.Profiles["olexfx-sp-before"] = Profile{Name: "olexfx-sp-before", Enabled: true,
-		Sources: []string{SourceHub, SourceWH}, Steps: func() []Step { return steps(0) }}
-	e.runner.Profiles["olexfx-sp"] = Profile{Name: "olexfx-sp", Enabled: true,
-		Sources: []string{SourceHub, SourceWH}, Steps: func() []Step { return steps(1) }}
+	e.runner.Profiles["olexfx-dist"] = Profile{Name: "olexfx-dist", Enabled: true,
+		Sources: []string{SourceHub, SourceWH}, Steps: steps}
 
 	// 1. The old shape: a full run, then the dealers under a TR distributor
 	//    that sold them their orders.
-	first := e.run("olexfx-sp-before", Options{})
+	first := e.run("olexfx-dist", Options{})
 	// TEC-1006: the units of completed legacy services get the service as
 	// owner, every legacy barcode is a unit. (The ownership counts cover the
 	// whole brand of the shared test database, so they are not asserted.)
@@ -157,17 +158,17 @@ func TestOlexServicePointMerge(t *testing.T) {
 	}
 	dealerBefore, centerBefore := of(dealer1), of(centerID)
 	if dealerBefore.Services == 0 || dealerBefore.Warranties == 0 || dealerBefore.Members == 0 || dealerBefore.Orders == 0 {
-		t.Fatalf("fixture dealer 1 has too little to merge: %+v", dealerBefore)
+		t.Fatalf("fixture dealer 1 has too few records: %+v", dealerBefore)
 	}
 	ordersOfDist := scalar(`SELECT count(*) FROM orders WHERE seller_org_id = $1`, distID)
 	if ordersOfDist == 0 {
 		t.Fatal("no distributor orders")
 	}
 
-	// 2. The run with the service point merges both into the center.
-	rep := e.run("olexfx-sp", Options{})
+	// 2. The run merges the distributor into the center, and only it.
+	rep := e.run("olexfx-dist", Options{})
 	oc := stepCounts(t, rep, "organizations")
-	if oc["distributor_merged"] != 1 || oc["service_point_merged"] != 1 {
+	if oc["distributor_merged"] != 1 || oc["service_point_merged"] != 0 {
 		t.Fatalf("organizations counts = %v", oc)
 	}
 	if n := scalar(`SELECT count(*) FROM organizations WHERE parent_id = $1 AND deleted_at IS NULL`, distID); n != 0 {
@@ -180,17 +181,20 @@ func TestOlexServicePointMerge(t *testing.T) {
 	if n := scalar(`SELECT count(*) FROM territories WHERE organization_id = $1`, distID); n != 0 {
 		t.Errorf("distributor territory kept: %d", n)
 	}
-	dealerAfter, centerAfter := of(dealer1), of(centerID)
-	if dealerAfter.Services != 0 || dealerAfter.Warranties != 0 || dealerAfter.Units != 0 || dealerAfter.Members != 0 {
-		t.Errorf("dealer 1 after merge = %+v", dealerAfter)
+	// TEC-1202: dealer 1 is a live dealer under the center and keeps every
+	// record; the center's own records do not grow.
+	if n := scalar(`SELECT count(*) FROM organizations WHERE id = $1 AND type = 'dealer' AND parent_id = $2
+		AND deleted_at IS NULL AND merged_into_id IS NULL`, dealer1, centerID); n != 1 {
+		t.Errorf("dealer 1 is not a live dealer under the center")
 	}
-	// The orders the service point bought stay its history.
-	if dealerAfter.Orders != dealerBefore.Orders {
-		t.Errorf("dealer 1 orders = %d, want %d kept", dealerAfter.Orders, dealerBefore.Orders)
+	if n := scalar(`SELECT count(*) FROM org_merge_runs WHERE source_org_id = $1`, dealer1); n != 0 {
+		t.Errorf("dealer 1 merged %d times", n)
 	}
-	if centerAfter.Services != centerBefore.Services+dealerBefore.Services ||
-		centerAfter.Warranties != centerBefore.Warranties+dealerBefore.Warranties {
-		t.Errorf("center after merge = %+v, before %+v + dealer %+v", centerAfter, centerBefore, dealerBefore)
+	if got := of(dealer1); got != dealerBefore {
+		t.Errorf("dealer 1 after the run = %+v, want %+v", got, dealerBefore)
+	}
+	if got := of(centerID); got.Services != centerBefore.Services || got.Warranties != centerBefore.Warranties {
+		t.Errorf("center after the run = %+v, before %+v", got, centerBefore)
 	}
 	var spName string
 	var spOn bool
@@ -198,33 +202,37 @@ func TestOlexServicePointMerge(t *testing.T) {
 		Scan(&spName, &spOn); err != nil {
 		t.Fatal(err)
 	}
-	if spName != "Sentetik Bayi Bir" || !spOn {
-		t.Errorf("center service point = %q %v", spName, spOn)
+	if spName == "Sentetik Bayi Bir" {
+		t.Errorf("center service point filled from dealer 1: %q %v", spName, spOn)
 	}
-	// Dealer 1's owner and staff are center members now, with the center
-	// counterparts of their roles.
-	for email, want := range map[string]string{"sahip1@example.test": "center_staff", "personel1@example.test": "center_service"} {
+	// Dealer 1's owner and staff keep their dealer roles at the dealer and
+	// get no center membership (center_service is not used).
+	for email, want := range map[string]string{"sahip1@example.test": "dealer_owner", "personel1@example.test": "dealer_staff"} {
 		var got string
-		if err := tx.QueryRow(ctx, `SELECT string_agg(r.slug, ',') FROM organization_members om
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(string_agg(r.slug, ','), '') FROM organization_members om
 			JOIN users u ON u.id = om.user_id
 			JOIN organization_member_roles omr ON omr.member_id = om.id JOIN roles r ON r.id = omr.role_id
-			WHERE u.email = $1 AND om.organization_id = $2`, email, centerID).Scan(&got); err != nil {
+			WHERE u.email = $1 AND om.organization_id = $2`, email, dealer1).Scan(&got); err != nil {
 			t.Fatalf("%s: %v", email, err)
 		}
 		if got != want {
-			t.Errorf("%s center roles = %q, want %s", email, got, want)
+			t.Errorf("%s dealer roles = %q, want %s", email, got, want)
+		}
+		if n := scalar(`SELECT count(*) FROM organization_members om JOIN users u ON u.id = om.user_id
+			WHERE u.email = $1 AND om.organization_id = $2`, email, centerID); n != 0 {
+			t.Errorf("%s is a center member", email)
 		}
 	}
 
-	// 3. A rerun resolves dealer 1 to the center and writes nothing new.
+	// 3. A rerun writes nothing new and merges nothing.
 	servicesTotal := scalar(`SELECT count(*) FROM services WHERE id IN (` + fixtureServices + `)`)
 	warrantiesTotal := scalar(`SELECT count(*) FROM warranties WHERE service_id IN (` + fixtureServices + `)`)
-	rep = e.run("olexfx-sp", Options{})
+	rep = e.run("olexfx-dist", Options{})
 	if n := stepCounts(t, rep, "unit_trace")["service_consumption_created"]; n != 0 {
 		t.Errorf("rerun created %d service consumptions", n)
 	}
 	oc = stepCounts(t, rep, "organizations")
-	if oc["distributor_merged"] != 0 || oc["service_point_merged"] != 0 {
+	if oc["distributor_merged"] != 0 {
 		t.Errorf("rerun merged again: %v", oc)
 	}
 	if n := scalar(`SELECT count(*) FROM services WHERE id IN (` + fixtureServices + `)`); n != servicesTotal {
@@ -233,32 +241,17 @@ func TestOlexServicePointMerge(t *testing.T) {
 	if n := scalar(`SELECT count(*) FROM warranties WHERE service_id IN (` + fixtureServices + `)`); n != warrantiesTotal {
 		t.Errorf("rerun warranties %d -> %d", warrantiesTotal, n)
 	}
-	if got := of(dealer1); got.Services != 0 || got.Members != 0 {
-		t.Errorf("rerun wrote to the merged dealer: %+v", got)
+	if got := of(dealer1); got != dealerBefore {
+		t.Errorf("rerun changed dealer 1: %+v, want %+v", got, dealerBefore)
 	}
 
-	// 4. Undo both merges (last first): dealer 1 has its rows back.
-	rows, err := tx.Query(ctx, `SELECT uuid::text FROM org_merge_runs WHERE source_org_id = ANY ($1) ORDER BY id DESC`,
-		[]int64{distID, dealer1})
-	if err != nil {
+	// 4. Undo the distributor merge: the dealers are back under it.
+	var run string
+	if err := tx.QueryRow(ctx, `SELECT uuid::text FROM org_merge_runs WHERE source_org_id = $1`, distID).Scan(&run); err != nil {
 		t.Fatal(err)
 	}
-	var runs []string
-	for rows.Next() {
-		var s string
-		if err := rows.Scan(&s); err != nil {
-			t.Fatal(err)
-		}
-		runs = append(runs, s)
-	}
-	rows.Close()
-	if len(runs) != 2 {
-		t.Fatalf("merge runs = %v", runs)
-	}
-	for _, r := range runs {
-		if _, err := orgmerge.Undo(ctx, tx, r); err != nil {
-			t.Fatalf("undo %s: %v", r, err)
-		}
+	if _, err := orgmerge.Undo(ctx, tx, run); err != nil {
+		t.Fatalf("undo %s: %v", run, err)
 	}
 	if got := of(dealer1); got.Services != dealerBefore.Services || got.Warranties != dealerBefore.Warranties ||
 		got.Members != dealerBefore.Members || got.Customers != dealerBefore.Customers {
@@ -270,11 +263,11 @@ func TestOlexServicePointMerge(t *testing.T) {
 	if n := scalar(`SELECT count(*) FROM territories WHERE organization_id = $1`, distID); n != 1 {
 		t.Errorf("distributor territory after undo = %d", n)
 	}
-	if n := scalar(`SELECT count(*) FROM organizations WHERE id = ANY ($1) AND (deleted_at IS NOT NULL OR merged_into_id IS NOT NULL)`,
-		[]int64{distID, dealer1}); n != 0 {
-		t.Errorf("%d organizations still merged after undo", n)
+	if n := scalar(`SELECT count(*) FROM organizations WHERE id = $1 AND (deleted_at IS NOT NULL OR merged_into_id IS NOT NULL)`,
+		distID); n != 0 {
+		t.Error("distributor still merged after undo")
 	}
-	if _, err := orgmerge.Undo(ctx, tx, runs[0]); err == nil {
+	if _, err := orgmerge.Undo(ctx, tx, run); err == nil {
 		t.Error("a second undo must fail")
 	}
 }

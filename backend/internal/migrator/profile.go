@@ -45,8 +45,9 @@ var (
 func olexSteps() []Step {
 	return []Step{
 		// TEC-254: center and dealers; TEC-1003: the TR distributor of
-		// earlier runs and the AFM Florya service point merge into the center.
-		OrganizationsStep{ServicePointDealerID: OlexServicePointDealerID},
+		// earlier runs merges into the center. TEC-1202: AFM Florya is a
+		// normal dealer under the center (no service point merge).
+		OrganizationsStep{},
 		UsersStep{},     // TEC-254: users, memberships, roles
 		CustomersStep{}, // TEC-255: customers -> users, profiles, dealer links
 
@@ -57,7 +58,8 @@ func olexSteps() []Step {
 
 		// TEC-257: warehouse structure, stock units and their initial
 		// ownership.
-		// TEC-1006: AFM Florya is the center warehouse "AFM Florya Merkez".
+		// TEC-1006 / TEC-1202: the legacy FLORYA warehouse is the center
+		// warehouse "Merkez Depo".
 		WarehousesStep{PrimaryCode: OlexPrimaryWarehouseCode, PrimaryName: OlexPrimaryWarehouseName},
 		UnitsStep{},
 
