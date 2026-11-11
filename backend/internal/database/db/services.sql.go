@@ -1033,7 +1033,7 @@ func (q *Queries) GetServiceItemCorrectionByItem(ctx context.Context, serviceIte
 const getServiceRefs = `-- name: GetServiceRefs :one
 SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
        -- TEC-1075: who applied the service: the center's service point name
-       -- (AFM Florya) for the center's own services, else the organization.
+       -- for the center's own services, else the organization.
        org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS applied_by_name,
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
        u.phone_e164 AS customer_phone, u.status AS customer_status,

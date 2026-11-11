@@ -1,6 +1,6 @@
 // Package orgbrand resolves the name and logo an organization shows to
-// customers (TEC-1003). A brand center with its service point on (AFM
-// Florya, the center's own service point) shows the service point name and
+// customers (TEC-1003). A brand center with its service point on (the
+// center serving customers itself) shows the service point name and
 // logo on customer surfaces — warranty page and PDF, service and
 // measurement PDFs, portal, WhatsApp — while the panel keeps the
 // organization name.

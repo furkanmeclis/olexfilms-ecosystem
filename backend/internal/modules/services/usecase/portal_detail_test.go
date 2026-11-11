@@ -117,13 +117,13 @@ func TestPortalViewHidesMeasurementAndPrices(t *testing.T) {
 // TEC-1017: the dealer card names the center's service point when it is
 // on; a disabled service point or a normal dealer keeps the org name.
 func TestPortalViewDealerServicePointName(t *testing.T) {
-	sp := pgtype.Text{String: "AFM Florya", Valid: true}
+	sp := pgtype.Text{String: "Olex Hizmet Noktası", Valid: true}
 	cases := []struct {
 		name string
 		org  db.Organization
 		want string
 	}{
-		{"center service point on", db.Organization{Type: "center", Name: "Olex Merkez", ServicePointEnabled: true, ServicePointName: sp}, "AFM Florya"},
+		{"center service point on", db.Organization{Type: "center", Name: "Olex Merkez", ServicePointEnabled: true, ServicePointName: sp}, "Olex Hizmet Noktası"},
 		{"center service point off", db.Organization{Type: "center", Name: "Olex Merkez", ServicePointName: sp}, "Olex Merkez"},
 		{"dealer", db.Organization{Type: "dealer", Name: "Bayi A", ServicePointEnabled: true, ServicePointName: sp}, "Bayi A"},
 	}

@@ -193,7 +193,7 @@ func (p *PDFService) doc(ctx context.Context, svc db.Service, loc i18n.Locale) (
 	if err != nil {
 		return PDFDoc{}, fmt.Errorf("services pdf: organization: %w", err)
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	zone, err := time.LoadLocation(org.Timezone)
 	if err != nil || org.Timezone == "" {

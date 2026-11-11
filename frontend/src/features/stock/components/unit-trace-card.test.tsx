@@ -37,7 +37,7 @@ describe("UnitTraceCard (TEC-1006)", () => {
       origin_warehouse: {
         uuid: "w1",
         code: "FLORYA",
-        name: "AFM Florya Merkez",
+        name: "Merkez Depo",
       },
       orders: [
         {
@@ -68,7 +68,7 @@ describe("UnitTraceCard (TEC-1006)", () => {
       root.render(createElement(UnitTraceCard, { trace, slug: "acme" })),
     );
     expect(container.textContent).toContain("stock.trace.source.order");
-    expect(container.textContent).toContain("AFM Florya Merkez");
+    expect(container.textContent).toContain("Merkez Depo");
     expect(
       container.querySelector("[data-testid=trace-orders]")?.textContent,
     ).toContain("Olex Merkez → Bayi Bir");

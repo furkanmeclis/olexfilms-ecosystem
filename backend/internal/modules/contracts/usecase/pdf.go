@@ -94,7 +94,7 @@ func (s *Service) renderExecutedPDF(ctx context.Context, q *db.Queries, row db.C
 	if err != nil {
 		return nil, "", err
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	vars, err := s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {
@@ -513,7 +513,7 @@ func (l contractDocumentLoader) Load(ctx context.Context, viewer docmodel.Viewer
 	if err != nil {
 		return docmodel.Source{}, err
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	vars, err := l.s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {

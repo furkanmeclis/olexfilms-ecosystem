@@ -50,7 +50,7 @@ beforeEach(() => {
     items: [
       {
         uuid: "w-1",
-        name: "AFM Florya Merkez",
+        name: "Merkez Depo",
         active: true,
         is_primary: true,
       },

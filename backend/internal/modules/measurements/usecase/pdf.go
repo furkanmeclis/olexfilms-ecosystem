@@ -213,7 +213,7 @@ func (p *PDFService) GeneratePDF(ctx context.Context, resultID int64) error {
 	if err != nil {
 		return err
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	doc, err := p.buildDocument(ctx, qtx, row, org)
 	if err != nil {
@@ -342,7 +342,7 @@ func (p *PDFService) RenderHTML(ctx context.Context, resultID int64) (Document, 
 	if err != nil {
 		return Document{}, err
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	return p.buildDocument(ctx, p.q, row, org)
 }

@@ -22,9 +22,10 @@ function readScope(key: string, fallback: NetworkScope): NetworkScope {
 }
 
 /**
- * TEC-1003: the brand center works as a service point too (AFM Florya), so
- * its service and warranty lists split into its own records and the whole
- * network. `organizationUuid` narrows the list (organization_uuid) when the
+ * TEC-1003: the brand center can work as a service point too, so its
+ * service and warranty lists split into its own records (organization =
+ * center) and the whole network. TEC-1202: AFM Florya is a dealer, its
+ * records are part of the network like any dealer's. `organizationUuid` narrows the list (organization_uuid) when the
  * scope is "own"; other organizations see no switch.
  *
  * `defaultScope` applies until the user picks a side; a saved choice wins

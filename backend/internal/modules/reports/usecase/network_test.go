@@ -107,7 +107,7 @@ VALUES ($1, $2, $1, $3, 'received', 'TRY', '{}', 1, 50, 50, $4, $4)`, f.distA.ID
 	}
 
 	// services.by_org: the center's own services are the service point row.
-	f.exec(t, `UPDATE organizations SET service_point_enabled = true, service_point_name = 'AFM Florya' WHERE id = $1`, f.center.ID)
+	f.exec(t, `UPDATE organizations SET service_point_enabled = true, service_point_name = 'Olex Hizmet Noktası' WHERE id = $1`, f.center.ID)
 	customer := f.id(t, `INSERT INTO users (password_hash, name, surname, status, email)
 VALUES ('x', 'c', 'T1090', 'active', $1) RETURNING id`, f.prefix+"-sp@example.test")
 	vehicle := f.id(t, `INSERT INTO vehicles (user_id, organization_id, brand_id, car_brand_id, car_model_id, vin)
@@ -122,7 +122,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, 'completed', $8, $8)`, "S-"+f.prefix+"-sp", 
 		t.Fatal(err)
 	}
 	r := rowFor(env, f.center.Uuid)
-	if r == nil || r["organization"] != "AFM Florya" || r["is_service_point"] != true || r["services_count"] != int64(1) {
+	if r == nil || r["organization"] != "Olex Hizmet Noktası" || r["is_service_point"] != true || r["services_count"] != int64(1) {
 		t.Fatalf("center row = %v", r)
 	}
 	if d := rowFor(env, f.dealer3.Uuid); d == nil || d["services_count"] != int64(3) || d["is_service_point"] != false {

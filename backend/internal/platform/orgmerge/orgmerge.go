@@ -129,7 +129,8 @@ type Options struct {
 	Keep []Column
 	// ServicePoint copies the source name and logo to the target's
 	// service point fields when they are empty and turns the service point
-	// on (the AFM Florya case).
+	// on (the center's own service point; the migrator no longer uses it
+	// since TEC-1202, AFM Florya stays a dealer).
 	ServicePoint bool
 }
 

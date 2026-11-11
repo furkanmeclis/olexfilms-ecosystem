@@ -2,9 +2,10 @@
 // undoes an earlier merge. Without -apply it is a dry run: the merge runs in
 // a transaction that is rolled back and the report shows what would move
 // (per table and column, members and their new roles, balances before and
-// after). The migrator's organizations step runs the Olex merges itself (the
-// Türkiye distributor and the AFM Florya service point); this command is for
-// reviewing and undoing them by hand.
+// after). The migrator's organizations step runs the Olex merge itself (the
+// Türkiye distributor into the center; since TEC-1202 AFM Florya is not
+// merged, it stays a dealer); this command is for reviewing and undoing
+// merges by hand.
 //
 // Usage (from backend/):
 //

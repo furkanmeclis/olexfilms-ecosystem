@@ -269,7 +269,7 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: organization: %w", err)
 	}
-	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	// TEC-1003: the customer sees the center's service point name and logo.
 	org = orgbrand.ForCustomer(org)
 	refs, err := s.q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
