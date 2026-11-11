@@ -124,9 +124,10 @@ func (m *Mapper) Lookup(ctx context.Context, system, table, id string) (uuid.UUI
 	if table != "dealers" {
 		return target, true, nil
 	}
-	// TEC-1003: a dealer merged into another organization (AFM Florya into
-	// the center) resolves to the organization that took its records, so
-	// later steps write there.
+	// TEC-1003: a dealer merged into another organization (by hand, with
+	// cmd/org-merge) resolves to the organization that took its records, so
+	// later steps write there. The migrator itself merges no dealer since
+	// TEC-1202 (AFM Florya stays a dealer).
 	live, err := m.q.MigratorMergedOrganizationUUID(ctx, target)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return target, true, nil

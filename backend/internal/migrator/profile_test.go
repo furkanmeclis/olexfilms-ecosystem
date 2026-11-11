@@ -74,3 +74,30 @@ func TestChecksum(t *testing.T) {
 		t.Errorf("checksum length = %d, want 64 (VARCHAR(64))", n)
 	}
 }
+
+// TEC-1202: the Olex profile makes the legacy FLORYA warehouse the center's
+// "Merkez Depo" with code CENTRAL; AFM Florya itself is imported as a normal
+// dealer (OrganizationsStep has no service point merge).
+func TestOlexProfilePrimaryWarehouse(t *testing.T) {
+	var found bool
+	for _, st := range olexSteps() {
+		w, ok := st.(WarehousesStep)
+		if !ok {
+			continue
+		}
+		found = true
+		if w.PrimaryCode != "FLORYA" || w.PrimaryNewCode != "CENTRAL" || w.PrimaryName != "Merkez Depo" {
+			t.Errorf("primary warehouse = %q -> %q %q, want FLORYA -> CENTRAL / Merkez Depo",
+				w.PrimaryCode, w.PrimaryNewCode, w.PrimaryName)
+		}
+		if got := w.targetCode("florya"); got != "CENTRAL" {
+			t.Errorf("targetCode(florya) = %q, want CENTRAL", got)
+		}
+		if got := w.targetCode("other-wh"); got != "OTHER_WH" {
+			t.Errorf("targetCode(other-wh) = %q, want OTHER_WH", got)
+		}
+	}
+	if !found {
+		t.Fatal("no warehouses step in the olex profile")
+	}
+}

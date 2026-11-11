@@ -268,7 +268,7 @@ func TestOlexOrganizationsAndUsers(t *testing.T) {
 	for _, step := range []string{"organizations", "users"} {
 		c := stepCounts(t, second, step)
 		for _, k := range []string{cntCreated, cntUpdated, "members_created", "member_roles_created", "user_roles_created",
-			"center_created", "distributor_merged", "service_point_merged"} {
+			"center_created", "distributor_merged"} {
 			if c[k] != 0 {
 				t.Errorf("rerun %s.%s = %d, want 0 (%v)", step, k, c[k], c)
 			}

@@ -37,8 +37,10 @@ import (
 // Parties (K6): the buyer is the dealer (hub dealer_id; warehouse customer ->
 // its hub dealer through source/external_id or dealer_code), the seller is
 // the dealer's parent (the brand center for TR dealers since TEC-1003, a
-// distributor abroad). The orders of a dealer merged into the center (AFM
-// Florya) keep that dealer as buyer: they are history (TEC-1003). Currency is the brand currency (TRY for
+// distributor abroad). The orders of a dealer merged into another
+// organization keep that dealer as buyer: they are history (TEC-1003); AFM
+// Florya is not merged (TEC-1202) and is the buyer of its orders like any
+// dealer. Currency is the brand currency (TRY for
 // Olex); an approved order freezes the rate of its order date, or 1 when no
 // rate is stored (reported, K7). Legacy orders carry no prices, so lines are
 // written at 0.

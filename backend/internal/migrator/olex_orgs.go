@@ -20,24 +20,24 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/slug"
 )
 
-// Olex organization tree defaults (TEC-254, K1/K5; TEC-1003).
+// Olex organization tree defaults (TEC-254, K1/K5; TEC-1003, TEC-1202).
 const (
 	OlexBrandSlug = "olex"
 	// TRCountry is the default country of legacy dealers, addresses and
 	// phones.
 	TRCountry = "TR"
 	// TRDistributorSlug names the Türkiye distributor earlier migrator runs
-	// created. Since TEC-1003 Türkiye has no distributor: the TR dealers hang
-	// under the center, and a distributor left with this slug is merged into
-	// the center.
+	// created. Since TEC-1003 Türkiye has no distributor: the center is the
+	// Türkiye distributor too, the TR dealers hang under it, and a
+	// distributor left with this slug is merged into the center.
+	//
+	// TEC-1202: no hub dealer is merged into the center any more. AFM Florya
+	// (hub dealer 1) is imported like every other dealer, under the center;
+	// its records stay its own and the migrator leaves the center's service
+	// point (service_point_*) unset.
 	TRDistributorSlug = "olex-turkiye"
-	// OlexServicePointDealerID is the legacy hub dealer that is the center's
-	// own service point (AFM Florya, the same legal entity as the center):
-	// it is merged into the center and lends the center its customer-facing
-	// name and logo (TEC-1003).
-	OlexServicePointDealerID = 1
-	olexCenterSlug           = "olex-merkez"
-	olexCenterName           = "Olex Merkez"
+	olexCenterSlug    = "olex-merkez"
+	olexCenterName    = "Olex Merkez"
 )
 
 // mergeActor is org_merge_runs.actor of merges the migrator runs.
@@ -100,15 +100,9 @@ func resolveOlexTree(ctx context.Context, q *db.Queries, create bool, c counts) 
 
 // mergeIntoCenter merges an organization into the center (orgmerge) and
 // adds the run to the step counts.
-func mergeIntoCenter(ctx context.Context, dst *Target, tree olexTree, orgID int64, servicePoint bool, label string, c counts) error {
-	keep := []orgmerge.Column{}
-	if servicePoint {
-		// The orders the service point bought from the center stay its
-		// history (TEC-1003): the buyer keeps pointing at it.
-		keep = append(keep, orgmerge.Column{Table: "orders", Column: "buyer_org_id"})
-	}
+func mergeIntoCenter(ctx context.Context, dst *Target, tree olexTree, orgID int64, label string, c counts) error {
 	rep, err := orgmerge.Merge(ctx, dst.Tx, orgmerge.Options{
-		SourceID: orgID, TargetID: tree.CenterID, Actor: mergeActor, Keep: keep, ServicePoint: servicePoint,
+		SourceID: orgID, TargetID: tree.CenterID, Actor: mergeActor,
 	})
 	if err != nil {
 		return fmt.Errorf("merge %s into the center: %w", label, err)
@@ -133,43 +127,17 @@ func mergeTRDistributor(ctx context.Context, dst *Target, tree olexTree, c count
 	if err != nil {
 		return fmt.Errorf("TR distributor: %w", err)
 	}
-	return mergeIntoCenter(ctx, dst, tree, id, false, "distributor", c)
-}
-
-// mergeServicePoint merges the organization of the service point dealer
-// (OlexServicePointDealerID) into the center once.
-func (s OrganizationsStep) mergeServicePoint(ctx context.Context, dst *Target, m *Mapper, tree olexTree, c counts) error {
-	if s.ServicePointDealerID == 0 {
-		return nil
-	}
-	target, ok, err := m.LookupRaw(ctx, s.system(), "dealers", strconv.FormatInt(s.ServicePointDealerID, 10))
-	if err != nil || !ok {
-		return err
-	}
-	org, err := dst.Q.MigratorOrganizationStateByUUID(ctx, target)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("service point dealer: %w", err)
-	}
-	if org.DeletedAt.Valid || org.Type != "dealer" {
-		return nil // merged by an earlier run
-	}
-	return mergeIntoCenter(ctx, dst, tree, org.ID, true, "service_point", c)
+	return mergeIntoCenter(ctx, dst, tree, id, "distributor", c)
 }
 
 // OrganizationsStep imports hub dealers as Olex dealer organizations under
 // the brand center, creating the center when it is missing (TEC-254). Since
-// TEC-1003 it also merges the Türkiye distributor of earlier runs and the
-// service point dealer into the center (idempotent: a merged organization
-// is not merged again, and later steps resolve it to the center).
+// TEC-1003 it also merges the Türkiye distributor of earlier runs into the
+// center (idempotent: a merged organization is not merged again). Every hub
+// dealer, AFM Florya included, stays a dealer of its own (TEC-1202).
 type OrganizationsStep struct {
 	// System is the migration_map source system; empty means SourceHub.
 	System string
-	// ServicePointDealerID is the legacy hub dealer merged into the center
-	// (0: none).
-	ServicePointDealerID int64
 }
 
 // Name implements Step.
@@ -243,9 +211,6 @@ func (s OrganizationsStep) Run(ctx context.Context, src Sources, dst *Target, m 
 		if err := s.importDealer(ctx, dst.Q, m, tree, countries, d, c); err != nil {
 			return StepResult{Counts: c}, fmt.Errorf("dealer %d: %w", d.ID, err)
 		}
-	}
-	if err := s.mergeServicePoint(ctx, dst, m, tree, c); err != nil {
-		return StepResult{Counts: c}, err
 	}
 	return StepResult{Counts: c, Watermark: watermark}, nil
 }

@@ -17,7 +17,6 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/normalize"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
 
 // Where a mapped legacy role is granted.
@@ -405,7 +404,7 @@ func (s UsersStep) grantRoles(ctx context.Context, q *db.Queries, m *Mapper, tre
 				continue
 			}
 			dealerRole = true
-			if err := grantMember(ctx, q, dealerOrg, userID, atDealerOrg(t, dealerOrg == tree.CenterID), c); err != nil {
+			if err := grantMember(ctx, q, dealerOrg, userID, t, c); err != nil {
 				return err
 			}
 		}
@@ -413,23 +412,9 @@ func (s UsersStep) grantRoles(ctx context.Context, q *db.Queries, m *Mapper, tre
 	if dealerOrg != 0 && !dealerRole {
 		c.inc("dealer_default_role")
 		t := RoleTarget{Slug: defaultDealerRole, At: RoleAtDealer}
-		return grantMember(ctx, q, dealerOrg, userID, atDealerOrg(t, dealerOrg == tree.CenterID), c)
+		return grantMember(ctx, q, dealerOrg, userID, t, c)
 	}
 	return nil
-}
-
-// atDealerOrg is the grant of a dealer role at the user's dealer
-// organization. The service point dealer is merged into the center
-// (TEC-1003): there the role becomes its center counterpart (dealer owner ->
-// center staff, dealer staff -> center service staff) in a staff membership.
-func atDealerOrg(t RoleTarget, center bool) RoleTarget {
-	if !center {
-		return t
-	}
-	if slug, ok := rbac.CenterRoleFor(t.Slug); ok {
-		return RoleTarget{Slug: slug, At: RoleAtCenter}
-	}
-	return t
 }
 
 func grantMember(ctx context.Context, q *db.Queries, orgID, userID int64, t RoleTarget, c counts) error {

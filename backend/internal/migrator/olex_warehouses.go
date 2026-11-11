@@ -35,18 +35,44 @@ type WarehousesStep struct {
 	// WHSystem is the migration_map source system of the warehouse rows;
 	// empty means SourceWH.
 	WHSystem string
-	// PrimaryCode / PrimaryName (TEC-1006): the warehouse with this code
-	// (normalised) becomes the center's primary warehouse under this name
-	// on every run; empty: none.
+	// PrimaryCode / PrimaryName (TEC-1006): the warehouse with this legacy
+	// code (normalised) becomes the center's primary warehouse under this
+	// name on every run; empty: none.
 	PrimaryCode, PrimaryName string
+	// PrimaryNewCode (TEC-1202): the code the primary warehouse gets instead
+	// of its legacy code; empty keeps the legacy code.
+	PrimaryNewCode string
 }
 
-// The Olex primary warehouse (TEC-1006): the legacy AFM Florya warehouse is
-// the center warehouse ("AFM Florya = merkez depo").
+// The Olex primary warehouse (TEC-1006): the legacy FLORYA warehouse is the
+// center warehouse. TEC-1202: AFM Florya is a dealer of its own now, so the
+// warehouse is "Merkez Depo" with code CENTRAL. It stays the same warehouse
+// row (migration_map on the legacy id), so units, barcode history and order
+// traces keep pointing at it.
 const (
-	OlexPrimaryWarehouseCode = "FLORYA"
-	OlexPrimaryWarehouseName = "AFM Florya Merkez"
+	OlexPrimaryWarehouseCode    = "FLORYA"
+	OlexPrimaryWarehouseNewCode = "CENTRAL"
+	OlexPrimaryWarehouseName    = "Merkez Depo"
 )
+
+// primaryCode is the new code of the primary warehouse ("" when there is
+// none or it keeps its legacy code).
+func (s WarehousesStep) primaryCode() string {
+	if whCode(s.PrimaryCode) == "" {
+		return ""
+	}
+	return whCode(s.PrimaryNewCode)
+}
+
+// targetCode is the code a legacy warehouse gets: its normalised legacy
+// code, or PrimaryNewCode for the primary warehouse.
+func (s WarehousesStep) targetCode(legacy string) string {
+	code := whCode(legacy)
+	if nc := s.primaryCode(); nc != "" && code == whCode(s.PrimaryCode) {
+		return nc
+	}
+	return code
+}
 
 // Name implements Step.
 func (WarehousesStep) Name() string { return "warehouses" }
@@ -185,7 +211,7 @@ func (s WarehousesStep) Run(ctx context.Context, src Sources, dst *Target, m *Ma
 // markPrimary names the primary warehouse and makes it the only primary one
 // of the center (idempotent: a rerun changes nothing).
 func (s WarehousesStep) markPrimary(ctx context.Context, q *db.Queries, centerID int64, c counts) error {
-	code := whCode(s.PrimaryCode)
+	code := s.targetCode(s.PrimaryCode)
 	if code == "" {
 		return nil
 	}
@@ -341,7 +367,7 @@ func whAddress(w legacyWarehouse) pgtype.Text {
 }
 
 func (s WarehousesStep) importWarehouse(ctx context.Context, q *db.Queries, m *Mapper, centerID int64, w legacyWarehouse, c counts) (int64, error) {
-	code := whCode(w.Code)
+	code := s.targetCode(w.Code)
 	name := truncate(strings.TrimSpace(w.Name), whNameMax)
 	if name == "" {
 		name = code
@@ -353,6 +379,11 @@ func (s WarehousesStep) importWarehouse(ctx context.Context, q *db.Queries, m *M
 	active := w.Active && !w.DeletedAt.Valid
 	key := Key{System: s.whSystem(), Table: "warehouses", ID: w.ID, TargetTable: "warehouses"}
 	sum := Checksum(w.Code, w.Name, w.Country, w.City, w.District, w.Active, w.SortOrder, w.DeletedAt.Valid)
+	if code != whCode(w.Code) {
+		// A renamed primary warehouse (TEC-1202): the new code is part of
+		// the checksum, so a database an earlier run filled gets it too.
+		sum = Checksum(w.Code, w.Name, w.Country, w.City, w.District, w.Active, w.SortOrder, w.DeletedAt.Valid, code)
+	}
 
 	linked, err := linkExisting(ctx, m, key, sum, c, "warehouses_linked_existing", func() (uuid.UUID, error) {
 		return q.MigratorFindWarehouse(ctx, db.MigratorFindWarehouseParams{OrganizationID: centerID, Code: code})
