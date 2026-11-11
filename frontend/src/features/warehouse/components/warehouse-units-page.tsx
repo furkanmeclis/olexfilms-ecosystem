@@ -49,7 +49,7 @@ const sourceTone = {
  * warehouse — still in it or gone to a dealer, a service or the trash —
  * with the order that carried it, the service that used it and the
  * customer. Legacy hub units without a location originate from the primary
- * warehouse (AFM Florya Merkez). Departed units are not warehouse stock;
+ * warehouse (Merkez Depo). Departed units are not warehouse stock;
  * "source unknown" marks units at another organization without an order.
  */
 export function WarehouseUnitsPage({ slug }: { slug: string }) {

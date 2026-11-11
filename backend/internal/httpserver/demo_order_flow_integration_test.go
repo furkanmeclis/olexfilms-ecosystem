@@ -55,7 +55,7 @@ func (f *fakeExpo) sentTo(token string) []map[string]any {
 	return out
 }
 
-// Demo order flow end to end (center Olex Merkez, warehouse AFM Florya):
+// Demo order flow end to end (center Olex Merkez, warehouse Merkez Depo):
 //
 //  1. The center owner opens the accounts: a warehouse worker
 //     (center_warehouse, member of the primary warehouse) and a new dealer
@@ -103,7 +103,7 @@ func TestIntegrationDemoOrderFlow(t *testing.T) {
 		}
 	}
 
-	// The center's primary warehouse "AFM Florya Merkez" with one bin (the
+	// The center's primary warehouse "Merkez Depo" with one bin (the
 	// previous primary comes back after the test).
 	var prevPrimary pgtype.Int8
 	_ = it.pool.QueryRow(ctx, `SELECT id FROM warehouses WHERE organization_id = $1 AND is_primary`, center.ID).Scan(&prevPrimary)
@@ -115,7 +115,7 @@ func TestIntegrationDemoOrderFlow(t *testing.T) {
 	})
 	code := fmt.Sprintf("AFM%d", time.Now().UnixNano()%1_000_000_000)
 	wh, err := it.q.CreateWarehouse(ctx, db.CreateWarehouseParams{
-		OrganizationID: center.ID, Code: code, Name: "AFM Florya Merkez " + it.suffix, Active: true,
+		OrganizationID: center.ID, Code: code, Name: "Merkez Depo " + it.suffix, Active: true,
 	})
 	if err != nil {
 		t.Fatalf("warehouse: %v", err)

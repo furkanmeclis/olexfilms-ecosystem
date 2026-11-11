@@ -30,7 +30,7 @@ export type ServicePointCardProps = {
 };
 
 /**
- * TEC-1003: the brand center's own service point (AFM Florya). While it is
+ * TEC-1003: the brand center's own service point. While it is
  * on, its name and logo replace the organization's on customer surfaces
  * (warranty page and PDF, portal, WhatsApp); the panel keeps the
  * organization name.

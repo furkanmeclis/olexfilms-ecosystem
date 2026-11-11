@@ -109,9 +109,9 @@ func (s *Service) SetPlates(p PlateValidator) { s.plates = p }
 func (s *Service) SetInviter(i PasswordInviter) { s.inviter = i }
 
 // CanServeFleets reports whether an organization opens and links fleets:
-// dealers, serving distributors and, since TEC-1003 (K4: the center's own
-// service point replaced the AFM Florya dealer), the brand center with its
-// service point switched on.
+// dealers, serving distributors and, since TEC-1003 (K4: the center can
+// serve customers itself through its service point), the brand center with
+// its service point switched on.
 func CanServeFleets(org db.Organization) bool {
 	switch org.Type {
 	case "dealer", "distributor":

@@ -1180,9 +1180,12 @@ var Roles = []RoleDef{
 		}),
 	},
 	{
-		// TEC-1003 (000152): the center's own service point staff (the
-		// former AFM Florya dealer staff). Managed scope = the center's own
-		// records only; no warehouse, prices, accounting or network.
+		// TEC-1003 (000152): the center's own service point staff.
+		// Managed scope = the center's own records only; no warehouse,
+		// prices, accounting or network. TEC-1202: AFM Florya is a dealer
+		// again and its staff hold dealer roles, so the migrator grants this
+		// role to nobody; it stays in the catalog (only orgmerge
+		// CenterRoleFor maps dealer staff to it). Removing it is open.
 		Slug: RoleCenterService, Name: "Center service staff", OrgType: OrgTypeCenter,
 		Description: "Center service point staff: the center's own services, customers, warranties and appointments; sees no prices (purchase or sale), no warehouse or accounting",
 		// The dealer showcase is a dealer page; the center has none.

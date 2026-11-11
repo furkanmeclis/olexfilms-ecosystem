@@ -153,7 +153,7 @@ type ServiceView struct {
 	StatusLabel  string    `json:"status_label"`
 	Organization OrgRef    `json:"organization"`
 	// AppliedBy names who applied the service (TEC-1075): the center's
-	// service point name (AFM Florya) for the center's own services, else
+	// service point name for the center's own services, else
 	// the organization name.
 	AppliedBy        string           `json:"applied_by"`
 	Customer         CustomerRef      `json:"customer"`

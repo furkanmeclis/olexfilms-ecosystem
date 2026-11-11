@@ -505,7 +505,7 @@ func (h *Handler) TenantUploadServicePointLogo(w http.ResponseWriter, r *http.Re
 
 // TenantDeleteServicePointLogo clears the service point logo (the
 // organization logo shows again). A logo copied from a merged organization
-// (AFM Florya) is not deleted from storage.
+// (orgmerge ServicePoint) is not deleted from storage.
 func (h *Handler) TenantDeleteServicePointLogo(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
 	if key, err := h.svc.ServicePointLogoObjectKey(r.Context(), scope.UUID); err == nil &&

@@ -134,7 +134,7 @@ func init() {
 		Placeholders: []msgtemplate.Placeholder{
 			ph("order_no", "SP00000123", "SP00000123"),
 			ph("buyer_name", "Kuzey Oto", "North Auto"),
-			ph("warehouse_name", "AFM Florya Merkez", "Main Warehouse"),
+			ph("warehouse_name", "Merkez Depo", "Main Warehouse"),
 		},
 		UserConfigurable: true,
 		Templates:        orderWarehouseTemplates(),

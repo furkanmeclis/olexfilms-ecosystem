@@ -13,7 +13,7 @@ import (
 func TestOrderWarehouseNewDispatch(t *testing.T) {
 	ev := events.New(events.OrdersWarehouseNew).WithPayload(map[string]any{
 		"order_uuid": "o-1", "order_no": "ORD-00000042", "status": "approved", "brand_id": int64(3),
-		"buyer_name": "Kuzey Oto", "warehouse_uuid": "w-1", "warehouse_name": "AFM Florya Merkez",
+		"buyer_name": "Kuzey Oto", "warehouse_uuid": "w-1", "warehouse_name": "Merkez Depo",
 		"notify_user_ids": []any{float64(7), float64(9)},
 	})
 	in, ok := orderWarehouseNewDispatch(ev)
@@ -26,7 +26,7 @@ func TestOrderWarehouseNewDispatch(t *testing.T) {
 	if in.BrandID == nil || *in.BrandID != 3 {
 		t.Fatalf("brand = %v", in.BrandID)
 	}
-	if in.Vars["order_no"] != "ORD-00000042" || in.Vars["warehouse_name"] != "AFM Florya Merkez" || in.Vars["buyer_name"] != "Kuzey Oto" {
+	if in.Vars["order_no"] != "ORD-00000042" || in.Vars["warehouse_name"] != "Merkez Depo" || in.Vars["buyer_name"] != "Kuzey Oto" {
 		t.Fatalf("vars = %v", in.Vars)
 	}
 	if in.Payload["order_uuid"] != "o-1" || in.Payload["warehouse_uuid"] != "w-1" {
