@@ -15261,6 +15261,42 @@ paths:
         "503":
           description: PII_ENCRYPTION_UNAVAILABLE (CUSTOMER_PII_KEY not configured)
 
+  /v1/customers/caller-id:
+    get:
+      tags: [Customers]
+      operationId: getCustomerCallerId
+      summary: Phone book of the mobile caller ID
+      description: >-
+        TEC-1208. customers.read, same scope as the customer list (dealer its
+        organization, distributor its subtree, center the brand). Customers
+        with a phone that are active or pending; anonymized, disabled and
+        merged customers are left out. One snapshot ordered by phone, at most
+        50000 entries (`truncated` when the scope holds more). `version` is a
+        hash of the entries: send it back as `known_version` and the answer
+        has `unchanged: true` and no entries while nothing changed. A
+        download of the entries is written to the activity log. The app
+        reaches it through the mobile mirror
+        (`/v1/mobile/panel/customers/caller-id`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: known_version
+          in: query
+          description: Version the device holds (at most 64 characters).
+          schema: { type: string, maxLength: 64 }
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCallerIdSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/customers/{uuid}:
     get:
       tags: [Customers]
@@ -35910,6 +35946,30 @@ components:
         data: { $ref: "#/components/schemas/CustomerWrite" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    CallerIdEntry:
+      type: object
+      required: [phone, label]
+      properties:
+        phone: { type: string, description: "E.164 with the plus sign." }
+        label: { type: string, description: "Name, with the company in brackets; at most 80 characters, one line." }
+    CallerIdSnapshot:
+      type: object
+      required: [version, unchanged, truncated, count, entries]
+      properties:
+        version: { type: string }
+        unchanged: { type: boolean, description: "known_version still matches; entries is empty." }
+        truncated: { type: boolean }
+        count: { type: integer }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/CallerIdEntry" }
+    EnvelopeCallerIdSnapshot:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/CallerIdSnapshot" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     EnvelopeCustomerPage:
       type: object
       required: [success, data, meta]
