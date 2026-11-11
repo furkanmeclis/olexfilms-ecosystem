@@ -5,6 +5,7 @@ import { hasLanguagePreference, isLanguage, setLanguage } from '@/core/i18n';
 import { useOnboarding } from '@/core/onboarding';
 import { queryClient } from '@/core/query';
 import { readJSON, storage, writeJSON } from '@/core/storage';
+import { clearCallerId } from '@/features/caller-id/clear';
 import { clearWidgets } from '@/features/widgets/clear';
 
 import { fetchMe, logout, type MobileLoginResult, type MobileMe, switchOrganization } from './api';
@@ -51,7 +52,11 @@ export const useSession = create<Session>((set, get) => ({
     // Already signed in when the onboarding shipped: never show it after sign-out.
     if (signedIn) useOnboarding.getState().markSeen();
     // Widgets of a previous session must not outlive it (killed before sign-out finished, token gone).
-    else void clearWidgets();
+    else {
+      void clearWidgets();
+      // The customer list of a previous session must not stay on the device either.
+      void clearCallerId();
+    }
     set({ status: signedIn ? 'signedIn' : 'signedOut', me });
   },
 
@@ -104,10 +109,13 @@ export const useSession = create<Session>((set, get) => ({
     // synchronous, so it runs now (tokens are already gone); the slow part (asset
     // writes) is awaited only after the UI is signed out and can never block it.
     const widgetsCleared = clearWidgets().catch(() => undefined);
+    // Caller ID (TEC-1208): the customer phone list leaves the device with the session.
+    const callerIdCleared = clearCallerId();
     storage.remove(ME_KEY);
     queryClient.clear();
     set({ status: 'signedOut', me: null });
     await widgetsCleared;
+    await callerIdCleared;
   },
 }));
 

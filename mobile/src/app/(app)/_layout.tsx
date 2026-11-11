@@ -8,6 +8,7 @@ import { useGaugeAppSession } from '@/features/ble-gauge/use-gauge-session';
 import { usePushNotifications } from '@/core/push';
 import { rememberPath } from '@/core/space-memory';
 import { kindsOf } from '@/core/spaces';
+import { useCallerIdSync } from '@/features/caller-id/use-caller-id-sync';
 import { LARGE_TITLES } from '@/features/shell/large-titles';
 import { useWidgetSync } from '@/features/widgets/use-widget-sync';
 
@@ -29,6 +30,8 @@ export default function AppLayout() {
   useWidgetSync();
   // BLE gauge: one connection for the whole signed-in app, kept across tabs and screens.
   useGaugeAppSession();
+  // Caller ID: keeps the customer phone list on the device current while the feature is on.
+  useCallerIdSync();
 
   useQuery({
     queryKey: ['me'],
@@ -62,6 +65,7 @@ export default function AppLayout() {
       <Stack.Screen name="intro" options={{ presentation: 'modal' }} />
       <Stack.Screen name="notifications" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
       <Stack.Screen name="settings" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
+      <Stack.Screen name="caller-id" options={{ headerShown: true }} />
       <Stack.Screen name="soon/[key]" options={{ headerShown: true }} />
       <Stack.Screen
         name="qr-login/[code]"

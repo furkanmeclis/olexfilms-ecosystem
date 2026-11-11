@@ -9,6 +9,7 @@ import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
 import type { DigitStyle } from '@/core/digits';
 import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
 import { getUpdateInfo } from '@/core/updates';
+import { CallerIdSettings } from '@/features/caller-id/caller-id-settings';
 import { FeedbackSettings } from '@/features/feedback/feedback-settings';
 import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
 import { Icon } from '@/ui/icon';
@@ -114,6 +115,8 @@ export function SettingsScreen() {
         ) : null}
 
         {customer ? null : <PlateRecognitionSettings />}
+
+        {customer ? null : <CallerIdSettings />}
 
         <FeedbackSettings />
 
