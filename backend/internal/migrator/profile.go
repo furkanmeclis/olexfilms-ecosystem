@@ -59,8 +59,9 @@ func olexSteps() []Step {
 		// TEC-257: warehouse structure, stock units and their initial
 		// ownership.
 		// TEC-1006 / TEC-1202: the legacy FLORYA warehouse is the center
-		// warehouse "Merkez Depo".
-		WarehousesStep{PrimaryCode: OlexPrimaryWarehouseCode, PrimaryName: OlexPrimaryWarehouseName},
+		// warehouse "Merkez Depo" with code CENTRAL.
+		WarehousesStep{PrimaryCode: OlexPrimaryWarehouseCode, PrimaryNewCode: OlexPrimaryWarehouseNewCode,
+			PrimaryName: OlexPrimaryWarehouseName},
 		UnitsStep{},
 
 		// TEC-258: legacy stock movements -> ledger opening, projection

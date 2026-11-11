@@ -61,7 +61,7 @@ func TestOlexDistributorMergeKeepsDealers(t *testing.T) {
 			CustomersStep{System: hubSys},
 			VehicleCatalogStep{System: hubSys},
 			CatalogStep{System: hubSys, WHSystem: whSys},
-			WarehousesStep{WHSystem: whSys, PrimaryCode: "SYN-WH-1", PrimaryName: "Sentetik Ana Depo"},
+			WarehousesStep{WHSystem: whSys, PrimaryCode: "SYN-WH-1", PrimaryNewCode: "SYN_CENTRAL", PrimaryName: "Sentetik Ana Depo"},
 			UnitsStep{System: hubSys, WHSystem: whSys},
 			LedgerStep{System: hubSys, WHSystem: whSys},
 			OrdersStep{System: hubSys, WHSystem: whSys},
@@ -99,6 +99,13 @@ func TestOlexDistributorMergeKeepsDealers(t *testing.T) {
 		t.Fatalf("%d units of completed services without an owner", n)
 	}
 	checkWarehouseTrace(t, ctx, tx)
+	// TEC-1202: the primary warehouse carries its new code, not the legacy one.
+	if n := scalar(`SELECT count(*) FROM warehouses WHERE is_primary AND name = 'Sentetik Ana Depo' AND code = 'SYN_CENTRAL'`); n != 1 {
+		t.Errorf("primary warehouse with code SYN_CENTRAL = %d, want 1", n)
+	}
+	if n := scalar(`SELECT count(*) FROM warehouses WHERE name = 'Sentetik Ana Depo' AND code = 'SYN_WH_1'`); n != 0 {
+		t.Errorf("primary warehouse kept its legacy code")
+	}
 	var centerID, dealer1, countryID int64
 	if err := tx.QueryRow(ctx, `SELECT c.id, o.id, o.country_id
 		FROM migration_map m JOIN organizations o ON o.uuid = m.target_uuid
