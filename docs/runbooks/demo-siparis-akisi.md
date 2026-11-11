@@ -1,6 +1,6 @@
 # Demo kılavuzu: merkez → bayi sipariş akışı (3 telefon)
 
-Merkez **Olex Merkez**, depo **Merkez Depo** (eski FLORYA deposu, TEC-1202). Üç kişi, üç telefon:
+Merkez **Olex Merkez**, depo **Merkez Depo** (kod CENTRAL, eski FLORYA deposu, TEC-1202). Üç kişi, üç telefon:
 
 | Telefon | Kim | Rol | Uygulamada açılan alan |
 |---|---|---|---|
