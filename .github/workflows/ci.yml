@@ -293,7 +293,14 @@ jobs:
       - name: Build
         run: pnpm build
       - name: Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        # The runner image already ships chromium's shared libraries; --with-deps
+        # only adds font packages through apt. When the apt mirrors do not
+        # resolve, apt retries for ~12 minutes and fails the job, so cap it and
+        # fall back to the browser download alone (cdn.playwright.dev, no apt).
+        # A really missing library still fails the E2E step below.
+        run: |
+          timeout 180 pnpm exec playwright install --with-deps chromium \
+            || pnpm exec playwright install chromium
       - name: E2E (mocked API)
         run: pnpm test:e2e
 
