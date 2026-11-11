@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -11,6 +11,7 @@ import { formatDateTime } from '@/features/services/lib';
 import { Chips, ListBody, ListFooter } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { PAGE_SIZE, type PortalAppointment, useFleetRoles, usePortalPages } from './lib';
 import { AppointmentRow } from './parts';
@@ -124,7 +125,7 @@ export function CustomerAppointmentsScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>

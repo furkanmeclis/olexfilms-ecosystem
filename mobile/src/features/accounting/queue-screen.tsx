@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, unwrap } from '@/core/api/client';
@@ -14,6 +14,7 @@ import { Input } from '@/ui/input';
 import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { accountingKey, useAccountingAccess, useAccountingLinks } from './hooks';
 import { formatMoney } from './lib';
@@ -170,8 +171,8 @@ function QueueOrders({ tab, header, onChanged }: { tab: 'orders' | 'transit'; he
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl
-            refreshing={list.isRefetching && !list.isFetchingNextPage}
+          <PullRefresh
+            busy={list.isRefetching && !list.isFetchingNextPage}
             onRefresh={() => {
               onChanged();
               void list.refetch();
@@ -307,8 +308,8 @@ function QueueReturns({ header, onChanged }: { header: React.ReactElement; onCha
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl
-            refreshing={list.isRefetching && !list.isFetchingNextPage}
+          <PullRefresh
+            busy={list.isRefetching && !list.isFetchingNextPage}
             onRefresh={() => {
               onChanged();
               void list.refetch();

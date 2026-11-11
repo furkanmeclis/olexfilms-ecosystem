@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { activeMembership, useCan } from '@/core/spaces';
@@ -15,6 +15,7 @@ import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { plainText } from './plain-text';
 import {
@@ -85,7 +86,7 @@ export function CatalogScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('title'), headerRight: canOrder ? () => <CartButton /> : undefined }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <List>
           <ListRow icon="search" title={t('all_products')} subtitle={t('all_products_hint')} onPress={() => open()} last />
         </List>
@@ -249,7 +250,7 @@ export function ProductDetailScreen() {
       <Stack.Screen
         options={{ title: p?.name ?? '', headerLargeTitle: false, headerRight: canOrder ? () => <CartButton /> : undefined }}
       />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton rows={4} inset={false} />
         ) : !p ? (

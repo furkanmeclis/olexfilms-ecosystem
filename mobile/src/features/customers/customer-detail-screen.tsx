@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
@@ -12,6 +12,7 @@ import { DetailSkeleton, ErrorState, InfoRow, ListSkeleton, Section } from '@/fe
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { EditCustomerSheet, EditVehicleSheet } from './edit-sheets';
 
@@ -78,7 +79,7 @@ export function CustomerDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={customer.isRefetching} onRefresh={refresh} />}>
+        refreshControl={<PullRefresh busy={customer.isRefetching} onRefresh={refresh} />}>
         {!c ? (
           customer.isPending ? (
             <DetailSkeleton />

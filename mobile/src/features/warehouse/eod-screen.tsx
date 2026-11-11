@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { CardRow, Chips, ErrorState, ListSkeleton, PagedList, useChildHref, useFormat } from '@/features/admin/kit';
@@ -15,6 +15,7 @@ import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { useCurrentWarehouse } from './context';
 import {
@@ -203,7 +204,7 @@ export function EodDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: r ? f.date(r.report_date) : t('eod.title'), headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton />
         ) : !r ? (

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
@@ -24,6 +24,7 @@ import { Text } from '@/ui/text';
 
 import { Chips, ErrorState } from './kit';
 import type { IconName } from '@/ui/icons';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -112,7 +113,7 @@ export function AdminHomeScreen() {
           headerRight: () => <HomeHeaderRight />,
         }}
       />
-      <Screen refreshControl={<RefreshControl refreshing={overview.isRefetching} onRefresh={refresh} />}>
+      <Screen refreshControl={<PullRefresh busy={overview.isRefetching} onRefresh={refresh} />}>
         {org ? (
           <Text variant="footnote" tone="muted">
             {org.name} · {t(`spaces:org_type.${org.type ?? 'center'}`)} ·{' '}

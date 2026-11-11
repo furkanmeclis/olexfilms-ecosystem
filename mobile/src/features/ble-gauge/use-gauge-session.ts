@@ -4,7 +4,16 @@ import { AppState } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 
-import { isGaugeAvailable, isPermissionPromptOpen, pauseCommits, reconnectLast, shutdown, subscribeCommits } from './manager';
+import type { ButtonEvent } from './button';
+import {
+  isGaugeAvailable,
+  isPermissionPromptOpen,
+  pauseCommits,
+  reconnectLast,
+  shutdown,
+  subscribeButton,
+  subscribeCommits,
+} from './manager';
 import type { Commit } from './readings';
 import { useGauge } from './store';
 
@@ -13,21 +22,18 @@ export function useGaugeUserKey(): string | null {
   return useSession((s) => s.me?.user.uuid ?? null);
 }
 
-/** Screens that keep the gauge connected; it is dropped when the last one leaves. */
-let holders = 0;
-
 /**
- * Keeps the gauge connection while the screen is mounted: dropped when the
- * last holding screen unmounts or the app goes to the background, restored
- * when it comes back. `pause` holds steady readings back (device and
- * calibration screens opened over the measuring form).
+ * App-wide gauge lifetime, mounted once in the signed-in shell: the
+ * connection survives moving between tabs and screens (like the old app) and
+ * only ends on "Disconnect", sign-out (the shell unmounts, or the user
+ * changes) or the app going to the background; a connection that was up then
+ * comes back when the app returns.
  */
-export function useGaugeHold({ pause = false }: { pause?: boolean } = {}) {
+export function useGaugeAppSession() {
   const userKey = useGaugeUserKey();
 
   useEffect(() => {
     if (!isGaugeAvailable()) return;
-    holders += 1;
     let resume = false;
     const app = AppState.addEventListener('change', (next) => {
       // Android's permission dialog backgrounds the app; that is not leaving it.
@@ -43,11 +49,17 @@ export function useGaugeHold({ pause = false }: { pause?: boolean } = {}) {
     });
     return () => {
       app.remove();
-      holders -= 1;
-      if (holders === 0) void shutdown();
+      void shutdown();
     };
   }, [userKey]);
+}
 
+/**
+ * Screens that use the gauge. The connection itself is app-wide
+ * (useGaugeAppSession); `pause` holds steady readings back (device and
+ * calibration screens opened over the measuring form).
+ */
+export function useGaugeHold({ pause = false }: { pause?: boolean } = {}) {
   useEffect(() => {
     if (!pause || !isGaugeAvailable()) return;
     return pauseCommits();
@@ -55,8 +67,8 @@ export function useGaugeHold({ pause = false }: { pause?: boolean } = {}) {
 }
 
 /**
- * Binds the gauge to a measuring screen: steady readings go to `onCommit`,
- * the connection lives as long as the screen (useGaugeHold).
+ * Binds the gauge to a measuring screen: steady readings go to `onCommit`
+ * while the screen is mounted (the connection itself is app-wide).
  */
 export function useGaugeSession(onCommit: (c: Commit) => void) {
   const handler = useRef(onCommit);
@@ -70,6 +82,28 @@ export function useGaugeSession(onCommit: (c: Commit) => void) {
     return subscribeCommits((c) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       handler.current(c);
+    });
+  }, []);
+}
+
+/**
+ * The gauge's button in the air while a measuring screen is mounted
+ * (button.ts): `short` / `long`, with a haptic so the user feels it without
+ * looking at the phone.
+ */
+export function useGaugeButtons(onButton: (e: ButtonEvent) => void) {
+  const handler = useRef(onButton);
+  useEffect(() => {
+    handler.current = onButton;
+  });
+  useEffect(() => {
+    if (!isGaugeAvailable()) return;
+    return subscribeButton((e) => {
+      void (e === 'long'
+        ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+        : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      ).catch(() => undefined);
+      handler.current(e);
     });
   }, []);
 }

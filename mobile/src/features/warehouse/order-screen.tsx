@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { usePricesVisible } from '@/core/use-prices-visible';
@@ -17,6 +17,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { resolveScan } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -259,8 +260,8 @@ export function OrderScreen() {
       <Stack.Screen options={{ title: o.order_no, headerLargeTitle: false }} />
       <Screen
         refreshControl={
-          <RefreshControl
-            refreshing={q.isRefetching}
+          <PullRefresh
+            busy={q.isRefetching}
             onRefresh={() => {
               void q.refetch();
               if (view === 'pick') void pick.refetch();

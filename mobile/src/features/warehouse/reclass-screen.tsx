@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { useCan } from '@/core/spaces';
@@ -15,6 +15,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { resolveScan, type ScanResult } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -156,7 +157,7 @@ export function ReclassDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: r?.unit.barcode ?? t('reclass.title'), headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton />
         ) : !r ? (

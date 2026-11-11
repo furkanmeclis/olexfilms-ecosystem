@@ -3,7 +3,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -15,6 +15,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { retryPortal, useFleetRoles } from './lib';
 import { reviewMissing } from './review-lib';
@@ -277,7 +278,7 @@ export function CustomerServiceReviewScreen() {
         keyboardDismissMode="on-drag"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!state ? (
           q.isPending ? (
             <DetailSkeleton />

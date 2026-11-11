@@ -2,12 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, RefreshControl, View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { ErrorState, ListSkeleton, useFormat } from '@/features/admin/kit';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { toBlocks, type Part } from './lib';
 
@@ -60,7 +61,7 @@ export function AnnouncementDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: '', headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton rows={4} inset={false} />
         ) : !a ? (

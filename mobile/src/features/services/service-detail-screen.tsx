@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -15,6 +15,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { ServiceContractCard, useContractRequiredAlert } from './contract-card';
 import { IntakePhotos, intakeKey } from './intake-photos';
@@ -156,7 +157,7 @@ export function ServiceDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-5 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={svc.isRefetching} onRefresh={() => void svc.refetch()} />}>
+        refreshControl={<PullRefresh busy={svc.isRefetching} onRefresh={() => void svc.refetch()} />}>
         {!s ? (
           svc.isPending ? (
             <DetailSkeleton />

@@ -12,7 +12,7 @@ import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
 import { SAPL_COLORS, saplLevel } from './interpretation';
-import { clearError, connect, disconnect, lastGauge, reconnectLast, retryCurve, startScan, stopScan } from './manager';
+import { clearError, connect, disconnectByUser, lastGauge, reconnectLast, retryCurve, startScan, stopScan } from './manager';
 import { type GaugeStatus, useGauge } from './store';
 import { useGaugeUserKey } from './use-gauge-session';
 
@@ -147,7 +147,7 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
         {connected ? (
           <>
             <Button className="flex-1" title={t('ble.device_open')} variant="outline" onPress={() => router.push(href('device'))} />
-            <Button className="flex-1" title={t('ble.disconnect')} variant="ghost" onPress={() => void disconnect()} />
+            <Button className="flex-1" title={t('ble.disconnect')} variant="ghost" onPress={() => void disconnectByUser()} />
           </>
         ) : (
           <>

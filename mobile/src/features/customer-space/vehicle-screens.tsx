@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatNumber, vehicleLabel } from '@/features/services/lib';
@@ -9,6 +9,7 @@ import { DetailSkeleton, ErrorState, InfoRow, ListBody, ListFooter, Section } fr
 import { Icon } from '@/ui/icon';
 import { List, ListRow } from '@/ui/list';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { PAGE_SIZE, retryPortal, useCustomerLinks, useFleetRoles, usePortalPages } from './lib';
 import { ActiveWarrantyRow, PortalServiceRow, VehicleCard } from './parts';
@@ -46,7 +47,7 @@ export function CustomerVehiclesScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>
@@ -77,7 +78,7 @@ export function CustomerVehicleDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!v ? (
           q.isPending ? (
             <DetailSkeleton />

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { FlatList, Linking, Pressable, ScrollView, View } from 'react-native';
 import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
@@ -20,6 +20,7 @@ import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 
 import { portalFiles, useExportDownload } from './files';
@@ -84,7 +85,7 @@ export function CustomerServicesScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>
@@ -128,7 +129,7 @@ export function CustomerServiceDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!s ? (
           q.isPending ? (
             <DetailSkeleton />

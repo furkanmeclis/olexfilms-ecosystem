@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
@@ -8,6 +8,7 @@ import { formatDate, vehicleLabel } from '@/features/services/lib';
 import { ListBody, ListFooter } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { portalFiles, useDirectDownload } from './files';
 import { PAGE_SIZE, usePortalPages } from './lib';
@@ -100,7 +101,7 @@ export function CustomerContractsScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>

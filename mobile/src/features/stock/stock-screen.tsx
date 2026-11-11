@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
@@ -15,6 +15,7 @@ import { Chips, ListStatus, Segmented } from '@/features/warehouse/parts';
 import { unitStatusTone } from '@/features/warehouse/scan-result-card';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type StockProduct, type StockWarehouseUnit, useOrgProducts, useWarehouseUnits } from './api';
 import {
@@ -143,8 +144,8 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
           className="flex-1 bg-background"
           contentContainerClassName="gap-2 px-4 pb-10 pt-2"
           refreshControl={
-            <RefreshControl
-              refreshing={(query.isRefetching && !query.isFetchingNextPage) || totals.isRefetching}
+            <PullRefresh
+              busy={(query.isRefetching && !query.isFetchingNextPage) || totals.isRefetching}
               onRefresh={() => {
                 if (!fromTotals) void query.refetch();
                 if (warehouse) void totals.refetch();
@@ -324,7 +325,7 @@ function WarehouseUnitsList({
       keyboardDismissMode="on-drag"
       className="flex-1 bg-background"
       contentContainerClassName="gap-2 px-4 pb-10 pt-2"
-      refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
+      refreshControl={<PullRefresh busy={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
       onEndReachedThreshold={0.5}
       onEndReached={() => query.hasNextPage && !query.isFetchingNextPage && void query.fetchNextPage()}
       ListHeaderComponent={

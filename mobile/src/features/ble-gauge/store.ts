@@ -47,6 +47,8 @@ export type GaugeState = {
   /** Current calibration of the connected serial (local or from the backend). */
   calibration: StoredCalibration | null;
   calibrationRun: CalibrationRun;
+  /** Latest press of the gauge's button: in the air (short / long) or on a surface (reading saved). */
+  lastButton: { kind: 'short' | 'long' | 'surface'; at: number } | null;
   error: GaugeErrorKey | null;
 };
 
@@ -67,6 +69,7 @@ export const initialGaugeState: GaugeState = {
   noData: false,
   calibration: null,
   calibrationRun: idleCalibration,
+  lastButton: null,
   error: null,
 };
 

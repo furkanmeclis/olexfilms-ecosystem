@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatDateTime, PAGE_SIZE, usePagedList } from '@/features/services/lib';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { OrderDetailSheet } from './order-detail-sheet';
 import { accountingKey, useAccountingAccess, useCategoryLabels, useOpenDisputeEntries } from './hooks';
@@ -186,8 +187,8 @@ export function CariDetailScreen() {
         }}
         ListFooterComponent={<ListFooter loading={entries.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl
-            refreshing={(cari.isRefetching || entries.isRefetching) && !entries.isFetchingNextPage}
+          <PullRefresh
+            busy={(cari.isRefetching || entries.isRefetching) && !entries.isFetchingNextPage}
             onRefresh={() => {
               void cari.refetch();
               void entries.refetch();

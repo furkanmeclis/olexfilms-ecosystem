@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
@@ -11,6 +11,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { entryApi, resolveScan, type StockEntry, useEntry, wk } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -88,7 +89,7 @@ export function EntryScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('entry.title'), headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
             <Icon name="packageIn" tone="primary" size={18} />

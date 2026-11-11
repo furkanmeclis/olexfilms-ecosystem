@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { InfoRow, useFormat } from '@/features/admin/kit';
@@ -16,10 +16,11 @@ import { Text } from '@/ui/text';
 
 import { calibrationSteps, newerCalibration, type StoredCalibration } from './calibration';
 import { deviceModelName, type Material } from './curve';
+import { GaugeBattery, GaugeDeviceImage, useShownGauge } from './gauge-badge';
 import { DevicePickerSheet, GaugeLiveValue, useGaugeHref } from './gauge-panel';
 import {
   cancelCalibration,
-  disconnect,
+  disconnectByUser,
   fetchBackendCalibration,
   finishCalibration,
   forgetGauge,
@@ -56,6 +57,37 @@ function hz(v: number | null) {
  * model and serial, Default / Connected / Calibrated badges, the last
  * calibration, and Disconnect / Start calibration / Delete device.
  */
+/** Shows the latest press of the gauge's button for a moment (device screen, live value box). */
+function ButtonFlash() {
+  const { t } = useTranslation('measure');
+  const last = useGauge((s) => s.lastButton);
+  // `now` only moves when the flash should end: a press shows until at + BUTTON_FLASH_MS.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!last) return;
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, last.at + BUTTON_FLASH_MS - Date.now()));
+    return () => clearTimeout(timer);
+  }, [last]);
+  const visible = last && now < last.at + BUTTON_FLASH_MS ? last : null;
+  if (!visible) return null;
+  return (
+    <View className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1" accessibilityLiveRegion="polite">
+      <Icon name="target" tone="primary-foreground" size={14} />
+      <Text variant="footnote" tone="onPrimary" className="font-semibold">
+        {t(`ble.button.${visible.kind}`)}
+      </Text>
+    </View>
+  );
+}
+
+const BUTTON_FLASH_MS = 2_500;
+
+/**
+ * Gauge screen: the device (image, model, serial, link, battery, calibration
+ * state) and its live value up top, the one next step (connect / calibrate)
+ * as the primary action, then calibration and device details, and the rare
+ * actions (disconnect, forget) at the end.
+ */
 export function GaugeDeviceScreen() {
   const { t } = useTranslation('measure');
   const f = useFormat();
@@ -68,12 +100,14 @@ export function GaugeDeviceScreen() {
   useGaugeHold({ pause: true });
 
   const saved = lastGauge(userKey);
+  const shown = useShownGauge();
   const connected = g.status === 'connected';
+  const busy = g.status === 'connecting' || g.status === 'scanning';
   const serial = connected ? g.serial : (saved?.serial ?? null);
   const model = (connected ? g.model : null) ?? saved?.model ?? deviceModelName(null);
   const { calibration, loading } = useCalibration(serial);
-  const isDefault = !!saved && (!connected || saved.id === g.device?.id);
   const ready = connected && g.curve === 'ready' && g.serial != null;
+  const bleName = (connected ? g.device?.name : saved?.name) ?? null;
 
   const onDelete = () =>
     Alert.alert(t('ble.device.delete_confirm_title'), t('ble.device.delete_confirm_body'), [
@@ -94,71 +128,122 @@ export function GaugeDeviceScreen() {
     );
   }
 
+  const statusPill = connected ? (
+    <StatusPill label={t('ble.badge.connected')} tone="done" />
+  ) : busy ? (
+    <StatusPill label={t(`ble.status.${g.status}`)} tone="progress" />
+  ) : (
+    <StatusPill label={t('ble.status.idle')} tone="problem" />
+  );
+
   return (
     <>
       <Stack.Screen options={{ title: t('ble.device_title'), headerLargeTitle: false }} />
-      <Screen>
+      <Screen className="pb-16">
         {!saved && !connected ? (
-          <View className="items-center gap-3 rounded-lg border border-border bg-card px-4 py-6">
-            <Icon name="gauge" tone="muted-foreground" size={32} />
+          <View className="items-center gap-3 rounded-2xl border border-border bg-card px-5 py-8">
+            <Icon name="gauge" tone="muted-foreground" size={36} />
             <Text variant="headline">{t('ble.device.none')}</Text>
             <Text variant="footnote" tone="muted" className="text-center">
               {t('ble.device.none_body')}
             </Text>
-            <Button title={t('ble.connect')} icon={<Icon name="bluetooth" tone="primary-foreground" size={18} />} onPress={() => setPicking(true)} />
+            <Button
+              title={t('ble.connect')}
+              loading={busy}
+              icon={<Icon name="bluetooth" tone="primary-foreground" size={18} />}
+              onPress={() => setPicking(true)}
+            />
           </View>
         ) : (
-          <View className="gap-3 rounded-lg border border-border bg-card px-4 py-4">
-            <View className="flex-row items-center gap-3">
-              <View className="size-12 items-center justify-center rounded-md bg-secondary">
-                <Icon name="gauge" tone={connected ? 'primary' : 'muted-foreground'} size={26} />
-              </View>
-              <View className="flex-1 gap-0.5">
-                <Text variant="title" numberOfLines={1}>
-                  {model}
-                </Text>
-                <Text variant="headline" tone={serial != null ? 'default' : 'muted'} selectable>
-                  {serial != null ? t('ble.serial', { serial }) : t('ble.device.serial_unknown')}
-                </Text>
-                <Text variant="footnote" tone="muted" numberOfLines={1}>
-                  {(connected ? g.device?.name : saved?.name) ?? ''}
-                </Text>
-              </View>
+          <View className="items-center gap-4 rounded-2xl border border-border bg-card px-5 pb-5 pt-6">
+            <GaugeDeviceImage deviceType={shown?.deviceType} connected={connected} width={64} />
+            <View className="items-center gap-0.5">
+              <Text variant="title" className="text-center" numberOfLines={1}>
+                {model}
+              </Text>
+              <Text variant="callout" tone="muted" selectable>
+                {serial != null ? t('ble.serial', { serial }) : t('ble.device.serial_unknown')}
+              </Text>
             </View>
-            <View className="flex-row flex-wrap gap-2">
-              {isDefault ? <StatusPill label={t('ble.badge.default')} tone="neutral" /> : null}
-              <StatusPill label={connected ? t('ble.badge.connected') : t('ble.status.idle')} tone={connected ? 'done' : 'neutral'} />
+            <View className="flex-row flex-wrap items-center justify-center gap-2">
+              {statusPill}
               {serial != null ? (
                 <StatusPill
                   label={calibration ? t('ble.badge.calibrated') : t('ble.badge.not_calibrated')}
                   tone={calibration ? 'done' : 'progress'}
                 />
               ) : null}
+              {connected ? <GaugeBattery percent={g.batteryPercent} /> : null}
             </View>
-            {connected ? <GaugeLiveValue /> : null}
+
+            {connected ? (
+              <View className="w-full items-center gap-1 rounded-xl bg-secondary px-4 py-4">
+                <Text variant="caption" tone="muted">
+                  {t('ble.device.live')}
+                </Text>
+                <ButtonFlash />
+                {g.reading ? (
+                  <GaugeLiveValue />
+                ) : (
+                  <Text variant="callout" tone="muted" className="py-3 text-center">
+                    {t('ble.device.probe_hint')}
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text variant="footnote" tone="muted" className="text-center">
+                {t('ble.device.disconnected_body')}
+              </Text>
+            )}
+            {connected ? (
+              <Text variant="footnote" tone="muted" className="text-center">
+                {t('ble.device.button_hint')}
+              </Text>
+            ) : null}
+
             {connected && g.noData ? (
-              <Text variant="footnote" tone="danger">
+              <Text variant="footnote" tone="danger" className="text-center">
                 {t('ble.no_data')}
               </Text>
+            ) : null}
+            {g.error && !connected ? (
+              <Text variant="footnote" tone="danger" className="text-center">
+                {t(g.error)}
+              </Text>
+            ) : null}
+
+            {!connected && saved ? (
+              <Button
+                className="self-stretch"
+                title={t('ble.reconnect', { name: saved.name })}
+                loading={busy}
+                icon={<Icon name="bluetooth" tone="primary-foreground" size={18} />}
+                onPress={() => void reconnectLast(userKey)}
+              />
             ) : null}
           </View>
         )}
 
-        {connected || serial != null ? (
-          <>
-            <SectionHeader title={t('ble.device.info')} />
-            <List>
-              <InfoRow label={t('ble.device.model')} value={model} />
-              <InfoRow label={t('ble.device.serial')} value={serial != null ? String(serial) : null} />
-              {connected ? (
-                <InfoRow
-                  label={t('ble.device.battery')}
-                  value={g.batteryPercent != null ? `${g.batteryPercent}% · ${g.battery?.toFixed(1)} V` : null}
-                />
-              ) : null}
-              <InfoRow label={t('ble.device.curve')} value={connected ? t(`ble.curve_state.${g.curve}`) : null} last />
-            </List>
+        {canWrite && connected && serial != null && !calibration && !loading ? (
+          <View className="gap-3 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4">
+            <View className="flex-row items-center gap-2">
+              <Icon name="alert" tone="foreground" size={18} />
+              <Text variant="headline">{t('ble.device.calibrate_cta_title')}</Text>
+            </View>
+            <Text variant="footnote" tone="muted">
+              {t('ble.device.calibrate_cta_body')}
+            </Text>
+            <Button title={t('ble.device.start_calibration')} disabled={!ready} onPress={() => router.push(href('calibrate'))} />
+            {!ready ? (
+              <Text variant="footnote" tone="muted">
+                {t('ble.device.calibrate_needs_connection')}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
+        {serial != null ? (
+          <View className="gap-2">
             <SectionHeader title={t('ble.device.last_calibration')} />
             <List>
               {calibration ? (
@@ -178,42 +263,47 @@ export function GaugeDeviceScreen() {
                 <InfoRow label={t('ble.device.calibrated_at')} value={loading ? '…' : t('ble.device.never_calibrated')} last />
               )}
             </List>
-          </>
+            {canWrite && calibration ? (
+              <Button
+                title={t('ble.device.recalibrate')}
+                variant="outline"
+                disabled={!ready}
+                onPress={() => router.push(href('calibrate'))}
+              />
+            ) : null}
+          </View>
         ) : null}
 
-        {g.error ? (
-          <Text variant="footnote" tone="danger">
-            {t(g.error)}
-          </Text>
+        {connected || serial != null ? (
+          <View className="gap-2">
+            <SectionHeader title={t('ble.device.info')} />
+            <List>
+              <InfoRow label={t('ble.device.model')} value={model} />
+              <InfoRow label={t('ble.device.serial')} value={serial != null ? String(serial) : null} />
+              <InfoRow label={t('ble.device.ble_name')} value={bleName} />
+              {connected ? (
+                <InfoRow
+                  label={t('ble.device.battery')}
+                  value={g.batteryPercent != null ? `${g.batteryPercent}% · ${g.battery?.toFixed(1)} V` : null}
+                />
+              ) : null}
+              <InfoRow label={t('ble.device.curve')} value={connected ? t(`ble.curve_state.${g.curve}`) : null} last />
+            </List>
+          </View>
         ) : null}
 
-        <SectionHeader title={t('ble.device.actions')} />
-        <View className="gap-2">
-          {connected ? (
-            <Button title={t('ble.disconnect')} variant="outline" onPress={() => void disconnect()} />
-          ) : saved ? (
-            <Button
-              title={t('ble.reconnect', { name: saved.name })}
-              loading={g.status === 'connecting' || g.status === 'scanning'}
-              icon={<Icon name="bluetooth" tone="primary-foreground" size={18} />}
-              onPress={() => void reconnectLast(userKey)}
-            />
-          ) : null}
-          {canWrite ? (
-            <Button
-              title={t('ble.device.start_calibration')}
-              variant={connected ? 'primary' : 'secondary'}
-              disabled={!ready}
-              onPress={() => router.push(href('calibrate'))}
-            />
-          ) : null}
-          {canWrite && !ready ? (
-            <Text variant="footnote" tone="muted">
-              {t('ble.device.calibrate_needs_connection')}
-            </Text>
-          ) : null}
-          {saved ? <Button title={t('ble.device.delete')} variant="ghost" onPress={onDelete} /> : null}
-        </View>
+        {connected || saved ? (
+          <View className="gap-1 pt-2">
+            {connected ? <Button title={t('ble.disconnect')} variant="outline" onPress={() => void disconnectByUser()} /> : null}
+            {saved ? (
+              <Pressable accessibilityRole="button" onPress={onDelete} className="items-center py-3 active:opacity-60">
+                <Text variant="callout" tone="danger">
+                  {t('ble.device.delete')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
       </Screen>
       {picking ? <DevicePickerSheet onClose={() => setPicking(false)} /> : null}
     </>

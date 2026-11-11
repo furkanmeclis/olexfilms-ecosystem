@@ -1,13 +1,14 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { Chips, ErrorState, ListSkeleton, useChildHref, useFormat } from '@/features/admin/kit';
 import { EmptyState } from '@/ui/empty-state';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type Period, PERIODS, useReport, useReportCatalog } from './api';
 import { ReportView } from './report-view';
@@ -22,7 +23,7 @@ export function ReportsScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('reports.title') }} />
-      <Screen refreshControl={<RefreshControl refreshing={catalog.isRefetching} onRefresh={() => void catalog.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={catalog.isRefetching} onRefresh={() => void catalog.refetch()} />}>
         {catalog.isPending ? (
           <ListSkeleton inset={false} />
         ) : catalog.isError && !items.length ? (
@@ -67,7 +68,7 @@ export function ReportScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-3 pb-10"
-        refreshControl={<RefreshControl refreshing={report.isRefetching} onRefresh={() => void report.refetch()} />}>
+        refreshControl={<PullRefresh busy={report.isRefetching} onRefresh={() => void report.refetch()} />}>
         {entry?.periodic && periods.length > 0 ? (
           <Chips
             options={periods.map((p) => ({ key: p, label: t(`reports.period.${p}`) }))}

@@ -2,7 +2,7 @@ import { useInfiniteQuery, type QueryKey } from '@tanstack/react-query';
 import { usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, type ListRenderItem, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { FlatList, type ListRenderItem, Pressable, ScrollView, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
@@ -11,6 +11,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { PullRefresh } from '@/ui/pull-refresh';
 import { intlLocale } from '@/core/digits';
 
 /** Page shape of the list contract (docs/list-contract.md). */
@@ -193,7 +194,7 @@ export function PagedList<T>({ query, renderItem, keyOf, empty, header }: PagedL
       }}
       ListFooterComponent={query.isFetchingNextPage ? <Skeleton className="mx-4 h-16 rounded-lg" /> : undefined}
       refreshControl={
-        <RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />
+        <PullRefresh busy={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />
       }
     />
   );
@@ -207,6 +208,7 @@ export function CardRow({
   detail,
   trailing,
   onPress,
+  onLongPress,
 }: {
   title: string;
   subtitle?: string;
@@ -215,6 +217,7 @@ export function CardRow({
   detail?: string | null;
   trailing?: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
 }) {
   const inner = (
     <View className="mx-4 flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
@@ -241,9 +244,9 @@ export function CardRow({
       {trailing}
     </View>
   );
-  if (!onPress) return inner;
+  if (!onPress && !onLongPress) return inner;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} className="active:opacity-70">
+    <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} className="active:opacity-70">
       {inner}
     </Pressable>
   );

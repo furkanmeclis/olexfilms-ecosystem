@@ -18,7 +18,12 @@ export type MapAsset = {
   points: MapPoint[];
   svg: string | null;
 };
-export type PartMapData = { point_radius: number; assets: MapAsset[] };
+export type PartMapData = {
+  point_radius: number;
+  assets: MapAsset[];
+  /** Guided walk: numbered points in walking order (backend). */
+  guide?: { part: string; place: string; position: number; x: number; y: number }[];
+};
 
 export type MapValue = {
   part_type: string;

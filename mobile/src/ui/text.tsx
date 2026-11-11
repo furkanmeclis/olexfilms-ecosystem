@@ -41,8 +41,18 @@ export type TextVariant = NonNullable<VariantProps<typeof text>['variant']>;
 const DISPLAY = new Set<TextVariant>(['largeTitle', 'title']);
 
 /** Locale-aware uppercase for string children (RN textTransform is not). */
+/** Units that keep their case in uppercased captions ("µm" would become "ΜM", read as "MM"). */
+const KEEP_CASE = /(µm)/u;
+
 function upper(children: ReactNode, lang: string): ReactNode {
-  return Children.map(children, (c) => (typeof c === 'string' ? c.toLocaleUpperCase(lang) : c));
+  return Children.map(children, (c) =>
+    typeof c === 'string'
+      ? c
+          .split(KEEP_CASE)
+          .map((part) => (KEEP_CASE.test(part) ? part : part.toLocaleUpperCase(lang)))
+          .join('')
+      : c,
+  );
 }
 
 export function Text({

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
+import { useGaugeAppSession } from '@/features/ble-gauge/use-gauge-session';
 import { usePushNotifications } from '@/core/push';
 import { rememberPath } from '@/core/space-memory';
 import { kindsOf } from '@/core/spaces';
@@ -26,6 +27,8 @@ export default function AppLayout() {
   usePushNotifications();
   // Home-screen widgets: refresh on foreground and when user, organization, language or digits change.
   useWidgetSync();
+  // BLE gauge: one connection for the whole signed-in app, kept across tabs and screens.
+  useGaugeAppSession();
 
   useQuery({
     queryKey: ['me'],

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { ErrorState, ListSkeleton } from '@/features/admin/kit';
@@ -13,6 +13,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { loadRange, useOrgTimeZone } from './data';
 import { type Appointment, addDays, startOfWeek, statusTone, ymd } from './lib';
@@ -74,7 +75,7 @@ export function AppointmentsScreen() {
         }}
       />
       <Screen
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <View className="flex-row items-center gap-2">
           <Pressable
             accessibilityRole="button"
