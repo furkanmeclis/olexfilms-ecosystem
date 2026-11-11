@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, RefreshControl, View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -32,6 +32,7 @@ import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { LinePlotter, OrderLinesEditor } from './order-edit';
 import { creatorOf, liveTryAmount } from './order-summary';
@@ -221,7 +222,7 @@ export function OrderDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: o?.order_no ?? '', headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton rows={4} inset={false} />
         ) : !o ? (

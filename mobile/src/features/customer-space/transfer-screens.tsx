@@ -3,7 +3,7 @@ import { type Href, router, Stack, useLocalSearchParams, useSegments } from 'exp
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { Alert, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -17,6 +17,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { retryPortal, useFleetRoles } from './lib';
 import {
@@ -362,7 +363,7 @@ export function CustomerVehicleTransferScreen() {
         keyboardShouldPersistTaps="handled"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {error ? (
           <View className="rounded-lg border border-destructive bg-card p-3">
             <Text variant="callout" tone="danger" accessibilityRole="alert">

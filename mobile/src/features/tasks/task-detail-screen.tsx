@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, RefreshControl, View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -16,6 +16,7 @@ import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { isOverdue, nextStatuses, priorityTone, statusTone, TASK_PRIORITIES, type TaskPriority, type TaskStatus } from './lib';
 
@@ -79,7 +80,7 @@ export function TaskDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: task?.title ?? '', headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={refetchAll} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={refetchAll} />}>
         {q.isPending ? (
           <ListSkeleton rows={4} inset={false} />
         ) : !task ? (

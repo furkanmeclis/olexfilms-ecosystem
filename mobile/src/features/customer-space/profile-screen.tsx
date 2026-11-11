@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, RefreshControl, Switch, View } from 'react-native';
+import { ActivityIndicator, Alert, Switch, View } from 'react-native';
 import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
@@ -14,6 +14,7 @@ import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { portalFiles, useExportDownload } from './files';
 import { isHidden, type NotificationPreferences, retryPortal } from './lib';
@@ -110,7 +111,7 @@ export function CustomerProfileScreen() {
       <Stack.Screen options={{ title: t('profile') }} />
       <Screen
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={() => void qc.invalidateQueries({ queryKey: PREFS_KEY })} />
+          <PullRefresh busy={false} onRefresh={() => void qc.invalidateQueries({ queryKey: PREFS_KEY })} />
         }>
         <View className="items-center gap-2 py-4">
           <View className="size-16 items-center justify-center rounded-full bg-secondary">

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDateTime } from '@/features/services/lib';
@@ -9,6 +9,7 @@ import { ErrorState, errorText, ListBody, ListSkeleton } from '@/features/servic
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type AIConversation, type AIStatus, quotaRemainingPercent, quotaUsedUp } from './chat-state';
 import { ConsentCard, useAssistantLinks } from './consent-card';
@@ -146,8 +147,8 @@ export function AssistantScreen() {
             </Pressable>
           )}
           refreshControl={
-            <RefreshControl
-              refreshing={status.isRefetching || conversations.isRefetching}
+            <PullRefresh
+              busy={status.isRefetching || conversations.isRefetching}
               onRefresh={() => {
                 void status.refetch();
                 if (usable) void conversations.refetch();

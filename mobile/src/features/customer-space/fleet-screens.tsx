@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -14,6 +14,7 @@ import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import {
   type FleetLink,
@@ -175,7 +176,7 @@ export function FleetList<T extends { uuid: string }>({
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>
@@ -375,8 +376,8 @@ export function FleetHomeScreen() {
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
         refreshControl={
-          <RefreshControl
-            refreshing={overview.isRefetching || links.isRefetching}
+          <PullRefresh
+            busy={overview.isRefetching || links.isRefetching}
             onRefresh={() => {
               void overview.refetch();
               void links.refetch();

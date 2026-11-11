@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
@@ -14,6 +14,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { fetchAssignees, leadEventsKey, leadKey } from './hooks';
 import {
@@ -116,8 +117,8 @@ export function LeadDetailScreen() {
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
         refreshControl={
-          <RefreshControl
-            refreshing={q.isRefetching}
+          <PullRefresh
+            busy={q.isRefetching}
             onRefresh={() => {
               void q.refetch();
               void events.refetch();

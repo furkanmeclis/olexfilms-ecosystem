@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, type AlertButton, RefreshControl, View } from 'react-native';
+import { Alert, type AlertButton, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
@@ -10,6 +10,7 @@ import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { CodeNameSheet } from './code-name-sheet';
 import { alertError, confirmAction, go } from './format';
@@ -128,8 +129,8 @@ export function RoomScreen() {
       <Stack.Screen options={{ title: r.name || r.code, headerLargeTitle: false }} />
       <Screen
         refreshControl={
-          <RefreshControl
-            refreshing={locs.isRefetching}
+          <PullRefresh
+            busy={locs.isRefetching}
             onRefresh={() => {
               void room.refetch();
               void locs.refetch();

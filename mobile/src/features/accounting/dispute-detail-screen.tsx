@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDateTime } from '@/features/services/lib';
@@ -11,6 +11,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { accountingKey, useAccountingAccess, useCategoryLabels } from './hooks';
 import {
@@ -83,7 +84,7 @@ export function DisputeDetailScreen() {
         keyboardShouldPersistTaps="handled"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!d ? (
           q.isPending ? (
             <DetailSkeleton />

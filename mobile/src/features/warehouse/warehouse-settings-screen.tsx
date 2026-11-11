@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl } from 'react-native';
+
 
 import { useCan } from '@/core/spaces';
 import { ErrorState, ListSkeleton } from '@/features/admin/kit';
@@ -11,6 +11,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { eodKeys, saveWarehouseSettings, useWarehouseSettings } from './eod-api';
 import { alertError } from './format';
@@ -66,7 +67,7 @@ export function WarehouseSettingsScreen() {
       <Stack.Screen options={{ title: t('settings.title'), headerLargeTitle: false }} />
       <Screen
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton rows={2} />
         ) : !q.data ? (

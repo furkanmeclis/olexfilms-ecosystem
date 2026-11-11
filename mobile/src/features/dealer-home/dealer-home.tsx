@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
@@ -20,6 +20,7 @@ import { Skeleton } from '@/ui/skeleton';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { BOARD_GROUPS, type BoardGroup, boardRows, fitTags, kpiIcon, listFilterOf, statusParam, uniqueCategories } from './board';
 
@@ -102,7 +103,7 @@ export function DealerHome() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-5 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
+        refreshControl={<PullRefresh busy={refreshing} onRefresh={refresh} />}>
         {org ? (
           <Text variant="footnote" tone="muted">
             {org.name} · {t(`spaces:org_type.${org.type ?? 'dealer'}`)}

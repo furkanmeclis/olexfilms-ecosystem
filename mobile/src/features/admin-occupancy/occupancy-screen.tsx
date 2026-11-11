@@ -2,7 +2,7 @@ import { keepPreviousData, useQueries, useQueryClient } from '@tanstack/react-qu
 import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
@@ -15,6 +15,7 @@ import { List } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { aggregateOccupancy, type OccupancyLevel, occupancyPercent, summarizeOccupancy } from './lib';
 
@@ -101,7 +102,7 @@ export function OccupancyScreen() {
       <Stack.Screen options={{ title: t('occupancy.title') }} />
       <Screen
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void qc.invalidateQueries({ queryKey: ['admin-occupancy'] })} />
+          <PullRefresh busy={refreshing} onRefresh={() => void qc.invalidateQueries({ queryKey: ['admin-occupancy'] })} />
         }>
         {!canRead ? (
           <EmptyState icon="blocked" title={t('no_access')} />

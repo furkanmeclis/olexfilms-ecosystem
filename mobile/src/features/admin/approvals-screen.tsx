@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, RefreshControl, View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { hasAmount } from '@/core/price-visibility';
 import { usePricesVisible } from '@/core/use-prices-visible';
@@ -15,6 +15,7 @@ import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { useClaimLinks } from '@/features/warranty-claims/hooks';
 
@@ -269,7 +270,7 @@ export function ApprovalsScreen() {
       <Stack.Screen options={{ title: t('approvals.title') }} />
       <Screen
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={() => void qc.invalidateQueries({ queryKey: ['approvals'] })} />
+          <PullRefresh busy={false} onRefresh={() => void qc.invalidateQueries({ queryKey: ['approvals'] })} />
         }>
         {any ? (
           <>

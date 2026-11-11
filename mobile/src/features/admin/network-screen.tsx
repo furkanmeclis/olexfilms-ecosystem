@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, RefreshControl, View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import type { paths } from '@/core/api/schema';
@@ -10,6 +10,7 @@ import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { CardRow, Chips, ErrorState, InfoRow, ListSkeleton, PagedList, PAGE_SIZE, useChildHref, useDebounced, useFormat, usePagedQuery } from './kit';
 
@@ -112,7 +113,7 @@ export function NetworkDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: o?.name ?? '', headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isPending ? (
           <ListSkeleton rows={4} inset={false} />
         ) : !o ? (

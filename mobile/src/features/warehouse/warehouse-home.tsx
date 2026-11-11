@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { activeMembership, useCan } from '@/core/spaces';
@@ -23,6 +23,7 @@ import { OrderCard } from './jobs-screen';
 import { ErrorState, ListSkeleton } from './parts';
 import { WarehousePickerSheet } from './warehouse-picker';
 import type { IconName } from '@/ui/icons';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -104,8 +105,8 @@ export function WarehouseHome() {
       />
       <Screen
         refreshControl={
-          <RefreshControl
-            refreshing={summary.isRefetching}
+          <PullRefresh
+            busy={summary.isRefetching}
             onRefresh={() => {
               refetch();
               void summary.refetch();

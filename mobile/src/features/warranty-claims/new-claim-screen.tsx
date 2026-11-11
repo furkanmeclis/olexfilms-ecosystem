@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -14,6 +14,7 @@ import { confirmAction } from '@/ui/confirm';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 import { useLeaveGuard } from '@/ui/use-leave-guard';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { useClaimLinks } from './hooks';
 import { claimFormMissing } from './lib';
@@ -78,7 +79,7 @@ function WarrantyPicker({ onPick }: { onPick: (w: Warranty) => void }) {
       }}
       ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
       refreshControl={
-        <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+        <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
       }
     />
   );

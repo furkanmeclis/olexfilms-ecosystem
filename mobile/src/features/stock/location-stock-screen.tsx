@@ -1,8 +1,9 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 import { go } from '@/features/warehouse/format';
 import { ListStatus } from '@/features/warehouse/parts';
 
@@ -25,7 +26,7 @@ export function LocationStockScreen({ base }: { base: string }) {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-2 px-4 pb-10 pt-2"
-        refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
+        refreshControl={<PullRefresh busy={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
         onEndReachedThreshold={0.5}
         onEndReached={() => query.hasNextPage && !query.isFetchingNextPage && void query.fetchNextPage()}
         ListEmptyComponent={

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -13,6 +13,7 @@ import { ListBody } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { retryPortal, useCustomerLinks } from './lib';
 
@@ -96,7 +97,7 @@ export function CustomerClaimsScreen() {
             {item.warranty_uuid ? <Icon name="forward" tone="muted-foreground" size={18} /> : null}
           </Pressable>
         )}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}
       />
     </>
   );

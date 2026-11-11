@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { EmptyState } from '@/ui/empty-state';
@@ -8,6 +8,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 import { formatDate, formatNumber, go } from '@/features/warehouse/format';
 import { Card, ErrorState, Field, ListSkeleton } from '@/features/warehouse/parts';
 import { unitStatusTone } from '@/features/warehouse/scan-result-card';
@@ -29,7 +30,7 @@ export function UnitScreen() {
   return (
     <>
       <Stack.Screen options={{ title: barcode, headerLargeTitle: false }} />
-      <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+      <Screen refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {q.isLoading ? (
           <ListSkeleton rows={4} />
         ) : !h ? (

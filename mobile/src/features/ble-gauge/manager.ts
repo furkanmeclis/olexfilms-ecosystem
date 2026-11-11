@@ -47,6 +47,7 @@ import {
   isGaugePeripheral,
   modeCommand,
 } from './protocol';
+import { createButtonTracker, type ButtonEvent } from './button';
 import { type Commit, initialSampler, type SamplerState, samplerProgress, stepSampler } from './readings';
 import { createGeneration, createSerialConfirm, poweredOnTimeoutError, poweredOnWaitMs } from './session';
 import { type GaugeState, idleCalibration, initialGaugeState, upsertDevice, useGauge } from './store';
@@ -229,7 +230,7 @@ function applyCurve(c: GaugeCurve) {
     deviceType: c.deviceType,
     calibrationTargetUm: calibrationTargetUm(c),
   });
-  rememberGauge({ serial: c.serial, model: deviceModelName(c.deviceType) });
+  rememberGauge({ serial: c.serial, model: deviceModelName(c.deviceType), deviceType: c.deviceType });
 }
 
 /** `"abc…"` / `W/"abc…"` → abc…: the backend ETag is the hex SHA-256 of the raw file. */
@@ -487,6 +488,22 @@ export function subscribeCommits(listener: CommitListener): () => void {
   };
 }
 
+type ButtonListener = (e: ButtonEvent) => void;
+const buttonListeners = new Set<ButtonListener>();
+
+/** The gauge's button pressed with the probe in the air (button.ts): short / long. */
+export function subscribeButton(listener: ButtonListener): () => void {
+  buttonListeners.add(listener);
+  return () => {
+    buttonListeners.delete(listener);
+  };
+}
+
+const button = createButtonTracker((kind) => {
+  set({ lastButton: { kind, at: Date.now() } });
+  if (commitPauses === 0) for (const l of buttonListeners) l(kind);
+});
+
 const splitter = createLineSplitter();
 const serialConfirm = createSerialConfirm(2);
 let lastFrameAt = 0;
@@ -518,9 +535,11 @@ function onLine(line: string) {
   const step = stepMeasure(measure, frame, curve, offsets, lastFrameAt);
   measure = step.state;
   if (!step.reading) return;
+  if (!step.reading.held) button.feed({ button: frame.button, air: step.reading.um == null }, lastFrameAt);
   const sampled = stepSampler(sampler, step.reading);
   sampler = sampled.state;
   set({ reading: step.reading, progress: samplerProgress(sampler), ...battery });
+  if (sampled.commit?.trigger === 'button') set({ lastButton: { kind: 'surface', at: lastFrameAt } });
   if (sampled.commit && commitPauses === 0) for (const l of commitListeners) l(sampled.commit);
 }
 
@@ -550,7 +569,7 @@ async function writeMode(mode: number): Promise<void> {
 }
 
 /** The user's default gauge: the last one connected, with its serial and model once known. */
-export type SavedGauge = { id: string; name: string; serial?: number; model?: string };
+export type SavedGauge = { id: string; name: string; serial?: number; model?: string; deviceType?: number };
 
 const lastKey = (userKey: string) => `ble.gauge.last.${userKey}`;
 let currentUserKey: string | null = null;
@@ -559,8 +578,8 @@ export function lastGauge(userKey: string | null | undefined): SavedGauge | null
   return userKey ? readJSON<SavedGauge>(lastKey(userKey)) : null;
 }
 
-/** Adds the serial / model of the connected gauge to the saved default gauge. */
-function rememberGauge(patch: Pick<SavedGauge, 'serial' | 'model'>) {
+/** Adds the serial / model / device type of the connected gauge to the saved default gauge. */
+function rememberGauge(patch: Pick<SavedGauge, 'serial' | 'model' | 'deviceType'>) {
   const key = currentUserKey;
   const d = useGauge.getState().device;
   const saved = key ? lastGauge(key) : null;
@@ -584,6 +603,7 @@ function teardown() {
   serialConfirm.reset();
   sampler = initialSampler;
   measure = initialMeasure;
+  button.reset();
   calStep = null;
   stopCalibrationTimer();
   device = null;
@@ -608,6 +628,7 @@ export async function connect(id: string, userKey?: string | null): Promise<void
   const ticket = generation.next();
   const stale = () => !generation.isCurrent(ticket);
   userDisconnect = false;
+  blockedByUser = false;
   pendingId = id;
   set({ status: 'connecting', error: null });
   try {
@@ -718,6 +739,56 @@ export function clearError() {
 
 /** Stops everything (screen left or app sent to the background). */
 export async function shutdown(): Promise<void> {
+  cancelAutoReconnect();
   stopScan();
   await disconnect();
+}
+
+/** The user tapped "Disconnect": no automatic reconnect until they connect again. */
+let blockedByUser = false;
+
+/** "Disconnect" button: drops the link and stops automatic reconnects. */
+export async function disconnectByUser(): Promise<void> {
+  blockedByUser = true;
+  cancelAutoReconnect();
+  await disconnect();
+}
+
+/** The automatic reconnect loop in flight, if any. */
+let autoRun: { cancelled: boolean } | null = null;
+
+export function cancelAutoReconnect() {
+  if (autoRun) autoRun.cancelled = true;
+  autoRun = null;
+}
+
+/** Attempts and pause of the automatic reconnect (measuring list opened, user decision 11.11). */
+export const AUTO_RECONNECT = { attempts: 6, intervalMs: 10_000 } as const;
+
+/**
+ * Reconnects the user's last gauge in the background: up to
+ * AUTO_RECONNECT.attempts tries, AUTO_RECONNECT.intervalMs apart; stops once
+ * connected, on "Disconnect", or when the app goes to the background. A run
+ * already in flight is kept (no parallel loops), and nothing starts while the
+ * user's own disconnect stands or no gauge was ever connected.
+ */
+export function autoReconnect(userKey: string | null | undefined): void {
+  if (!isGaugeAvailable() || blockedByUser || autoRun || !lastGauge(userKey)) return;
+  const status = useGauge.getState().status;
+  if (status === 'connected' || status === 'connecting') return;
+  const run = { cancelled: false };
+  autoRun = run;
+  void (async () => {
+    try {
+      for (let i = 0; i < AUTO_RECONNECT.attempts && !run.cancelled; i += 1) {
+        const now = useGauge.getState().status;
+        if (now === 'connected') return;
+        if (now === 'idle' || now === 'error') await reconnectLast(userKey);
+        if (run.cancelled || useGauge.getState().status === 'connected') return;
+        if (i < AUTO_RECONNECT.attempts - 1) await new Promise((r) => setTimeout(r, AUTO_RECONNECT.intervalMs));
+      }
+    } finally {
+      if (autoRun === run) autoRun = null;
+    }
+  })();
 }

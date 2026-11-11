@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Switch, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useChildHref, useFormat } from '@/features/admin/kit';
@@ -14,6 +14,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import {
   filterStaff,
@@ -199,7 +200,7 @@ export function StaffListScreen() {
             onPress={() => router.push(child(s.uuid))}
           />
         )}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}
       />
       {creating ? (
         <StaffFormSheet
@@ -272,8 +273,8 @@ export function StaffDetailScreen() {
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
         refreshControl={
-          <RefreshControl
-            refreshing={list.isRefetching}
+          <PullRefresh
+            busy={list.isRefetching}
             onRefresh={() => {
               void list.refetch();
               void payments.refetch();

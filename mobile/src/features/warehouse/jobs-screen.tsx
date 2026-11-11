@@ -1,13 +1,14 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { useActivityText, useAmountText } from '@/features/orders/order-timeline';
 import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
 import { StatusPill } from '@/ui/status-pill';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type StockCount, type StockEntry, type Transfer, useCounts, useEntries, useTransfers } from './api';
 import { countTone, entryTone, formatDate, go, transferTone } from './format';
@@ -173,7 +174,7 @@ function JobsList({
       contentInsetAdjustmentBehavior="automatic"
       className="flex-1 bg-background"
       contentContainerClassName="gap-2 px-4 pb-10 pt-2"
-      refreshControl={<RefreshControl refreshing={q.isRefetching && !q.isFetchingNextPage} onRefresh={() => void q.refetch()} />}
+      refreshControl={<PullRefresh busy={q.isRefetching && !q.isFetchingNextPage} onRefresh={() => void q.refetch()} />}
       onEndReachedThreshold={0.5}
       onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && void q.fetchNextPage()}
       ListHeaderComponent={header}

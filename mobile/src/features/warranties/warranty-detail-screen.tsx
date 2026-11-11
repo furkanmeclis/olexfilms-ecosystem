@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import {
@@ -19,6 +19,7 @@ import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 /** One warranty: coverage, product, vehicle, holder and the public page link. */
 export function WarrantyDetailScreen() {
@@ -38,7 +39,7 @@ export function WarrantyDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!w ? (
           q.isPending ? (
             <DetailSkeleton />

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatDateTime } from '@/features/services/lib';
@@ -9,6 +9,7 @@ import { DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/service
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { useAccountingAccess } from './hooks';
 import { einvoiceTimeline, einvoiceTone, formatMoney, hasWebOnlyActions, validationTone } from './lib';
@@ -37,7 +38,7 @@ export function EinvoiceDetailScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!inv ? (
           q.isPending ? (
             <DetailSkeleton />

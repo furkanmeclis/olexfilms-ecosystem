@@ -1,12 +1,13 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { fullName, PAGE_SIZE, useDebounced, useLinks, usePagedList } from '@/features/services/lib';
 import { ListBody, ListFooter, SearchField } from '@/features/services/ui';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 /** Customers of the scope: search by name, phone or e-mail, infinite scroll. */
 export function CustomersListScreen() {
@@ -78,7 +79,7 @@ export function CustomersListScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>

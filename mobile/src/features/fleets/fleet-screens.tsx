@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack, useLocalSearchParams, useSegments } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
@@ -19,6 +19,7 @@ import { Input } from '@/ui/input';
 import { List, ListRow } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import {
   closedPeriods,
@@ -162,7 +163,7 @@ export function FleetCardScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         {!fleet ? (
           q.isPending ? (
             <DetailSkeleton />
@@ -533,7 +534,7 @@ export function FleetStatementScreen() {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-4 px-4 pb-12 pt-2"
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
+        refreshControl={<PullRefresh busy={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <View className="flex-row items-center justify-between gap-3">
           <Pressable accessibilityRole="button" accessibilityLabel={t('month_prev')} hitSlop={10} onPress={() => setMonth(shiftMonth(month, -1))}>
             <Icon name="back" tone="primary" />

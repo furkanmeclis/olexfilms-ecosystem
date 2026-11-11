@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -11,6 +11,7 @@ import { Chips, errorText, ListBody, ListFooter } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 
 import { ActionPreviewRows, useSecondsLeft } from './action-card';
 import { type AIActionCard, type ActionPreview, formatCountdown } from './chat-state';
@@ -161,7 +162,7 @@ export function PendingActionsScreen() {
         }}
         ListFooterComponent={<ListFooter loading={list.isFetchingNextPage} />}
         refreshControl={
-          <RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
+          <PullRefresh busy={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()} />
         }
       />
     </>

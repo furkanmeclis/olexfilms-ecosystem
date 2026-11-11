@@ -1,11 +1,12 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { PullRefresh } from '@/ui/pull-refresh';
 import { formatNumber, go } from '@/features/warehouse/format';
 import { ListStatus } from '@/features/warehouse/parts';
 import { unitStatusTone } from '@/features/warehouse/scan-result-card';
@@ -30,7 +31,7 @@ export function StockProductScreen({ base }: { base: string }) {
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-2 px-4 pb-10 pt-2"
-        refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
+        refreshControl={<PullRefresh busy={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
         onEndReachedThreshold={0.5}
         onEndReached={() => query.hasNextPage && !query.isFetchingNextPage && void query.fetchNextPage()}
         ListHeaderComponent={
