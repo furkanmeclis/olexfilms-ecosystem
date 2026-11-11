@@ -1,11 +1,11 @@
 # Demo kılavuzu: merkez → bayi sipariş akışı (3 telefon)
 
-Merkez **Olex Merkez**, hizmet noktası ve depo **AFM Florya Merkez**. Üç kişi, üç telefon:
+Merkez **Olex Merkez**, depo **Merkez Depo** (eski FLORYA deposu, TEC-1202). Üç kişi, üç telefon:
 
 | Telefon | Kim | Rol | Uygulamada açılan alan |
 |---|---|---|---|
 | 1 | Zorbey | `center_owner` (Olex Merkez sahibi) | Bayi çalışma alanı + Menü'de depo/admin ekranları; web panel |
-| 2 | Depo çalışanı | `center_warehouse`, AFM Florya Merkez deposunun üyesi | Depo (İşler, Tara, Stok) |
+| 2 | Depo çalışanı | `center_warehouse`, Merkez Depo deposunun üyesi | Depo (İşler, Tara, Stok) |
 | 3 | Bayi sahibi | `dealer_owner` (yeni bayi) | Bayi |
 
 Bu senaryonun tamamını backend'de `TestIntegrationDemoOrderFlow` testi koşuyor
@@ -25,7 +25,7 @@ Bu senaryonun tamamını backend'de `TestIntegrationDemoOrderFlow` testi koşuyo
 - [ ] **iOS push anahtarı**: EAS'ta iOS Push Notifications anahtarı tanımlı olmalı
       (`cd mobile && npx eas-cli@latest credentials -p ios` → Push Notifications: anahtar oluştur/yükle).
       Yoksa token kaydolur ama Apple bildirimi teslim etmez.
-- [ ] AFM Florya Merkez deposu **birincil depo** (Depo > Konumlar'da "birincil"); sipariş buraya düşer.
+- [ ] Merkez Depo deposu **birincil depo** (Depo > Konumlar'da "birincil"); sipariş buraya düşer.
 - [ ] Depoda en az bir ürünün **barkodlu birimi** var (Stok girişi ile), ürün kataloğda ve bayiye fiyatı tanımlı
       (fiyatsız ürün de eklenebilir; satır 0 TL olur ve muhasebeye 0 yazılır, demo için fiyatlı ürün seçin).
 - [ ] Teslimat yöntemlerinde en az biri var (Ayarlar > Teslimat yöntemleri, ör. "Aras Kargo"); yoksa depo çalışanı
@@ -39,7 +39,7 @@ Zorbey web panelde Olex Merkez'e girer: **Ayarlar > Hesaplar**.
 
 1. **Personel ekle** (`/t/<merkez>/settings/team/new`)
    - Ad, soyad, **telefon** (+90 5xx…), e-posta isteğe bağlı.
-   - Rol: **Merkez depo** (`center_warehouse`). Depolar: **AFM Florya Merkez** işaretli (birincil önseçili).
+   - Rol: **Merkez depo** (`center_warehouse`). Depolar: **Merkez Depo** işaretli (birincil önseçili).
    - "Personeli ekle" → Beklenen: "Personel eklendi" kartı; telefon ve rol görünür.
 2. **Yeni bayi** (`/t/<merkez>/settings/dealers/new`)
    - Bayi adı, şehir; bayi sahibi ad, soyad, **telefon**.
@@ -59,11 +59,11 @@ API karşılıkları: `POST /v1/tenant/members`, `POST /v1/tenant/dealers`.
 ## 3. Sipariş açma (Zorbey, web ya da mobil)
 
 - **Web**: Siparişler > **Yeni sipariş** (`/t/<merkez>/orders/new`) → "Bayi adına yeni sipariş": bayiyi seçin, ürün ekleyin,
-  depo **AFM Florya Merkez** (önseçili) → oluştur.
+  depo **Merkez Depo** (önseçili) → oluştur.
 - **Mobil**: Menü > Katalog → ürünleri sepete ekleyin → sepet → bayiyi seçin → oluştur.
 
 Beklenen:
-- Sipariş **Onaylandı** durumunda başlar (bayi onayı beklenmez), sipariş deposu AFM Florya Merkez.
+- Sipariş **Onaylandı** durumunda başlar (bayi onayı beklenmez), sipariş deposu Merkez Depo.
 - **Telefon 2 (depo)**: "Yeni sipariş hazırlanacak: ORD-…" push'u gelir; dokununca siparişin **hazırlama ekranı** açılır.
   İşler sekmesi > Siparişler'de de görünür.
 - **Telefon 3 (bayi)**: "Merkez sizin için sipariş açtı: ORD-…" push'u (ve in-app bildirim).
