@@ -26,3 +26,16 @@ func (h *Handler) PartMap(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, max-age=86400")
 	response.JSON(w, r, http.StatusOK, out)
 }
+
+// BodyTypes is GET /v1/measurement-body-types: the body types of the
+// guided measuring picker (code, name, side view thumbnail, point count).
+// Embedded and immutable, so the answer is cacheable.
+func (h *Handler) BodyTypes(w http.ResponseWriter, r *http.Request) {
+	out, err := svg.BodyTypes()
+	if err != nil {
+		response.InternalErr(w, r, err, "measurement body types failed")
+		return
+	}
+	w.Header().Set("Cache-Control", "private, max-age=86400")
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": out})
+}

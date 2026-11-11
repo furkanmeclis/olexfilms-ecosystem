@@ -19,7 +19,7 @@ import (
 var MobilePanelMirrorPrefixes = []string{
 	"services", "service-pdfs", "warranty-certificates", "customers", "vehicles",
 	"warranties", "warranty-claims", "orders", "quotes", "stock", "stock-transfers",
-	"warehouse", "measurements", "measurement-part-maps", "reports", "search", "notifications", "appointments",
+	"warehouse", "measurements", "measurement-part-maps", "measurement-body-types", "reports", "search", "notifications", "appointments",
 	"catalog", "vehicle-catalog", "plate-formats", "performance", "tasks", "leads",
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
 	"announcements", "stats", "tenant/organizations", "tenant/modules", "tenant/pricing", "delivery-methods",

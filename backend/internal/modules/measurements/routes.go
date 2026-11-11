@@ -55,6 +55,8 @@ func RegisterPanelRoutes(
 	mux.Handle("GET /v1/measurements/{uuid}", middleware.Chain(http.HandlerFunc(h.GetMeasurement), authn, org, module, read))
 	// TEC-299: the raw NexPTG part map of a body type.
 	mux.Handle("GET /v1/measurement-part-maps/{body_type}", middleware.Chain(http.HandlerFunc(h.PartMap), authn, org, module, read))
+	// Guided measuring: the body type picker (code, name, thumbnail, points).
+	mux.Handle("GET /v1/measurement-body-types", middleware.Chain(http.HandlerFunc(h.BodyTypes), authn, org, module, read))
 
 	// TEC-294: VIN completion of a vin_pending measurement.
 	link := middleware.RequireScope(q, rbac.PermMeasurementsLink)
