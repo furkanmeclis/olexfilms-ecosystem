@@ -32,6 +32,8 @@ type PartMapView struct {
 	PointRadius float64        `json:"point_radius"`
 	Places      []string       `json:"places"`
 	Assets      []PartMapAsset `json:"assets"`
+	// Guide is the guided measuring walk (Guide): numbered points in walking order.
+	Guide []GuidePoint `json:"guide"`
 }
 
 // PartMap resolves a body type (ResolveID) and returns its manifest assets
@@ -75,5 +77,6 @@ func PartMap(bodyType string) (*PartMapView, error) {
 		}
 		out.Assets = append(out.Assets, asset)
 	}
+	out.Guide = Guide(out.Assets)
 	return out, nil
 }

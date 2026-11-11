@@ -18072,6 +18072,36 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/measurement-body-types:
+    get:
+      tags: [Measurements]
+      operationId: listMeasurementBodyTypes
+      summary: List the body types of guided measuring
+      description: >-
+        The NexPTG body types with a part map, in picker order (common bodies
+        first): code (the measurement's body_type), a lower snake case key
+        for translations, the catalog name, the left side view as a PNG data
+        URI and the number of guided points. Requires the measurements module
+        and `measurements.read`. Immutable: `Cache-Control: private,
+        max-age=86400`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Body types
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: private, max-age=86400
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMeasurementBodyTypes"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/measurements/devices/smartptg/curves/{serial}:
     get:
       tags: [Measurements]
@@ -44142,9 +44172,43 @@ components:
           type: [string, "null"]
           description: Raw SVG file content; null when the body type ships no file for the part.
 
+    MeasurementGuidePoint:
+      type: object
+      required: [part, place, position, x, y]
+      properties:
+        part: { type: string }
+        place: { type: string, enum: [left, right, top, back] }
+        position: { type: integer, description: NexPTG point number of the part }
+        x: { type: number }
+        y: { type: number }
+
+    MeasurementBodyType:
+      type: object
+      required: [code, key, name, thumbnail, points]
+      properties:
+        code: { type: string, description: "Catalog bodywork, sent as the measurement's body_type" }
+        key: { type: string, description: Lower snake case code for client translations }
+        name: { type: string }
+        thumbnail: { type: string, description: Left side view as a PNG data URI }
+        points: { type: integer, description: Number of guided points }
+
+    EnvelopeMeasurementBodyTypes:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/MeasurementBodyType" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     MeasurementPartMap:
       type: object
-      required: [id, name, bodywork, point_radius, places, assets]
+      required: [id, name, bodywork, point_radius, places, assets, guide]
       properties:
         id: { type: string }
         name: { type: string }
@@ -44156,6 +44220,13 @@ components:
         assets:
           type: array
           items: { $ref: "#/components/schemas/MeasurementPartMapAsset" }
+        guide:
+          type: array
+          description: >-
+            Guided measuring walk: the numbered points in walking order (hood,
+            left side front to back, trunk, right side back to front, roof;
+            other parts after, in manifest order), each part's points by number.
+          items: { $ref: "#/components/schemas/MeasurementGuidePoint" }
 
     EnvelopeMeasurementPartMap:
       type: object

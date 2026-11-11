@@ -229,6 +229,20 @@ func TestMobilePanelMirrorTEC939Calibrations(t *testing.T) {
 	}
 }
 
+// The NexPTG part maps (GET /v1/measurement-part-maps/{body_type}) feed the
+// mobile measurement detail map and the guided measuring screen.
+func TestMobilePanelMirrorMeasurementPartMaps(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/measurement-part-maps/SEDAN", nil)
+	req.Header.Set(MobileAPIVersionHeader, "1")
+	called := false
+	MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		called = r.URL.Path == "/v1/measurement-part-maps/SEDAN"
+	})).ServeHTTP(httptest.NewRecorder(), req)
+	if !called {
+		t.Fatal("measurement-part-maps was not mirrored")
+	}
+}
+
 func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
 	id := uuid.NewString()
 	for _, path := range []string{

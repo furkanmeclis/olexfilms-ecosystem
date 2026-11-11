@@ -9574,6 +9574,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/measurement-body-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the body types of guided measuring
+         * @description The NexPTG body types with a part map, in picker order (common bodies first): code (the measurement's body_type), a lower snake case key for translations, the catalog name, the left side view as a PNG data URI and the number of guided points. Requires the measurements module and `measurements.read`. Immutable: `Cache-Control: private, max-age=86400`.
+         */
+        get: operations["listMeasurementBodyTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/measurements/devices/smartptg/curves/{serial}": {
         parameters: {
             query?: never;
@@ -25194,6 +25214,34 @@ export interface components {
             /** @description Raw SVG file content; null when the body type ships no file for the part. */
             svg: string | null;
         };
+        MeasurementGuidePoint: {
+            part: string;
+            /** @enum {string} */
+            place: "left" | "right" | "top" | "back";
+            /** @description NexPTG point number of the part */
+            position: number;
+            x: number;
+            y: number;
+        };
+        MeasurementBodyType: {
+            /** @description Catalog bodywork, sent as the measurement's body_type */
+            code: string;
+            /** @description Lower snake case code for client translations */
+            key: string;
+            name: string;
+            /** @description Left side view as a PNG data URI */
+            thumbnail: string;
+            /** @description Number of guided points */
+            points: number;
+        };
+        EnvelopeMeasurementBodyTypes: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["MeasurementBodyType"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         MeasurementPartMap: {
             id: string;
             name: string;
@@ -25201,6 +25249,8 @@ export interface components {
             point_radius: number;
             places: ("left" | "right" | "top" | "back")[];
             assets: components["schemas"]["MeasurementPartMapAsset"][];
+            /** @description Guided measuring walk: the numbered points in walking order (hood, left side front to back, trunk, right side back to front, roof; other parts after, in manifest order), each part's points by number. */
+            guide: components["schemas"]["MeasurementGuidePoint"][];
         };
         EnvelopeMeasurementPartMap: {
             /** @enum {boolean} */
@@ -49742,6 +49792,30 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listMeasurementBodyTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Body types */
+            200: {
+                headers: {
+                    /** @description private, max-age=86400 */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMeasurementBodyTypes"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getSmartPTGCurve: {
