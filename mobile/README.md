@@ -137,6 +137,32 @@ app once so the first sync runs, then add the widgets from the home screen galle
 Check light and dark, Arabic (RTL), a tinted home screen, and sign-out, which must
 empty all eight.
 
+## Caller ID (TEC-1208)
+
+Staff who can read customers (`customers.read`) can turn on **Settings → Caller ID**: when a customer
+of the active organization calls, the phone shows their name. Nothing is written to the contacts.
+
+- **List**: `GET /v1/customers/caller-id` returns the customers in scope (phone + label) as one
+  snapshot with a version; the app sends the version it holds and gets no entries while nothing
+  changed. `features/caller-id/sync.ts` refreshes on launch, on foreground (at most every 15 min),
+  at once when the user or organization changes, and from a periodic background task
+  (`expo-background-task`, about every 6 h, the system decides). There is no push-triggered sync yet.
+- **iOS**: the system looks the number up itself in a list loaded by a Call Directory extension
+  (target `OlexCallerId`, bundle id `com.olexfilms.app.callerid`, added by `plugins/with-caller-id.js`;
+  source in `modules/caller-id/extension`). The app writes `callerid/next.tsv` to the App Group and
+  reloads the extension, which applies only the difference. The user switches the extension on once
+  in Settings → Apps → Phone → Call Blocking & Identification; the screen links there and re-reads
+  the status when the app is active again. New customers show after the next sync, not instantly.
+- **Android** (10+): the app asks for the "Caller ID & spam app" role; `CallerIdScreeningService`
+  looks the number up in a local SQLite table and draws a card over the call screen
+  ("Display over other apps"). No phone or call log permission. Android does not ask a screening
+  service about numbers saved in the contacts, so the card appears for unknown numbers only.
+- **Privacy**: the list lives on the device only while the switch is on; switching off, signing out
+  and changing the organization delete it. A download is written to the activity log
+  (`customers.caller_id_downloaded`, count only).
+- **Testing** needs a real device and a real incoming call; neither side works in a simulator.
+  The extension target needs its own provisioning profile with the App Group on the first EAS build.
+
 ## Structure
 
 ```

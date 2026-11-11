@@ -489,3 +489,25 @@ WHERE u.uuid = sqlc.arg(uuid)
   AND u.status <> 'anonymized'
   AND u.merged_into_user_id IS NULL
 GROUP BY u.id, cp.user_id;
+
+-- name: ListCallerIDEntries :many
+-- TEC-1208: phone book of the mobile caller ID. Customers linked to the
+-- scope (same filter as ListOrganizationCustomers) that have a phone and are
+-- not anonymized, disabled or merged away. Ordered by phone so the snapshot
+-- (and its version hash) is stable.
+SELECT u.phone_e164::text AS phone, u.name, u.surname,
+       COALESCE(cp.company_name, '')::text AS company_name
+FROM users u
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.deleted_at IS NULL
+  AND u.phone_e164 IS NOT NULL
+  AND u.merged_into_user_id IS NULL
+  AND u.status IN ('active', 'pending')
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = u.id
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR co.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
+      AND (sqlc.narg(brand_id)::bigint IS NULL OR co.brand_id = sqlc.narg(brand_id))
+  )
+ORDER BY u.phone_e164 ASC
+LIMIT sqlc.arg(limit_count);

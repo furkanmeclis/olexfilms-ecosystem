@@ -17,6 +17,8 @@ import { i18n } from '@/core/i18n';
 import { applyThemePreference } from '@/core/preferences';
 import { persistOptions, queryClient } from '@/core/query';
 import { startUpdateChecks } from '@/core/updates';
+// Defines the periodic caller ID sync task in the global scope (TEC-1208).
+import '@/features/caller-id/background';
 import { FeedbackRoot } from '@/features/feedback/feedback-root';
 import { UpdateBanner } from '@/features/shell/update-banner';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';

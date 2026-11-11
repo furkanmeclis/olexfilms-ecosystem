@@ -146,6 +146,29 @@ func (h *Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
+// CallerID (GET /v1/customers/caller-id, TEC-1208): the phone book of the
+// mobile caller ID. known_version is the version the device holds; the
+// entries are left out while it still matches. A download of the list is
+// written to the activity log (count only, no personal data).
+func (h *Handler) CallerID(w http.ResponseWriter, r *http.Request) {
+	known := r.URL.Query().Get("known_version")
+	if len(known) > 64 {
+		writeError(w, r, &cu.ValidationError{Field: "known_version", Message: "must be at most 64 characters"})
+		return
+	}
+	snap, err := h.svc.CallerIDSnapshot(r.Context(), caller(r), known)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if !snap.Unchanged {
+		h.record(r, "customers.caller_id_downloaded", "customers", nil, map[string]any{
+			"count": snap.Count, "truncated": snap.Truncated,
+		})
+	}
+	response.JSON(w, r, http.StatusOK, snap)
+}
+
 // CreateCustomer (POST /v1/customers): 201 for a new user, 200 when the
 // phone already belonged to a user who was linked.
 func (h *Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {

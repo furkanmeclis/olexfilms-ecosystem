@@ -8079,6 +8079,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/customers/caller-id": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Phone book of the mobile caller ID
+         * @description TEC-1208. customers.read, same scope as the customer list (dealer its organization, distributor its subtree, center the brand). Customers with a phone that are active or pending; anonymized, disabled and merged customers are left out. One snapshot ordered by phone, at most 50000 entries (`truncated` when the scope holds more). `version` is a hash of the entries: send it back as `known_version` and the answer has `unchanged: true` and no entries while nothing changed. A download of the entries is written to the activity log. The app reaches it through the mobile mirror (`/v1/mobile/panel/customers/caller-id`).
+         */
+        get: operations["getCustomerCallerId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/customers/{uuid}": {
         parameters: {
             query?: never;
@@ -19031,6 +19051,26 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["CustomerWrite"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        CallerIdEntry: {
+            /** @description E.164 with the plus sign. */
+            phone: string;
+            /** @description Name, with the company in brackets; at most 80 characters, one line. */
+            label: string;
+        };
+        CallerIdSnapshot: {
+            version: string;
+            /** @description known_version still matches; entries is empty. */
+            unchanged: boolean;
+            truncated: boolean;
+            count: number;
+            entries: components["schemas"]["CallerIdEntry"][];
+        };
+        EnvelopeCallerIdSnapshot: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CallerIdSnapshot"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeCustomerPage: {
@@ -47213,6 +47253,32 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    getCustomerCallerId: {
+        parameters: {
+            query?: {
+                /** @description Version the device holds (at most 64 characters). */
+                known_version?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCallerIdSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getCustomer: {

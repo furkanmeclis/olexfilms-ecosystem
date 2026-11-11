@@ -1810,6 +1810,11 @@ type Querier interface {
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	ListBulkOperationsForOrganization(ctx context.Context, arg ListBulkOperationsForOrganizationParams) ([]BulkOperation, error)
+	// TEC-1208: phone book of the mobile caller ID. Customers linked to the
+	// scope (same filter as ListOrganizationCustomers) that have a phone and are
+	// not anonymized, disabled or merged away. Ordered by phone so the snapshot
+	// (and its version hash) is stable.
+	ListCallerIDEntries(ctx context.Context, arg ListCallerIDEntriesParams) ([]ListCallerIDEntriesRow, error)
 	// Approval queue: pending campaigns whose approver is one of
 	// approver_org_ids (the caller's organizations holding campaigns.approve).
 	// Sort created_at | scheduled_at | name, default created_at (oldest first is

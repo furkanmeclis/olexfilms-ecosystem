@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!-- The caller card is drawn over the incoming call screen. The user grants
+       it in the system settings ("Display over other apps"). -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+  <application>
+    <!-- Bound by the system only while the app holds the "Caller ID & spam
+         app" role (RoleManager.ROLE_CALL_SCREENING). No phone or call log
+         permission is needed. -->
+    <service
+      android:name="expo.modules.callerid.CallerIdScreeningService"
+      android:exported="true"
+      android:permission="android.permission.BIND_SCREENING_SERVICE">
+      <intent-filter>
+        <action android:name="android.telecom.CallScreeningService" />
+      </intent-filter>
+    </service>
+  </application>
+</manifest>

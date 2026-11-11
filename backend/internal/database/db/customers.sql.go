@@ -818,6 +818,67 @@ func (q *Queries) LinkCustomerOrganization(ctx context.Context, arg LinkCustomer
 	return i, err
 }
 
+const listCallerIDEntries = `-- name: ListCallerIDEntries :many
+SELECT u.phone_e164::text AS phone, u.name, u.surname,
+       COALESCE(cp.company_name, '')::text AS company_name
+FROM users u
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+WHERE u.deleted_at IS NULL
+  AND u.phone_e164 IS NOT NULL
+  AND u.merged_into_user_id IS NULL
+  AND u.status IN ('active', 'pending')
+  AND EXISTS (
+    SELECT 1 FROM customer_organizations co
+    WHERE co.user_id = u.id
+      AND ($1::bigint[] IS NULL OR co.organization_id = ANY ($1::bigint[]))
+      AND ($2::bigint IS NULL OR co.brand_id = $2)
+  )
+ORDER BY u.phone_e164 ASC
+LIMIT $3
+`
+
+type ListCallerIDEntriesParams struct {
+	OrgIds     []int64     `json:"org_ids"`
+	BrandID    pgtype.Int8 `json:"brand_id"`
+	LimitCount int32       `json:"limit_count"`
+}
+
+type ListCallerIDEntriesRow struct {
+	Phone       string `json:"phone"`
+	Name        string `json:"name"`
+	Surname     string `json:"surname"`
+	CompanyName string `json:"company_name"`
+}
+
+// TEC-1208: phone book of the mobile caller ID. Customers linked to the
+// scope (same filter as ListOrganizationCustomers) that have a phone and are
+// not anonymized, disabled or merged away. Ordered by phone so the snapshot
+// (and its version hash) is stable.
+func (q *Queries) ListCallerIDEntries(ctx context.Context, arg ListCallerIDEntriesParams) ([]ListCallerIDEntriesRow, error) {
+	rows, err := q.db.Query(ctx, listCallerIDEntries, arg.OrgIds, arg.BrandID, arg.LimitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCallerIDEntriesRow{}
+	for rows.Next() {
+		var i ListCallerIDEntriesRow
+		if err := rows.Scan(
+			&i.Phone,
+			&i.Name,
+			&i.Surname,
+			&i.CompanyName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCustomerOrganizationsByUser = `-- name: ListCustomerOrganizationsByUser :many
 SELECT co.id, co.user_id, co.organization_id, co.brand_id, co.first_service_at, co.created_at,
        o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,

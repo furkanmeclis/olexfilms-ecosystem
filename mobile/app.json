@@ -270,6 +270,13 @@
             }
           ]
         }
+      ],
+      "expo-background-task",
+      [
+        "./plugins/with-caller-id",
+        {
+          "groupIdentifier": "group.com.olexfilms.app"
+        }
       ]
     ],
     "experiments": {

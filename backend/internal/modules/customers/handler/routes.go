@@ -40,6 +40,10 @@ import (
 // TEC-245: the three writes refuse a fleet session (read only) with 403
 // PORTAL_READ_ONLY (middleware.DenyPortalReadOnly); the list stays open.
 //
+// TEC-1208: GET /v1/customers/caller-id is the phone book of the mobile
+// caller ID (customers.read, the list's scope; reached by the app through
+// the mobile mirror).
+//
 // TEC-164: GET /v1/customers?q= searches the Meilisearch customers index
 // (filtered on the scope) when it is up; the list export needs
 // customers.read with the list's scope.
@@ -78,6 +82,8 @@ func RegisterRoutes(
 	}
 
 	mux.Handle("GET /v1/customers", readC(h.ListCustomers))
+	// TEC-1208: literal path, wins over {uuid}.
+	mux.Handle("GET /v1/customers/caller-id", readC(h.CallerID))
 	mux.Handle("POST /v1/customers", writeC(h.CreateCustomer))
 	// TEC-164: list export (I/O engine), same permission and scope as the list.
 	mux.Handle("POST /v1/customers/export", readC(h.RequestListExport))
