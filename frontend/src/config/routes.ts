@@ -227,6 +227,12 @@ export const routes = {
     efficiency: {
       root: (slug: string) => `/t/${slug}/efficiency`,
     },
+    /** TEC-1212: reports center (catalog by category) and report detail. */
+    reports: {
+      root: (slug: string) => `/t/${slug}/reports`,
+      detail: (slug: string, key: string) =>
+        `/t/${slug}/reports/${encodeURIComponent(key)}`,
+    },
     /** TEC-496: performance panel, ranking, region map and widgets. */
     performance: {
       root: (slug: string) => `/t/${slug}/performance`,

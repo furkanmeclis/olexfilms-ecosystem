@@ -52,6 +52,7 @@ import portal from "./portal.json";
 import rates from "./rates.json";
 import realtime from "./realtime.json";
 import register from "./register.json";
+import reports from "./reports.json";
 import roles from "./roles.json";
 import search from "./search.json";
 import services from "./services.json";
@@ -122,6 +123,7 @@ const catalog: LocaleCatalog = {
   rates,
   realtime,
   register,
+  reports,
   roles,
   search,
   services,

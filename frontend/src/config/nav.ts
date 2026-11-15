@@ -57,6 +57,7 @@ import { conversationsNavItem } from "@/features/conversations/nav";
 import { pendingActionsNavItem } from "@/features/mcp/nav";
 import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
+import { REPORTS_NAV_PERMISSIONS } from "@/features/reports/lib/catalog";
 import { staffReportsNavGroup } from "@/features/staff-reports/nav";
 import { defineNav, type NavGroupDef } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
@@ -169,6 +170,17 @@ export function tenantNav(slug: string) {
             titleKey: "layout.home",
             href: routes.tenant.home(slug),
             icon: LayoutDashboard,
+          },
+          {
+            // TEC-1212: reports center. Any report domain opens it (the
+            // backend catalog filters the rest); performance.read is no
+            // longer required.
+            id: "reports",
+            titleKey: "reports.nav",
+            href: routes.tenant.reports.root(slug),
+            icon: ChartColumn,
+            anyPermission: REPORTS_NAV_PERMISSIONS,
+            orgTypes: ["center", "distributor", "dealer"],
           },
           {
             // TEC-390: AI assistant (ai_assistant module + ai.use; the
