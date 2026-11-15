@@ -5,11 +5,7 @@ import { BookOpen, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
-import {
-  BarChart,
-  KpiGrid,
-  type KpiTileProps,
-} from "@/components/analytics";
+import { BarChart, KpiGrid, type KpiTileProps } from "@/components/analytics";
 import { routes } from "@/config/routes";
 import {
   AccountingDashboardBody,
@@ -93,10 +89,7 @@ function pnlTiles(
     previous: previous ? amount(previous.totals[key]) : undefined,
     good,
     format: { kind: "money", currency },
-    spark:
-      lines.length > 1
-        ? lines.map((l) => amount(l[key]) ?? 0)
-        : undefined,
+    spark: lines.length > 1 ? lines.map((l) => amount(l[key]) ?? 0) : undefined,
     href,
   });
   return [tile("income", "up"), tile("expense", "down"), tile("net", "up")];
@@ -153,12 +146,7 @@ function AccountingPnlSummary({
     expense: t("staff_reports.reports.pnl.expense"),
     net: t("staff_reports.reports.pnl.net"),
   };
-  const tiles = pnlTiles(
-    current.data,
-    previous?.data,
-    labels,
-    reportsHref,
-  );
+  const tiles = pnlTiles(current.data, previous?.data, labels, reportsHref);
   const lines = current.data?.lines ?? [];
   const currency = current.data?.currency || undefined;
   return (
@@ -188,7 +176,11 @@ function AccountingPnlSummary({
         ]}
         format={{ kind: "money", currency }}
         loading={current.isPending}
-        error={current.isError && !current.data ? t("reports.panel.error") : undefined}
+        error={
+          current.isError && !current.data
+            ? t("reports.panel.error")
+            : undefined
+        }
         onRetry={() => void current.refetch()}
       />
     </div>

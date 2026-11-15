@@ -30,5 +30,17 @@
   "special.efficiency.title": "Effizienz",
   "special.efficiency.description": "Erwarteter und tatsächlicher Verbrauch, Verschnittanalyse.",
   "special.performance.title": "Leistung",
-  "special.performance.description": "Ziele, Rangliste, Regionenkarte und Prämien."
+  "special.performance.description": "Ziele, Rangliste, Regionenkarte und Prämien.",
+  "detail.trend": "Verlauf im Zeitraum",
+  "detail.trend_description": "Die gestrichelte Linie zeigt den Vergleichszeitraum.",
+  "detail.unavailable": "Dieser Bericht ist für Sie nicht freigegeben.",
+  "detail.unavailable_description": "Eine Berechtigung, Ihre Reichweite oder ein deaktiviertes Modul sperrt diesen Bericht.",
+  "export": "Exportieren",
+  "export_xlsx": "Excel (XLSX)",
+  "export_csv": "CSV",
+  "export_error": "Der Bericht konnte nicht exportiert werden.",
+  "panel.empty": "Keine Daten für diesen Zeitraum.",
+  "panel.error": "Der Bericht konnte nicht geladen werden.",
+  "panel.kpi_error": "Die Kennzahlen konnten nicht geladen werden.",
+  "panel.open": "Bericht öffnen"
 }

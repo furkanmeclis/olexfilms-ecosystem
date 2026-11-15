@@ -14,6 +14,7 @@ import {
   ReportTrendPanel,
 } from "@/features/reports/components/report-panels";
 import { StockForecastWidget } from "@/features/stock-forecast";
+import { StockSummaryWidget } from "@/features/stock";
 import { useLocale } from "@/providers/locale-provider";
 
 const TOP = { limit: 10 } as const;
@@ -83,7 +84,11 @@ export function CenterOverview({ slug }: { slug: string }) {
             title={t("dashboard.role.stock_section")}
             testId="center-stock"
           >
-            <ReportKpiStrip slug={slug} reportKey="stock.summary" query={query} />
+            <ReportKpiStrip
+              slug={slug}
+              reportKey="stock.summary"
+              query={query}
+            />
             <ReportTrendPanel
               slug={slug}
               reportKey="stock.movement"
@@ -91,7 +96,10 @@ export function CenterOverview({ slug }: { slug: string }) {
               title={t("dashboard.role.stock_movement")}
               kind="area"
             />
-            <StockForecastWidget slug={slug} />
+            <div className="grid gap-6 xl:grid-cols-2">
+              <StockSummaryWidget slug={slug} />
+              <StockForecastWidget slug={slug} />
+            </div>
           </OverviewSection>
           <div className="grid gap-6 xl:grid-cols-3">
             <ReportTablePanel

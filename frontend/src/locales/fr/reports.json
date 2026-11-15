@@ -30,5 +30,17 @@
   "special.efficiency.title": "Efficacité",
   "special.efficiency.description": "Consommation prévue et réelle, analyse des chutes.",
   "special.performance.title": "Performance",
-  "special.performance.description": "Objectifs, classement, carte des régions et primes."
+  "special.performance.description": "Objectifs, classement, carte des régions et primes.",
+  "detail.trend": "Tendance de la période",
+  "detail.trend_description": "La ligne pointillée montre la période comparée.",
+  "detail.unavailable": "Ce rapport ne vous est pas ouvert.",
+  "detail.unavailable_description": "Une autorisation, votre périmètre ou un module désactivé ferme ce rapport.",
+  "export": "Exporter",
+  "export_xlsx": "Excel (XLSX)",
+  "export_csv": "CSV",
+  "export_error": "Impossible d'exporter le rapport.",
+  "panel.empty": "Aucune donnée pour cette période.",
+  "panel.error": "Impossible de charger le rapport.",
+  "panel.kpi_error": "Impossible de charger les indicateurs clés.",
+  "panel.open": "Ouvrir le rapport"
 }

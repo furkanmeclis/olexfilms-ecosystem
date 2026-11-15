@@ -291,6 +291,10 @@ export function DataGrid<R extends GridRow = GridRow>({
     enableMultiSort: true,
     maxMultiSortColCount: 4,
     groupedColumnMode: false,
+    // TEC-1212: no pagination here; the default page-index reset queued a
+    // table state update on every row model recompute, which looped in the
+    // browser (endless commits, frozen PeriodBar on the overview).
+    autoResetAll: false,
     autoResetExpanded: false,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

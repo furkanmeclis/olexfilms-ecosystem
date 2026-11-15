@@ -13,6 +13,7 @@ import {
   ReportTablePanel,
   ReportTrendPanel,
 } from "@/features/reports/components/report-panels";
+import { StockSummaryWidget } from "@/features/stock";
 import { useLocale } from "@/providers/locale-provider";
 
 const TOP = { limit: 10 } as const;
@@ -33,7 +34,11 @@ export function DistributorOverview({ slug }: { slug: string }) {
     >
       {(query) => (
         <>
-          <ReportKpiStrip slug={slug} reportKey="network.summary" query={query} />
+          <ReportKpiStrip
+            slug={slug}
+            reportKey="network.summary"
+            query={query}
+          />
           <ReportTrendPanel
             slug={slug}
             reportKey="network.summary"
@@ -75,7 +80,10 @@ export function DistributorOverview({ slug }: { slug: string }) {
               />
             </div>
           </OverviewSection>
-          <RecentAnnouncementsWidget slug={slug} />
+          <div className="grid gap-6 xl:grid-cols-2">
+            <StockSummaryWidget slug={slug} />
+            <RecentAnnouncementsWidget slug={slug} />
+          </div>
         </>
       )}
     </OverviewShell>

@@ -70,7 +70,14 @@ export function WarehouseDashboard({ slug }: { slug: string }) {
  * the header (the warehouse overview puts its PeriodBar and the
  * fulfillment / stock movement reports above).
  */
-export function WarehouseDashboardBody({ slug }: { slug: string }) {
+export function WarehouseDashboardBody({
+  slug,
+  showOrderChart = true,
+}: {
+  slug: string;
+  /** Off in the warehouse overview: its PeriodBar drives the trends. */
+  showOrderChart?: boolean;
+}) {
   const { t } = useLocale();
   const { can } = usePermission();
   const org = useActiveOrganization(slug);
@@ -80,7 +87,7 @@ export function WarehouseDashboardBody({ slug }: { slug: string }) {
       <WarehouseKpis slug={slug} can={can} orgType={org?.type} />
       <div className="grid gap-6 xl:grid-cols-2">
         {can(Permission.StockRead) ? <WarehouseStockCard slug={slug} /> : null}
-        {canOrders ? <OrderCountChart /> : null}
+        {canOrders && showOrderChart ? <OrderCountChart /> : null}
         {canOrders ? (
           <OrderListCard
             slug={slug}

@@ -37,7 +37,8 @@ describe("groupByCategory", () => {
 describe("visibleSpecialReports", () => {
   it("needs the permission, the module and the organization type", () => {
     const can = (p: string) =>
-      p === permissions.accounting.read || p === permissions.warrantyClaims.read;
+      p === permissions.accounting.read ||
+      p === permissions.warrantyClaims.read;
     expect(visibleSpecialReports(can, "dealer", null)).toEqual([]);
     const keys = (orgType: string) =>
       visibleSpecialReports(can, orgType, [

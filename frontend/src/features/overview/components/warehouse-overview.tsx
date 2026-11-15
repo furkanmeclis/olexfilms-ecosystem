@@ -54,7 +54,7 @@ export function WarehouseOverview({ slug }: { slug: string }) {
             height={280}
             title={t("dashboard.role.fulfillment_by_warehouse")}
           />
-          <WarehouseDashboardBody slug={slug} />
+          <WarehouseDashboardBody slug={slug} showOrderChart={false} />
         </>
       )}
     </OverviewShell>

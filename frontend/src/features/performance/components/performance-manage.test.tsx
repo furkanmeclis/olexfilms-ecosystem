@@ -91,9 +91,16 @@ vi.mock("@/features/bulk-engine", async (orig) => ({
     return createElement("div", { "data-testid": "bulk-menu" });
   },
 }));
-vi.mock("@/components/charts", () => ({
-  AppChart: () => createElement("div", { "data-testid": "chart" }),
-}));
+vi.mock("@/components/analytics", async (orig) => {
+  const chart = () => createElement("div", { "data-testid": "chart" });
+  return {
+    ...(await orig<object>()),
+    TrendChart: chart,
+    BarChart: chart,
+    RankBar: chart,
+    DonutChart: chart,
+  };
+});
 vi.mock("@/components/entity", async (orig) => ({
   ...(await orig<object>()),
   EntityToolbar: () => null,

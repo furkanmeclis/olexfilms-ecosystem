@@ -191,8 +191,11 @@ describe("period", () => {
     expect(off.toString()).toBe("compare=none");
     expect(parsePeriodParams(off, defaults).compare).toBe("none");
     expect(
-      writePeriodParams("", { preset: "30d", compare: "previous" }, defaults)
-        .toString(),
+      writePeriodParams(
+        "",
+        { preset: "30d", compare: "previous" },
+        defaults,
+      ).toString(),
     ).toBe("");
   });
 });

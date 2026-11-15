@@ -2,7 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 
 import {
   categoriesFromSeries,
@@ -119,10 +119,7 @@ export function ReportKpiStrip({
   const tiles = report.data ? reportKpiTiles(asV2(report.data), slug) : [];
   return (
     <div data-testid={`kpis-${reportKey}`} className={className}>
-      <KpiGrid
-        items={map ? map(tiles) : tiles}
-        loading={report.isPending}
-      />
+      <KpiGrid items={map ? map(tiles) : tiles} loading={report.isPending} />
     </div>
   );
 }
@@ -159,7 +156,9 @@ export function ReportTrendPanel({
         kind={kind}
         title={title ?? env?.title}
         description={description}
-        actions={<OpenReportLink slug={slug} reportKey={reportKey} query={query} />}
+        actions={
+          <OpenReportLink slug={slug} reportKey={reportKey} query={query} />
+        }
         data={ts.data}
         series={ts.series}
         format={ts.format}
@@ -199,7 +198,9 @@ export function ReportRankPanel({
       <RankBar
         title={title ?? env?.title}
         description={description}
-        actions={<OpenReportLink slug={slug} reportKey={reportKey} query={query} />}
+        actions={
+          <OpenReportLink slug={slug} reportKey={reportKey} query={query} />
+        }
         items={items}
         format={unitFormat(series?.unit)}
         limit={limit}
@@ -231,7 +232,9 @@ export function ReportDonutPanel({
       <DonutChart
         title={title ?? env?.title}
         description={description}
-        actions={<OpenReportLink slug={slug} reportKey={reportKey} query={query} />}
+        actions={
+          <OpenReportLink slug={slug} reportKey={reportKey} query={query} />
+        }
         items={categoriesFromSeries(series)}
         format={unitFormat(series?.unit)}
         loading={report.isPending}
@@ -271,12 +274,23 @@ export function ReportGrid({
   toolbar?: ReactNode;
 }) {
   const { t } = useLocale();
+  // Stable props: the grid recomputes its model when they change.
+  const columns = useMemo(
+    () => reportGridColumns({ columns: env.columns }),
+    [env.columns],
+  );
+  const rows = useMemo(() => gridRowsFromReport(env.rows), [env.rows]);
+  const report = env.report;
+  const rowHref = useCallback(
+    (row: { _link?: unknown }) => reportRowHref(row, slug, report),
+    [slug, report],
+  );
   return (
     <DataGrid
-      columns={reportGridColumns(env)}
-      rows={gridRowsFromReport(env.rows)}
+      columns={columns}
+      rows={rows}
       slug={slug}
-      rowHref={(row) => reportRowHref(row, slug, env.report)}
+      rowHref={rowHref}
       persistKey={`reports.${env.report}`}
       exportName={env.report}
       caption={env.title}

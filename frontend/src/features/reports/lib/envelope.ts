@@ -105,10 +105,7 @@ export function reportHref(
       ? `${routes.tenant.orders.list(slug)}?buyer_org_uuid=${id}`
       : `${routes.tenant.services.list(slug)}?organization_uuid=${id}`;
   }
-  return reportLinkHref(
-    link as Parameters<typeof reportLinkHref>[0],
-    slug,
-  );
+  return reportLinkHref(link as Parameters<typeof reportLinkHref>[0], slug);
 }
 
 /** KPI tiles with the TEC-1212 link rules. */

@@ -32,9 +32,9 @@ describe("resolveOverviewRole", () => {
   });
 
   it("uses the organization type for dealers", () => {
-    expect(resolveOverviewRole(grants(Permission.AccountingRead), "dealer")).toBe(
-      "dealer",
-    );
+    expect(
+      resolveOverviewRole(grants(Permission.AccountingRead), "dealer"),
+    ).toBe("dealer");
     expect(resolveOverviewRole(grants(), undefined)).toBeNull();
   });
 });

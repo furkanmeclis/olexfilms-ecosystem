@@ -30,5 +30,17 @@
   "special.efficiency.title": "Ефективност",
   "special.efficiency.description": "Очакван и реален разход, анализ на брака.",
   "special.performance.title": "Представяне",
-  "special.performance.description": "Цели, класация, карта на регионите и бонуси."
+  "special.performance.description": "Цели, класация, карта на регионите и бонуси.",
+  "detail.trend": "Тенденция за периода",
+  "detail.trend_description": "Пунктирната линия показва сравнявания период.",
+  "detail.unavailable": "Този отчет не е достъпен за вас.",
+  "detail.unavailable_description": "Права, обхватът или изключен модул затварят този отчет.",
+  "export": "Експорт",
+  "export_xlsx": "Excel (XLSX)",
+  "export_csv": "CSV",
+  "export_error": "Отчетът не можа да бъде експортиран.",
+  "panel.empty": "Няма данни за този период.",
+  "panel.error": "Отчетът не можа да се зареди.",
+  "panel.kpi_error": "Ключовите показатели не можаха да се заредят.",
+  "panel.open": "Отвори отчета"
 }

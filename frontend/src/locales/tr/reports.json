@@ -30,5 +30,17 @@
   "special.efficiency.title": "Verimlilik",
   "special.efficiency.description": "Beklenen ve gerçek sarfiyat, fire analizi.",
   "special.performance.title": "Performans",
-  "special.performance.description": "Hedefler, sıralama, bölge haritası ve primler."
+  "special.performance.description": "Hedefler, sıralama, bölge haritası ve primler.",
+  "detail.trend": "Dönem trendi",
+  "detail.trend_description": "Kesik çizgi karşılaştırılan dönemi gösterir.",
+  "detail.unavailable": "Bu rapor size açık değil.",
+  "detail.unavailable_description": "Yetki, kapsam ya da modül bu raporu kapatıyor.",
+  "export": "Dışa aktar",
+  "export_xlsx": "Excel (XLSX)",
+  "export_csv": "CSV",
+  "export_error": "Rapor dışa aktarılamadı.",
+  "panel.empty": "Bu dönem için veri yok.",
+  "panel.error": "Rapor yüklenemedi.",
+  "panel.kpi_error": "Göstergeler yüklenemedi.",
+  "panel.open": "Raporu aç"
 }

@@ -16,7 +16,9 @@ import { ApiError } from "@/lib/api/errors";
  * shown with a retry instead of vanishing (TEC-1212, the TEC-1072 cards).
  */
 export function isUnavailable(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 403 || error.status === 404);
+  return (
+    error instanceof ApiError && (error.status === 403 || error.status === 404)
+  );
 }
 
 /** One report envelope for the active organization. */

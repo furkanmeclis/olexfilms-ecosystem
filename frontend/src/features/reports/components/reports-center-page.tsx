@@ -94,9 +94,7 @@ export function ReportsCenterPage({ slug }: { slug: string }) {
     const needle = q.trim().toLocaleLowerCase();
     if (!needle) return entries;
     return entries.filter((e) =>
-      `${e.title} ${e.description ?? ""}`
-        .toLocaleLowerCase()
-        .includes(needle),
+      `${e.title} ${e.description ?? ""}`.toLocaleLowerCase().includes(needle),
     );
   }, [entries, q]);
   const groups = groupByCategory(filtered, (e) => e.category);
@@ -154,7 +152,8 @@ export function ReportsCenterPage({ slug }: { slug: string }) {
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {group.items.map((entry) => {
-                const Icon = (entry.kind && KIND_ICONS[entry.kind]) || ChartColumn;
+                const Icon =
+                  (entry.kind && KIND_ICONS[entry.kind]) || ChartColumn;
                 return (
                   <li key={entry.key}>
                     <Link
@@ -175,7 +174,10 @@ export function ReportsCenterPage({ slug }: { slug: string }) {
                           </span>
                         ) : entry.kind ? (
                           <Badge variant="secondary" className="w-fit">
-                            {t(KIND_LABEL_KEYS[entry.kind] ?? "reports.kind.table")}
+                            {t(
+                              KIND_LABEL_KEYS[entry.kind] ??
+                                "reports.kind.table",
+                            )}
                           </Badge>
                         ) : null}
                       </span>

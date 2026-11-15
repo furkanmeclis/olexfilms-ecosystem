@@ -8,11 +8,7 @@ import { isWarehouseHomeRole } from "@/features/warehouse/lib/home-role";
  * organization overview.
  */
 export type OverviewRole =
-  | "center"
-  | "distributor"
-  | "dealer"
-  | "warehouse"
-  | "accounting";
+  "center" | "distributor" | "dealer" | "warehouse" | "accounting";
 
 export function resolveOverviewRole(
   can: (permission: string) => boolean,

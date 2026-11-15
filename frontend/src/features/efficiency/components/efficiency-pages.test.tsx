@@ -85,9 +85,16 @@ vi.mock("@/features/io/components/export-menu", () => ({
 vi.mock("@/features/io/components/import-wizard", () => ({
   ImportWizard: () => null,
 }));
-vi.mock("@/components/charts", () => ({
-  AppChart: () => createElement("div", { "data-testid": "chart" }),
-}));
+vi.mock("@/components/analytics", async (orig) => {
+  const chart = () => createElement("div", { "data-testid": "chart" });
+  return {
+    ...(await orig<object>()),
+    TrendChart: chart,
+    BarChart: chart,
+    RankBar: chart,
+    DonutChart: chart,
+  };
+});
 vi.mock("@/components/entity", async (orig) => ({
   ...(await orig<object>()),
   EntityToolbar: ({ children }: { children?: ReactNode }) => children,

@@ -12,6 +12,7 @@ import {
   ReportTablePanel,
   ReportTrendPanel,
 } from "@/features/reports/components/report-panels";
+import { StockSummaryWidget } from "@/features/stock";
 import { useLocale } from "@/providers/locale-provider";
 
 const TOP = { limit: 10 } as const;
@@ -93,6 +94,7 @@ export function DealerOverview({ slug }: { slug: string }) {
             <div className="flex flex-col gap-6">
               <RecentAnnouncementsWidget slug={slug} />
               <NetworkOccupancyWidget slug={slug} />
+              <StockSummaryWidget slug={slug} />
             </div>
           </div>
         </>
