@@ -44,6 +44,8 @@ type Input struct {
 	// AllTime is all_time=true|false (orders.inactive_buyers only):
 	// true ignores the period and lists dealers that never ordered.
 	AllTime string
+	// Compare is none | previous | year (TEC-1210; empty = none).
+	Compare string
 	// Locale is the ?locale= override (empty: Fallback).
 	Locale string
 	// Fallback is the request locale and timezone (K10 chain).
@@ -63,10 +65,20 @@ type query struct {
 	allTime     bool
 	locale      i18n.Locale
 	tz          *time.Location
+	// compare is none | previous | year; prevFromDate / prevToDate are the
+	// compared range (zero with none).
+	compare      string
+	prevFromDate time.Time
+	prevToDate   time.Time
+	// autoGranularity is the bucket size of the KPI sparks (the series
+	// granularity of a granular report, the default rule otherwise).
+	autoGranularity string
+	// previous marks the query of the compared range (no sparks).
+	previous bool
 }
 
 func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
-	q := query{locale: in.Fallback.Locale, limit: DefaultLimit}
+	q := query{locale: in.Fallback.Locale, limit: DefaultLimit, compare: CompareNone}
 	if q.locale == "" {
 		q.locale = i18n.DefaultLocale
 	}
@@ -98,6 +110,12 @@ func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
 		q.limit = int32(n)
 	}
 
+	compare := strings.TrimSpace(in.Compare)
+	switch compare {
+	case "", CompareNone, ComparePrevious, CompareYear:
+	default:
+		return query{}, invalid("compare", "invalid", "compare must be none, previous or year")
+	}
 	period := strings.TrimSpace(in.Period)
 	rawFrom, rawTo := strings.TrimSpace(in.RangeFrom), strings.TrimSpace(in.RangeTo)
 	gran := strings.TrimSpace(in.Granularity)
@@ -197,6 +215,19 @@ func (s *Service) resolveQuery(d Definition, in Input) (query, error) {
 	if d.Granular {
 		q.granularity = gran
 	}
+	q.autoGranularity = gran
+	if compare != "" && compare != CompareNone {
+		q.compare = compare
+		q.prevFromDate, q.prevToDate = previousRange(q.period, q.fromDate, q.toDate, compare)
+		// dealers.performance reads one month (the month of range_to): its
+		// previous is the month before even when the day range stays
+		// inside one month.
+		if d.Key == ReportDealersPerformance && compare == ComparePrevious &&
+			q.prevToDate.Year() == q.toDate.Year() && q.prevToDate.Month() == q.toDate.Month() {
+			q.prevToDate = time.Date(q.toDate.Year(), q.toDate.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+			q.prevFromDate = time.Date(q.prevToDate.Year(), q.prevToDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+		}
+	}
 	q.from = time.Date(q.fromDate.Year(), q.fromDate.Month(), q.fromDate.Day(), 0, 0, 0, 0, tz)
 	q.to = time.Date(q.toDate.Year(), q.toDate.Month(), q.toDate.Day(), 0, 0, 0, 0, tz).AddDate(0, 0, 1)
 	return q, nil
@@ -240,4 +271,62 @@ func (q query) buckets() []string {
 		}
 	}
 	return out
+}
+
+// Compare values (TEC-1210).
+const (
+	CompareNone     = "none"
+	ComparePrevious = "previous"
+	CompareYear     = "year"
+)
+
+// Compares lists the compare values of a periodic report.
+var Compares = []string{CompareNone, ComparePrevious, CompareYear}
+
+// previousRange is the compared range: previous = the same number of days
+// right before (12m: the 12 months before), year = the same dates a year
+// earlier.
+func previousRange(period string, from, to time.Time, compare string) (time.Time, time.Time) {
+	if compare == CompareYear || period == "12m" {
+		return from.AddDate(-1, 0, 0), to.AddDate(-1, 0, 0)
+	}
+	n := days(from, to)
+	prevTo := from.AddDate(0, 0, -1)
+	return prevTo.AddDate(0, 0, -(n - 1)), prevTo
+}
+
+// previousQuery is the query of the compared range: same granularity,
+// limit and locale, no compare of its own.
+func (q query) previousQuery(_ Definition) query {
+	p := q
+	p.compare, p.previous = CompareNone, true
+	p.prevFromDate, p.prevToDate = time.Time{}, time.Time{}
+	p.fromDate, p.toDate = q.prevFromDate, q.prevToDate
+	p.from = time.Date(p.fromDate.Year(), p.fromDate.Month(), p.fromDate.Day(), 0, 0, 0, 0, q.tz)
+	p.to = time.Date(p.toDate.Year(), p.toDate.Month(), p.toDate.Day(), 0, 0, 0, 0, q.tz).AddDate(0, 0, 1)
+	return p
+}
+
+// periodInfo is the envelope's period_info of a periodic query.
+func (q query) periodInfo() *PeriodInfo {
+	gran := q.granularity
+	if gran == "" {
+		gran = q.autoGranularity
+	}
+	pi := &PeriodInfo{
+		From: q.fromDate.Format(dateLayout), To: q.toDate.Format(dateLayout),
+		Granularity: gran, Compare: q.compare,
+	}
+	if q.compare != CompareNone {
+		pf, pt := q.prevFromDate.Format(dateLayout), q.prevToDate.Format(dateLayout)
+		pi.PreviousFrom, pi.PreviousTo = &pf, &pt
+	}
+	return pi
+}
+
+// sparkBuckets lists the bucket starts of the KPI sparks.
+func (q query) sparkBuckets() []string {
+	g := q
+	g.granularity = q.autoGranularity
+	return g.buckets()
 }

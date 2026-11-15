@@ -3596,6 +3596,21 @@ type Querier interface {
 	// Customers: a customer belongs to the organizations it is linked to
 	// (customer_organizations); type comes from customer_profiles.
 	ReportCustomerTrend(ctx context.Context, arg ReportCustomerTrendParams) ([]ReportCustomerTrendRow, error)
+	// One row per shipping warehouse and seller (warehouse_uuid NULL: no
+	// warehouse set).
+	ReportFulfillmentByWarehouse(ctx context.Context, arg ReportFulfillmentByWarehouseParams) ([]ReportFulfillmentByWarehouseRow, error)
+	// TEC-1210 (analytics A): the role reports of envelope v2. Scope arguments
+	// follow reports.sql (brand_id always, org_ids NULL = whole brand, ranges
+	// half open [range_from, range_to), buckets date_trunc in the caller's
+	// zone).
+	// orders.fulfillment (warehouse): the orders the organizations in reach
+	// sell (organization_id = seller), grouped by the shipping warehouse.
+	// Orders cancelled after shipping are left out of shipped / received.
+	// Open = approved .. processing (not shipped yet); overdue = open and
+	// approved more than 48 hours before now_at. Preparation time is approved
+	// -> shipped of the orders shipped in the range (seconds; the usecase
+	// divides by prep_count).
+	ReportFulfillmentTrend(ctx context.Context, arg ReportFulfillmentTrendParams) ([]ReportFulfillmentTrendRow, error)
 	// Active dealers inside the scope with no counted order in the range
 	// (all_time: none at all); last_order_at is their latest counted order
 	// ever (null: never ordered). Oldest activity first, never-ordered first.
@@ -3607,6 +3622,10 @@ type Querier interface {
 	ReportMeasurementTrend(ctx context.Context, arg ReportMeasurementTrendParams) ([]ReportMeasurementTrendRow, error)
 	// TEC-1072: distributor counts next to the dealer counts (center home).
 	ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error)
+	// network.summary: the dealers in reach with their services completed,
+	// orders placed (as buyer; draft and cancelled left out) and warranties
+	// started in the range. Most services first.
+	ReportNetworkDealers(ctx context.Context, arg ReportNetworkDealersParams) ([]ReportNetworkDealersRow, error)
 	ReportOrderOverview(ctx context.Context, arg ReportOrderOverviewParams) (ReportOrderOverviewRow, error)
 	// TEC-1058 (RV-5.6): plotter-cut lines shipped per month and product. A
 	// line counts in the month its order shipped (in the report zone); orders
@@ -3640,6 +3659,13 @@ type Querier interface {
 	// other service rankings). The center's own row carries its service point
 	// (TEC-1003) so a client can label it apart from the dealers.
 	ReportServicesByOrg(ctx context.Context, arg ReportServicesByOrgParams) ([]ReportServicesByOrgRow, error)
+	ReportStockMovementByWarehouse(ctx context.Context, arg ReportStockMovementByWarehouseParams) ([]ReportStockMovementByWarehouseRow, error)
+	// stock.movement: serial unit movements into and out of the warehouses in
+	// reach (a location's warehouse). A move inside one warehouse (placement,
+	// location to location) is neither in nor out; a transfer between two
+	// warehouses is out of one and in to the other. The location's
+	// organization is the reach (org_ids).
+	ReportStockMovementTrend(ctx context.Context, arg ReportStockMovementTrendParams) ([]ReportStockMovementTrendRow, error)
 	ReportStockTotals(ctx context.Context, arg ReportStockTotalsParams) (ReportStockTotalsRow, error)
 	// Stock: a snapshot of the holding organizations in reach (serial units by
 	// status from unit_current_state, quantities from organization_product_stocks).

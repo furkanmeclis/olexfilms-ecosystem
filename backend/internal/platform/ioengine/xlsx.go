@@ -42,10 +42,23 @@ func EncodeXLSX(ds Dataset, locale string, lh *Letterhead) ([]byte, error) {
 			_ = f.SetCellStyle(sheet, cell, cell, style)
 		}
 	}
-	// rows
+	// rows: number / money columns are numeric cells (TEC-1210).
+	moneyStyle := 0
 	for ri, row := range ds.Rows {
 		for ci, c := range ds.Columns {
 			cell, _ := excelize.CoordinatesToCellName(ci+1, rowStart+1+ri)
+			if c.Type == ColumnTypeNumber || c.Type == ColumnTypeMoney {
+				if n, ok := NumericValue(row[c.Key]); ok {
+					_ = f.SetCellValue(sheet, cell, n)
+					if c.Type == ColumnTypeMoney {
+						if moneyStyle == 0 {
+							moneyStyle, _ = f.NewStyle(&excelize.Style{NumFmt: 4})
+						}
+						_ = f.SetCellStyle(sheet, cell, cell, moneyStyle)
+					}
+					continue
+				}
+			}
 			_ = f.SetCellValue(sheet, cell, safeCell(formatCell(row[c.Key], c, loc)))
 		}
 	}

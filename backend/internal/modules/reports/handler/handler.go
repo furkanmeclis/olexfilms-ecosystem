@@ -9,6 +9,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/reports/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
@@ -34,6 +35,7 @@ func input(r *http.Request) usecase.Input {
 		Period: v.Get("period"), RangeFrom: v.Get("range_from"), RangeTo: v.Get("range_to"),
 		Granularity: v.Get("granularity"), Limit: v.Get("limit"), Locale: v.Get("locale"),
 		AllTime:  v.Get("all_time"),
+		Compare:  v.Get("compare"),
 		Fallback: i18n.FromContext(r.Context()),
 	}
 }
@@ -91,6 +93,21 @@ func (h *Handler) report(w http.ResponseWriter, r *http.Request, key string) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, env)
+}
+
+// Export: GET /v1/reports/{report}/export?format=xlsx|csv (TEC-1210): the
+// report with the same query, permission and scope as a file.
+func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
+	file, err := h.svc.Export(r.Context(), caller(r), r.PathValue("report"), r.URL.Query().Get("format"), input(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", file.ContentType)
+	w.Header().Set("Content-Disposition", ioengine.AttachmentDisposition(file.Filename))
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(file.Body)
 }
 
 // GetLayout: GET /v1/reports/layout.

@@ -411,3 +411,21 @@ func TestMobilePanelMirrorTEC960Allowed(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1210: the report export rides the "reports" prefix of the mirror.
+func TestMobilePanelMirrorReportExport(t *testing.T) {
+	for _, path := range []string{"reports/catalog", "reports/overview", "reports/services.trend", "reports/orders.fulfillment/export"} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+"?format=xlsx&compare=previous", nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path || r.URL.Query().Get("format") != "xlsx" || r.URL.Query().Get("compare") != "previous" {
+				t.Errorf("rewrite = %s?%s", r.URL.Path, r.URL.RawQuery)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}

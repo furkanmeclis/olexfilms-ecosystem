@@ -33847,11 +33847,16 @@ paths:
         route: one "cards" series with the card groups of every domain the
         caller reaches (services, orders, customers, warranties, stock,
         measurements; dealer counts only for a subtree / brand reach).
+        TEC-1210: the cards are also kpis[] (value, previous, delta_pct,
+        good, spark, link to the detail report); compare=previous|year
+        fills previous / delta_pct of the comparable KPIs (snapshot KPIs
+        such as open orders or stock on hand keep previous null).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ReportPeriod"
         - $ref: "#/components/parameters/ReportRangeFrom"
         - $ref: "#/components/parameters/ReportRangeTo"
+        - $ref: "#/components/parameters/ReportCompare"
         - $ref: "#/components/parameters/ReportLocale"
       responses:
         "200":
@@ -33938,28 +33943,33 @@ paths:
         tables take limit (1..50, default 10). Parameters a report does
         not take are 400. Unknown report 404; module off 403
         FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+        TEC-1210 (envelope v2, backend/docs/reports-v2.md): compare=none|previous|year
+        (default none; previous = the same number of days right before,
+        12m = the 12 months before; year = the same dates a year earlier;
+        ignored by reports without a period and with all_time=true) fills
+        period_info.previous_from / previous_to, series[].previous_total /
+        delta_pct, points[].previous (time series by bucket index, the others
+        by key) and kpis[].previous / delta_pct. Every series has total
+        (null for the cards series). Summary reports put their cards into
+        kpis[] (the cards series stays). Columns carry type (text, number,
+        money, percent = ratio 0..1, date, datetime, duration, status, org,
+        link), align, aggregate and currency; rows may carry _link and
+        _status. New role reports: orders.fulfillment (orders.read; shipped /
+        received series, preparation-time / open / overdue KPIs, rows per
+        shipping warehouse), network.summary (organizations.read, subtree /
+        brand reach; network services / orders / warranties / active
+        dealers, rows per dealer), stock.movement (stock.read; serial units
+        into / out of the warehouses, rows per warehouse).
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: report
-          in: path
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/ReportKey"
         - $ref: "#/components/parameters/ReportPeriod"
         - $ref: "#/components/parameters/ReportRangeFrom"
         - $ref: "#/components/parameters/ReportRangeTo"
-        - name: granularity
-          in: query
-          schema: { type: string, enum: [day, week, month] }
-        - name: limit
-          in: query
-          schema: { type: integer, minimum: 1, maximum: 50 }
-        - name: all_time
-          in: query
-          description: >-
-            TEC-1090, orders.inactive_buyers only: true ignores the period
-            and lists active dealers that never ordered. Exclusive with
-            period / range_from / range_to.
-          schema: { type: boolean }
+        - $ref: "#/components/parameters/ReportGranularity"
+        - $ref: "#/components/parameters/ReportLimit"
+        - $ref: "#/components/parameters/ReportAllTime"
+        - $ref: "#/components/parameters/ReportCompare"
         - $ref: "#/components/parameters/ReportLocale"
       responses:
         "200":
@@ -33967,6 +33977,55 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/reports/{report}/export:
+    get:
+      tags: [Reports]
+      operationId: exportReport
+      summary: One report as an XLSX or CSV file
+      description: >-
+        TEC-1210. The report of GET /v1/reports/{report} (same parameters,
+        permission, module and scope; same 400 / 403 / 404) as a file. A
+        table report exports its columns and rows (status cells as their
+        label; a currency column is added next to money columns without a
+        column currency); a time series report one row per bucket with a
+        column per series (and its previous value with compare); the others
+        one row per KPI and series point (series, item, value, previous,
+        delta_pct). Headers are translated to the request locale (?locale=
+        or the Accept-Language chain); number, money, percent and duration
+        cells are numeric cells (CSV: plain decimals), times UTC. Also on
+        the mobile panel mirror (/v1/mobile/panel/reports/...).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ReportKey"
+        - name: format
+          in: query
+          description: File format (default xlsx).
+          schema: { type: string, enum: [xlsx, csv], default: xlsx }
+        - $ref: "#/components/parameters/ReportPeriod"
+        - $ref: "#/components/parameters/ReportRangeFrom"
+        - $ref: "#/components/parameters/ReportRangeTo"
+        - $ref: "#/components/parameters/ReportGranularity"
+        - $ref: "#/components/parameters/ReportLimit"
+        - $ref: "#/components/parameters/ReportAllTime"
+        - $ref: "#/components/parameters/ReportCompare"
+        - $ref: "#/components/parameters/ReportLocale"
+      responses:
+        "200":
+          description: Report file
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename="report-<key>_<YYYYMMDD>.<ext>" (plus filename*)'
+              schema: { type: string }
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+            text/csv:
+              schema: { type: string, format: binary }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -34492,6 +34551,37 @@ components:
       in: query
       description: Label locale (default the request locale chain, K10).
       schema: { type: string }
+    ReportKey:
+      name: report
+      in: path
+      required: true
+      description: Catalog key (GET /v1/reports/catalog).
+      schema: { type: string }
+    ReportGranularity:
+      name: granularity
+      in: query
+      schema: { type: string, enum: [day, week, month] }
+    ReportLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50 }
+    ReportAllTime:
+      name: all_time
+      in: query
+      description: >-
+        TEC-1090, orders.inactive_buyers only: true ignores the period
+        and lists active dealers that never ordered. Exclusive with
+        period / range_from / range_to.
+      schema: { type: boolean }
+    ReportCompare:
+      name: compare
+      in: query
+      description: >-
+        TEC-1210: compared range. previous = the same number of days right
+        before (12m: the 12 months before; dealers.performance: the month
+        before), year = the same dates a year earlier. Ignored by reports
+        without a period.
+      schema: { type: string, enum: [none, previous, year], default: none }
     AIUsageChannel:
       name: channel
       in: query
@@ -53306,6 +53396,11 @@ components:
         granularities: { type: array, items: { type: string } }
         limited: { type: boolean }
         all_time: { type: boolean, description: "TEC-1090: the report takes all_time=true instead of a period" }
+        compares:
+          type: array
+          description: "TEC-1210: compare values the report takes ([none] without a period)"
+          items: { type: string, enum: [none, previous, year] }
+        exportable: { type: boolean, description: "TEC-1210: GET /v1/reports/{report}/export answers" }
 
     EnvelopeReportCatalog:
       type: object
@@ -53323,33 +53418,118 @@ components:
 
     ReportPoint:
       type: object
+      description: >-
+        TEC-1210: previous is always sent since envelope v2 (null with
+        compare=none); it is not in required so older fixtures stay valid.
       required: [key, label, value]
       properties:
         key: { type: string, description: "Bucket start date, status, item uuid or card key" }
         label: { type: string }
         value: { type: number }
+        previous:
+          type: [number, "null"]
+          description: "TEC-1210: value of the compared range (time series: same bucket index; others: same key)"
 
     ReportSeries:
       type: object
+      description: >-
+        TEC-1210: total / previous_total / delta_pct are always sent since
+        envelope v2 (not in required so older fixtures stay valid).
       required: [key, label, unit, points]
       properties:
         key: { type: string }
         label: { type: string }
-        unit: { type: string }
+        unit: { type: string, description: "count, pieces, meters" }
         points:
           type: array
           items: { $ref: "#/components/schemas/ReportPoint" }
+        total:
+          type: [number, "null"]
+          description: "Sum of the points (null for the cards series)"
+        previous_total:
+          type: [number, "null"]
+          description: "Sum of the compared range (null with compare=none)"
+        delta_pct:
+          type: [number, "null"]
+          description: "(total - previous_total) / previous_total * 100, one decimal; null when previous_total is null or 0"
+
+    ReportLink:
+      type: object
+      description: >-
+        TEC-1210 drill-down target: a record (kind + uuid) or, for a KPI, a
+        report (kind=report + report key).
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [service, order, customer, organization, warranty, measurement, product, report] }
+        uuid: { type: string, format: uuid }
+        report: { type: string }
+
+    ReportStatusCell:
+      type: object
+      required: [label, tone]
+      properties:
+        label: { type: string }
+        tone: { type: string, enum: [neutral, progress, done, problem] }
+
+    ReportKPI:
+      type: object
+      required: [key, label, unit, value, previous, delta_pct, good, spark, link]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        unit: { type: string, description: "count, pieces, meters, hours" }
+        value: { type: number }
+        previous:
+          type: [number, "null"]
+          description: "Value of the compared range; null with compare=none and for snapshot KPIs (open orders, stock on hand, active warranties ...)"
+        delta_pct: { type: [number, "null"], description: "Change in percent, one decimal; null without previous or when it is 0" }
+        good: { type: string, enum: [up, down], description: "Direction that is an improvement" }
+        spark:
+          type: array
+          description: "Bucket values of the period (at most the last 30; empty for snapshot KPIs)"
+          items: { type: number }
+        link:
+          oneOf:
+            - $ref: "#/components/schemas/ReportLink"
+            - type: "null"
+
+    ReportPeriodInfo:
+      type: object
+      description: >-
+        TEC-1210: the contract's "period" object; named period_info because
+        period is the legacy period string.
+      required: [from, to, granularity, compare, previous_from, previous_to]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        granularity: { type: string, enum: [day, week, month], description: "Series bucket size (non-granular reports: the KPI spark bucket)" }
+        compare: { type: string, enum: [none, previous, year] }
+        previous_from: { type: [string, "null"], format: date }
+        previous_to: { type: [string, "null"], format: date }
 
     ReportColumn:
       type: object
+      description: >-
+        TEC-1210: align / aggregate / currency are always sent since
+        envelope v2 (not in required so older fixtures stay valid).
       required: [key, label, type]
       properties:
         key: { type: string }
         label: { type: string }
         type:
           type: string
-          enum: [string, integer, number, datetime, money]
-          description: money is a decimal string with two digits (TEC-1090, orders.by_buyer total)
+          enum: [text, number, money, percent, date, datetime, duration, status, org, link, string, integer]
+          description: >-
+            TEC-1210: text, number, money (decimal string with two digits,
+            currency on the column or the row's currency field), percent
+            (ratio 0..1), date, datetime, duration (hours), status (label
+            and tone in the row's _status), org (organization name; the
+            row's _link / organization_uuid), link (opens the row's _link).
+            string / integer are the pre-TEC-1210 names of text / number and
+            are no longer sent.
+        align: { type: string, enum: [left, right] }
+        aggregate: { type: string, enum: [sum, avg, none], description: "Footer of the column" }
+        currency: { type: [string, "null"], description: "Currency of a money column when every row shares it" }
 
     ReportEnvelope:
       type: object
@@ -53379,9 +53559,29 @@ components:
           items: { $ref: "#/components/schemas/ReportColumn" }
         rows:
           type: array
-          items:
-            type: object
-            additionalProperties: true
+          items: { $ref: "#/components/schemas/ReportRow" }
+        period_info:
+          description: "TEC-1210: resolved period and compared range (null without a period or with all_time)"
+          oneOf:
+            - $ref: "#/components/schemas/ReportPeriodInfo"
+            - type: "null"
+        kpis:
+          type: array
+          description: "TEC-1210: headline numbers (summary reports and overview; empty elsewhere)"
+          items: { $ref: "#/components/schemas/ReportKPI" }
+
+    ReportRow:
+      type: object
+      description: >-
+        One table row keyed by the column keys (plus ids such as
+        organization_uuid). TEC-1210: _link opens the row's record, _status
+        maps a status column key to its label and tone.
+      additionalProperties: true
+      properties:
+        _link: { $ref: "#/components/schemas/ReportLink" }
+        _status:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/ReportStatusCell" }
 
     EnvelopeReport:
       type: object

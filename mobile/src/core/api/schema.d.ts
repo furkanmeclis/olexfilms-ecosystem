@@ -17713,7 +17713,7 @@ export interface paths {
         };
         /**
          * Overview cards (legacy dashboard summary)
-         * @description TEC-495. Same as GET /v1/reports/overview through the generic route: one "cards" series with the card groups of every domain the caller reaches (services, orders, customers, warranties, stock, measurements; dealer counts only for a subtree / brand reach).
+         * @description TEC-495. Same as GET /v1/reports/overview through the generic route: one "cards" series with the card groups of every domain the caller reaches (services, orders, customers, warranties, stock, measurements; dealer counts only for a subtree / brand reach). TEC-1210: the cards are also kpis[] (value, previous, delta_pct, good, spark, link to the detail report); compare=previous|year fills previous / delta_pct of the comparable KPIs (snapshot KPIs such as open orders or stock on hand keep previous null).
          */
         get: operations["getReportOverview"];
         put?: never;
@@ -17757,9 +17757,29 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent, orders.by_buyer, orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand reach only). orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). orders.by_buyer rows carry total / currency only with pricing.purchase.read or pricing.sale.read (else null and no total column). orders.inactive_buyers takes all_time=true instead of a period (dealers that never ordered). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent, orders.by_buyer, orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand reach only). orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). orders.by_buyer rows carry total / currency only with pricing.purchase.read or pricing.sale.read (else null and no total column). orders.inactive_buyers takes all_time=true instead of a period (dealers that never ordered). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN. TEC-1210 (envelope v2, backend/docs/reports-v2.md): compare=none|previous|year (default none; previous = the same number of days right before, 12m = the 12 months before; year = the same dates a year earlier; ignored by reports without a period and with all_time=true) fills period_info.previous_from / previous_to, series[].previous_total / delta_pct, points[].previous (time series by bucket index, the others by key) and kpis[].previous / delta_pct. Every series has total (null for the cards series). Summary reports put their cards into kpis[] (the cards series stays). Columns carry type (text, number, money, percent = ratio 0..1, date, datetime, duration, status, org, link), align, aggregate and currency; rows may carry _link and _status. New role reports: orders.fulfillment (orders.read; shipped / received series, preparation-time / open / overdue KPIs, rows per shipping warehouse), network.summary (organizations.read, subtree / brand reach; network services / orders / warranties / active dealers, rows per dealer), stock.movement (stock.read; serial units into / out of the warehouses, rows per warehouse).
          */
         get: operations["getReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{report}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One report as an XLSX or CSV file
+         * @description TEC-1210. The report of GET /v1/reports/{report} (same parameters, permission, module and scope; same 400 / 403 / 404) as a file. A table report exports its columns and rows (status cells as their label; a currency column is added next to money columns without a column currency); a time series report one row per bucket with a column per series (and its previous value with compare); the others one row per KPI and series point (series, item, value, previous, delta_pct). Headers are translated to the request locale (?locale= or the Accept-Language chain); number, money, percent and duration cells are numeric cells (CSV: plain decimals), times UTC. Also on the mobile panel mirror (/v1/mobile/panel/reports/...).
+         */
+        get: operations["exportReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32644,6 +32664,10 @@ export interface components {
             limited: boolean;
             /** @description TEC-1090: the report takes all_time=true instead of a period */
             all_time?: boolean;
+            /** @description TEC-1210: compare values the report takes ([none] without a period) */
+            compares?: ("none" | "previous" | "year")[];
+            /** @description TEC-1210: GET /v1/reports/{report}/export answers */
+            exportable?: boolean;
         };
         EnvelopeReportCatalog: {
             /** @enum {boolean} */
@@ -32653,26 +32677,97 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description TEC-1210: previous is always sent since envelope v2 (null with compare=none); it is not in required so older fixtures stay valid. */
         ReportPoint: {
             /** @description Bucket start date, status, item uuid or card key */
             key: string;
             label: string;
             value: number;
+            /** @description TEC-1210: value of the compared range (time series: same bucket index; others: same key) */
+            previous?: number | null;
         };
+        /** @description TEC-1210: total / previous_total / delta_pct are always sent since envelope v2 (not in required so older fixtures stay valid). */
         ReportSeries: {
             key: string;
             label: string;
+            /** @description count, pieces, meters */
             unit: string;
             points: components["schemas"]["ReportPoint"][];
+            /** @description Sum of the points (null for the cards series) */
+            total?: number | null;
+            /** @description Sum of the compared range (null with compare=none) */
+            previous_total?: number | null;
+            /** @description (total - previous_total) / previous_total * 100, one decimal; null when previous_total is null or 0 */
+            delta_pct?: number | null;
         };
+        /** @description TEC-1210 drill-down target: a record (kind + uuid) or, for a KPI, a report (kind=report + report key). */
+        ReportLink: {
+            /** @enum {string} */
+            kind: "service" | "order" | "customer" | "organization" | "warranty" | "measurement" | "product" | "report";
+            /** Format: uuid */
+            uuid?: string;
+            report?: string;
+        };
+        ReportStatusCell: {
+            label: string;
+            /** @enum {string} */
+            tone: "neutral" | "progress" | "done" | "problem";
+        };
+        ReportKPI: {
+            key: string;
+            label: string;
+            /** @description count, pieces, meters, hours */
+            unit: string;
+            value: number;
+            /** @description Value of the compared range; null with compare=none and for snapshot KPIs (open orders, stock on hand, active warranties ...) */
+            previous: number | null;
+            /** @description Change in percent, one decimal; null without previous or when it is 0 */
+            delta_pct: number | null;
+            /**
+             * @description Direction that is an improvement
+             * @enum {string}
+             */
+            good: "up" | "down";
+            /** @description Bucket values of the period (at most the last 30; empty for snapshot KPIs) */
+            spark: number[];
+            link: components["schemas"]["ReportLink"] | null;
+        };
+        /** @description TEC-1210: the contract's "period" object; named period_info because period is the legacy period string. */
+        ReportPeriodInfo: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /**
+             * @description Series bucket size (non-granular reports: the KPI spark bucket)
+             * @enum {string}
+             */
+            granularity: "day" | "week" | "month";
+            /** @enum {string} */
+            compare: "none" | "previous" | "year";
+            /** Format: date */
+            previous_from: string | null;
+            /** Format: date */
+            previous_to: string | null;
+        };
+        /** @description TEC-1210: align / aggregate / currency are always sent since envelope v2 (not in required so older fixtures stay valid). */
         ReportColumn: {
             key: string;
             label: string;
             /**
-             * @description money is a decimal string with two digits (TEC-1090, orders.by_buyer total)
+             * @description TEC-1210: text, number, money (decimal string with two digits, currency on the column or the row's currency field), percent (ratio 0..1), date, datetime, duration (hours), status (label and tone in the row's _status), org (organization name; the row's _link / organization_uuid), link (opens the row's _link). string / integer are the pre-TEC-1210 names of text / number and are no longer sent.
              * @enum {string}
              */
-            type: "string" | "integer" | "number" | "datetime" | "money";
+            type: "text" | "number" | "money" | "percent" | "date" | "datetime" | "duration" | "status" | "org" | "link" | "string" | "integer";
+            /** @enum {string} */
+            align?: "left" | "right";
+            /**
+             * @description Footer of the column
+             * @enum {string}
+             */
+            aggregate?: "sum" | "avg" | "none";
+            /** @description Currency of a money column when every row shares it */
+            currency?: string | null;
         };
         /** @description Shared envelope of every report: the same keys in all reports; period / range / granularity are null when a report does not take them, columns / rows are empty outside tables. */
         ReportEnvelope: {
@@ -32697,9 +32792,20 @@ export interface components {
             generated_at: string;
             series: components["schemas"]["ReportSeries"][];
             columns: components["schemas"]["ReportColumn"][];
-            rows: {
-                [key: string]: unknown;
-            }[];
+            rows: components["schemas"]["ReportRow"][];
+            /** @description TEC-1210: resolved period and compared range (null without a period or with all_time) */
+            period_info?: components["schemas"]["ReportPeriodInfo"] | null;
+            /** @description TEC-1210: headline numbers (summary reports and overview; empty elsewhere) */
+            kpis?: components["schemas"]["ReportKPI"][];
+        };
+        /** @description One table row keyed by the column keys (plus ids such as organization_uuid). TEC-1210: _link opens the row's record, _status maps a status column key to its label and tone. */
+        ReportRow: {
+            _link?: components["schemas"]["ReportLink"];
+            _status?: {
+                [key: string]: components["schemas"]["ReportStatusCell"];
+            };
+        } & {
+            [key: string]: unknown;
         };
         EnvelopeReport: {
             /** @enum {boolean} */
@@ -33152,6 +33258,14 @@ export interface components {
         ReportRangeTo: string;
         /** @description Label locale (default the request locale chain, K10). */
         ReportLocale: string;
+        /** @description Catalog key (GET /v1/reports/catalog). */
+        ReportKey: string;
+        ReportGranularity: "day" | "week" | "month";
+        ReportLimit: number;
+        /** @description TEC-1090, orders.inactive_buyers only: true ignores the period and lists active dealers that never ordered. Exclusive with period / range_from / range_to. */
+        ReportAllTime: boolean;
+        /** @description TEC-1210: compared range. previous = the same number of days right before (12m: the 12 months before; dealers.performance: the month before), year = the same dates a year earlier. Ignored by reports without a period. */
+        ReportCompare: "none" | "previous" | "year";
         AIUsageChannel: ("panel" | "portal" | "whatsapp" | "mcp" | "triage")[];
         AIUsagePurpose: ("chat" | "title" | "triage" | "locale")[];
         AIUsagePool: ("org" | "system")[];
@@ -64892,6 +65006,8 @@ export interface operations {
                 period?: components["parameters"]["ReportPeriod"];
                 range_from?: components["parameters"]["ReportRangeFrom"];
                 range_to?: components["parameters"]["ReportRangeTo"];
+                /** @description TEC-1210: compared range. previous = the same number of days right before (12m: the 12 months before; dealers.performance: the month before), year = the same dates a year earlier. Ignored by reports without a period. */
+                compare?: components["parameters"]["ReportCompare"];
                 /** @description Label locale (default the request locale chain, K10). */
                 locale?: components["parameters"]["ReportLocale"];
             };
@@ -64970,16 +65086,19 @@ export interface operations {
                 period?: components["parameters"]["ReportPeriod"];
                 range_from?: components["parameters"]["ReportRangeFrom"];
                 range_to?: components["parameters"]["ReportRangeTo"];
-                granularity?: "day" | "week" | "month";
-                limit?: number;
+                granularity?: components["parameters"]["ReportGranularity"];
+                limit?: components["parameters"]["ReportLimit"];
                 /** @description TEC-1090, orders.inactive_buyers only: true ignores the period and lists active dealers that never ordered. Exclusive with period / range_from / range_to. */
-                all_time?: boolean;
+                all_time?: components["parameters"]["ReportAllTime"];
+                /** @description TEC-1210: compared range. previous = the same number of days right before (12m: the 12 months before; dealers.performance: the month before), year = the same dates a year earlier. Ignored by reports without a period. */
+                compare?: components["parameters"]["ReportCompare"];
                 /** @description Label locale (default the request locale chain, K10). */
                 locale?: components["parameters"]["ReportLocale"];
             };
             header?: never;
             path: {
-                report: string;
+                /** @description Catalog key (GET /v1/reports/catalog). */
+                report: components["parameters"]["ReportKey"];
             };
             cookie?: never;
         };
@@ -64992,6 +65111,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportReport: {
+        parameters: {
+            query?: {
+                /** @description File format (default xlsx). */
+                format?: "xlsx" | "csv";
+                period?: components["parameters"]["ReportPeriod"];
+                range_from?: components["parameters"]["ReportRangeFrom"];
+                range_to?: components["parameters"]["ReportRangeTo"];
+                granularity?: components["parameters"]["ReportGranularity"];
+                limit?: components["parameters"]["ReportLimit"];
+                /** @description TEC-1090, orders.inactive_buyers only: true ignores the period and lists active dealers that never ordered. Exclusive with period / range_from / range_to. */
+                all_time?: components["parameters"]["ReportAllTime"];
+                /** @description TEC-1210: compared range. previous = the same number of days right before (12m: the 12 months before; dealers.performance: the month before), year = the same dates a year earlier. Ignored by reports without a period. */
+                compare?: components["parameters"]["ReportCompare"];
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path: {
+                /** @description Catalog key (GET /v1/reports/catalog). */
+                report: components["parameters"]["ReportKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report file */
+            200: {
+                headers: {
+                    /** @description attachment; filename="report-<key>_<YYYYMMDD>.<ext>" (plus filename*) */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "text/csv": string;
                 };
             };
             400: components["responses"]["BadRequest"];
