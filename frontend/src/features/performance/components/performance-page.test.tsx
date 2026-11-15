@@ -74,9 +74,16 @@ vi.mock(
     performanceService: api,
   }),
 );
-vi.mock("@/components/charts", () => ({
-  AppChart: () => createElement("div", { "data-testid": "chart" }),
-}));
+vi.mock("@/components/analytics", async (orig) => {
+  const chart = () => createElement("div", { "data-testid": "chart" });
+  return {
+    ...(await orig<object>()),
+    TrendChart: chart,
+    BarChart: chart,
+    RankBar: chart,
+    DonutChart: chart,
+  };
+});
 vi.mock("@/components/common/leaflet-map", () => ({
   LeafletMap: (props: Record<string, unknown>) => {
     captured.maps.push(props);

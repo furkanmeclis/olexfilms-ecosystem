@@ -5,14 +5,17 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ChartPie } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { AppChart } from "@/components/charts";
+import {
+  BarChart,
+  type ChartDatum,
+  type ChartSeriesDef,
+} from "@/components/analytics";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
 import { createColumn } from "@/components/tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChartConfig } from "@/components/ui/chart";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -296,11 +299,6 @@ function Stat({
   );
 }
 
-function useMoneyFormatter(currency: string | undefined) {
-  const { format } = useLocale();
-  return (v: number) => format.currency(v, currency ?? "TRY");
-}
-
 function SectionCard({
   kind,
   children,
@@ -319,6 +317,13 @@ function SectionCard({
   );
 }
 
+/** Kit chart rows (TEC-1212): the label is the category key. */
+function chartData(
+  rows: readonly ({ label: string } & Record<string, number | string>)[],
+): ChartDatum[] {
+  return rows.map((r) => ({ ...r, key: r.label }));
+}
+
 // --- P&L ---------------------------------------------------------------------
 
 function PnlSection({ org, query, enabled }: SectionProps) {
@@ -331,20 +336,13 @@ function PnlSection({ org, query, enabled }: SectionProps) {
   });
   const data = report.data;
   const currency = data?.currency ?? "";
-  const money = useMoneyFormatter(data?.currency);
   const rows = useMemo(() => data?.lines ?? [], [data]);
   const chart = useMemo(() => pnlChartRows(rows), [rows]);
-  const config = useMemo<ChartConfig>(
-    () => ({
-      income: {
-        label: t("staff_reports.reports.pnl.income"),
-        color: "var(--chart-2)",
-      },
-      expense: {
-        label: t("staff_reports.reports.pnl.expense"),
-        color: "var(--chart-5)",
-      },
-    }),
+  const series = useMemo<ChartSeriesDef[]>(
+    () => [
+      { key: "income", label: t("staff_reports.reports.pnl.income") },
+      { key: "expense", label: t("staff_reports.reports.pnl.expense") },
+    ],
     [t],
   );
 
@@ -413,13 +411,11 @@ function PnlSection({ org, query, enabled }: SectionProps) {
             />
           </div>
         ) : null}
-        <AppChart
-          type="bar"
-          data={chart}
-          config={config}
-          series={["income", "expense"]}
-          valueFormatter={money}
-          emptyTitle={t("staff_reports.reports.empty")}
+        <BarChart
+          data={chartData(chart)}
+          series={series}
+          format={{ kind: "money", currency: currency || undefined }}
+          emptyText={t("staff_reports.reports.empty")}
         />
         <EntityTable
           key={data?.group ?? "month"}
@@ -461,24 +457,20 @@ function MarginSection({ org, query, enabled }: SectionProps) {
   const data = report.data;
   const currency = data?.currency ?? "";
   const costVisible = data?.cost_visible ?? false;
-  const money = useMoneyFormatter(data?.currency);
   const rows = useMemo(() => data?.products ?? [], [data]);
   const chart = useMemo(() => marginChartRows(rows), [rows]);
-  const config = useMemo<ChartConfig>(
-    () => ({
-      revenue: {
-        label: t("staff_reports.reports.margin.revenue"),
-        color: "var(--chart-1)",
-      },
+  const series = useMemo<ChartSeriesDef[]>(
+    () => [
+      { key: "revenue", label: t("staff_reports.reports.margin.revenue") },
       ...(costVisible
-        ? {
-            gross_profit: {
+        ? [
+            {
+              key: "gross_profit",
               label: t("staff_reports.reports.margin.gross_profit"),
-              color: "var(--chart-2)",
             },
-          }
-        : {}),
-    }),
+          ]
+        : []),
+    ],
     [costVisible, t],
   );
   const pct = (v: string | null) => formatPct(format, v);
@@ -632,13 +624,11 @@ function MarginSection({ org, query, enabled }: SectionProps) {
             )}
           </>
         ) : null}
-        <AppChart
-          type="bar-horizontal"
-          data={chart}
-          config={config}
-          valueFormatter={money}
-          height={Math.max(160, chart.length * 36 + 48)}
-          emptyTitle={t("staff_reports.reports.empty")}
+        <BarChart
+          data={chartData(chart)}
+          series={series}
+          format={{ kind: "money", currency: currency || undefined }}
+          emptyText={t("staff_reports.reports.empty")}
         />
         <EntityTable
           key={costVisible ? "cost" : "no-cost"}
@@ -750,7 +740,6 @@ function AgingSection({ org, query, enabled }: SectionProps) {
   });
   const data = report.data;
   const currency = data?.currency ?? "";
-  const money = useMoneyFormatter(data?.currency);
   const rows = useMemo(() => data?.lines ?? [], [data]);
   const chart = useMemo(
     () =>
@@ -761,17 +750,14 @@ function AgingSection({ org, query, enabled }: SectionProps) {
         : [],
     [data, t],
   );
-  const config = useMemo<ChartConfig>(
-    () => ({
-      receivable: {
+  const series = useMemo<ChartSeriesDef[]>(
+    () => [
+      {
+        key: "receivable",
         label: t("staff_reports.reports.aging.sides.receivable"),
-        color: "var(--chart-2)",
       },
-      payable: {
-        label: t("staff_reports.reports.aging.sides.payable"),
-        color: "var(--chart-4)",
-      },
-    }),
+      { key: "payable", label: t("staff_reports.reports.aging.sides.payable") },
+    ],
     [t],
   );
   const columns = useMemo(() => agingColumns(currency, t), [currency, t]);
@@ -797,13 +783,11 @@ function AgingSection({ org, query, enabled }: SectionProps) {
             />
           </div>
         ) : null}
-        <AppChart
-          type="bar"
-          data={chart}
-          config={config}
-          series={["receivable", "payable"]}
-          valueFormatter={money}
-          emptyTitle={t("staff_reports.reports.empty")}
+        <BarChart
+          data={chartData(chart)}
+          series={series}
+          format={{ kind: "money", currency: currency || undefined }}
+          emptyText={t("staff_reports.reports.empty")}
         />
         <div data-testid="aging-table">
           <EntityTable
@@ -846,24 +830,14 @@ function StaffCostSection({
   });
   const data = report.data;
   const currency = data?.currency ?? "";
-  const money = useMoneyFormatter(data?.currency);
   const rows = useMemo(() => data?.lines ?? [], [data]);
   const chart = useMemo(() => staffCostChartRows(rows), [rows]);
-  const config = useMemo<ChartConfig>(
-    () => ({
-      salary: {
-        label: t("staff_reports.payment_types.salary"),
-        color: "var(--chart-1)",
-      },
-      advance: {
-        label: t("staff_reports.payment_types.advance"),
-        color: "var(--chart-3)",
-      },
-      bonus: {
-        label: t("staff_reports.payment_types.bonus"),
-        color: "var(--chart-2)",
-      },
-    }),
+  const series = useMemo<ChartSeriesDef[]>(
+    () => [
+      { key: "salary", label: t("staff_reports.payment_types.salary") },
+      { key: "advance", label: t("staff_reports.payment_types.advance") },
+      { key: "bonus", label: t("staff_reports.payment_types.bonus") },
+    ],
     [t],
   );
 
@@ -958,14 +932,12 @@ function StaffCostSection({
           </div>
         ) : null}
         {upcoming}
-        <AppChart
-          type="bar"
-          data={chart}
-          config={config}
-          series={["salary", "advance", "bonus"]}
+        <BarChart
+          data={chartData(chart)}
+          series={series}
+          format={{ kind: "money", currency: currency || undefined }}
           stacked
-          valueFormatter={money}
-          emptyTitle={t("staff_reports.reports.empty")}
+          emptyText={t("staff_reports.reports.empty")}
         />
         <EntityTable
           columns={columns}

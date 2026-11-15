@@ -48,7 +48,10 @@ vi.mock("@/hooks/use-mobile", () => ({
   useIsXl: () => true,
 }));
 // recharts needs layout; the charts are covered by their row helpers.
-vi.mock("@/components/charts", () => ({ AppChart: () => null }));
+vi.mock("@/components/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/analytics")>()),
+  BarChart: () => null,
+}));
 vi.mock("@/components/ui/date-picker", async () => {
   const { createElement: h } = await import("react");
   return {

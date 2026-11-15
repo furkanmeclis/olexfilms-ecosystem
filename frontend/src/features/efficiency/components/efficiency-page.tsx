@@ -6,7 +6,7 @@ import { Eye, Recycle } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { AppChart } from "@/components/charts";
+import { BarChart, TrendChart } from "@/components/analytics";
 import { ErrorState } from "@/components/common/error-state";
 import { StatsCard } from "@/components/common/stats-card";
 import {
@@ -630,52 +630,57 @@ export function EfficiencyPage({ slug }: { slug: string }) {
           }
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {compare.isError ? (
-          <ErrorState
-            title={t("common.error_generic")}
-            onRetry={() => void compare.refetch()}
-          />
-        ) : (
-          <AppChart
-            type="bar"
-            title={t("efficiency.compare.title")}
-            data={compareData}
-            categoryKey="bucket"
-            config={{ waste: { label: t("efficiency.columns.waste_ratio") } }}
-            loading={compare.isLoading}
-            emptyTitle={t("efficiency.empty.title")}
-            valueFormatter={(v) => format.percent(v, 1)}
-            height={240}
-          />
-        )}
-        {trend.isError ? (
-          <ErrorState
-            title={t("common.error_generic")}
-            onRetry={() => void trend.refetch()}
-          />
-        ) : (
-          <AppChart
-            type="composed"
-            title={t("efficiency.trend.title")}
-            data={trendData}
-            categoryKey="month"
-            config={{
-              waste: { label: t("efficiency.trend.waste_pct") },
-              meters: { label: t("efficiency.columns.meters") },
-            }}
-            series={[
-              { key: "meters", type: "bar", yAxisId: "right" },
-              { key: "waste", type: "line" },
-            ]}
-            showRightYAxis
-            loading={trend.isLoading}
-            emptyTitle={t("efficiency.empty.title")}
-            tickValueFormatter={(v) => format.number(v)}
-            valueFormatter={(v) => format.number(v)}
-            height={240}
-          />
-        )}
+      {/* TEC-1212: analytics kit charts; the former dual-axis chart is
+          split into waste % and meters (one y axis per chart). */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <BarChart
+          title={t("efficiency.compare.title")}
+          data={compareData.map((row) => ({
+            key: row.bucket,
+            label: row.bucket,
+            waste: row.waste * 100,
+          }))}
+          series={[
+            { key: "waste", label: t("efficiency.columns.waste_ratio") },
+          ]}
+          format={{ kind: "percent", maximumFractionDigits: 1 }}
+          loading={compare.isLoading}
+          error={compare.isError ? t("common.error_generic") : undefined}
+          onRetry={() => void compare.refetch()}
+          emptyText={t("efficiency.empty.title")}
+          height={240}
+        />
+        <TrendChart
+          title={t("efficiency.trend.waste_pct")}
+          categorical
+          data={trendData.map((row) => ({
+            key: row.month,
+            label: row.month,
+            waste: row.waste,
+          }))}
+          series={[{ key: "waste", label: t("efficiency.trend.waste_pct") }]}
+          format={{ kind: "percent", maximumFractionDigits: 1 }}
+          loading={trend.isLoading}
+          error={trend.isError ? t("common.error_generic") : undefined}
+          onRetry={() => void trend.refetch()}
+          emptyText={t("efficiency.empty.title")}
+          height={240}
+        />
+        <BarChart
+          title={t("efficiency.columns.meters")}
+          data={trendData.map((row) => ({
+            key: row.month,
+            label: row.month,
+            meters: row.meters,
+          }))}
+          series={[{ key: "meters", label: t("efficiency.columns.meters") }]}
+          format={{ kind: "number" }}
+          loading={trend.isLoading}
+          error={trend.isError ? t("common.error_generic") : undefined}
+          onRetry={() => void trend.refetch()}
+          emptyText={t("efficiency.empty.title")}
+          height={240}
+        />
       </div>
       <Tabs value={activeTab} onValueChange={setTab}>
         <TabsList className="flex-wrap">

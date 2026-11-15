@@ -19,6 +19,10 @@ vi.mock("next/link", () => ({
   } & Record<string, unknown>) =>
     createElement("a", { href, ...rest }, children as never),
 }));
+vi.mock("@/components/analytics", async (orig) => ({
+  ...(await orig<object>()),
+  BarChart: () => null,
+}));
 vi.mock("@/providers/toast-provider", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-import { AppChart } from "@/components/charts";
+import { TrendChart } from "@/components/analytics";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -42,7 +42,7 @@ export function DashboardPanel({
   slug: string;
   period: string;
 }) {
-  const { t, format } = useLocale();
+  const { t } = useLocale();
   const enabled = useEnabledFeatures(slug);
   const dashboard = useQuery({
     queryKey: performanceKeys.dashboard(period),
@@ -109,21 +109,24 @@ export function DashboardPanel({
           />
         ))}
       </div>
-      <AppChart
-        type="line"
+      <TrendChart
         title={t("performance.trend.title")}
         description={t("performance.trend.description")}
-        data={trendData}
-        categoryKey="period"
-        config={{ value: { label: t(`performance.metrics.${activeTrend}`) } }}
-        series={["value"]}
-        curved
-        emptyTitle={t("performance.empty")}
-        valueFormatter={(v) =>
+        categorical
+        data={trendData.map((row) => ({
+          key: row.period,
+          label: row.period,
+          value: row.value,
+        }))}
+        series={[
+          { key: "value", label: t(`performance.metrics.${activeTrend}`) },
+        ]}
+        format={
           metricKind(activeTrend) === "ratio"
-            ? `${format.number(v, { maximumFractionDigits: 1 })}%`
-            : format.number(v, { maximumFractionDigits: 2 })
+            ? { kind: "percent", maximumFractionDigits: 1 }
+            : { kind: "number", maximumFractionDigits: 2 }
         }
+        emptyText={t("performance.empty")}
         height={260}
         actions={
           <Select value={activeTrend} onValueChange={setTrendMetric}>

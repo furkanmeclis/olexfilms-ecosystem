@@ -18,11 +18,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { GripVertical, LayoutGrid, Plus, X } from "lucide-react";
+import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { AppChart } from "@/components/charts";
 import {
   Card,
   CardContent,
@@ -30,8 +29,6 @@ import {
   CardTitle,
 } from "@/components/common/card";
 import { ErrorState } from "@/components/common/error-state";
-import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
-import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -49,112 +46,12 @@ import {
   performanceKeys,
   performanceService,
   type ReportCatalogItem,
-  type ReportEnvelope,
 } from "@/features/performance/services/performance.service";
+import { CompactReportBody } from "@/features/reports/components/report-body";
 import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
-
-type Row = Record<string, unknown>;
-
-/** Table body of a `table` report (client-side, the report is one page). */
-function ReportTable({ report }: { report: ReportEnvelope }) {
-  const { t } = useLocale();
-  const columns = useMemo(
-    () =>
-      report.columns.map((c) =>
-        createColumn<Row>({
-          id: c.key,
-          accessorFn: (row) => row[c.key] as unknown,
-          labelKey: c.label,
-          label: c.label,
-          cell: ({ row }) => String(row.original[c.key] ?? "—"),
-        }),
-      ) as ColumnDef<Row, unknown>[],
-    [report.columns],
-  );
-  return (
-    <EntityTable
-      columns={columns}
-      data={report.rows as Row[]}
-      getRowId={(_row, index) => String(index)}
-      manual={CLIENT_SIDE_MANUAL}
-      features={{
-        persistKey: `tenant-report-${report.report}-v1`,
-        rowSelection: false,
-        columnFilters: false,
-        viewMode: false,
-      }}
-      emptyTitle={t("performance.empty")}
-    />
-  );
-}
-
-/** Renders one report by its kind (cards, series, distribution, table). */
-function ReportBody({ report }: { report: ReportEnvelope }) {
-  const { t, format } = useLocale();
-  const series = report.series ?? [];
-  if (report.kind === "table") return <ReportTable report={report} />;
-  if (report.kind === "summary") {
-    const points = series.flatMap((s) => s.points);
-    return (
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {points.map((p) => (
-          <div key={p.key} className="rounded-md border p-3">
-            <dt className="text-muted-foreground text-xs">{p.label}</dt>
-            <dd className="font-semibold tabular-nums">
-              {format.number(p.value)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  const first = series[0];
-  if (!first) {
-    return (
-      <p className="text-muted-foreground text-sm">{t("performance.empty")}</p>
-    );
-  }
-  if (report.kind === "timeseries") {
-    const rows = first.points.map((p, i) => {
-      const row: Row = { label: p.label };
-      series.forEach((s) => {
-        row[s.key] = s.points[i]?.value ?? null;
-      });
-      return row;
-    });
-    return (
-      <AppChart
-        type="line"
-        data={rows}
-        categoryKey="label"
-        config={Object.fromEntries(
-          series.map((s) => [s.key, { label: s.label }]),
-        )}
-        series={series.map((s) => s.key)}
-        curved
-        valueFormatter={(v) => format.number(v)}
-        height={220}
-        emptyTitle={t("performance.empty")}
-      />
-    );
-  }
-  const rows = first.points.map((p) => ({ label: p.label, value: p.value }));
-  return (
-    <AppChart
-      type={report.kind === "distribution" ? "donut" : "bar-horizontal"}
-      data={rows}
-      categoryKey="label"
-      config={{ value: { label: first.label } }}
-      series={["value"]}
-      valueFormatter={(v) => format.number(v)}
-      height={220}
-      emptyTitle={t("performance.empty")}
-    />
-  );
-}
 
 function WidgetCard({
   widget,
@@ -178,6 +75,8 @@ function WidgetCard({
     transition,
     isDragging,
   } = useSortable({ id: widget.id, disabled: !editing });
+  const params = useParams<{ slug: string }>();
+  const slug = String(params?.slug ?? "");
   const report = useQuery({
     queryKey: performanceKeys.report(widget.report, widget.period),
     queryFn: () =>
@@ -258,7 +157,7 @@ function WidgetCard({
           ) : report.isLoading || !report.data ? (
             <Skeleton className="h-40" />
           ) : (
-            <ReportBody report={report.data} />
+            <CompactReportBody report={report.data} slug={slug} />
           )}
         </CardContent>
       </Card>

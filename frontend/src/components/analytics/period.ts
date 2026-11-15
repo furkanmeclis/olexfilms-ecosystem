@@ -97,6 +97,10 @@ export function writePeriodParams(
     delete q.period;
   if (q.granularity && q.granularity === defaults.granularity)
     delete q.granularity;
+  // TEC-1212: with a compare default (report detail: previous) "none" must
+  // stay in the URL, and the default itself is left out.
+  if (state.compare === defaults.compare) delete q.compare;
+  else if (state.compare === "none") q.compare = "none";
   for (const [k, v] of Object.entries(q)) next.set(k, v);
   return next;
 }
