@@ -127,6 +127,16 @@ const KPI_ICON_TABLE: Record<string, IconName> = {
   measurements_vehicles: 'vehicle',
   dealers_total: 'network',
   dealers_active: 'building',
+  // TEC-1210 role reports.
+  fulfillment_shipped: 'truck',
+  fulfillment_received: 'packageCheck',
+  fulfillment_prep_hours: 'clock',
+  fulfillment_open: 'package',
+  fulfillment_overdue: 'alert',
+  network_services: 'service',
+  network_orders: 'cart',
+  network_warranties: 'warranty',
+  network_active_dealers: 'network',
 };
 // A Map, so inherited names like "toString" never match.
 const KPI_ICONS = new Map(Object.entries(KPI_ICON_TABLE));

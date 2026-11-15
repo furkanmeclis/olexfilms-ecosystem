@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} autres revendeurs",
   "orders.action.received_on_behalf": "Reçu au nom de l'acheteur",
   "orders.confirm.received_on_behalf": "Marquer la commande comme reçue au nom de l'acheteur ?",
-  "orders.on_behalf_note": "au nom de l'acheteur"
+  "orders.on_behalf_note": "au nom de l'acheteur",
+  "home.network_dealers": "Concessionnaires du réseau",
+  "home.last_order": "Dernière commande : {{date}}",
+  "home.never_ordered": "Jamais commandé"
 }

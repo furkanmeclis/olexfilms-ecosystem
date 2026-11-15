@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} altri rivenditori",
   "orders.action.received_on_behalf": "Ricevuto per conto dell'acquirente",
   "orders.confirm.received_on_behalf": "Segnare l'ordine come ricevuto per conto dell'acquirente?",
-  "orders.on_behalf_note": "per conto dell'acquirente"
+  "orders.on_behalf_note": "per conto dell'acquirente",
+  "home.network_dealers": "Concessionari della rete",
+  "home.last_order": "Ultimo ordine: {{date}}",
+  "home.never_ordered": "Mai ordinato"
 }

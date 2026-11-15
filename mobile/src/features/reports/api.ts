@@ -3,9 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { api, unwrap } from '@/core/api/client';
 import type { paths } from '@/core/api/schema';
+import type { Envelope } from '@/features/analytics-kit/envelope';
+import { type PeriodQuery, type PeriodState, type PeriodSupport, toQuery } from '@/features/analytics-kit/period';
 
 type ReportOp = paths['/v1/reports/{report}']['get'];
-export type Report = ReportOp['responses'][200]['content']['application/json']['data'];
+type ApiReport = ReportOp['responses'][200]['content']['application/json']['data'];
+/** The report envelope; v2 fields (TEC-1210) are read through the kit's `Envelope`. */
+export type Report = ApiReport & Envelope;
 export type ReportSeries = Report['series'][number];
 export type CatalogItem =
   paths['/v1/reports/catalog']['get']['responses'][200]['content']['application/json']['data']['items'][number];
@@ -23,23 +27,75 @@ export function useReportCatalog() {
 }
 
 /**
+ * What a catalog entry takes from the period bar: a period, a bucket size
+ * (when it lists granularities) and a comparison (TEC-1210 `compare`, when
+ * the catalog says so).
+ */
+export function supportOf(entry: CatalogItem | undefined): PeriodSupport {
+  if (!entry) return { periodic: false };
+  return {
+    periodic: entry.periodic,
+    granularity: entry.granularities.length > 0,
+    // TEC-1210: periodic reports list [none, previous, year], the others [none].
+    compare: (entry.compares ?? []).some((c) => c !== 'none'),
+  };
+}
+
+type Extra = { limit?: number; all_time?: boolean };
+
+/**
  * One report in the shared envelope. Parameters a report does not take are a
- * 400, so period / limit are sent only when the catalog says the report takes them.
+ * 400, so callers pass only what the catalog says the report takes: a legacy
+ * `period`, or `range` (the period bar's query, compare included).
  */
 export function useReport(
   key: string,
-  opts: { period?: Period; limit?: number; enabled?: boolean } = {},
+  opts: { period?: Period | 'today'; range?: PeriodQuery; limit?: number; allTime?: boolean; enabled?: boolean } = {},
 ) {
   const { i18n } = useTranslation();
-  const { period, limit, enabled = true } = opts;
+  const { period, range, limit, allTime, enabled = true } = opts;
+  const query: PeriodQuery & Extra = range ? { ...range } : period ? { period } : {};
+  if (limit) query.limit = limit;
+  if (allTime) query.all_time = true;
   return useQuery({
-    queryKey: ['reports', 'report', key, period ?? null, limit ?? null, i18n.language],
+    queryKey: ['reports', 'report', key, query, i18n.language],
     enabled,
-    queryFn: () =>
-      unwrap(
+    queryFn: async () =>
+      (await unwrap(
         api.GET('/v1/reports/{report}', {
-          params: { path: { report: key }, query: { period, limit, locale: i18n.language } },
+          params: { path: { report: key }, query: { ...query, locale: i18n.language } },
         }),
-      ),
+      )) as Report,
   });
+}
+
+/** A report driven by the period bar state; `support` drops what the report does not take. */
+export function usePeriodReport(key: string, state: PeriodState, support: PeriodSupport, opts: { limit?: number; enabled?: boolean } = {}) {
+  return useReport(key, { range: toQuery(state, support), limit: opts.limit, enabled: opts.enabled });
+}
+
+
+/**
+ * A report by catalog key for the home screens: it runs only when the
+ * catalog lists it for the caller (module, permission, reach), and sends only
+ * the period parameters the report takes. `available` is false while the
+ * catalog loads or when the report is not open to the caller.
+ */
+export function useCatalogReport(
+  key: string,
+  state: PeriodState,
+  opts: { limit?: number; allTime?: boolean; enabled?: boolean; granularity?: boolean } = {},
+) {
+  const catalog = useReportCatalog();
+  const entry = catalog.data?.items.find((i) => i.key === key);
+  const support = supportOf(entry);
+  if (opts.granularity === false) support.granularity = false;
+  const allTime = !!opts.allTime && !!entry?.all_time;
+  const query = useReport(key, {
+    range: allTime ? undefined : toQuery(state, support),
+    limit: entry?.limited ? opts.limit : undefined,
+    allTime,
+    enabled: !!entry && (opts.enabled ?? true),
+  });
+  return { query, entry, available: !!entry, loading: catalog.isPending || (!!entry && query.isPending) };
 }

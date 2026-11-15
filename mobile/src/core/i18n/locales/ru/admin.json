@@ -129,5 +129,8 @@
   "home.more_dealers": "Ещё дилеров: {{count}}",
   "orders.action.received_on_behalf": "Получено от имени покупателя",
   "orders.confirm.received_on_behalf": "Отметить заказ как полученный от имени покупателя?",
-  "orders.on_behalf_note": "от имени покупателя"
+  "orders.on_behalf_note": "от имени покупателя",
+  "home.network_dealers": "Дилеры в сети",
+  "home.last_order": "Последний заказ: {{date}}",
+  "home.never_ordered": "Никогда не заказывал"
 }

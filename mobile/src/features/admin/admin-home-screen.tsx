@@ -4,25 +4,26 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { formatDigits } from '@/core/digits';
 import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, isSalesWorkplace, useCan } from '@/core/spaces';
 import { SalesBoard, ServicesBoard } from '@/features/center-home/boards';
-import { type Period, PERIODS, useReport } from '@/features/reports/api';
+import { PeriodBar } from '@/features/analytics-kit/period-bar';
+import { DEFAULT_PERIOD, type PeriodState } from '@/features/analytics-kit/period';
+import { num } from '@/features/analytics-kit/table';
+import { supportOf, useCatalogReport } from '@/features/reports/api';
+import { KpiSection, RankSection, TrendSection } from '@/features/reports/sections';
 import { Segmented } from '@/features/warehouse/parts';
-import { StatTiles, TimeChart } from '@/features/reports/report-view';
+import { useFormat } from './kit';
 import { APPROVAL_PERMISSIONS } from '@/features/menu/groups';
 import { usePendingOrderCount } from '@/features/warehouse/orders-api';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Icon } from '@/ui/icon';
-import { KpiGridSkeleton } from '@/ui/kpi';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
-import { Chips, ErrorState } from './kit';
 import type { IconName } from '@/ui/icons';
 import { PullRefresh } from '@/ui/pull-refresh';
 
@@ -70,7 +71,8 @@ export function AdminHomeScreen() {
   const { t, i18n } = useTranslation('admin');
   const me = useSession((s) => s.me);
   const org = activeMembership(me);
-  const [period, setPeriod] = useState<Period>('30d');
+  const f = useFormat();
+  const [period, setPeriod] = useState<PeriodState>(DEFAULT_PERIOD);
   const canServices = useCan('services.read');
   const perms = new Set(me?.permissions ?? []);
   const moduleOn = useModuleFilter();
@@ -89,19 +91,16 @@ export function AdminHomeScreen() {
   const shownBoard = board && boards.includes(board) ? board : boards[0];
   const ordersBase = sales ? '/bayi/orders' : '/bayi/menu/orders';
 
-  const overview = useReport('overview', { period });
-  const trend = useReport('services.trend', { period, enabled: canServices });
-  const cards = overview.data?.series.find((s) => s.key === 'cards');
-  const trendSeries = trend.data?.series.find((s) => s.key === 'created');
+  // TEC-1213: KPIs against the previous period, services over time, and the
+  // network by dealer (network.summary: center whole network, distributor its subtree).
+  const overview = useCatalogReport('overview', period);
+  const trend = useCatalogReport('services.trend', period, { enabled: canServices });
+  const network = useCatalogReport('network.summary', period, { limit: 5 });
 
   const qc = useQueryClient();
   const refresh = () => {
-    void overview.refetch();
-    if (canServices) void trend.refetch();
-    if (boards.length) {
-      void qc.invalidateQueries({ queryKey: ['center-home'] });
-      void qc.invalidateQueries({ queryKey: ['reports', 'report'] });
-    }
+    void qc.invalidateQueries({ queryKey: ['reports', 'report'] });
+    if (boards.length) void qc.invalidateQueries({ queryKey: ['center-home'] });
   };
 
   return (
@@ -113,7 +112,7 @@ export function AdminHomeScreen() {
           headerRight: () => <HomeHeaderRight />,
         }}
       />
-      <Screen refreshControl={<PullRefresh busy={overview.isRefetching} onRefresh={refresh} />}>
+      <Screen refreshControl={<PullRefresh busy={overview.query.isRefetching} onRefresh={refresh} />}>
         {org ? (
           <Text variant="footnote" tone="muted">
             {org.name} · {t(`spaces:org_type.${org.type ?? 'center'}`)} ·{' '}
@@ -122,28 +121,27 @@ export function AdminHomeScreen() {
         ) : null}
 
         <View className="-mx-4">
-          <Chips
-            options={PERIODS.map((p) => ({ key: p, label: t(`reports.period.${p}`) }))}
-            value={period}
-            onChange={setPeriod}
-          />
+          <PeriodBar value={period} onChange={setPeriod} support={overview.entry ? supportOf(overview.entry) : undefined} />
         </View>
 
-        {overview.isPending ? (
-          <KpiGridSkeleton />
-        ) : overview.isError && !overview.data ? (
-          <ErrorState error={overview.error} onRetry={() => void overview.refetch()} />
-        ) : cards && cards.points.length ? (
-          <StatTiles series={cards} />
-        ) : (
-          <Text variant="callout" tone="muted" className="py-4 text-center">
-            {t('reports.no_data')}
-          </Text>
-        )}
-
-        {canServices && trendSeries && !(trend.isError && isApiError(trend.error)) ? (
-          <TimeChart series={trendSeries} compact />
-        ) : null}
+        <KpiSection r={overview} />
+        {canServices ? <TrendSection r={trend} keys={['created', 'completed']} /> : null}
+        <RankSection
+          r={network}
+          title={t('home.network_dealers')}
+          toItem={(row) => {
+            const v = num(row.services_count) ?? 0;
+            const label = typeof row.organization === 'string' ? row.organization : typeof row.name === 'string' ? row.name : null;
+            if (!label) return null;
+            return {
+              key: String((row._link as { uuid?: string } | undefined)?.uuid ?? row.organization_uuid ?? label),
+              label,
+              value: v,
+              valueText: t('home.services_count', { count: f.number(v) }),
+              sub: typeof row.city === 'string' ? row.city : null,
+            };
+          }}
+        />
 
         <SectionHeader title={t('home.quick_actions')} />
         <View className="flex-row flex-wrap gap-2.5">

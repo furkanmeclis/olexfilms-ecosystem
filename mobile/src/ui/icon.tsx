@@ -17,12 +17,19 @@ export type IconTone =
 
 const IOS_MAJOR = Platform.OS === 'ios' ? parseInt(String(Platform.Version), 10) || 0 : 0;
 
-type Props = { name: IconName; tone?: IconTone; size?: number; weight?: 'regular' | 'medium' | 'semibold' };
+type Props = {
+  name: IconName;
+  tone?: IconTone;
+  /** Explicit color (charts, delta badges); wins over `tone`. */
+  color?: string;
+  size?: number;
+  weight?: 'regular' | 'medium' | 'semibold';
+};
 
 /** Semantic icon: SF Symbol on iOS, Lucide elsewhere, colored from a theme token. */
-export function Icon({ name, tone = 'foreground', size = 22, weight = 'regular' }: Props) {
+export function Icon({ name, tone = 'foreground', color: explicit, size = 22, weight = 'regular' }: Props) {
   const raw = useCSSVariable(`--color-${tone}`);
-  const color = typeof raw === 'string' ? raw : undefined;
+  const color = explicit ?? (typeof raw === 'string' ? raw : undefined);
   const fallback = createElement(lucideFor(name), { size, color, strokeWidth: tone === 'on-media' ? 2 : 1.75 });
   if (Platform.OS !== 'ios' || IOS_MAJOR < (ICONS[name].minIOS ?? 0)) return fallback;
   return <SymbolView name={ICONS[name].sf} size={size} tintColor={color} weight={weight} fallback={fallback} />;

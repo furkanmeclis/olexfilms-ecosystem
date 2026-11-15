@@ -1,5 +1,6 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -8,6 +9,10 @@ import { useSession } from '@/core/auth/session';
 import { useModuleFilter } from '@/core/modules';
 import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { AdminHomeScreen } from '@/features/admin/admin-home-screen';
+import { PeriodBar } from '@/features/analytics-kit/period-bar';
+import { DEFAULT_PERIOD, type PeriodState } from '@/features/analytics-kit/period';
+import { supportOf, useCatalogReport } from '@/features/reports/api';
+import { KpiSection, TrendSection } from '@/features/reports/sections';
 import { BrandMark, PlateBadge } from '@/features/customer-space/home-parts';
 import { formatDate, formatNumber, fullName, type Service, serviceTone, useLinks, vehicleLabel } from '@/features/services/lib';
 import { errorText } from '@/features/services/ui';
@@ -15,14 +20,13 @@ import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
-import { KpiCard, KpiGrid, KpiGridSkeleton } from '@/ui/kpi';
 import { Skeleton } from '@/ui/skeleton';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
 import { PullRefresh } from '@/ui/pull-refresh';
 
-import { BOARD_GROUPS, type BoardGroup, boardRows, fitTags, kpiIcon, listFilterOf, statusParam, uniqueCategories } from './board';
+import { BOARD_GROUPS, type BoardGroup, boardRows, fitTags, listFilterOf, statusParam, uniqueCategories } from './board';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -37,7 +41,7 @@ type Action = { key: string; icon: IconName; href: Href; show: boolean };
  * (reports overview cards) and the board of services to work on.
  */
 export function DealerHome() {
-  const { t, i18n } = useTranslation('dealer');
+  const { t } = useTranslation('dealer');
   const me = useSession((s) => s.me);
   const org = activeMembership(me);
   const links = useLinks();
@@ -48,10 +52,10 @@ export function DealerHome() {
   const canSell = useCan('product_sales.write');
   const canOrders = useCan('orders.read');
 
-  const overview = useQuery({
-    queryKey: ['dealer-home', 'overview', i18n.language],
-    queryFn: () => unwrap(api.GET('/v1/reports/overview', { params: { query: { period: '30d' } } })),
-  });
+  // TEC-1213: the period comes from the period bar (no fixed 30 days); deltas against the previous period.
+  const [period, setPeriod] = useState<PeriodState>(DEFAULT_PERIOD);
+  const overview = useCatalogReport('overview', period);
+  const trend = useCatalogReport('services.trend', period, { enabled: canServices });
   // One request per board group: each brings its own `total` and server order.
   const board = useQueries({
     queries: BOARD_GROUPS.map((g) => ({
@@ -66,7 +70,6 @@ export function DealerHome() {
     })),
   });
 
-  const cards = overview.data?.series.find((s) => s.key === 'cards')?.points ?? overview.data?.series[0]?.points ?? [];
 
   const moduleOn = useModuleFilter();
   // Scan and measure stay in the tab bar; the home keeps the desk jobs.
@@ -85,10 +88,11 @@ export function DealerHome() {
   ).filter((a) => moduleOn(a.key) && a.show);
 
   const refresh = () => {
-    void overview.refetch();
+    void overview.query.refetch();
+    if (trend.available) void trend.query.refetch();
     if (canServices) board.forEach((q) => void q.refetch());
   };
-  const refreshing = overview.isRefetching || board.some((q) => q.isRefetching);
+  const refreshing = overview.query.isRefetching || board.some((q) => q.isRefetching);
 
   return (
     <>
@@ -130,30 +134,11 @@ export function DealerHome() {
           </View>
         ) : null}
 
-        {overview.isPending ? (
-          <View className="gap-2">
-            <Skeleton className="mx-1 h-3 w-20" />
-            <KpiGridSkeleton />
-          </View>
-        ) : cards.length > 0 ? (
-          <View className="gap-2">
-            <Text variant="caption" tone="muted" className="px-1">
-              {t('last_30_days')}
-            </Text>
-            <KpiGrid>
-              {cards.slice(0, 8).map((c) => (
-                <KpiCard key={c.key} icon={kpiIcon(c.key)} label={c.label} value={formatNumber(c.value, i18n.language)} />
-              ))}
-            </KpiGrid>
-          </View>
-        ) : overview.isError ? (
-          <View className="items-center gap-2 rounded-2xl border border-border bg-card p-4">
-            <Text variant="callout" tone="muted" className="text-center">
-              {errorText(overview.error)}
-            </Text>
-            <Button title={t('common:retry')} variant="secondary" onPress={() => void overview.refetch()} />
-          </View>
-        ) : null}
+        <View className="-mx-4">
+          <PeriodBar value={period} onChange={setPeriod} support={overview.entry ? supportOf(overview.entry) : undefined} />
+        </View>
+        <KpiSection r={overview} max={8} />
+        {canServices ? <TrendSection r={trend} keys={['created', 'completed']} /> : null}
 
         {canServices ? <Board queries={board} canWrite={canWrite} /> : null}
       </ScrollView>

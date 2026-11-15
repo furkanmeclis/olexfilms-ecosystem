@@ -83,6 +83,9 @@ import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
 import MessageCircleMoreIcon from 'lucide-react-native/icons/message-circle-more';
 import EyeIcon from 'lucide-react-native/icons/eye';
 import EyeOffIcon from 'lucide-react-native/icons/eye-off';
+import TrendingUpIcon from 'lucide-react-native/icons/trending-up';
+import TrendingDownIcon from 'lucide-react-native/icons/trending-down';
+import ArrowUpDownIcon from 'lucide-react-native/icons/arrow-up-down';
 import type { SFSymbol } from 'expo-symbols';
 import { I18nManager } from 'react-native';
 
@@ -181,7 +184,10 @@ export type IconName =
   | 'undo'
   | 'shake'
   | 'battery'
-  | 'batteryLow';
+  | 'batteryLow'
+  | 'trendUp'
+  | 'trendDown'
+  | 'sort';
 
 /**
  * iOS renders the SF Symbol, Android renders the Lucide glyph. The app runs
@@ -277,6 +283,9 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   shake: { sf: 'iphone.radiowaves.left.and.right', lucide: VibrateIcon },
   battery: { sf: 'battery.100', lucide: BatteryFullIcon },
   batteryLow: { sf: 'battery.25', lucide: BatteryLowIcon },
+  trendUp: { sf: 'arrow.up.right', lucide: TrendingUpIcon },
+  trendDown: { sf: 'arrow.down.right', lucide: TrendingDownIcon },
+  sort: { sf: 'arrow.up.arrow.down', lucide: ArrowUpDownIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

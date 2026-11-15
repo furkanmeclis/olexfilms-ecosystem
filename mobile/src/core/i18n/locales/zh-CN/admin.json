@@ -129,5 +129,8 @@
   "home.more_dealers": "另有 {{count}} 个经销商",
   "orders.action.received_on_behalf": "已代买方收货",
   "orders.confirm.received_on_behalf": "将订单标记为已代买方收货？",
-  "orders.on_behalf_note": "代买方"
+  "orders.on_behalf_note": "代买方",
+  "home.network_dealers": "网络中的经销商",
+  "home.last_order": "最近订单：{{date}}",
+  "home.never_ordered": "从未下单"
 }
