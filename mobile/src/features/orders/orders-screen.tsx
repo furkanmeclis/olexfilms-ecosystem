@@ -146,10 +146,8 @@ export function OrdersScreen() {
         }
         renderItem={({ item }) => {
           const other = item.role === 'buyer' ? item.seller : item.buyer;
-          const party =
-            item.role === 'observer'
-              ? `${item.seller.name} → ${item.buyer.name}`
-              : t(item.role === 'seller' ? 'orders.to' : 'orders.from', { name: other.name });
+          // The dealer's name leads the card so everyone recognises the order at a glance; the number follows.
+          const party = item.role === 'observer' ? `${item.seller.name} → ${item.buyer.name}` : other.name;
           // TEC-1055 (revize 5): warehouse, amount, USD with a small live TRY figure, who handles it.
           const tl = liveTryAmount(item);
           const money =
@@ -158,9 +156,11 @@ export function OrdersScreen() {
               : null;
           return (
             <CardRow
-              title={item.order_no}
+              title={party}
               subtitle={
-                item.seller_warehouse ? `${party} · ${t('orders:card.warehouse', { name: item.seller_warehouse.name })}` : party
+                item.seller_warehouse
+                  ? `${item.order_no} · ${t('orders:card.warehouse', { name: item.seller_warehouse.name })}`
+                  : item.order_no
               }
               meta={[amountText(item), money, f.date(item.created_at)].filter(Boolean).join(' · ')}
               detail={activityText(item.last_activity)}
