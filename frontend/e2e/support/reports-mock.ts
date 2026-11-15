@@ -552,6 +552,11 @@ export function mockReports(api: MockApi, only?: readonly string[]) {
   });
 }
 
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /** Accounting P&L (GET /v1/accounting/reports/pnl) by month. */
 export function pnlReport(
   from: string | null,
@@ -599,10 +604,8 @@ export function mockEmptyLists(api: MockApi) {
     if (call.path === "/v1/accounting/reports/pnl") {
       const from = call.url.searchParams.get("from");
       const to = call.url.searchParams.get("to");
-      // the compared window is the older one: smaller figures
-      await call.ok(
-        pnlReport(from, to, from && from < "2026-10-01" ? 0.86 : 1),
-      );
+      // the compared window ends before today: smaller figures
+      await call.ok(pnlReport(from, to, to && to < todayIso() ? 0.86 : 1));
       return true;
     }
     if (call.path === "/v1/accounting/queue/summary") {
