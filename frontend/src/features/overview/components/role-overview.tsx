@@ -1,11 +1,11 @@
 "use client";
 
-import { AccountingDashboard } from "@/features/accounting";
+import { AccountingOverview } from "@/features/overview/components/accounting-overview";
 import { CenterOverview } from "@/features/overview/components/center-overview";
 import { DealerOverview } from "@/features/overview/components/dealer-overview";
 import { DistributorOverview } from "@/features/overview/components/distributor-overview";
 import { resolveOverviewRole } from "@/features/overview/lib/role";
-import { WarehouseDashboard } from "@/features/warehouse";
+import { WarehouseOverview } from "@/features/overview/components/warehouse-overview";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -20,9 +20,9 @@ export function RoleOverview({ slug }: { slug: string }) {
   const role = resolveOverviewRole(can, org?.type);
   switch (role) {
     case "accounting":
-      return <AccountingDashboard slug={slug} />;
+      return <AccountingOverview slug={slug} />;
     case "warehouse":
-      return <WarehouseDashboard slug={slug} />;
+      return <WarehouseOverview slug={slug} />;
     case "center":
       return <CenterOverview slug={slug} />;
     case "distributor":

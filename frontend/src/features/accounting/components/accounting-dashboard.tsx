@@ -50,6 +50,45 @@ export const DASHBOARD_ROWS = 6;
  * waiting to be processed and the caris with the highest balance.
  */
 export function AccountingDashboard({ slug }: { slug: string }) {
+  return (
+    <div className="flex flex-col gap-6" data-testid="accounting-dashboard">
+      <AccountingDashboardHeader slug={slug} />
+      <AccountingDashboardBody slug={slug} />
+    </div>
+  );
+}
+
+/** TEC-1212: header of the accounting home (title + queue button). */
+export function AccountingDashboardHeader({ slug }: { slug: string }) {
+  const { t } = useLocale();
+  return (
+    <PageHeader
+      title={t("accounting.home.title")}
+      description={t("accounting.home.description")}
+      icon={<BookOpen className="size-6" />}
+      actions={<AccountingQueueButton slug={slug} />}
+    />
+  );
+}
+
+/** Queue button of the accounting home. */
+export function AccountingQueueButton({ slug }: { slug: string }) {
+  const { t } = useLocale();
+  return (
+    <Button asChild>
+      <Link href={routes.tenant.accounting.queue(slug)}>
+        <ListChecks className="size-4" />
+        {t("accounting.queue.title")}
+      </Link>
+    </Button>
+  );
+}
+
+/**
+ * TEC-1212: queue counters and cards of the accounting home, without the
+ * header (the accounting overview puts its PeriodBar in between).
+ */
+export function AccountingDashboardBody({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { can } = usePermission();
   const access = useAccountingAccess(slug);
@@ -93,20 +132,7 @@ export function AccountingDashboard({ slug }: { slug: string }) {
   ];
 
   return (
-    <div className="flex flex-col gap-6" data-testid="accounting-dashboard">
-      <PageHeader
-        title={t("accounting.home.title")}
-        description={t("accounting.home.description")}
-        icon={<BookOpen className="size-6" />}
-        actions={
-          <Button asChild>
-            <Link href={queueHref}>
-              <ListChecks className="size-4" />
-              {t("accounting.queue.title")}
-            </Link>
-          </Button>
-        }
-      />
+    <>
       <div className="grid gap-3 sm:grid-cols-3">
         {tiles.map((tile) => {
           const hot = typeof tile.value === "number" && tile.value > 0;
@@ -153,7 +179,7 @@ export function AccountingDashboard({ slug }: { slug: string }) {
         <ReturnsCard slug={slug} href={`${queueHref}?tab=returns`} />
         <TopCariCard slug={slug} />
       </div>
-    </div>
+    </>
   );
 }
 

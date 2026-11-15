@@ -53,9 +53,6 @@ export type OrderChartPeriod = (typeof ORDER_CHART_PERIODS)[number];
  */
 export function WarehouseDashboard({ slug }: { slug: string }) {
   const { t } = useLocale();
-  const { can } = usePermission();
-  const org = useActiveOrganization(slug);
-  const canOrders = can(Permission.OrdersRead);
   return (
     <div className="flex flex-col gap-6" data-testid="warehouse-dashboard">
       <PageHeader
@@ -63,6 +60,23 @@ export function WarehouseDashboard({ slug }: { slug: string }) {
         description={t("warehouse.home.description")}
         icon={<Warehouse className="size-6" />}
       />
+      <WarehouseDashboardBody slug={slug} />
+    </div>
+  );
+}
+
+/**
+ * TEC-1212: counters, stock and order lists of the warehouse home without
+ * the header (the warehouse overview puts its PeriodBar and the
+ * fulfillment / stock movement reports above).
+ */
+export function WarehouseDashboardBody({ slug }: { slug: string }) {
+  const { t } = useLocale();
+  const { can } = usePermission();
+  const org = useActiveOrganization(slug);
+  const canOrders = can(Permission.OrdersRead);
+  return (
+    <>
       <WarehouseKpis slug={slug} can={can} orgType={org?.type} />
       <div className="grid gap-6 xl:grid-cols-2">
         {can(Permission.StockRead) ? <WarehouseStockCard slug={slug} /> : null}
@@ -103,7 +117,7 @@ export function WarehouseDashboard({ slug }: { slug: string }) {
           />
         ) : null}
       </div>
-    </div>
+    </>
   );
 }
 

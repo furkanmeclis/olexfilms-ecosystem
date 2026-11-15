@@ -181,6 +181,20 @@ describe("period", () => {
     expect(state).toMatchObject({ preset: "30d", compare: "none" });
     expect(writePeriodParams("", state).toString()).toBe("");
   });
+  it("keeps compare=none when the default compares (TEC-1212)", () => {
+    const defaults = { preset: "30d", compare: "previous" } as const;
+    const off = writePeriodParams(
+      "",
+      { preset: "30d", compare: "none" },
+      defaults,
+    );
+    expect(off.toString()).toBe("compare=none");
+    expect(parsePeriodParams(off, defaults).compare).toBe("none");
+    expect(
+      writePeriodParams("", { preset: "30d", compare: "previous" }, defaults)
+        .toString(),
+    ).toBe("");
+  });
 });
 
 describe("adapters", () => {

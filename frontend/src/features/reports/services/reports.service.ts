@@ -11,30 +11,23 @@ export type ReportCatalogItem = Schemas["ReportCatalogItem"];
 export type ReportEnvelope = Schemas["ReportEnvelope"];
 
 /**
- * TEC-1212: query of one report (TEC-1210 contract): a preset period or a
- * custom range, the bucket size and the comparison window. Undefined keys
- * are dropped from the URL.
+ * TEC-1212: query of one report (TEC-1210 contract): the PeriodBar query
+ * (period or range_from / range_to, granularity, compare) plus limit /
+ * all_time. Empty values are dropped from the URL.
  */
-export type ReportQuery = {
-  period?: string;
-  range_from?: string;
-  range_to?: string;
-  granularity?: string;
-  compare?: "none" | "previous" | "year";
-  limit?: number;
-  all_time?: boolean;
-};
+export type ReportQuery = Readonly<
+  Record<string, string | number | boolean | null | undefined>
+>;
 
 function toQuery(q: ReportQuery): Record<string, string | undefined> {
-  return {
-    period: q.range_from ? undefined : q.period,
-    range_from: q.range_from,
-    range_to: q.range_to,
-    granularity: q.granularity,
-    compare: q.compare && q.compare !== "none" ? q.compare : undefined,
-    limit: q.limit === undefined ? undefined : String(q.limit),
-    all_time: q.all_time ? "true" : undefined,
-  };
+  const out: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(q)) {
+    if (v === null || v === undefined || v === "" || v === false) continue;
+    if (k === "compare" && v === "none") continue;
+    if (k === "period" && q.range_from) continue;
+    out[k] = String(v);
+  }
+  return out;
 }
 
 const enc = encodeURIComponent;

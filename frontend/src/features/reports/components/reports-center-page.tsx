@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import {
   ChartColumn,
   ChartLine,
@@ -32,10 +31,7 @@ import {
   CATEGORY_LABEL_KEYS,
   KIND_LABEL_KEYS,
 } from "@/features/reports/lib/labels";
-import {
-  reportsKeys,
-  reportsService,
-} from "@/features/reports/services/reports.service";
+import { useReportCatalog } from "@/features/reports/hooks/use-report";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -70,11 +66,7 @@ export function ReportsCenterPage({ slug }: { slug: string }) {
   const features = useEnabledFeatures(slug);
   const [q, setQ] = useState("");
 
-  const catalog = useQuery({
-    queryKey: reportsKeys.catalog(org?.uuid ?? slug),
-    queryFn: () => reportsService.catalog(),
-    staleTime: 5 * 60_000,
-  });
+  const catalog = useReportCatalog(slug);
 
   const entries = useMemo<Entry[]>(() => {
     const generic: Entry[] = (catalog.data?.items ?? []).map((item) => ({

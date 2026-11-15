@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, FileDown, Wand2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -65,6 +65,7 @@ export function ServicesListPage({ slug }: { slug: string }) {
   const { t, format, locale } = useLocale();
   const { can } = usePermission();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const access = resolveServiceListAccess(can);
   const orgFilter = useScopeOrganizationOptions(slug, access.canRead);
   // TEC-1075: the center opens on the whole network (dealer names visible);
@@ -308,8 +309,19 @@ export function ServicesListPage({ slug }: { slug: string }) {
 
   // Column meta drives the params: status / organization_uuid (CSV),
   // created_* / completed_* (days); sort is one backend field.
+  // TEC-1212: ?organization_uuid=<uuid> (report drill-down) seeds the
+  // organization filter.
+  const orgParam = searchParams?.get("organization_uuid") ?? "";
+  const initialColumnFilters = useMemo(
+    () =>
+      orgParam
+        ? [{ id: "organization", value: orgParam.split(",").filter(Boolean) }]
+        : undefined,
+    [orgParam],
+  );
   const listState = useServerListState({
     columns,
+    initialColumnFilters,
     initialSort: "-created_at",
     initialPageSize: SERVICE_PAGE_SIZE,
     persistKey: SERVICES_PERSIST_KEY,
