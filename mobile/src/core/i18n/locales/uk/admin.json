@@ -129,5 +129,8 @@
   "home.more_dealers": "Ще {{count}} дилерів",
   "orders.action.received_on_behalf": "Отримано від імені покупця",
   "orders.confirm.received_on_behalf": "Позначити замовлення як отримане від імені покупця?",
-  "orders.on_behalf_note": "від імені покупця"
+  "orders.on_behalf_note": "від імені покупця",
+  "home.network_dealers": "Дилери в мережі",
+  "home.last_order": "Останнє замовлення: {{date}}",
+  "home.never_ordered": "Ніколи не замовляв"
 }

@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} bayi daha",
   "orders.action.received_on_behalf": "Alıcı adına teslim alındı",
   "orders.confirm.received_on_behalf": "Sipariş alıcı adına teslim alındı olarak işaretlensin mi?",
-  "orders.on_behalf_note": "alıcı adına"
+  "orders.on_behalf_note": "alıcı adına",
+  "home.network_dealers": "Ağdaki bayiler",
+  "home.last_order": "Son sipariş: {{date}}",
+  "home.never_ordered": "Hiç sipariş vermedi"
 }

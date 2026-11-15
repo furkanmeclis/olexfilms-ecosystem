@@ -24,6 +24,10 @@ import { ErrorState, ListSkeleton } from './parts';
 import { WarehousePickerSheet } from './warehouse-picker';
 import type { IconName } from '@/ui/icons';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { PeriodBar } from '@/features/analytics-kit/period-bar';
+import { DEFAULT_PERIOD, type PeriodState } from '@/features/analytics-kit/period';
+import { supportOf, useCatalogReport } from '@/features/reports/api';
+import { KpiSection, TrendSection } from '@/features/reports/sections';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -55,6 +59,9 @@ export function WarehouseHome() {
   const recent = useOrders('prepare', orders, scope);
   const recentOrders = (recent.data?.pages.flatMap((p) => p.items) ?? []).slice(0, HOME_ORDERS);
   const [picking, setPicking] = useState(false);
+  const [period, setPeriod] = useState<PeriodState>(DEFAULT_PERIOD);
+  const fulfillment = useCatalogReport('orders.fulfillment', period, { enabled: orders });
+  const movement = useCatalogReport('stock.movement', period, { enabled: stockRead });
   // TEC-1087 (revize 7.4): stock entries are the center or distributor management's job; warehouse
   // staff see neither the "new entry" shortcut nor the open entry drafts.
   const entries =
@@ -114,6 +121,8 @@ export function WarehouseHome() {
                 void orderCounts.refetch();
                 void recent.refetch();
               }
+              if (fulfillment.available) void fulfillment.query.refetch();
+              if (movement.available) void movement.query.refetch();
             }}
           />
         }>
@@ -193,6 +202,19 @@ export function WarehouseHome() {
                 {t('orders:warehouse_home.empty')}
               </Text>
             )}
+          </>
+        ) : null}
+
+        {/* TEC-1213: fulfillment (approval → shipping, open, late) and stock in / out of the period. */}
+        {fulfillment.available || movement.available ? (
+          <>
+            <SectionHeader title={t('analytics:warehouse_title')} />
+            <View className="-mx-4 -mt-2">
+              <PeriodBar value={period} onChange={setPeriod} support={supportOf(fulfillment.entry ?? movement.entry)} />
+            </View>
+            <KpiSection r={fulfillment} max={4} skeleton={2} />
+            <TrendSection r={fulfillment} defaultMode="bar" />
+            <TrendSection r={movement} defaultMode="bar" />
           </>
         ) : null}
 

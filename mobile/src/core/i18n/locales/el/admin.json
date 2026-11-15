@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} ακόμη αντιπρόσωποι",
   "orders.action.received_on_behalf": "Παραλήφθηκε εκ μέρους του αγοραστή",
   "orders.confirm.received_on_behalf": "Να σημειωθεί η παραγγελία ως παραληφθείσα εκ μέρους του αγοραστή;",
-  "orders.on_behalf_note": "εκ μέρους του αγοραστή"
+  "orders.on_behalf_note": "εκ μέρους του αγοραστή",
+  "home.network_dealers": "Αντιπρόσωποι δικτύου",
+  "home.last_order": "Τελευταία παραγγελία: {{date}}",
+  "home.never_ordered": "Δεν έχει παραγγείλει ποτέ"
 }

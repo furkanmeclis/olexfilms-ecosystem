@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} وكلاء آخرون",
   "orders.action.received_on_behalf": "تم الاستلام نيابة عن المشتري",
   "orders.confirm.received_on_behalf": "هل تريد تعليم الطلب كمستلم نيابة عن المشتري؟",
-  "orders.on_behalf_note": "نيابة عن المشتري"
+  "orders.on_behalf_note": "نيابة عن المشتري",
+  "home.network_dealers": "الوكلاء في الشبكة",
+  "home.last_order": "آخر طلب: {{date}}",
+  "home.never_ordered": "لم يطلب أبدًا"
 }

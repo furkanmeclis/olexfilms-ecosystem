@@ -6,36 +6,20 @@ import { Pressable, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { usePricesVisible } from '@/core/use-prices-visible';
 import { ErrorState, ListSkeleton, useFormat } from '@/features/admin/kit';
+import { ChartCard, RankBars } from '@/features/analytics-kit/charts';
+import { ChartEmpty, ChartError, ChartSkeleton } from '@/features/analytics-kit/states';
+import type { PeriodState } from '@/features/analytics-kit/period';
+import { num, type Row } from '@/features/analytics-kit/table';
 import { NEW_ORDER, useCanOrder } from '@/features/catalog/catalog-screen';
-import { orderTone, type Order } from '@/features/orders/orders-screen';
-import { type Period, useReport } from '@/features/reports/api';
-import { BarList, TimeChart } from '@/features/reports/report-view';
+import { orderTone } from '@/features/orders/orders-screen';
+import { useCatalogReport } from '@/features/reports/api';
+import { RankSection, TrendSection, useRowPress } from '@/features/reports/sections';
 import { useLinks } from '@/features/services/lib';
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { Button } from '@/ui/button';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
-
-import { dealersWithoutOrders, periodStart, RANK_MAX_PAGES, RANK_PAGE, type RankRow, topBuyers, topOpeners } from './lib';
-
-type Paged<T> = { items: T[]; total: number };
-
-/**
- * Every row of a period, at most RANK_MAX_PAGES pages of 100; `partial`
- * tells when the period holds more (the ranking then covers the newest rows).
- */
-async function readPages<T>(page: (offset: number) => Promise<Paged<T>>): Promise<{ items: T[]; partial: boolean }> {
-  const items: T[] = [];
-  let total = 0;
-  for (let i = 0; i < RANK_MAX_PAGES; i++) {
-    const r = await page(i * RANK_PAGE);
-    items.push(...r.items);
-    total = r.total;
-    if (items.length >= r.total || r.items.length === 0) break;
-  }
-  return { items, partial: items.length < total };
-}
 
 function Header({ title }: { title: string }) {
   return (
@@ -53,125 +37,104 @@ function Empty({ text }: { text: string }) {
   );
 }
 
-/** A ranking of organizations: name, count and (orders) amounts. */
-function RankList({ rows, unit, money }: { rows: RankRow[]; unit: 'orders' | 'services'; money: boolean }) {
+const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
+
+/**
+ * Active dealers without an order in the period (orders.inactive_buyers,
+ * TEC-1090): never ordered first, then the oldest last order. The card's
+ * total is the `inactive_dealers` card; rows are capped by `limit`.
+ */
+function InactiveBuyers({ period }: { period: PeriodState }) {
   const { t } = useTranslation('admin');
   const f = useFormat();
-  const max = Math.max(1, ...rows.map((r) => r.count));
+  const press = useRowPress();
+  const SHOWN = 8;
+  const r = useCatalogReport('orders.inactive_buyers', period, { limit: SHOWN, granularity: false });
+  if (!r.available && !r.loading) return null;
+  const data = r.query.data;
+  const count = data?.series.find((s) => s.key === 'cards')?.points.find((p) => p.key === 'inactive_dealers')?.value;
+  const rows: Row[] = data?.rows ?? [];
+
   return (
-    <View className="gap-3 rounded-lg border border-border bg-card p-3.5">
-      {rows.map((r, i) => {
-        const amounts = money ? Object.entries(r.totals).map(([cur, v]) => f.money(v, cur)) : [];
-        return (
-          <View key={r.uuid} className="gap-1">
-            <View className="flex-row items-baseline justify-between gap-2">
-              <Text variant="footnote" className="flex-1" numberOfLines={1}>
-                {`${f.number(i + 1)}. ${r.name}`}
-              </Text>
-              <Text variant="footnote" className="font-semibold tabular-nums">
-                {t(unit === 'orders' ? 'home.orders_count' : 'home.services_count', { count: r.count })}
-              </Text>
-            </View>
-            {amounts.length ? (
-              <Text variant="footnote" tone="muted" className="tabular-nums" numberOfLines={1}>
-                {amounts.join(' · ')}
-              </Text>
+    <ChartCard title={t('home.no_orders')} trailing={count !== undefined ? <Text variant="footnote" tone="muted">{f.number(count)}</Text> : undefined}>
+      {r.loading && !data ? (
+        <ChartSkeleton height={120} />
+      ) : r.query.isError && !data ? (
+        <ChartError error={r.query.error} onRetry={() => void r.query.refetch()} />
+      ) : rows.length ? (
+        <View className="-mx-3.5 -mb-3.5">
+          <List>
+            {rows.slice(0, SHOWN).map((row, i, shown) => {
+              const last = str(row.last_order_at);
+              return (
+                <ListRow
+                  key={str(row.organization_uuid) ?? String(i)}
+                  icon="building"
+                  title={str(row.organization) ?? '–'}
+                  subtitle={[str(row.city), last ? t('home.last_order', { date: f.date(last) }) : t('home.never_ordered')].filter(Boolean).join(' · ')}
+                  last={i === shown.length - 1 && (count ?? rows.length) <= SHOWN}
+                  onPress={press(row)}
+                />
+              );
+            })}
+            {(count ?? 0) > SHOWN ? (
+              <ListRow title={t('home.more_dealers', { count: (count ?? 0) - SHOWN })} last onPress={() => router.push('/bayi/menu/network' as Href)} />
             ) : null}
-            <View className="h-2 overflow-hidden rounded-full bg-muted">
-              <View className="h-2 rounded-full bg-primary" style={{ width: `${(r.count / max) * 100}%` }} />
-            </View>
-          </View>
-        );
-      })}
-    </View>
+          </List>
+        </View>
+      ) : (
+        <ChartEmpty height={60} text={t('home.no_orders_none')} />
+      )}
+    </ChartCard>
   );
 }
 
 // ------------------------------------------------------------------- sales
 
 /**
- * Sales board of the center sales staff (TEC-1068): quick order, the order
- * chart of the period (orders.trend), the dealers that ordered the most, the
- * active dealers without an order in the period, the latest orders with
- * their status. Amounts only with price visibility (TEC-1051).
+ * Sales board of the center sales staff (TEC-1068, TEC-1213): quick order,
+ * orders over time against the previous period (orders.trend), the dealers
+ * that ordered the most (orders.by_buyer), the active dealers without an
+ * order (orders.inactive_buyers) and the latest orders. Amounts only with
+ * price visibility (the API leaves them out otherwise, TEC-1051).
  */
-export function SalesBoard({ period, ordersBase }: { period: Period; ordersBase: string }) {
+export function SalesBoard({ period, ordersBase }: { period: PeriodState; ordersBase: string }) {
   const { t } = useTranslation('admin');
   const f = useFormat();
   const prices = usePricesVisible();
   const canOrder = useCanOrder();
-  const from = periodStart(period);
 
-  const trend = useReport('orders.trend', { period });
-  const created = trend.data?.series.find((s) => s.key === 'created');
-
-  const sold = useQuery({
-    queryKey: ['center-home', 'orders', from],
-    queryFn: () =>
-      readPages<Order>((offset) =>
-        unwrap(
-          api.GET('/v1/orders', {
-            params: { query: { side: 'seller', created_from: from, sort: '-created_at', limit: RANK_PAGE, offset } },
-          }),
-        ),
-      ),
-  });
-  const dealers = useQuery({
-    queryKey: ['center-home', 'dealers'],
-    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200 } } })),
-    staleTime: 5 * 60_000,
-  });
+  const trend = useCatalogReport('orders.trend', period);
+  const buyers = useCatalogReport('orders.by_buyer', period, { limit: 5 });
   const recent = useQuery({
     queryKey: ['center-home', 'orders', 'recent'],
     queryFn: () => unwrap(api.GET('/v1/orders', { params: { query: { side: 'seller', sort: '-created_at', limit: 5, offset: 0 } } })),
   });
 
-  const orders = sold.data?.items ?? [];
-  const top = topBuyers(orders);
-  const idle = dealers.data ? dealersWithoutOrders(dealers.data.items, orders) : [];
-  const IDLE_SHOWN = 8;
-
   return (
     <View className="gap-3">
       {canOrder ? <Button title={t('home.quick_order')} icon="add" size="lg" onPress={() => router.push(NEW_ORDER as Href)} /> : null}
 
-      {created ? <TimeChart series={created} /> : trend.isPending ? <ListSkeleton rows={1} inset={false} /> : null}
+      <TrendSection r={trend} defaultMode="bar" />
 
-      <Header title={t('home.top_buyers')} />
-      {sold.isPending ? (
-        <ListSkeleton rows={3} inset={false} />
-      ) : sold.isError ? (
-        <ErrorState error={sold.error} onRetry={() => void sold.refetch()} />
-      ) : top.length ? (
-        <RankList rows={top} unit="orders" money={prices} />
-      ) : (
-        <Empty text={t('home.empty_period')} />
-      )}
-      {sold.data?.partial ? <Empty text={t('home.rank_partial', { count: RANK_PAGE * RANK_MAX_PAGES })} /> : null}
+      <RankSection
+        r={buyers}
+        title={t('home.top_buyers')}
+        toItem={(row) => {
+          const count = num(row.order_count) ?? 0;
+          const total = prices ? num(row.total) : null;
+          const cur = str(row.currency);
+          return {
+            key: str(row.organization_uuid) ?? String(row.organization),
+            label: str(row.organization) ?? '–',
+            value: count,
+            valueText: t('home.orders_count', { count: f.number(count) }),
+            sub: [total !== null && cur ? f.money(total, cur) : null, str(row.city)].filter(Boolean).join(' · ') || null,
+          };
+        }}
+      />
 
-      <Header title={t('home.no_orders')} />
-      {sold.isPending || dealers.isPending ? (
-        <ListSkeleton rows={3} inset={false} />
-      ) : dealers.isError ? (
-        <ErrorState error={dealers.error} onRetry={() => void dealers.refetch()} />
-      ) : idle.length ? (
-        <List>
-          {idle.slice(0, IDLE_SHOWN).map((d, i, shown) => (
-            <ListRow
-              key={d.uuid}
-              icon="building"
-              title={d.name}
-              last={i === shown.length - 1 && idle.length <= IDLE_SHOWN}
-              onPress={() => router.push(`/bayi/menu/network/${d.uuid}` as Href)}
-            />
-          ))}
-          {idle.length > IDLE_SHOWN ? (
-            <ListRow title={t('home.more_dealers', { count: idle.length - IDLE_SHOWN })} last onPress={() => router.push('/bayi/menu/network' as Href)} />
-          ) : null}
-        </List>
-      ) : (
-        <Empty text={t('home.no_orders_none')} />
-      )}
+      <InactiveBuyers period={period} />
 
       <Header title={t('home.recent_orders')} />
       {recent.isPending ? (
@@ -211,36 +174,24 @@ export function SalesBoard({ period, ordersBase }: { period: Period; ordersBase:
 // ---------------------------------------------------------------- services
 
 /**
- * Services board of the center (TEC-1073): the latest services (plate first,
- * service number and the dealer that opened it), and the period's most used
- * products, brands, models and the dealers that opened the most services.
+ * Services board of the center (TEC-1073, TEC-1213): the latest services,
+ * services over time against the previous period, the period's most used
+ * products, brands and models, and services by dealer (services.by_org; the
+ * center's own service point is its own row).
  */
-export function ServicesBoard({ period }: { period: Period }) {
+export function ServicesBoard({ period }: { period: PeriodState }) {
   const { t } = useTranslation('admin');
+  const f = useFormat();
   const links = useLinks();
-  const from = periodStart(period);
 
   const recent = useQuery({
     queryKey: ['center-home', 'services', 'recent'],
     queryFn: () => unwrap(api.GET('/v1/services', { params: { query: { sort: '-created_at', limit: 5, offset: 0 } } })),
   });
-  const products = useReport('services.top_products', { period, limit: 5 });
-  const brands = useReport('services.top_brands', { period, limit: 5 });
-  const models = useReport('services.top_models', { period, limit: 5 });
-  const opened = useQuery({
-    queryKey: ['center-home', 'services', from],
-    queryFn: () =>
-      readPages((offset) =>
-        unwrap(api.GET('/v1/services', { params: { query: { created_from: from, sort: '-created_at', limit: RANK_PAGE, offset } } })),
-      ),
-  });
-  const openers = topOpeners(opened.data?.items ?? []);
-
-  const rankings = [
-    { key: 'products', title: t('home.top_products'), q: products },
-    { key: 'brands', title: t('home.top_brands'), q: brands },
-    { key: 'models', title: t('home.top_models'), q: models },
-  ];
+  const products = useCatalogReport('services.top_products', period, { limit: 5 });
+  const brands = useCatalogReport('services.top_brands', period, { limit: 5 });
+  const models = useCatalogReport('services.top_models', period, { limit: 5 });
+  const byOrg = useCatalogReport('services.by_org', period, { limit: 5 });
 
   return (
     <View className="gap-3">
@@ -260,35 +211,49 @@ export function ServicesBoard({ period }: { period: Period }) {
       )}
       <Button title={t('home.see_all_services')} variant="ghost" onPress={() => router.push('/bayi/services?status=all' as Href)} />
 
-      {rankings.map(({ key, title, q }) => {
-        const series = q.data?.series[0];
-        return (
-          <View key={key} className="gap-3">
-            <Header title={title} />
-            {q.isPending ? (
-              <ListSkeleton rows={2} inset={false} />
-            ) : q.isError ? (
-              <ErrorState error={q.error} onRetry={() => void q.refetch()} />
-            ) : series && series.points.length ? (
-              <BarList series={series} hideLabel />
-            ) : (
-              <Empty text={t('home.empty_period')} />
-            )}
-          </View>
-        );
-      })}
+      <RankSection
+        r={byOrg}
+        title={t('home.top_dealers')}
+        toItem={(row) => {
+          const count = num(row.services_count) ?? 0;
+          return {
+            key: `${str(row.organization_uuid) ?? row.organization}${row.is_service_point ? ':sp' : ''}`,
+            label: str(row.organization) ?? '–',
+            value: count,
+            valueText: t('home.services_count', { count: f.number(count) }),
+            sub: str(row.city),
+          };
+        }}
+      />
 
-      <Header title={t('home.top_dealers')} />
-      {opened.isPending ? (
-        <ListSkeleton rows={3} inset={false} />
-      ) : opened.isError ? (
-        <ErrorState error={opened.error} onRetry={() => void opened.refetch()} />
-      ) : openers.length ? (
-        <RankList rows={openers} unit="services" money={false} />
-      ) : (
-        <Empty text={t('home.empty_period')} />
-      )}
-      {opened.data?.partial ? <Empty text={t('home.rank_partial', { count: RANK_PAGE * RANK_MAX_PAGES })} /> : null}
+      {[
+        { key: 'products', title: t('home.top_products'), r: products },
+        { key: 'brands', title: t('home.top_brands'), r: brands },
+        { key: 'models', title: t('home.top_models'), r: models },
+      ].map(({ key, title, r }) => (
+        <SeriesRank key={key} title={title} r={r} />
+      ))}
     </View>
+  );
+}
+
+/** A ranking report drawn from its first series (product, brand, model rankings). */
+function SeriesRank({ title, r }: { title: string; r: ReturnType<typeof useCatalogReport> }) {
+  const { t } = useTranslation('admin');
+  if (!r.available && !r.loading) return null;
+  const data = r.query.data;
+  const s = data?.series.find((x) => x.key !== 'cards' && x.points.length);
+  return (
+    <ChartCard title={title}>
+      {r.loading && !data ? (
+        <ChartSkeleton height={100} />
+      ) : r.query.isError && !data ? (
+        <ChartError error={r.query.error} onRetry={() => void r.query.refetch()} />
+      ) : s ? (
+        <RankBars items={s.points.map((p) => ({ key: p.key, label: p.label, value: p.value }))} unit={s.unit} />
+      ) : (
+        <ChartEmpty height={60} text={t('home.empty_period')} />
+      )}
+    </ChartCard>
   );
 }

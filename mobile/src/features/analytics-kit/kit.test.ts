@@ -309,3 +309,19 @@ describe('period', () => {
     assert.deepEqual(tapRange({ from: '2026-11-03', to: '2026-11-10' }, '2026-11-20'), { from: '2026-11-20' });
   });
 });
+
+describe('links', async () => {
+  const { linkPath } = await import('./links.ts');
+  it('opens records inside the current space', () => {
+    assert.equal(linkPath('bayi', 'order', 'u-1'), '/bayi/menu/orders/u-1');
+    assert.equal(linkPath('admin', 'organization', 'u-1'), '/admin/network/u-1');
+    assert.equal(linkPath('bayi', 'organization', 'u-1'), '/bayi/menu/network/u-1');
+    assert.equal(linkPath('bayi', 'service', 'u-1'), '/bayi/menu/customers/services/u-1');
+    assert.equal(linkPath('admin', 'product', 'u-1'), null);
+    assert.equal(linkPath('depo', 'order', 'u-1'), '/depo/menu/orders/u-1');
+    assert.equal(linkPath('depo', 'customer', 'u-1'), null);
+    assert.equal(linkPath('musteri', 'order', 'u-1'), null);
+    assert.equal(linkPath('bayi', 'unknown', 'u-1'), null);
+    assert.equal(linkPath('bayi', 'order', '../x'), null);
+  });
+});

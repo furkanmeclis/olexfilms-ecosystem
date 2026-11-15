@@ -129,5 +129,8 @@
   "home.more_dealers": "+{{count}} diler daha",
   "orders.action.received_on_behalf": "Alıcı adına təhvil alındı",
   "orders.confirm.received_on_behalf": "Sifariş alıcı adına təhvil alındı kimi qeyd edilsin?",
-  "orders.on_behalf_note": "alıcı adına"
+  "orders.on_behalf_note": "alıcı adına",
+  "home.network_dealers": "Şəbəkədəki dilerlər",
+  "home.last_order": "Son sifariş: {{date}}",
+  "home.never_ordered": "Heç sifariş verməyib"
 }
