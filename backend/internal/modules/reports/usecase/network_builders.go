@@ -35,7 +35,7 @@ func (s *Service) ordersByBuyer(ctx context.Context, c Caller, q query, a args, 
 	}
 	amounts := orderAmountsVisible(c.Principal)
 	sr := q.series("order_count", unitCount)
-	cols := [][2]string{{"rank", "integer"}, {"organization", "string"}, {"city", "string"}, {"order_count", "integer"}}
+	cols := [][2]string{{"rank", "integer"}, {"organization", "org"}, {"city", "string"}, {"order_count", "integer"}}
 	if amounts {
 		cols = append(cols, [2]string{"total", "money"})
 	}
@@ -47,6 +47,7 @@ func (s *Service) ordersByBuyer(ctx context.Context, c Caller, q query, a args, 
 			"rank": i + 1, "organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName,
 			"organization_type": r.OrganizationType, "city": r.City, "order_count": r.OrderCount,
 			"total": nil, "currency": nil, "last_order_at": r.LastOrderAt.Time.UTC(),
+			rowLink: link(LinkOrganization, r.OrganizationUuid.String()),
 		}
 		if amounts {
 			row["total"], row["currency"] = moneyText(r.Total), r.Currency
@@ -74,20 +75,22 @@ func (s *Service) inactiveBuyers(ctx context.Context, c Caller, f scopefilter.Fi
 		return fmt.Errorf("reports: inactive buyers: %w", err)
 	}
 	var count int64
-	env.Columns = q.columns([][2]string{{"organization", "string"}, {"city", "string"}, {"last_order_at", "datetime"}})
+	env.Columns = q.columns([][2]string{{"organization", "org"}, {"city", "string"}, {"last_order_at", "datetime"}})
 	for _, r := range rows {
 		count = r.TotalCount
 		row := map[string]any{
 			"organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName, "city": r.City, "last_order_at": nil,
+			rowLink: link(LinkOrganization, r.OrganizationUuid.String()),
 		}
 		if r.LastOrderAt.Valid {
 			row["last_order_at"] = r.LastOrderAt.Time.UTC()
 		}
 		env.Rows = append(env.Rows, row)
 	}
-	cards := q.series("cards", unitCount)
+	cards := q.series(seriesCards, unitCount)
 	cards.Points = []Point{q.card("inactive_dealers", float64(count))}
 	env.Series = []Series{cards}
+	env.KPIs = kpisFromCards(ReportOrdersInactiveBuyer, cards, nil)
 	return nil
 }
 
@@ -103,7 +106,7 @@ func (s *Service) servicesByOrg(ctx context.Context, q query, a args, env *Envel
 		return fmt.Errorf("reports: services by organization: %w", err)
 	}
 	sr := q.series("service_count", unitCount)
-	env.Columns = q.columns([][2]string{{"rank", "integer"}, {"organization", "string"}, {"city", "string"}, {"services_count", "integer"}})
+	env.Columns = q.columns([][2]string{{"rank", "integer"}, {"organization", "org"}, {"city", "string"}, {"services_count", "integer"}})
 	for i, r := range rows {
 		name := r.OrganizationName
 		point := r.OrganizationType == rbac.OrgTypeCenter && r.ServicePointEnabled && r.ServicePointName.Valid && r.ServicePointName.String != ""
@@ -115,6 +118,7 @@ func (s *Service) servicesByOrg(ctx context.Context, q query, a args, env *Envel
 			"rank": i + 1, "organization_uuid": r.OrganizationUuid, "organization": name,
 			"organization_name": r.OrganizationName, "organization_type": r.OrganizationType,
 			"is_service_point": r.OrganizationType == rbac.OrgTypeCenter, "city": r.City, "services_count": r.ServiceCount,
+			rowLink: link(LinkOrganization, r.OrganizationUuid.String()),
 		})
 	}
 	env.Series = []Series{sr}

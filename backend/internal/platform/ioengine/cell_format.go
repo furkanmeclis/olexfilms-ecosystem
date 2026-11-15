@@ -2,6 +2,7 @@ package ioengine
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,8 +82,36 @@ func formatCell(v any, col Column, loc i18n.Locale) string {
 		case time.Time:
 			return formatDatetime(t, loc)
 		}
+	case ColumnTypeNumber, ColumnTypeMoney:
+		if f, ok := NumericValue(v); ok {
+			if col.Type == ColumnTypeMoney {
+				return strconv.FormatFloat(f, 'f', 2, 64)
+			}
+			return strconv.FormatFloat(f, 'f', -1, 64)
+		}
 	}
 	return fmt.Sprint(v)
+}
+
+// NumericValue is v as a float64 when it is a Go number or a decimal
+// string (number / money columns, TEC-1210).
+func NumericValue(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case float32:
+		return float64(n), true
+	case int:
+		return float64(n), true
+	case int32:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(n), 64)
+		return f, err == nil
+	}
+	return 0, false
 }
 
 func pdfColumnWeights(columns []Column) []float64 {

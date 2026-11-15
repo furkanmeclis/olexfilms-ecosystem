@@ -14,7 +14,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const unitCount = "count"
+const (
+	unitCount   = "count"
+	seriesCards = "cards"
+)
 
 var (
 	serviceStatuses     = []string{"draft", "pending", "processing", "ready", "completed", "cancelled"}
@@ -27,6 +30,11 @@ var (
 	performanceColumns = []string{
 		perfmodel.MetricServicesCount, perfmodel.MetricWarrantyStartRate, perfmodel.MetricMeasurementRate,
 		perfmodel.MetricReviewAvg, perfmodel.MetricOrderVolume,
+	}
+	// performanceColumnTypes: rates are ratios (0..1) shown as percent.
+	performanceColumnTypes = map[string]string{
+		perfmodel.MetricServicesCount: "number", perfmodel.MetricWarrantyStartRate: "percent",
+		perfmodel.MetricMeasurementRate: "percent", perfmodel.MetricReviewAvg: "number", perfmodel.MetricOrderVolume: "money",
 	}
 )
 
@@ -150,13 +158,14 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		for _, r := range rows {
 			counts[r.Status] = r.Value
 		}
-		cards := q.series("cards", unitCount)
+		cards := q.series(seriesCards, unitCount)
 		cards.Points = []Point{
 			q.card("stock_products", float64(totals.ProductCount)),
 			q.card("stock_quantity", float64(totals.Quantity)),
 			q.card("stock_meters", totals.Meters),
 		}
 		env.Series = []Series{cards, q.distribution("units", "units.status.", unitStatuses, counts)}
+		env.KPIs = kpisFromCards(d.Key, cards, nil)
 	case ReportWarrantiesSummary:
 		counts, err := s.q.ReportWarrantyCounts(ctx, db.ReportWarrantyCountsParams{
 			NowAt: ts(s.now()), RangeFrom: from, RangeTo: to, BrandID: a.brandID, OrgIds: a.orgIDs, CreatedByUserID: a.createdBy,
@@ -175,7 +184,7 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		for _, r := range rows {
 			add(values, "started", r.Bucket, r.Value)
 		}
-		cards := q.series("cards", unitCount)
+		cards := q.series(seriesCards, unitCount)
 		cards.Points = []Point{
 			q.card("warranties_active", float64(counts.ActiveCount)),
 			q.card("warranties_expiring", float64(counts.ExpiringCount)),
@@ -186,7 +195,9 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		status := q.distribution("status", "warranties.status.", warrantyStatuses, map[string]int64{
 			"active": counts.ActiveCount, "expired": counts.ExpiredCount, "void": counts.VoidCount,
 		})
-		env.Series = []Series{cards, status, q.timeSeries("started", values)}
+		started := q.timeSeries("started", values)
+		env.Series = []Series{cards, status, started}
+		env.KPIs = kpisFromCards(d.Key, cards, map[string][]float64{"warranties_started": valuesOf(started)})
 	case ReportMeasurementsSummary:
 		counts, err := s.q.ReportMeasurementCounts(ctx, db.ReportMeasurementCountsParams{
 			BrandID: a.brandID, OrgIds: a.orgIDs, CreatedByUserID: a.createdBy, RangeFrom: from, RangeTo: to,
@@ -205,7 +216,7 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		for _, r := range rows {
 			add(values, "measurements", r.Bucket, r.Value)
 		}
-		cards := q.series("cards", unitCount)
+		cards := q.series(seriesCards, unitCount)
 		cards.Points = []Point{
 			q.card("measurements_total", float64(counts.TotalCount)),
 			q.card("measurements_linked", float64(counts.LinkedCount)),
@@ -214,13 +225,21 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		status := q.distribution("status", "measurements.status.", measurementStatuses, map[string]int64{
 			"accepted": counts.AcceptedCount, "vin_pending": counts.VinPendingCount,
 		})
-		env.Series = []Series{cards, status, q.timeSeries("measurements", values)}
+		trend := q.timeSeries("measurements", values)
+		env.Series = []Series{cards, status, trend}
+		env.KPIs = kpisFromCards(d.Key, cards, map[string][]float64{"measurements_total": valuesOf(trend)})
 	case ReportOrdersByBuyer:
 		return s.ordersByBuyer(ctx, c, q, a, env)
 	case ReportOrdersInactiveBuyer:
 		return s.inactiveBuyers(ctx, c, f, q, a, env)
 	case ReportServicesByOrg:
 		return s.servicesByOrg(ctx, q, a, env)
+	case ReportOrdersFulfillment:
+		return s.orderFulfillment(ctx, q, a, env)
+	case ReportNetworkSummary:
+		return s.networkSummary(ctx, q, a, env)
+	case ReportStockMovement:
+		return s.stockMovement(ctx, q, a, env)
 	case ReportDealersPerformance:
 		return s.dealersPerformance(ctx, c, f, q, env)
 	case ReportDealersTopByWarranty:
@@ -233,13 +252,14 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		sr := q.series("warranty_count", unitCount)
 		sr.Label = translate(q.locale, "column.warranty_count")
 		env.Columns = q.columns([][2]string{
-			{"rank", "integer"}, {"organization", "string"}, {"city", "string"}, {"warranty_count", "integer"}, {"active_count", "integer"},
+			{"rank", "integer"}, {"organization", "org"}, {"city", "string"}, {"warranty_count", "integer"}, {"active_count", "integer"},
 		})
 		for i, r := range rows {
 			sr.Points = append(sr.Points, Point{Key: r.OrganizationUuid.String(), Label: r.OrganizationName, Value: float64(r.WarrantyCount)})
 			env.Rows = append(env.Rows, map[string]any{
 				"rank": i + 1, "organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName,
 				"city": r.City, "warranty_count": r.WarrantyCount, "active_count": r.ActiveCount,
+				rowLink: link(LinkOrganization, r.OrganizationUuid.String()),
 			})
 		}
 		env.Series = []Series{sr}
@@ -251,8 +271,8 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 			return fmt.Errorf("reports: recent services: %w", err)
 		}
 		env.Columns = q.columns([][2]string{
-			{"service_no", "string"}, {"plate", "string"}, {"vehicle", "string"}, {"organization", "string"},
-			{"status", "string"}, {"created_at", "datetime"},
+			{"service_no", "link"}, {"plate", "string"}, {"vehicle", "string"}, {"organization", "org"},
+			{"status", "status"}, {"created_at", "datetime"},
 		})
 		for _, r := range rows {
 			row := map[string]any{
@@ -261,6 +281,8 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 				"organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName,
 				"status": r.Status, "status_label": translate(q.locale, "services.status."+r.Status),
 				"created_at": r.CreatedAt.Time.UTC(), "completed_at": nil,
+				rowLink:   link(LinkService, r.Uuid.String()),
+				rowStatus: map[string]StatusCell{"status": q.statusCell("services", "services.status.", r.Status)},
 			}
 			if r.Plate.Valid {
 				row["plate"] = r.Plate.String
@@ -299,16 +321,31 @@ func (s *Service) dealersPerformance(ctx context.Context, c Caller, f scopefilte
 			return perfErr(err)
 		}
 	}
-	cols := [][2]string{{"rank", "integer"}, {"organization", "string"}, {"type", "string"}}
+	// TEC-1050: order_volume is a price; it is left out without a pricing
+	// read permission.
+	amounts := orderAmountsVisible(c.Principal)
+	cols := [][2]string{{"rank", "integer"}, {"organization", "org"}, {"type", "string"}}
 	for _, m := range performanceColumns {
-		cols = append(cols, [2]string{m, "number"})
+		if m == perfmodel.MetricOrderVolume && !amounts {
+			continue
+		}
+		cols = append(cols, [2]string{m, performanceColumnTypes[m]})
 	}
 	env.Columns = q.columns(cols)
 	sr := q.series("service_count", unitCount)
 	for _, r := range rows {
-		row := map[string]any{"rank": r.Rank, "organization_uuid": r.OrganizationUUID, "organization": r.Name, "type": r.Type, "period": month}
+		row := map[string]any{
+			"rank": r.Rank, "organization_uuid": r.OrganizationUUID, "organization": r.Name, "type": r.Type, "period": month,
+			"currency": nil, rowLink: link(LinkOrganization, r.OrganizationUUID.String()),
+		}
 		for _, m := range performanceColumns {
+			if m == perfmodel.MetricOrderVolume && !amounts {
+				continue
+			}
 			row[m] = metricNumber(r.Metrics[m])
+		}
+		if amounts && r.Currency != "" {
+			row["currency"] = r.Currency
 		}
 		env.Rows = append(env.Rows, row)
 		if v, ok := row[perfmodel.MetricServicesCount].(float64); ok {
@@ -355,6 +392,7 @@ func (q query) series(key, unit string) Series {
 // timeSeries fills every bucket of the range (missing = 0).
 func (q query) timeSeries(key string, values map[string]map[string]int64) Series {
 	sr := q.series(key, unitCount)
+	sr.timeline = true
 	for _, b := range q.buckets() {
 		sr.Points = append(sr.Points, Point{Key: b, Label: b, Value: float64(values[key][b])})
 	}
@@ -374,10 +412,44 @@ func (q query) card(key string, v float64) Point {
 	return Point{Key: key, Label: translate(q.locale, "card."+key), Value: v}
 }
 
+// columns builds the table columns. The legacy types string / integer are
+// written as text / number (TEC-1210); align and aggregate follow the type
+// (numbers sum, percents average, rank none).
 func (q query) columns(defs [][2]string) []Column {
 	out := make([]Column, 0, len(defs))
 	for _, d := range defs {
-		out = append(out, Column{Key: d[0], Label: translate(q.locale, "column."+d[0]), Type: d[1]})
+		typ := d[1]
+		switch typ {
+		case "string":
+			typ = "text"
+		case "integer":
+			typ = "number"
+		}
+		c := Column{Key: d[0], Label: translate(q.locale, "column."+d[0]), Type: typ, Align: "left", Aggregate: "none"}
+		switch typ {
+		case "number", "money", "duration":
+			c.Align, c.Aggregate = "right", "sum"
+		case "percent":
+			c.Align, c.Aggregate = "right", "avg"
+		}
+		if agg, ok := columnAggregates[d[0]]; ok {
+			c.Aggregate = agg
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// columnAggregates override the type default of a column.
+var columnAggregates = map[string]string{
+	"rank": "none", perfmodel.MetricReviewAvg: "avg", "avg_prep_hours": "avg",
+}
+
+// valuesOf is the bucket values of a series (KPI sparks).
+func valuesOf(sr Series) []float64 {
+	out := make([]float64, 0, len(sr.Points))
+	for _, p := range sr.Points {
+		out = append(out, p.Value)
 	}
 	return out
 }
@@ -410,7 +482,8 @@ func (s *Service) overviewDomains(ctx context.Context, c Caller) ([]overviewDoma
 
 // overview is the legacy 15+ card dashboard: one card group per domain the
 // caller reaches (module on + read permission), each in its own scope.
-// Network cards (dealer counts) only for a multi-organization reach.
+// Network cards (dealer counts) only for a multi-organization reach. The
+// cards are also the KPIs (TEC-1210) with sparks from the domain trends.
 func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query) (Envelope, error) {
 	domains, err := s.overviewDomains(ctx, c)
 	if err != nil {
@@ -420,8 +493,21 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 		return Envelope{}, ErrForbidden
 	}
 	env := s.envelope(d, q, domains[0].filter)
-	cards := q.series("cards", unitCount)
+	cards := q.series(seriesCards, unitCount)
 	from, to := ts(q.from), ts(q.to)
+	sparks := map[string][]float64{}
+	// spark fills sparks[key] from the rows of one trend series.
+	spark := func(key string, rows map[string]map[string]int64, series string) {
+		if q.previous {
+			return
+		}
+		out := make([]float64, 0)
+		for _, b := range q.sparkBuckets() {
+			out = append(out, float64(rows[series][b]))
+		}
+		sparks[key] = out
+	}
+	gran, tz := q.autoGranularity, q.tz.String()
 	for _, dom := range domains {
 		f := dom.filter
 		orgIDs := f.OrgIDsArg()
@@ -439,6 +525,20 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 			}
 			cards.Points = append(cards.Points, q.card("services_created", float64(r.CreatedCount)),
 				q.card("services_completed", float64(r.CompletedCount)), q.card("services_open", float64(r.OpenCount)))
+			if !q.previous {
+				rows, err := s.q.ReportServiceTrend(ctx, db.ReportServiceTrendParams{
+					Granularity: gran, Tz: tz, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy, RangeFrom: from, RangeTo: to,
+				})
+				if err != nil {
+					return Envelope{}, fmt.Errorf("reports: overview services trend: %w", err)
+				}
+				vals := map[string]map[string]int64{}
+				for _, r := range rows {
+					add(vals, r.Series, r.Bucket, r.Value)
+				}
+				spark("services_created", vals, "created")
+				spark("services_completed", vals, "completed")
+			}
 		case ReportOrdersTrend:
 			r, err := s.q.ReportOrderOverview(ctx, db.ReportOrderOverviewParams{
 				RangeFrom: from, RangeTo: to, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy,
@@ -447,6 +547,19 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 				return Envelope{}, fmt.Errorf("reports: overview orders: %w", err)
 			}
 			cards.Points = append(cards.Points, q.card("orders_created", float64(r.CreatedCount)), q.card("orders_open", float64(r.OpenCount)))
+			if !q.previous {
+				rows, err := s.q.ReportOrderTrend(ctx, db.ReportOrderTrendParams{
+					Granularity: gran, Tz: tz, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy, RangeFrom: from, RangeTo: to,
+				})
+				if err != nil {
+					return Envelope{}, fmt.Errorf("reports: overview orders trend: %w", err)
+				}
+				vals := map[string]map[string]int64{}
+				for _, r := range rows {
+					add(vals, r.Series, r.Bucket, r.Value)
+				}
+				spark("orders_created", vals, "created")
+			}
 		case ReportCustomersTrend:
 			r, err := s.q.ReportCustomerOverview(ctx, db.ReportCustomerOverviewParams{
 				RangeFrom: from, RangeTo: to, BrandID: c.Org.BrandID, OrgIds: orgIDs,
@@ -455,6 +568,19 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 				return Envelope{}, fmt.Errorf("reports: overview customers: %w", err)
 			}
 			cards.Points = append(cards.Points, q.card("customers_total", float64(r.TotalCount)), q.card("customers_new", float64(r.NewCount)))
+			if !q.previous {
+				rows, err := s.q.ReportCustomerTrend(ctx, db.ReportCustomerTrendParams{
+					Granularity: gran, Tz: tz, BrandID: c.Org.BrandID, OrgIds: orgIDs, RangeFrom: from, RangeTo: to,
+				})
+				if err != nil {
+					return Envelope{}, fmt.Errorf("reports: overview customers trend: %w", err)
+				}
+				vals := map[string]map[string]int64{}
+				for _, r := range rows {
+					add(vals, "new", r.Bucket, r.Value)
+				}
+				spark("customers_new", vals, "new")
+			}
 		case ReportWarrantiesSummary:
 			r, err := s.q.ReportWarrantyCounts(ctx, db.ReportWarrantyCountsParams{
 				NowAt: ts(s.now()), RangeFrom: from, RangeTo: to, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy,
@@ -464,6 +590,19 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 			}
 			cards.Points = append(cards.Points, q.card("warranties_active", float64(r.ActiveCount)),
 				q.card("warranties_expiring", float64(r.ExpiringCount)), q.card("warranties_started", float64(r.StartedCount)))
+			if !q.previous {
+				rows, err := s.q.ReportWarrantyTrend(ctx, db.ReportWarrantyTrendParams{
+					Granularity: gran, Tz: tz, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy, RangeFrom: from, RangeTo: to,
+				})
+				if err != nil {
+					return Envelope{}, fmt.Errorf("reports: overview warranties trend: %w", err)
+				}
+				vals := map[string]map[string]int64{}
+				for _, r := range rows {
+					add(vals, "started", r.Bucket, r.Value)
+				}
+				spark("warranties_started", vals, "started")
+			}
 		case ReportStockSummary:
 			r, err := s.q.ReportStockTotals(ctx, db.ReportStockTotalsParams{BrandID: c.Org.BrandID, OrgIds: orgIDs})
 			if err != nil {
@@ -479,6 +618,19 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 				return Envelope{}, fmt.Errorf("reports: overview measurements: %w", err)
 			}
 			cards.Points = append(cards.Points, q.card("measurements_total", float64(r.TotalCount)))
+			if !q.previous {
+				rows, err := s.q.ReportMeasurementTrend(ctx, db.ReportMeasurementTrendParams{
+					Granularity: gran, Tz: tz, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy, RangeFrom: from, RangeTo: to,
+				})
+				if err != nil {
+					return Envelope{}, fmt.Errorf("reports: overview measurements trend: %w", err)
+				}
+				vals := map[string]map[string]int64{}
+				for _, r := range rows {
+					add(vals, "measurements", r.Bucket, r.Value)
+				}
+				spark("measurements_total", vals, "measurements")
+			}
 		case networkDef.Key:
 			r, err := s.q.ReportNetworkCounts(ctx, db.ReportNetworkCountsParams{BrandID: c.Org.BrandID, OrgIds: orgIDs})
 			if err != nil {
@@ -489,5 +641,6 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 		}
 	}
 	env.Series = []Series{cards}
+	env.KPIs = kpisFromCards(d.Key, cards, sparks)
 	return env, nil
 }

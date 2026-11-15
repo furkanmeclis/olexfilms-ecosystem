@@ -24,4 +24,5 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/reports/layout", route(h.GetLayout))
 	mux.Handle("PUT /v1/reports/layout", route(h.PutLayout))
 	mux.Handle("GET /v1/reports/{report}", route(h.Report))
+	mux.Handle("GET /v1/reports/{report}/export", route(h.Export))
 }

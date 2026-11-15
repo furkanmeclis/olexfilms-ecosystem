@@ -277,10 +277,12 @@ func TestReportsFollowScope(t *testing.T) {
 		ReportOverview:                   func(e Envelope) float64 { return card(e, "services_completed") },
 		ReportOrdersByBuyer:              func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportServicesByOrg:              func(e Envelope) float64 { return sumSeries(e, "") },
+		ReportNetworkSummary:             func(e Envelope) float64 { return card(e, "network_services") },
 	}
 	for _, d := range Definitions {
-		if d.Key == ReportDealersPerformance || d.Key == ReportOrdersInactiveBuyer {
-			continue // TestDealersPerformanceScope, TestNetworkReportsTEC1090
+		if d.Key == ReportDealersPerformance || d.Key == ReportOrdersInactiveBuyer ||
+			d.Key == ReportOrdersFulfillment || d.Key == ReportStockMovement {
+			continue // TestDealersPerformanceScope, TestNetworkReportsTEC1090, TestRoleReportsTEC1210
 		}
 		get, ok := total[d.Key]
 		if !ok {
@@ -448,7 +450,7 @@ func TestEnvelopeShapeSameForEveryReport(t *testing.T) {
 	f := newFixture(t)
 	s := f.svc(featureMap{})
 	center := f.caller(t, f.center, rbac.RoleCenterStaff, rbac.RoleCenterWarehouse)
-	want := []string{"all_time", "columns", "generated_at", "granularity", "kind", "locale", "period", "range_from", "range_to", "report", "rows", "scope", "series", "timezone", "title"}
+	want := []string{"all_time", "columns", "generated_at", "granularity", "kind", "kpis", "locale", "period", "period_info", "range_from", "range_to", "report", "rows", "scope", "series", "timezone", "title"}
 	for _, d := range Definitions {
 		t.Run(d.Key, func(t *testing.T) {
 			in := in30
@@ -470,7 +472,7 @@ func TestEnvelopeShapeSameForEveryReport(t *testing.T) {
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("keys = %v, want %v", got, want)
 			}
-			for _, k := range []string{"series", "columns", "rows"} {
+			for _, k := range []string{"series", "columns", "rows", "kpis"} {
 				if string(m[k])[0] != '[' {
 					t.Fatalf("%s is not an array: %s", k, m[k])
 				}

@@ -39,7 +39,7 @@ func (s *Service) plotterCut(ctx context.Context, q query, a args, env *Envelope
 	}
 	lines, pieces, meters := map[string]float64{}, map[string]float64{}, map[string]float64{}
 	env.Columns = q.columns([][2]string{
-		{"month", "string"}, {"product", "string"}, {"sku", "string"},
+		{"month", "string"}, {"product", "link"}, {"sku", "string"},
 		{"line_count", "integer"}, {"quantity", "integer"}, {"meters", "number"},
 	})
 	for _, r := range rows {
@@ -53,10 +53,12 @@ func (s *Service) plotterCut(ctx context.Context, q query, a args, env *Envelope
 		env.Rows = append(env.Rows, map[string]any{
 			"month": r.Month.Time.Format("2006-01"), "product_uuid": r.ProductUuid, "product": r.ProductName,
 			"sku": r.Sku, "unit_type": r.UnitType, "line_count": r.LineCount, "quantity": r.Quantity, "meters": r.Meters,
+			rowLink: link(LinkProduct, r.ProductUuid.String()),
 		})
 	}
 	series := func(key, unit string, values map[string]float64) Series {
 		sr := q.series(key, unit)
+		sr.timeline = true
 		for _, m := range q.months() {
 			sr.Points = append(sr.Points, Point{Key: m, Label: m[:7], Value: values[m]})
 		}

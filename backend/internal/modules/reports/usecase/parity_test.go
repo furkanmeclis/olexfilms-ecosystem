@@ -32,6 +32,13 @@ func TestParityTableCoversLegacyEndpoints(t *testing.T) {
 			t.Errorf("legacy %s missing from the parity table", legacy)
 		}
 	}
+	// TEC-1210: the envelope v2 reports are documented next to the
+	// backend (backend/docs/reports-v2.md).
+	v2, err := os.ReadFile("../../../../docs/reports-v2.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc += string(v2)
 	for _, d := range Definitions {
 		if !strings.Contains(doc, "`"+d.Key+"`") {
 			t.Errorf("report %s not documented", d.Key)

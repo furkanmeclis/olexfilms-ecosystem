@@ -15,6 +15,13 @@ const (
 	ColumnTypeBoolean  ColumnType = "boolean"
 	ColumnTypeUUID     ColumnType = "uuid"
 	ColumnTypeDatetime ColumnType = "datetime"
+	// ColumnTypeNumber is a numeric cell (TEC-1210): XLSX writes a number,
+	// CSV the plain decimal ("1234.5"); a value that is not a number is
+	// written as text.
+	ColumnTypeNumber ColumnType = "number"
+	// ColumnTypeMoney is a numeric cell with two decimals (XLSX format
+	// #,##0.00); decimal strings ("1234.50") are numbers too.
+	ColumnTypeMoney ColumnType = "money"
 )
 
 // Column describes one export/import field.
