@@ -86,8 +86,9 @@
 /* TEC-1211 data-viz tokens (components/analytics). Light and dark are
    separate, hand-picked steps (not an automatic inversion). Categorical
    order is fixed: series N always gets --viz-cat-N, never cycled; a 9th+
-   series folds into "Other" (--viz-other). Sequential = one blue hue
-   (13 steps, light → dark); diverging = blue ↔ red around a neutral middle.
+   series folds into "Other" (--viz-other). Sequential = one blue hue,
+   13 steps from low to high value (in dark mode low starts at the dark end
+   so small values recede into the surface); diverging = blue ↔ red around a neutral middle.
    Status colours are for status only (always with an icon + label), never
    for series. Dark applies with the app theme class (.dark, next-themes) and
    with prefers-color-scheme when no theme class is set yet. */
@@ -151,19 +152,19 @@
   --viz-cat-6: #008300;
   --viz-cat-7: #9085e9;
   --viz-cat-8: #e66767;
-  --viz-seq-1: #cde2fb;
-  --viz-seq-2: #b7d3f6;
-  --viz-seq-3: #9ec5f4;
-  --viz-seq-4: #86b6ef;
-  --viz-seq-5: #6da7ec;
-  --viz-seq-6: #5598e7;
+  --viz-seq-1: #0d366b;
+  --viz-seq-2: #104281;
+  --viz-seq-3: #184f95;
+  --viz-seq-4: #1c5cab;
+  --viz-seq-5: #256abf;
+  --viz-seq-6: #2a78d6;
   --viz-seq-7: #3987e5;
-  --viz-seq-8: #2a78d6;
-  --viz-seq-9: #256abf;
-  --viz-seq-10: #1c5cab;
-  --viz-seq-11: #184f95;
-  --viz-seq-12: #104281;
-  --viz-seq-13: #0d366b;
+  --viz-seq-8: #5598e7;
+  --viz-seq-9: #6da7ec;
+  --viz-seq-10: #86b6ef;
+  --viz-seq-11: #9ec5f4;
+  --viz-seq-12: #b7d3f6;
+  --viz-seq-13: #cde2fb;
   --viz-div-1: #cde2fb;
   --viz-div-2: #86b6ef;
   --viz-div-3: #3987e5;
@@ -198,19 +199,19 @@
     --viz-cat-6: #008300;
     --viz-cat-7: #9085e9;
     --viz-cat-8: #e66767;
-    --viz-seq-1: #cde2fb;
-    --viz-seq-2: #b7d3f6;
-    --viz-seq-3: #9ec5f4;
-    --viz-seq-4: #86b6ef;
-    --viz-seq-5: #6da7ec;
-    --viz-seq-6: #5598e7;
+    --viz-seq-1: #0d366b;
+    --viz-seq-2: #104281;
+    --viz-seq-3: #184f95;
+    --viz-seq-4: #1c5cab;
+    --viz-seq-5: #256abf;
+    --viz-seq-6: #2a78d6;
     --viz-seq-7: #3987e5;
-    --viz-seq-8: #2a78d6;
-    --viz-seq-9: #256abf;
-    --viz-seq-10: #1c5cab;
-    --viz-seq-11: #184f95;
-    --viz-seq-12: #104281;
-    --viz-seq-13: #0d366b;
+    --viz-seq-8: #5598e7;
+    --viz-seq-9: #6da7ec;
+    --viz-seq-10: #86b6ef;
+    --viz-seq-11: #9ec5f4;
+    --viz-seq-12: #b7d3f6;
+    --viz-seq-13: #cde2fb;
     --viz-div-1: #cde2fb;
     --viz-div-2: #86b6ef;
     --viz-div-3: #3987e5;

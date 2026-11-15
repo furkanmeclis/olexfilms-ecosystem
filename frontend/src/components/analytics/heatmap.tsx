@@ -60,8 +60,7 @@ export function Heatmap({
   // 2024-01-01 is a Monday.
   const dayName = (d: number, style: "short" | "long" = "short") =>
     fmt.dateParts(new Date(2024, 0, d), { weekday: style });
-  const hourName = (h: number) =>
-    fmt.dateParts(new Date(2024, 0, 1, h), { hour: "2-digit" });
+  const hourName = (h: number) => fmt.number(h, { minimumIntegerDigits: 2 });
 
   const table: ChartTable = {
     columns: [

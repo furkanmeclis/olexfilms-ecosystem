@@ -231,7 +231,10 @@ export function TrendChart({
       <XAxis
         {...xAxisProps}
         dataKey="key"
-        tickFormatter={(_v, i) => (rows[i] ? label(rows[i]) : "")}
+        tickFormatter={(v) => {
+          const d = rows.find((r) => r.key === String(v));
+          return d ? label(d) : String(v);
+        }}
       />
       <YAxis
         {...yAxisProps}
