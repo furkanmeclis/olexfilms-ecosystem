@@ -24,6 +24,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { categoricalColor } from "@/components/analytics/palette";
 import type { AppChartProps, ChartSeries } from "@/components/charts/types";
 import {
   Card,
@@ -143,8 +144,38 @@ function SeriesMarks({
   );
 }
 
+/** TEC-1211: fixed categorical order, never cycled (9th+ = "Other" grey). */
 function chartPaletteColor(index: number): string {
-  return `var(--chart-${(index % 5) + 1})`;
+  return categoricalColor(index);
+}
+
+/**
+ * TEC-1211: line / bar series whose config entry has no colour got an
+ * undefined `var(--color-<key>)`; give them the palette slot of their
+ * position in the series list.
+ */
+export function withSeriesColors(
+  config: ChartConfig,
+  keys: readonly string[],
+): ChartConfig {
+  const next: ChartConfig = { ...config };
+  keys.forEach((key, index) => {
+    const entry = next[key];
+    if (entry?.color || entry?.theme) return;
+    next[key] = { ...entry, color: chartPaletteColor(index) };
+  });
+  return next;
+}
+
+function seriesKeys(
+  series: AppChartProps["series"],
+  config: ChartConfig,
+  categoryKey: string,
+): string[] {
+  if (series?.length) {
+    return series.map((item) => (typeof item === "string" ? item : item.key));
+  }
+  return Object.keys(config).filter((key) => key !== categoryKey);
 }
 
 /** Stable CSS-safe key for category slice colors (labels may contain spaces). */
@@ -210,8 +241,10 @@ export function AppChart({
 
   const resolvedConfig = useMemo(
     () =>
-      isCategoryChart ? withCategoryColors(config, data, categoryKey) : config,
-    [isCategoryChart, config, data, categoryKey],
+      isCategoryChart
+        ? withCategoryColors(config, data, categoryKey)
+        : withSeriesColors(config, seriesKeys(seriesProp, config, categoryKey)),
+    [isCategoryChart, config, data, categoryKey, seriesProp],
   );
 
   const series = useMemo(

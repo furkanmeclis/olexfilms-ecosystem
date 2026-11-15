@@ -28,11 +28,12 @@
   --border: oklch(0.9 0.015 156);
   --input: oklch(0.9 0.015 156);
   --ring: oklch(0.42 0.08 160);
-  --chart-1: oklch(0.3176 0.072 159.8498);
-  --chart-2: oklch(0.52 0.09 159.85);
-  --chart-3: oklch(0.7939 0.1387 72.2682);
-  --chart-4: oklch(0.65 0.1 155);
-  --chart-5: oklch(0.42 0.07 165);
+  /* TEC-1211: shadcn chart-1..5 follow the categorical data palette. */
+  --chart-1: var(--viz-cat-1);
+  --chart-2: var(--viz-cat-2);
+  --chart-3: var(--viz-cat-3);
+  --chart-4: var(--viz-cat-4);
+  --chart-5: var(--viz-cat-5);
   --sidebar: oklch(0.3 0.065 160);
   --sidebar-foreground: oklch(0.955 0.012 155);
   --sidebar-primary: oklch(0.7939 0.1387 72.2682);
@@ -66,11 +67,12 @@
   --border: oklch(0.34 0.035 160);
   --input: oklch(0.34 0.035 160);
   --ring: oklch(0.74 0.12 158);
-  --chart-1: oklch(0.8009 0.1574 158.3067);
-  --chart-2: oklch(0.74 0.12 158);
-  --chart-3: oklch(0.7939 0.1387 72.2682);
-  --chart-4: oklch(0.6 0.09 155);
-  --chart-5: oklch(0.48 0.07 165);
+  /* TEC-1211: shadcn chart-1..5 follow the categorical data palette. */
+  --chart-1: var(--viz-cat-1);
+  --chart-2: var(--viz-cat-2);
+  --chart-3: var(--viz-cat-3);
+  --chart-4: var(--viz-cat-4);
+  --chart-5: var(--viz-cat-5);
   --sidebar: oklch(0.17 0.035 160);
   --sidebar-foreground: oklch(0.92 0.012 155);
   --sidebar-primary: oklch(0.7939 0.1387 72.2682);
@@ -79,6 +81,154 @@
   --sidebar-accent-foreground: oklch(0.95 0.01 155);
   --sidebar-border: oklch(0.28 0.035 160);
   --sidebar-ring: oklch(0.7939 0.1387 72.2682);
+}
+
+/* TEC-1211 data-viz tokens (components/analytics). Light and dark are
+   separate, hand-picked steps (not an automatic inversion). Categorical
+   order is fixed: series N always gets --viz-cat-N, never cycled; a 9th+
+   series folds into "Other" (--viz-other). Sequential = one blue hue
+   (13 steps, light → dark); diverging = blue ↔ red around a neutral middle.
+   Status colours are for status only (always with an icon + label), never
+   for series. Dark applies with the app theme class (.dark, next-themes) and
+   with prefers-color-scheme when no theme class is set yet. */
+:root {
+  --viz-surface: #fcfcfb;
+  --viz-grid: #e1e0d9;
+  --viz-axis: #c3c2b7;
+  --viz-muted: #898781;
+  --viz-other: #b4b2a9;
+  --viz-cat-1: #2a78d6;
+  --viz-cat-2: #eb6834;
+  --viz-cat-3: #1baf7a;
+  --viz-cat-4: #eda100;
+  --viz-cat-5: #e87ba4;
+  --viz-cat-6: #008300;
+  --viz-cat-7: #6250d6;
+  --viz-cat-8: #e34948;
+  --viz-seq-1: #cde2fb;
+  --viz-seq-2: #b7d3f6;
+  --viz-seq-3: #9ec5f4;
+  --viz-seq-4: #86b6ef;
+  --viz-seq-5: #6da7ec;
+  --viz-seq-6: #5598e7;
+  --viz-seq-7: #3987e5;
+  --viz-seq-8: #2a78d6;
+  --viz-seq-9: #256abf;
+  --viz-seq-10: #1c5cab;
+  --viz-seq-11: #184f95;
+  --viz-seq-12: #104281;
+  --viz-seq-13: #0d366b;
+  --viz-div-1: #104281;
+  --viz-div-2: #1c5cab;
+  --viz-div-3: #2a78d6;
+  --viz-div-4: #6da7ec;
+  --viz-div-5: #b7d3f6;
+  --viz-div-6: #f0efec;
+  --viz-div-7: #f6c4c3;
+  --viz-div-8: #ee8f8e;
+  --viz-div-9: #e34948;
+  --viz-div-10: #b8302f;
+  --viz-div-11: #86201f;
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-serious: #ec835a;
+  --viz-critical: #d03b3b;
+  --viz-delta-good: #006300;
+  --viz-delta-bad: #b8302f;
+}
+
+.dark {
+  --viz-surface: #1a1a19;
+  --viz-grid: #2c2c2a;
+  --viz-axis: #383835;
+  --viz-muted: #898781;
+  --viz-other: #5e5d58;
+  --viz-cat-1: #3987e5;
+  --viz-cat-2: #d95926;
+  --viz-cat-3: #199e70;
+  --viz-cat-4: #c98500;
+  --viz-cat-5: #d55181;
+  --viz-cat-6: #008300;
+  --viz-cat-7: #9085e9;
+  --viz-cat-8: #e66767;
+  --viz-seq-1: #cde2fb;
+  --viz-seq-2: #b7d3f6;
+  --viz-seq-3: #9ec5f4;
+  --viz-seq-4: #86b6ef;
+  --viz-seq-5: #6da7ec;
+  --viz-seq-6: #5598e7;
+  --viz-seq-7: #3987e5;
+  --viz-seq-8: #2a78d6;
+  --viz-seq-9: #256abf;
+  --viz-seq-10: #1c5cab;
+  --viz-seq-11: #184f95;
+  --viz-seq-12: #104281;
+  --viz-seq-13: #0d366b;
+  --viz-div-1: #cde2fb;
+  --viz-div-2: #86b6ef;
+  --viz-div-3: #3987e5;
+  --viz-div-4: #1c5cab;
+  --viz-div-5: #104281;
+  --viz-div-6: #383835;
+  --viz-div-7: #5a2323;
+  --viz-div-8: #8a2d2c;
+  --viz-div-9: #d03b3b;
+  --viz-div-10: #e66767;
+  --viz-div-11: #f2a3a3;
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-serious: #ec835a;
+  --viz-critical: #d03b3b;
+  --viz-delta-good: #0ca30c;
+  --viz-delta-bad: #e66767;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --viz-surface: #1a1a19;
+    --viz-grid: #2c2c2a;
+    --viz-axis: #383835;
+    --viz-muted: #898781;
+    --viz-other: #5e5d58;
+    --viz-cat-1: #3987e5;
+    --viz-cat-2: #d95926;
+    --viz-cat-3: #199e70;
+    --viz-cat-4: #c98500;
+    --viz-cat-5: #d55181;
+    --viz-cat-6: #008300;
+    --viz-cat-7: #9085e9;
+    --viz-cat-8: #e66767;
+    --viz-seq-1: #cde2fb;
+    --viz-seq-2: #b7d3f6;
+    --viz-seq-3: #9ec5f4;
+    --viz-seq-4: #86b6ef;
+    --viz-seq-5: #6da7ec;
+    --viz-seq-6: #5598e7;
+    --viz-seq-7: #3987e5;
+    --viz-seq-8: #2a78d6;
+    --viz-seq-9: #256abf;
+    --viz-seq-10: #1c5cab;
+    --viz-seq-11: #184f95;
+    --viz-seq-12: #104281;
+    --viz-seq-13: #0d366b;
+    --viz-div-1: #cde2fb;
+    --viz-div-2: #86b6ef;
+    --viz-div-3: #3987e5;
+    --viz-div-4: #1c5cab;
+    --viz-div-5: #104281;
+    --viz-div-6: #383835;
+    --viz-div-7: #5a2323;
+    --viz-div-8: #8a2d2c;
+    --viz-div-9: #d03b3b;
+    --viz-div-10: #e66767;
+    --viz-div-11: #f2a3a3;
+    --viz-good: #0ca30c;
+    --viz-warning: #fab219;
+    --viz-serious: #ec835a;
+    --viz-critical: #d03b3b;
+    --viz-delta-good: #0ca30c;
+    --viz-delta-bad: #e66767;
+  }
 }
 
 /* The sidebar is dark green in both modes: generic tokens used by nav
