@@ -149,11 +149,11 @@ export function TrendChart({ series: all, kind = 'line', granularity, height = 1
             {xLabels.map((i) => (
               <SvgText
                 key={`x${i}`}
-                x={xAt(i)}
+                x={n > 1 && i === 0 ? padStart : n > 1 && i === n - 1 ? width - 4 : xAt(i)}
                 y={height - 5}
                 fontSize={AXIS_FONT}
                 fill={th.muted}
-                textAnchor={i === 0 && kind === 'line' ? 'start' : i === n - 1 && kind === 'line' ? 'end' : 'middle'}>
+                textAnchor={n > 1 && i === 0 ? 'start' : n > 1 && i === n - 1 ? 'end' : 'middle'}>
                 {bucketLabel(base.points[i].key, gran, th.locale)}
               </SvgText>
             ))}
