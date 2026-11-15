@@ -2,6 +2,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { Platform, Share } from 'react-native';
 
 import { api } from '@/core/api/client';
+import { i18n } from '@/core/i18n';
 import { ApiError, toApiError } from '@/core/api/errors';
 import type { PeriodQuery } from '@/features/analytics-kit/period';
 import { loadSharing } from '@/features/feedback/native';
@@ -34,14 +35,12 @@ export function canShareExport() {
  * native module: expo-file-system and expo-sharing ship with the app.
  */
 export async function shareReportExport(key: string, query: PeriodQuery & { limit?: number; all_time?: boolean }, format: ExportFormat, title: string) {
-  // The export path joins the typed client after TEC-1210; until then it is untyped.
-  const get = api.GET as unknown as (
-    path: string,
-    init: { params: { path: { report: string }; query: Record<string, unknown> }; parseAs: 'arrayBuffer' },
-  ) => Promise<{ data?: ArrayBuffer; error?: unknown; response: Response }>;
-  let r: Awaited<ReturnType<typeof get>>;
+  let r: { data?: unknown; error?: unknown; response: Response };
   try {
-    r = await get('/v1/reports/{report}/export', { params: { path: { report: key }, query: { ...query, format } }, parseAs: 'arrayBuffer' });
+    r = await api.GET('/v1/reports/{report}/export', {
+      params: { path: { report: key }, query: { ...query, format, locale: i18n.language } },
+      parseAs: 'arrayBuffer',
+    });
   } catch (e) {
     throw new ApiError(0, { code: 'NETWORK_ERROR', message: e instanceof Error ? e.message : String(e) });
   }
@@ -49,7 +48,7 @@ export async function shareReportExport(key: string, query: PeriodQuery & { limi
 
   const stamp = new Date().toISOString().slice(0, 10);
   const file = new File(exportDir(), `${safeFilename(`${title} ${stamp}`)}.${format}`);
-  await file.write(new Uint8Array(r.data));
+  await file.write(new Uint8Array(r.data as ArrayBuffer));
 
   const sharing = loadSharing();
   try {

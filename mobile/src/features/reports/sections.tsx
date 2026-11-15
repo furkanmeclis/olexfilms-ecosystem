@@ -71,7 +71,7 @@ export function useRowPress() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   return (row: Row) => {
     const link = rowLink(row) ?? (typeof row.organization_uuid === 'string' ? { kind: 'organization', uuid: row.organization_uuid } : null);
-    const path = link ? linkPath(space, link.kind, link.uuid) : null;
+    const path = link ? linkPath(space, link.kind, link.uuid, link.report) : null;
     return path ? () => router.push(path as Href) : undefined;
   };
 }

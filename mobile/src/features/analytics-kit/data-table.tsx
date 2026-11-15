@@ -113,7 +113,7 @@ export function DataTable({ columns, rows, searchable = true }: { columns: Colum
             ) : null}
             {shown.map((row, ri) => {
               const link = rowLink(row);
-              const href = link ? linkPath(space, link.kind, link.uuid) : null;
+              const href = link ? linkPath(space, link.kind, link.uuid, link.report) : null;
               const cells = columns.map((c, i) => {
                 const right = alignOf(c) === 'right';
                 const status = c.type === 'status' ? rowStatus(row, c.key) : null;

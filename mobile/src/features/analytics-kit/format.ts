@@ -12,7 +12,7 @@ export function compact(v: number, locale: string): string {
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 }
 
-/** Units the reports use (count, pieces, meters, money, percent, hours) with a fallback. */
+/** Units the reports use (count, pieces, meters, money, percent as a 0..1 ratio, hours) with a fallback. */
 export function formatValue(v: number | null | undefined, unit: string | null | undefined, locale: string, currency?: string | null): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '–';
   const nf = (o: Intl.NumberFormatOptions) => new Intl.NumberFormat(locale, o).format(v);
@@ -27,7 +27,8 @@ export function formatValue(v: number | null | undefined, unit: string | null | 
       }
       return nf({ maximumFractionDigits: 2 });
     case 'percent':
-      return `${nf({ maximumFractionDigits: 1 })} %`;
+      // Ratios 0..1 (TEC-1210 percent columns).
+      return nf({ style: 'percent', maximumFractionDigits: 1 });
     case 'meters':
       return unitOr(() => nf({ style: 'unit', unit: 'meter', unitDisplay: 'short', maximumFractionDigits: 1 }), `${nf({ maximumFractionDigits: 1 })} m`);
     case 'hours':

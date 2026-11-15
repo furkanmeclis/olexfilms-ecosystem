@@ -8,7 +8,8 @@ import type { Good } from './delta.ts';
 import type { Column, Row } from './table.ts';
 
 export type LinkKind = 'service' | 'order' | 'customer' | 'organization' | 'warranty' | 'measurement' | 'product';
-export type ReportLink = { kind: LinkKind | string; uuid: string };
+/** A record (kind + uuid) or, for a KPI, a detail report (kind `report` + its key). */
+export type ReportLink = { kind: LinkKind | 'report' | string; uuid?: string; report?: string };
 
 export type Point = { key: string; label: string; value: number; previous?: number | null };
 
@@ -48,6 +49,7 @@ export type Envelope = {
   kind: string;
   title: string;
   period?: unknown;
+  period_info?: PeriodInfo | null;
   range_from?: string | null;
   range_to?: string | null;
   granularity?: string | null;
@@ -107,15 +109,16 @@ export function groupTimeSeries(series: readonly Series[]): Series[][] {
 }
 
 /** The comparison range of the answer, wherever the envelope carries it. */
-export function previousRange(env: { period?: unknown } & Record<string, unknown>): { from: string; to: string } | null {
-  const p = env.period && typeof env.period === 'object' ? (env.period as PeriodInfo) : (env as PeriodInfo);
+export function previousRange(env: { period?: unknown; period_info?: unknown } & Record<string, unknown>): { from: string; to: string } | null {
+  const info = env.period_info ?? env.period;
+  const p = info && typeof info === 'object' ? (info as PeriodInfo) : (env as PeriodInfo);
   return p.previous_from && p.previous_to ? { from: p.previous_from, to: p.previous_to } : null;
 }
 
 /** Detail link of a row (`_link`), when the report gives one. */
 export function rowLink(row: Row): ReportLink | null {
   const l = row._link as ReportLink | undefined | null;
-  return l && typeof l === 'object' && typeof l.uuid === 'string' && typeof l.kind === 'string' ? l : null;
+  return l && typeof l === 'object' && typeof l.kind === 'string' && (typeof l.uuid === 'string' || typeof l.report === 'string') ? l : null;
 }
 
 /** Status label and tone of a status cell (`_status[columnKey]`, else the raw value as label). */

@@ -7,7 +7,12 @@
 
 export type Space = 'bayi' | 'admin' | 'depo' | string;
 
-export function linkPath(space: Space, kind: string, uuid: string): string | null {
+export function linkPath(space: Space, kind: string, uuid: string | null | undefined, report?: string | null): string | null {
+  if (kind === 'report') {
+    // A KPI's detail report (TEC-1210 `{ kind: report, report: key }`); the warehouse space has no report screens.
+    if (!report || !/^[\w.]+$/.test(report) || (space !== 'bayi' && space !== 'admin')) return null;
+    return `/${space}/menu/reports/${encodeURIComponent(report)}`;
+  }
   if (!uuid || !/^[\w-]+$/.test(uuid)) return null;
   if (space === 'depo') return kind === 'order' ? `/depo/menu/orders/${uuid}` : null;
   if (space !== 'bayi' && space !== 'admin') return null;

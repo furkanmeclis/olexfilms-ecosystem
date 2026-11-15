@@ -33,11 +33,11 @@ export function useReportCatalog() {
  */
 export function supportOf(entry: CatalogItem | undefined): PeriodSupport {
   if (!entry) return { periodic: false };
-  const e = entry as CatalogItem & { compare?: boolean; compares?: string[] };
   return {
     periodic: entry.periodic,
     granularity: entry.granularities.length > 0,
-    compare: e.compare === true || (Array.isArray(e.compares) && e.compares.length > 0),
+    // TEC-1210: periodic reports list [none, previous, year], the others [none].
+    compare: (entry.compares ?? []).some((c) => c !== 'none'),
   };
 }
 
@@ -63,8 +63,7 @@ export function useReport(
     queryFn: async () =>
       (await unwrap(
         api.GET('/v1/reports/{report}', {
-          // `compare` is a TEC-1210 parameter; the cast keeps this compiling against an older schema.
-          params: { path: { report: key }, query: { ...query, locale: i18n.language } as ReportOp['parameters']['query'] },
+          params: { path: { report: key }, query: { ...query, locale: i18n.language } },
         }),
       )) as Report,
   });

@@ -91,7 +91,7 @@ export function effectiveGranularity(s: PeriodState): Granularity | null {
 export type PeriodSupport = { periodic: boolean; granularity?: boolean; compare?: boolean };
 
 export type PeriodQuery = {
-  period?: string;
+  period?: Preset;
   range_from?: string;
   range_to?: string;
   granularity?: Granularity;

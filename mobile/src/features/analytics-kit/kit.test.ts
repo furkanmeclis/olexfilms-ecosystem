@@ -133,7 +133,7 @@ describe('format', () => {
   });
   it('formats by unit', () => {
     assert.equal(formatValue(null, 'count', 'en'), '–');
-    assert.equal(formatValue(12, 'percent', 'en'), '12 %');
+    assert.equal(formatValue(0.125, 'percent', 'en'), '12.5%');
     assert.equal(formatValue(1234.5, 'money', 'en', 'USD'), '$1,235');
     assert.equal(formatValue(12.5, 'money', 'en', 'USD'), '$12.50');
     assert.equal(formatValue(1234, 'count', 'en'), '1,234');
@@ -196,6 +196,11 @@ describe('envelope', () => {
       to: '2026-10-31',
     });
     assert.equal(previousRange({ period: '30d' }), null);
+    assert.deepEqual(previousRange({ period: '30d', period_info: { previous_from: '2026-09-01', previous_to: '2026-09-30' } }), {
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+    assert.deepEqual(rowLink({ _link: { kind: 'report', report: 'orders.trend' } }), { kind: 'report', report: 'orders.trend' });
     assert.deepEqual(rowLink({ _link: { kind: 'order', uuid: 'u1' } }), { kind: 'order', uuid: 'u1' });
     assert.equal(rowLink({ _link: { kind: 'order' } }), null);
     assert.deepEqual(rowStatus({ s: 'x', _status: { s: { label: 'Done', tone: 'done' } } }, 's'), { label: 'Done', tone: 'done' });
@@ -323,5 +328,8 @@ describe('links', async () => {
     assert.equal(linkPath('musteri', 'order', 'u-1'), null);
     assert.equal(linkPath('bayi', 'unknown', 'u-1'), null);
     assert.equal(linkPath('bayi', 'order', '../x'), null);
+    assert.equal(linkPath('bayi', 'report', null, 'orders.trend'), '/bayi/menu/reports/orders.trend');
+    assert.equal(linkPath('depo', 'report', null, 'orders.trend'), null);
+    assert.equal(linkPath('admin', 'report', null, '../x'), null);
   });
 });

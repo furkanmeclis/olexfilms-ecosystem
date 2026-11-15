@@ -116,7 +116,7 @@ export function ReportScreen() {
         options={{
           title: entry?.title ?? report.data?.title ?? t('admin:reports.title'),
           headerLargeTitle: false,
-          headerRight: entry && canShareExport() ? () => <ExportButton busy={exporting} onPick={(fmt) => void doExport(fmt)} /> : undefined,
+          headerRight: entry?.exportable && canShareExport() ? () => <ExportButton busy={exporting} onPick={(fmt) => void doExport(fmt)} /> : undefined,
         }}
       />
       <ScrollView

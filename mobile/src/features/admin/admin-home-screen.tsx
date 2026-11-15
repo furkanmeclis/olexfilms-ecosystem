@@ -130,14 +130,14 @@ export function AdminHomeScreen() {
           r={network}
           title={t('home.network_dealers')}
           toItem={(row) => {
-            const v = num(row.services_count ?? row.service_count ?? row.orders_count ?? row.order_count ?? row.value) ?? 0;
+            const v = num(row.services_count) ?? 0;
             const label = typeof row.organization === 'string' ? row.organization : typeof row.name === 'string' ? row.name : null;
             if (!label) return null;
             return {
-              key: String(row.organization_uuid ?? label),
+              key: String((row._link as { uuid?: string } | undefined)?.uuid ?? row.organization_uuid ?? label),
               label,
               value: v,
-              valueText: f.number(v),
+              valueText: t('home.services_count', { count: f.number(v) }),
               sub: typeof row.city === 'string' ? row.city : null,
             };
           }}

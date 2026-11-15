@@ -21,7 +21,7 @@ import type { Report } from './api';
 export function useKpiPress() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   return (k: Kpi) => {
-    const path = k.link ? linkPath(space, k.link.kind, k.link.uuid) : null;
+    const path = k.link ? linkPath(space, k.link.kind, k.link.uuid, k.link.report) : null;
     return path ? () => router.push(path as Href) : undefined;
   };
 }
