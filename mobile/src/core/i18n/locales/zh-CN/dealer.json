@@ -293,5 +293,12 @@
   "applied_by": "施工人",
   "related.warranties": "质保",
   "related.appointments": "预约",
-  "related.measurements": "测量"
+  "related.measurements": "测量",
+  "credits.exhausted": "该条码已无可用次数，请选择其他条码。",
+  "credits.exhausted_title": "次数已用完",
+  "credits.finish": "产品已用完",
+  "credits.finish_hint": "剩余的 {{value}} 次全部计入本服务；该条码将无法用于其他服务。",
+  "credits.finished": "产品已用完",
+  "credits.left": "次数：{{value}}",
+  "credits.use_one_hint": "本服务将扣除该条码 1 次。"
 }

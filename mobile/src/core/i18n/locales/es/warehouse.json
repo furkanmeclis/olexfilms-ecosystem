@@ -723,5 +723,21 @@
   "labels.no_access_title": "Sin acceso a etiquetas",
   "labels.no_access_body": "Tu rol no puede imprimir etiquetas.",
   "labels.ios_only_title": "Imprimir etiquetas en este dispositivo",
-  "labels.ios_only_body": "En iPhone, los PDF de etiquetas se abren en el menú de compartir del sistema. En este dispositivo, imprímelos desde el panel web."
+  "labels.ios_only_body": "En iPhone, los PDF de etiquetas se abren en el menú de compartir del sistema. En este dispositivo, imprímelos desde el panel web.",
+  "stock.credits.amount": "Créditos a añadir",
+  "stock.credits.amount_invalid": "Introduzca un número entero de 1 a 1000.",
+  "stock.credits.amount_placeholder": "P. ej. 2",
+  "stock.credits.exhausted": "Sin créditos; el código de barras no puede elegirse en un servicio nuevo.",
+  "stock.credits.finished": "Producto terminado",
+  "stock.credits.increase": "Añadir créditos",
+  "stock.credits.increase_failed": "No se pudieron añadir los créditos",
+  "stock.credits.reason": "Motivo",
+  "stock.credits.reason_placeholder": "¿Por qué se añaden créditos?",
+  "stock.credits.reason_required": "El motivo es obligatorio.",
+  "stock.credits.remaining": "Restante / total",
+  "stock.credits.services": "Servicios en los que se usó",
+  "stock.credits.short": "Créditos {{value}}",
+  "stock.credits.taken": "{{value}} créditos",
+  "stock.credits.title": "Créditos de uso",
+  "stock.credits.used": "Usado en servicios"
 }

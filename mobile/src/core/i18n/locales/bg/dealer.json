@@ -293,5 +293,12 @@
   "applied_by": "Положено от",
   "related.warranties": "Гаранции",
   "related.appointments": "Часове",
-  "related.measurements": "Измервания"
+  "related.measurements": "Измервания",
+  "credits.exhausted": "Този баркод няма оставащи кредити. Изберете друг баркод.",
+  "credits.exhausted_title": "Няма кредити",
+  "credits.finish": "Продуктът е изразходван",
+  "credits.finish_hint": "Всички {{value}} оставащи кредита отиват за тази услуга; баркодът не може да се използва в друга услуга.",
+  "credits.finished": "Продуктът е изразходван",
+  "credits.left": "Кредити: {{value}}",
+  "credits.use_one_hint": "Тази услуга използва 1 кредит от баркода."
 }

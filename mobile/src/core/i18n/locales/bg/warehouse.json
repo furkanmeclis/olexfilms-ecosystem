@@ -723,5 +723,21 @@
   "labels.no_access_title": "Няма достъп до етикети",
   "labels.no_access_body": "Вашата роля не може да отпечатва етикети.",
   "labels.ios_only_title": "Отпечатване на етикети на това устройство",
-  "labels.ios_only_body": "На iPhone PDF файловете с етикети се отварят в системното меню за споделяне. На това устройство ги отпечатайте от уеб панела."
+  "labels.ios_only_body": "На iPhone PDF файловете с етикети се отварят в системното меню за споделяне. На това устройство ги отпечатайте от уеб панела.",
+  "stock.credits.amount": "Кредити за добавяне",
+  "stock.credits.amount_invalid": "Въведете цяло число от 1 до 1000.",
+  "stock.credits.amount_placeholder": "Напр. 2",
+  "stock.credits.exhausted": "Няма кредити; баркодът не може да бъде избран в нова услуга.",
+  "stock.credits.finished": "Продуктът е изразходван",
+  "stock.credits.increase": "Добави кредити",
+  "stock.credits.increase_failed": "Кредитите не можаха да бъдат добавени",
+  "stock.credits.reason": "Причина",
+  "stock.credits.reason_placeholder": "Защо се добавят кредити?",
+  "stock.credits.reason_required": "Причината е задължителна.",
+  "stock.credits.remaining": "Оставащи / общо",
+  "stock.credits.services": "Услуги, в които е използван",
+  "stock.credits.short": "Кредити {{value}}",
+  "stock.credits.taken": "{{value}} кредита",
+  "stock.credits.title": "Кредити за използване",
+  "stock.credits.used": "Използван в услуги"
 }

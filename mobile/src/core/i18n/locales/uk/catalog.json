@@ -26,5 +26,7 @@
   "description": "Опис",
   "unit_type.piece": "Штука",
   "unit_type.roll_meter": "Рулон (метри)",
-  "stock_units": "Одиниці на складі"
+  "stock_units": "Одиниці на складі",
+  "usage_credits": "Кредити використання",
+  "usage_credits_value": "{{value}} послуг"
 }

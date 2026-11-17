@@ -26,5 +26,7 @@
   "description": "Descrizione",
   "unit_type.piece": "Pezzo",
   "unit_type.roll_meter": "Rotolo (metri)",
-  "stock_units": "Unità in magazzino"
+  "stock_units": "Unità in magazzino",
+  "usage_credits": "Crediti di utilizzo",
+  "usage_credits_value": "{{value}} servizi"
 }

@@ -723,5 +723,21 @@
   "labels.no_access_title": "无标签权限",
   "labels.no_access_body": "您的角色无法打印标签。",
   "labels.ios_only_title": "在此设备上打印标签",
-  "labels.ios_only_body": "在 iPhone 上，标签 PDF 会在系统分享菜单中打开。在此设备上请通过网页后台打印。"
+  "labels.ios_only_body": "在 iPhone 上，标签 PDF 会在系统分享菜单中打开。在此设备上请通过网页后台打印。",
+  "stock.credits.amount": "增加的次数",
+  "stock.credits.amount_invalid": "请输入 1 到 1000 的整数。",
+  "stock.credits.amount_placeholder": "例如 2",
+  "stock.credits.exhausted": "次数已用完；该条码不能在新服务中选择。",
+  "stock.credits.finished": "产品已用完",
+  "stock.credits.increase": "增加次数",
+  "stock.credits.increase_failed": "无法增加次数",
+  "stock.credits.reason": "原因",
+  "stock.credits.reason_placeholder": "为什么增加次数？",
+  "stock.credits.reason_required": "必须填写原因。",
+  "stock.credits.remaining": "剩余 / 总计",
+  "stock.credits.services": "使用过的服务",
+  "stock.credits.short": "次数 {{value}}",
+  "stock.credits.taken": "{{value}} 次",
+  "stock.credits.title": "使用次数",
+  "stock.credits.used": "使用过的服务数"
 }

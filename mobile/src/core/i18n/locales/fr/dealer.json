@@ -293,5 +293,12 @@
   "applied_by": "Posé par",
   "related.warranties": "Garanties",
   "related.appointments": "Rendez-vous",
-  "related.measurements": "Mesures"
+  "related.measurements": "Mesures",
+  "credits.exhausted": "Ce code-barres n'a plus de crédits d'utilisation. Choisissez un autre code-barres.",
+  "credits.exhausted_title": "Plus de crédits",
+  "credits.finish": "J'ai terminé le produit",
+  "credits.finish_hint": "Les {{value}} crédits restants vont à ce service ; le code-barres ne pourra plus être utilisé dans un autre service.",
+  "credits.finished": "Produit terminé",
+  "credits.left": "Crédits : {{value}}",
+  "credits.use_one_hint": "Ce service utilise 1 crédit du code-barres."
 }

@@ -723,5 +723,21 @@
   "labels.no_access_title": "Нет доступа к этикеткам",
   "labels.no_access_body": "Ваша роль не позволяет печатать этикетки.",
   "labels.ios_only_title": "Печать этикеток на этом устройстве",
-  "labels.ios_only_body": "На iPhone PDF с этикетками открываются в системном меню «Поделиться». На этом устройстве печатайте их из веб-панели."
+  "labels.ios_only_body": "На iPhone PDF с этикетками открываются в системном меню «Поделиться». На этом устройстве печатайте их из веб-панели.",
+  "stock.credits.amount": "Сколько кредитов добавить",
+  "stock.credits.amount_invalid": "Введите целое число от 1 до 1000.",
+  "stock.credits.amount_placeholder": "Напр. 2",
+  "stock.credits.exhausted": "Кредиты закончились; штрихкод нельзя выбрать в новой услуге.",
+  "stock.credits.finished": "Продукт израсходован",
+  "stock.credits.increase": "Добавить кредиты",
+  "stock.credits.increase_failed": "Не удалось добавить кредиты",
+  "stock.credits.reason": "Причина",
+  "stock.credits.reason_placeholder": "Почему добавляются кредиты?",
+  "stock.credits.reason_required": "Причина обязательна.",
+  "stock.credits.remaining": "Осталось / всего",
+  "stock.credits.services": "Услуги, где использован",
+  "stock.credits.short": "Кредиты {{value}}",
+  "stock.credits.taken": "{{value}} кредитов",
+  "stock.credits.title": "Кредиты использования",
+  "stock.credits.used": "Использован в услугах"
 }

@@ -137,5 +137,10 @@
   "clear": "Svuota",
   "clear_title": "Svuotare il carrello?",
   "draft_kept": "La bozza è stata salvata; un nuovo invio ritenta solo la trasmissione.",
-  "card.created_by": "Effettuato da {{name}}"
+  "card.created_by": "Effettuato da {{name}}",
+  "errors.credits_invalid": "I crediti devono essere un numero intero da 1 a 1000.",
+  "plotter.badge_credits": "Taglio plotter · {{value}} crediti",
+  "plotter.credits": "Crediti",
+  "plotter.credits_default": "Valore del prodotto",
+  "plotter.credits_hint": "In quanti servizi può essere usato ogni codice a barre spedito su questa riga (1–1000). Vuoto: valore del prodotto."
 }

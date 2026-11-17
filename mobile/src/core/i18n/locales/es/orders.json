@@ -137,5 +137,10 @@
   "clear": "Vaciar",
   "clear_title": "¿Vaciar el carrito?",
   "draft_kept": "El borrador se guardó; volver a enviar solo reintenta el envío.",
-  "card.created_by": "Realizado por {{name}}"
+  "card.created_by": "Realizado por {{name}}",
+  "errors.credits_invalid": "Los créditos deben ser un número entero de 1 a 1000.",
+  "plotter.badge_credits": "Corte plotter · {{value}} créditos",
+  "plotter.credits": "Créditos",
+  "plotter.credits_default": "Valor del producto",
+  "plotter.credits_hint": "En cuántos servicios puede usarse cada código de barras enviado en esta línea (1–1000). Vacío: valor del producto."
 }

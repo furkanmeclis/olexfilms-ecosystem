@@ -26,5 +26,7 @@
   "description": "الوصف",
   "unit_type.piece": "قطعة",
   "unit_type.roll_meter": "لفة (بالمتر)",
-  "stock_units": "وحدات المخزون"
+  "stock_units": "وحدات المخزون",
+  "usage_credits": "أرصدة الاستخدام",
+  "usage_credits_value": "{{value}} خدمات"
 }

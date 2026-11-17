@@ -26,5 +26,7 @@
   "description": "Təsvir",
   "unit_type.piece": "Ədəd",
   "unit_type.roll_meter": "Rulon (metr)",
-  "stock_units": "Stok vahidləri"
+  "stock_units": "Stok vahidləri",
+  "usage_credits": "İstifadə krediti",
+  "usage_credits_value": "{{value}} xidmət"
 }

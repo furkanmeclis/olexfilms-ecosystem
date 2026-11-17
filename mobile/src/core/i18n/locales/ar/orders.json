@@ -137,5 +137,10 @@
   "clear": "مسح",
   "clear_title": "تفريغ السلة؟",
   "draft_kept": "حُفظت المسودة؛ إعادة الإرسال تعيد محاولة الإرسال فقط.",
-  "card.created_by": "قدّمه {{name}}"
+  "card.created_by": "قدّمه {{name}}",
+  "errors.credits_invalid": "يجب أن يكون الرصيد عددًا صحيحًا من 1 إلى 1000.",
+  "plotter.badge_credits": "قص بالبلوتر · {{value}} رصيد",
+  "plotter.credits": "الرصيد",
+  "plotter.credits_default": "افتراضي المنتج",
+  "plotter.credits_hint": "عدد الخدمات التي يمكن استخدام كل باركود مشحون في هذا البند فيها (1–1000). الفارغ يعني افتراضي المنتج."
 }

@@ -293,5 +293,12 @@
   "applied_by": "Tətbiq edən",
   "related.warranties": "Zəmanətlər",
   "related.appointments": "Randevular",
-  "related.measurements": "Ölçmələr"
+  "related.measurements": "Ölçmələr",
+  "credits.exhausted": "Bu barkodun istifadə krediti qalmayıb. Başqa barkod seçin.",
+  "credits.exhausted_title": "Kredit qalmayıb",
+  "credits.finish": "Məhsulu bitirdim",
+  "credits.finish_hint": "Qalan {{value}} kreditin hamısı bu xidmətə düşür; barkod başqa xidmətdə istifadə oluna bilməz.",
+  "credits.finished": "Məhsul bitirildi",
+  "credits.left": "Kredit: {{value}}",
+  "credits.use_one_hint": "Bu xidmət barkoddan 1 kredit istifadə edir."
 }

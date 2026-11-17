@@ -26,5 +26,7 @@
   "description": "Beschreibung",
   "unit_type.piece": "Stück",
   "unit_type.roll_meter": "Rolle (Meter)",
-  "stock_units": "Lagereinheiten"
+  "stock_units": "Lagereinheiten",
+  "usage_credits": "Nutzungsguthaben",
+  "usage_credits_value": "{{value}} Leistungen"
 }

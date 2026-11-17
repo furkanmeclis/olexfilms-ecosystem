@@ -723,5 +723,21 @@
   "labels.no_access_title": "Aucun accès aux étiquettes",
   "labels.no_access_body": "Votre rôle ne permet pas d'imprimer des étiquettes.",
   "labels.ios_only_title": "Imprimer des étiquettes sur cet appareil",
-  "labels.ios_only_body": "Sur iPhone, les PDF d'étiquettes s'ouvrent dans le menu de partage du système. Sur cet appareil, imprimez-les depuis le panneau web."
+  "labels.ios_only_body": "Sur iPhone, les PDF d'étiquettes s'ouvrent dans le menu de partage du système. Sur cet appareil, imprimez-les depuis le panneau web.",
+  "stock.credits.amount": "Crédits à ajouter",
+  "stock.credits.amount_invalid": "Saisissez un nombre entier de 1 à 1000.",
+  "stock.credits.amount_placeholder": "Ex. 2",
+  "stock.credits.exhausted": "Plus de crédits ; le code-barres ne peut pas être choisi dans un nouveau service.",
+  "stock.credits.finished": "Produit terminé",
+  "stock.credits.increase": "Ajouter des crédits",
+  "stock.credits.increase_failed": "Impossible d'ajouter les crédits",
+  "stock.credits.reason": "Motif",
+  "stock.credits.reason_placeholder": "Pourquoi ajouter des crédits ?",
+  "stock.credits.reason_required": "Un motif est requis.",
+  "stock.credits.remaining": "Restant / total",
+  "stock.credits.services": "Services où il a été utilisé",
+  "stock.credits.short": "Crédits {{value}}",
+  "stock.credits.taken": "{{value}} crédits",
+  "stock.credits.title": "Crédits d'utilisation",
+  "stock.credits.used": "Utilisé dans des services"
 }

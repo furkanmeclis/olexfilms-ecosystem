@@ -723,5 +723,21 @@
   "labels.no_access_title": "لا وصول إلى الملصقات",
   "labels.no_access_body": "لا يمكن لدورك طباعة الملصقات.",
   "labels.ios_only_title": "طباعة الملصقات على هذا الجهاز",
-  "labels.ios_only_body": "على iPhone تُفتح ملفات PDF للملصقات في قائمة المشاركة بالنظام. على هذا الجهاز اطبعها من لوحة الويب."
+  "labels.ios_only_body": "على iPhone تُفتح ملفات PDF للملصقات في قائمة المشاركة بالنظام. على هذا الجهاز اطبعها من لوحة الويب.",
+  "stock.credits.amount": "الرصيد المراد إضافته",
+  "stock.credits.amount_invalid": "أدخل عددًا صحيحًا من 1 إلى 1000.",
+  "stock.credits.amount_placeholder": "مثال: 2",
+  "stock.credits.exhausted": "لا يوجد رصيد؛ لا يمكن اختيار الباركود في خدمة جديدة.",
+  "stock.credits.finished": "تم إنهاء المنتج",
+  "stock.credits.increase": "إضافة رصيد",
+  "stock.credits.increase_failed": "تعذّرت إضافة الرصيد",
+  "stock.credits.reason": "السبب",
+  "stock.credits.reason_placeholder": "لماذا تتم إضافة الرصيد؟",
+  "stock.credits.reason_required": "السبب مطلوب.",
+  "stock.credits.remaining": "المتبقي / الإجمالي",
+  "stock.credits.services": "الخدمات التي استُخدم فيها",
+  "stock.credits.short": "الرصيد {{value}}",
+  "stock.credits.taken": "{{value}} رصيد",
+  "stock.credits.title": "أرصدة الاستخدام",
+  "stock.credits.used": "استُخدم في خدمات"
 }

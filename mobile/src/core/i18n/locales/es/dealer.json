@@ -293,5 +293,12 @@
   "applied_by": "Aplicado por",
   "related.warranties": "Garantías",
   "related.appointments": "Citas",
-  "related.measurements": "Mediciones"
+  "related.measurements": "Mediciones",
+  "credits.exhausted": "Este código de barras no tiene créditos de uso. Elija otro código de barras.",
+  "credits.exhausted_title": "Sin créditos",
+  "credits.finish": "He terminado el producto",
+  "credits.finish_hint": "Los {{value}} créditos restantes van a este servicio; el código de barras no podrá usarse en otro servicio.",
+  "credits.finished": "Producto terminado",
+  "credits.left": "Créditos: {{value}}",
+  "credits.use_one_hint": "Este servicio usa 1 crédito del código de barras."
 }
