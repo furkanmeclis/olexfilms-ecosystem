@@ -90,4 +90,5 @@ func RegisterMobileRoutes(
 	mux.Handle("POST "+p+"/transfers/{uuid}/ship", write(h.Transfers.Ship))
 	mux.Handle("POST "+p+"/transfers/{uuid}/complete", write(h.Transfers.Complete))
 	mux.Handle("POST "+p+"/transfers/{uuid}/cancel", write(h.Transfers.Cancel))
+	mux.Handle("POST "+p+"/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve", write(h.Transfers.ResolveDiscrepancy))
 }

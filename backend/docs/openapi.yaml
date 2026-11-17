@@ -14510,6 +14510,9 @@ paths:
         (line target, else the optional body location, else the transfer's
         default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409
         WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+        TEC-1227: `missing` lines get no transfer_in, stay in transit and
+        keep their lock under a loss investigation; `surplus` barcodes are
+        recorded only. Both form the transfer's discrepancy record.
       security:
         - bearerAuth: []
       parameters:
@@ -14522,6 +14525,48 @@ paths:
       responses:
         "200":
           description: Completed transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseTransfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve:
+    post:
+      tags: [Warehouse]
+      operationId: resolveWarehouseTransferDiscrepancy
+      summary: Resolve a row of a completed transfer's discrepancy record
+      description: >-
+        TEC-1227. Needs `warehouse.write`. A missing line found
+        (`found`: transfer_in + placement onto the line target, the body
+        location or the transfer's default location in the target
+        warehouse; target warehouse membership) or returned to its source
+        (`returned_to_source`: transfer_cancel_restore; either side); a
+        surplus row is `closed`. The unit lock is released. Writing a lost
+        unit off is the stock adjustment document's job. 409
+        WAREHOUSE_TRANSFER_DISCREPANCY_CLOSED when already resolved.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - { name: discrepancy_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseTransferDiscrepancyResolveInput" }
+      responses:
+        "200":
+          description: The transfer with its record
           content:
             application/json:
               schema:
@@ -19806,6 +19851,50 @@ paths:
       responses:
         '200':
           description: Completed transfer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeWarehouseTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '426':
+          $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve:
+    post:
+      tags:
+      - Mobile
+      operationId: mobileResolveWarehouseTransferDiscrepancy
+      summary: "Mobile: Resolve a row of a completed transfer's discrepancy record"
+      description: |
+        Mobile mirror of `POST /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve` (TEC-1227): same handler, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MobileApiVersion'
+      - $ref: '#/components/parameters/ResourceUUID'
+      - name: discrepancy_uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarehouseTransferDiscrepancyResolveInput'
+      responses:
+        '200':
+          description: The transfer with its record
           content:
             application/json:
               schema:
@@ -26238,6 +26327,170 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /v1/orders/{uuid}/partial-ship:
+    post:
+      tags: [Orders]
+      operationId: partialShipOrder
+      summary: Ship the picked part of a preparing order; the rest becomes a backorder
+      description: >-
+        TEC-1227. The default rule stays: an order leaves when every line is
+        fully picked. When stock is short the seller's warehouse staff
+        (orders.ship) may ship the picked part now. In one transaction a
+        line picked in full stays, a partly picked line keeps the picked
+        amount and its rest becomes a line of a new backorder (same unit
+        price, discount, gift and plotter marks; the two line totals add up
+        to the original), and a line nothing was picked for moves to the
+        backorder whole. The backorder is a new order of the same seller,
+        buyer, brand, currency and seller warehouse (`is_backorder`,
+        `backorder_of`); it takes the frozen rate and approval of the order
+        (no new price approval), starts `approved` and falls into the
+        warehouse queue (ORDER_WAREHOUSE_NEW). It is cancelled like any
+        order (active reservations are released). The order moves to
+        `ready` (`reason` is kept in the history) and is shipped with the
+        usual transition. 409 ORDER_NOT_PARTIALLY_SHIPPABLE when not
+        preparing, ORDER_NOTHING_PICKED without an assignment,
+        ORDER_FULLY_PICKED when nothing is short; the buyer gets 403. A
+        caller without a price grant gets the order without money.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderPartialShipInput"
+      responses:
+        "200":
+          description: The order (ready) with its backorder link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/resolve:
+    post:
+      tags: [Orders]
+      operationId: resolveOrderDiscrepancy
+      summary: Resolve a receipt discrepancy (missing or damaged unit)
+      description: >-
+        TEC-1227. On a received order: a missing unit the buyer found
+        (`delivered`, buyer with orders.receive; the received movement is
+        posted now), a missing unit the seller took back (`returned`,
+        seller with orders.ship; order_cancel_restore puts it back to the
+        order_out's source) or a damaged unit's record (`closed`, either
+        side). `can_resolve_as` on the record lists what the caller may
+        choose. 409 ORDER_DISCREPANCY_CLOSED when already resolved; 403
+        when the caller may choose nothing.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: discrepancy_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderDiscrepancyResolveInput"
+      responses:
+        "200":
+          description: The order with its records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos:
+    post:
+      tags: [Orders]
+      operationId: addOrderDiscrepancyPhoto
+      summary: Attach a photo to an open receipt discrepancy
+      description: >-
+        TEC-1227. The buyer (orders.receive) attaches a JPEG, PNG or WebP
+        photo (multipart `file`, at most 10 MB) to an open record; at most
+        5 photos (409 ORDER_DISCREPANCY_PHOTO_LIMIT). 503
+        ORDER_DOCUMENT_UNAVAILABLE without storage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: discrepancy_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200":
+          description: The order with its records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos/{index}:
+    get:
+      tags: [Orders]
+      operationId: getOrderDiscrepancyPhoto
+      summary: Stream a photo of a receipt discrepancy
+      description: TEC-1227. Both sides of the order; index is 0-based (`photo_count` on the record).
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: discrepancy_uuid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: index, in: path, required: true, schema: { type: integer, minimum: 0, maximum: 4 } }
+      responses:
+        "200":
+          description: The photo
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/orders/{uuid}/items:
     put:
       tags: [Orders]
@@ -26346,6 +26599,14 @@ paths:
         as from shipped); delivered -> cancelling (either side,
         orders.cancel). A cargo shipment may still go shipped -> received
         directly.
+        TEC-1227: the received step may carry `discrepancies` (missing or
+        damaged units, one per shipped unit, with a reason; 400 with any
+        other status). A missing unit gets no received movement and stays
+        in transit under an open record; a damaged unit is received and
+        recorded. At least one unit must be received. The order is
+        `received` with `open_discrepancies`; the seller's members holding
+        orders.approve or orders.ship are notified
+        (ORDER_RECEIPT_DISCREPANCY). The books still run on the order total.
       security:
         - bearerAuth: []
       parameters:
@@ -44060,6 +44321,62 @@ components:
       properties:
         location_uuid: { type: [string, "null"], format: uuid }
         location_code: { type: string, maxLength: 200 }
+        missing:
+          type: array
+          description: >-
+            TEC-1227 — lines that did not arrive: no transfer_in, they stay
+            in transit and keep their unit lock under an open record. At
+            least one line must arrive.
+          items:
+            type: object
+            required: [line_uuid]
+            properties:
+              line_uuid: { type: string, format: uuid }
+              note: { type: string, maxLength: 500 }
+        surplus:
+          type: array
+          maxItems: 500
+          description: >-
+            TEC-1227 — scanned barcodes that are not on the transfer;
+            recorded only, no stock movement.
+          items:
+            type: object
+            required: [barcode]
+            properties:
+              barcode: { type: string, minLength: 1 }
+              note: { type: string, maxLength: 500 }
+
+    WarehouseTransferDiscrepancyResolveInput:
+      type: object
+      additionalProperties: false
+      required: [resolution]
+      properties:
+        resolution: { type: string, enum: [found, returned_to_source, closed] }
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: string, maxLength: 200 }
+        note: { type: string, maxLength: 500 }
+
+    WarehouseTransferDiscrepancy:
+      type: object
+      description: TEC-1227 — one row of a transfer's record (tutanak). No prices.
+      required: [uuid, kind, status, barcode, line_uuid, unit_uuid, product_name, product_sku, note,
+        resolution, resolution_note, created_by, created_at, resolved_by, resolved_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [missing, surplus] }
+        status: { type: string, enum: [open, resolved] }
+        barcode: { type: string }
+        line_uuid: { type: [string, "null"], format: uuid }
+        unit_uuid: { type: [string, "null"], format: uuid }
+        product_name: { type: [string, "null"] }
+        product_sku: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        resolution: { type: [string, "null"], enum: [found, returned_to_source, closed, null] }
+        resolution_note: { type: [string, "null"] }
+        created_by: { type: [string, "null"], description: First name and surname }
+        created_at: { type: string, format: date-time }
+        resolved_by: { type: [string, "null"] }
+        resolved_at: { type: [string, "null"], format: date-time }
 
     WarehouseTransferLine:
       type: object
@@ -44104,6 +44421,14 @@ components:
           type: array
           description: Detail responses only.
           items: { $ref: "#/components/schemas/WarehouseTransferLine" }
+        discrepancies:
+          type: array
+          description: TEC-1227 (detail only) — the record of a transfer completed with differences.
+          items: { $ref: "#/components/schemas/WarehouseTransferDiscrepancy" }
+        open_discrepancies:
+          type: integer
+          format: int64
+          description: TEC-1227 — open record rows (detail responses; 0 on list rows).
         created_at: { type: string, format: date-time }
         shipped_at: { type: [string, "null"], format: date-time }
         completed_at: { type: [string, "null"], format: date-time }
@@ -48867,6 +49192,31 @@ components:
             supplementary order now — the seller with orders.write or
             orders.ship on a shipped, delivered or received order; omitted
             when false.
+        is_backorder:
+          type: boolean
+          description: >-
+            TEC-1227: the order was split from another by a partial
+            shipment (list rows carry it too).
+        backorder_of:
+          description: TEC-1227 (detail only) — the order a backorder was split from.
+          allOf:
+            - $ref: "#/components/schemas/OrderLink"
+        backorders:
+          type: array
+          description: TEC-1227 (detail only) — the backorders split from this order.
+          items: { $ref: "#/components/schemas/OrderLink" }
+        can_partial_ship:
+          type: boolean
+          description: >-
+            TEC-1227 (detail only): the caller may ship the picked part now
+            (seller, orders.ship, preparing); omitted when false.
+        discrepancies:
+          type: array
+          description: TEC-1227 (detail only) — receipt records (missing / damaged units).
+          items: { $ref: "#/components/schemas/OrderDiscrepancy" }
+        open_discrepancies:
+          type: integer
+          description: TEC-1227 (detail only) — open receipt records; omitted when 0.
         items:
           type: array
           description: Lines (detail responses only)
@@ -48952,6 +49302,17 @@ components:
         plotter_credits:
           type: integer
           description: TEC-1221 — the line's usage credits set with a plotter_marked step
+        related_order_no:
+          type: string
+          description: >-
+            TEC-1227 — the other order of a backorder_created (on the shipped
+            order) or backorder_opened (on the backorder) step
+        kind:
+          type: string
+          description: TEC-1227 — missing or damaged on a discrepancy_reported / discrepancy_resolved step
+        resolution:
+          type: string
+          description: TEC-1227 — delivered, returned or closed on a discrepancy_resolved step
 
     OrderLineChange:
       type: object
@@ -49267,7 +49628,7 @@ components:
 
     OrderLink:
       type: object
-      description: TEC-1222. A linked order (main order or supplementary order).
+      description: TEC-1222. A linked order (main order, supplementary order or, TEC-1227, backorder).
       required: [uuid, order_no, status, status_label]
       properties:
         uuid: { type: string, format: uuid }
@@ -49699,6 +50060,67 @@ components:
             methods (400 otherwise); the shipping note PDF is rendered after
             the shipment.
         tracking_no: { type: string, maxLength: 128, description: Shipping only (TEC-768) }
+        discrepancies:
+          type: array
+          description: TEC-1227 — received only; missing or damaged units
+          items: { $ref: "#/components/schemas/OrderDiscrepancyInput" }
+
+    OrderDiscrepancyInput:
+      type: object
+      required: [unit_uuid, kind, reason]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [missing, damaged] }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+
+    OrderPartialShipInput:
+      type: object
+      properties:
+        reason: { type: string, description: Kept in the history of the ready step }
+
+    OrderDiscrepancyResolveInput:
+      type: object
+      required: [resolution]
+      properties:
+        resolution: { type: string, enum: [delivered, returned, closed] }
+        note: { type: string, maxLength: 500 }
+
+    OrderDiscrepancy:
+      type: object
+      description: >-
+        TEC-1227: one receipt record (missing or damaged unit). Carries no
+        price; the warehouse roles read it too.
+      required: [uuid, kind, status, reason, resolution, resolution_note, unit_uuid, barcode,
+        product_name, product_sku, quantity, meters, photo_count, created_by, created_at,
+        resolved_by, resolved_at, can_resolve_as]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [missing, damaged] }
+        status: { type: string, enum: [open, resolved] }
+        reason: { type: string }
+        resolution: { type: [string, "null"], enum: [delivered, returned, closed, null] }
+        resolution_note: { type: [string, "null"] }
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        product_name: { type: string }
+        product_sku: { type: string }
+        quantity: { type: [integer, "null"] }
+        meters: { type: [string, "null"] }
+        photo_count: { type: integer }
+        created_by:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+        resolved_by:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        resolved_at: { type: [string, "null"], format: date-time }
+        can_resolve_as:
+          type: array
+          items: { type: string, enum: [delivered, returned, closed] }
+        can_add_photo: { type: boolean }
 
     OrderQuoteInput:
       type: object

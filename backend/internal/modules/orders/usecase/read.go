@@ -165,11 +165,23 @@ type OrderView struct {
 	// ParentOrder: the main order of a supplement; Supplements: the
 	// supplements of a main order; CanAddSupplement: the caller may open
 	// one now (detail only, TEC-1222).
-	ParentOrder      *OrderLink    `json:"parent_order,omitempty"`
-	Supplements      []OrderLink   `json:"supplements,omitempty"`
-	CanAddSupplement bool          `json:"can_add_supplement,omitempty"`
-	Items            []ItemView    `json:"items,omitempty"`
-	History          []HistoryView `json:"history,omitempty"`
+	ParentOrder      *OrderLink  `json:"parent_order,omitempty"`
+	Supplements      []OrderLink `json:"supplements,omitempty"`
+	CanAddSupplement bool        `json:"can_add_supplement,omitempty"`
+	// IsBackorder: the order was split from another by a partial shipment
+	// (TEC-1227); list rows carry it too. BackorderOf names that order,
+	// Backorders the backorders split from this one, CanPartialShip that
+	// the caller may ship the picked part now (detail only).
+	IsBackorder    bool        `json:"is_backorder"`
+	BackorderOf    *OrderLink  `json:"backorder_of,omitempty"`
+	Backorders     []OrderLink `json:"backorders,omitempty"`
+	CanPartialShip bool        `json:"can_partial_ship,omitempty"`
+	// Discrepancies are the receipt records (missing or damaged units,
+	// TEC-1227); OpenDiscrepancies counts the open ones (detail only).
+	Discrepancies     []DiscrepancyView `json:"discrepancies,omitempty"`
+	OpenDiscrepancies int               `json:"open_discrepancies,omitempty"`
+	Items             []ItemView        `json:"items,omitempty"`
+	History           []HistoryView     `json:"history,omitempty"`
 	// Timeline: every recorded step with its user (detail only, TEC-1060).
 	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
@@ -280,6 +292,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		AvailableTransitions: invoicedGuard(o, availableTransitions(o.Status, party, c.can)),
 		CanEditItems:         canEditItems(c, o),
 		IsSupplement:         o.ParentOrderID.Valid,
+		IsBackorder:          o.BackorderOfOrderID.Valid,
 	}
 	if o.DeliveryMethodID.Valid {
 		m, err := q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)
@@ -330,6 +343,12 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	}
 	v = views[0]
 	if err := s.withSupplements(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
+	if err := s.withBackorders(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
+	if err := s.withDiscrepancies(ctx, q, c, o, &v); err != nil {
 		return OrderView{}, err
 	}
 	items, err := q.ListOrderItems(ctx, o.ID)

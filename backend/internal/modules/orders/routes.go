@@ -69,6 +69,13 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/orders/{uuid}/documents/{kind}", route(h.Document))
 	receive := middleware.RequirePermission(rbac.PermOrdersReceive)
 	mux.Handle("POST /v1/orders/{uuid}/receipt-document", route(h.AttachReceipt, receive))
+	// TEC-1227: partial shipment (the rest becomes a backorder) and the
+	// receipt discrepancy records (missing / damaged units).
+	mux.Handle("POST /v1/orders/{uuid}/partial-ship", route(h.PartialShip, ship))
+	resolve := middleware.RequireAnyPermission(rbac.PermOrdersReceive, rbac.PermOrdersShip)
+	mux.Handle("POST /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/resolve", route(h.ResolveDiscrepancy, resolve))
+	mux.Handle("POST /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos", route(h.AddDiscrepancyPhoto, receive))
+	mux.Handle("GET /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos/{index}", route(h.DiscrepancyPhoto))
 	// TEC-1030: manual "invoiced" marks by the seller's accounting
 	// (einvoice.manage, the center accounting grant).
 	invoice := middleware.RequirePermission(rbac.PermEinvoiceManage)

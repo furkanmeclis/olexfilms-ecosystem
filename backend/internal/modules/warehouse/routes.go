@@ -176,6 +176,8 @@ func RegisterTransferRoutes(
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/ship", write(h.Ship))
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/complete", write(h.Complete))
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/cancel", write(h.Cancel))
+	// TEC-1227: the discrepancy record of a completed transfer.
+	mux.Handle("POST /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve", write(h.ResolveDiscrepancy))
 }
 
 // RegisterMemberRoutes mounts the TEC-769 user <-> warehouse membership.

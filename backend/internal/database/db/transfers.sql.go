@@ -238,7 +238,7 @@ func (q *Queries) DecideTransferRequest(ctx context.Context, arg DecideTransferR
 }
 
 const getOrderByUUIDInBrand = `-- name: GetOrderByUUIDInBrand :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders WHERE uuid = $1 AND brand_id = $2
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id FROM orders WHERE uuid = $1 AND brand_id = $2
 `
 
 type GetOrderByUUIDInBrandParams struct {
@@ -290,6 +290,7 @@ func (q *Queries) GetOrderByUUIDInBrand(ctx context.Context, arg GetOrderByUUIDI
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
 	)
 	return i, err
 }

@@ -2,8 +2,8 @@ package usecase
 
 // Receipt and cancel after shipping (TEC-168, F1-04d).
 //
-// shipped -> received: the buyer takes the whole shipment (no partial
-// receipt). Every shipped unit gets one ledger received movement (key
+// shipped -> received: the buyer takes the shipment; units it reports
+// missing stay in transit under a discrepancy record (TEC-1227). Every shipped unit gets one ledger received movement (key
 // order:order_item_unit:<id>:received:<barcode>) paired with its order_out;
 // the unit becomes available at the buyer organization. The status
 // history, orders.received and the accounting hook run in the same
@@ -80,23 +80,25 @@ func shippedUnits(ctx context.Context, q *db.Queries, o db.Order) ([]db.ListOrde
 
 // receive posts a received movement for every shipped unit into the buyer
 // organization.
-func (s *Service) receive(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, o db.Order) (map[string]any, error) {
+//
+// TEC-1227: units reported missing get no received movement (they stay in
+// transit under an open discrepancy record); damaged units are received
+// and recorded.
+func (s *Service) receive(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, o db.Order, report []DiscrepancyInput) (map[string]any, error) {
 	units, err := shippedUnits(ctx, q, o)
 	if err != nil {
 		return nil, err
 	}
-	buyer := ledger.Owner{Type: ledger.OwnerOrganization, ID: o.BuyerOrgID, OrgID: o.BuyerOrgID}
+	reported, err := resolveDiscrepancies(units, report)
+	if err != nil {
+		return nil, err
+	}
 	movements := 0
 	for _, a := range units {
-		m := ledger.Movement{
-			Type: ledger.TypeReceived, UnitID: a.UnitID, To: &buyer,
-			Source: LedgerSource, RefType: LedgerRefType, RefID: a.ID, ActorUserID: actorOf(c),
-			Metadata: map[string]any{"order_uuid": o.Uuid.String(), "order_no": o.OrderNo},
+		if r, ok := reported[a.ID]; ok && r.kind == DiscrepancyMissing {
+			continue
 		}
-		if a.UnitKind == ledger.KindFixed {
-			m.Quantity = a.Quantity.Int32
-		}
-		r, err := s.ledger.Post(ctx, tx, m)
+		r, err := s.ledger.Post(ctx, tx, receivedMovement(c, o, a))
 		if err != nil {
 			return nil, stockErr("received", a.Barcode, err)
 		}
@@ -104,7 +106,15 @@ func (s *Service) receive(ctx context.Context, q *db.Queries, tx pgx.Tx, c Calle
 			movements++
 		}
 	}
-	return map[string]any{"units": len(units), "movements": movements}, nil
+	meta := map[string]any{"units": len(units), "movements": movements}
+	diff, err := s.recordDiscrepancies(ctx, q, tx, c, o, reported, units)
+	if err != nil {
+		return nil, err
+	}
+	if diff != nil {
+		meta["discrepancies"] = diff
+	}
+	return meta, nil
 }
 
 // restore posts an order_cancel_restore for every shipped unit: serial

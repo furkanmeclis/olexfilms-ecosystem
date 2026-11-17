@@ -2143,6 +2143,7 @@ type Order struct {
 	InvoiceStatus             string             `json:"invoice_status"`
 	SellerWarehouseID         pgtype.Int8        `json:"seller_warehouse_id"`
 	ParentOrderID             pgtype.Int8        `json:"parent_order_id"`
+	BackorderOfOrderID        pgtype.Int8        `json:"backorder_of_order_id"`
 }
 
 type OrderInvoice struct {
@@ -2216,6 +2217,27 @@ type OrderOutbound struct {
 	LastError         pgtype.Text        `json:"last_error"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderReceiptDiscrepancy struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	OrderID          int64              `json:"order_id"`
+	OrderItemUnitID  int64              `json:"order_item_unit_id"`
+	UnitID           int64              `json:"unit_id"`
+	Kind             string             `json:"kind"`
+	Reason           string             `json:"reason"`
+	PhotoKeys        []string           `json:"photo_keys"`
+	Status           string             `json:"status"`
+	Resolution       pgtype.Text        `json:"resolution"`
+	ResolutionNote   pgtype.Text        `json:"resolution_note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	ResolvedByUserID pgtype.Int8        `json:"resolved_by_user_id"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type OrderStatusHistory struct {
@@ -3996,6 +4018,27 @@ type WarehouseTransfer struct {
 	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarehouseTransferDiscrepancy struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	TransferID       int64              `json:"transfer_id"`
+	TransferLineID   pgtype.Int8        `json:"transfer_line_id"`
+	UnitID           pgtype.Int8        `json:"unit_id"`
+	Barcode          string             `json:"barcode"`
+	Kind             string             `json:"kind"`
+	Note             pgtype.Text        `json:"note"`
+	Status           string             `json:"status"`
+	Resolution       pgtype.Text        `json:"resolution"`
+	ResolutionNote   pgtype.Text        `json:"resolution_note"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	ResolvedByUserID pgtype.Int8        `json:"resolved_by_user_id"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type WarehouseTransferLine struct {

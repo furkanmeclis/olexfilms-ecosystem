@@ -7686,9 +7686,29 @@ export interface paths {
         put?: never;
         /**
          * Receive a warehouse transfer (transfer_in + placement, in_transit -> completed)
-         * @description Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
+         * @description Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional. TEC-1227: `missing` lines get no transfer_in, stay in transit and keep their lock under a loss investigation; `surplus` barcodes are recorded only. Both form the transfer's discrepancy record.
          */
         post: operations["completeWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a row of a completed transfer's discrepancy record
+         * @description TEC-1227. Needs `warehouse.write`. A missing line found (`found`: transfer_in + placement onto the line target, the body location or the transfer's default location in the target warehouse; target warehouse membership) or returned to its source (`returned_to_source`: transfer_cancel_restore; either side); a surplus row is `closed`. The unit lock is released. Writing a lost unit off is the stock adjustment document's job. 409 WAREHOUSE_TRANSFER_DISCREPANCY_CLOSED when already resolved.
+         */
+        post: operations["resolveWarehouseTransferDiscrepancy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10443,6 +10463,26 @@ export interface paths {
          *     Needs `warehouse.write`. In one transaction every line gets the paired `transfer_in` and a `placement` onto its target location (line target, else the optional body location, else the transfer's default location; 409 WAREHOUSE_TRANSFER_UNPLACED when none). 409 WAREHOUSE_TRANSFER_STATE when not in transit. The body is optional.
          */
         post: operations["mobileCompleteWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Resolve a row of a completed transfer's discrepancy record
+         * @description Mobile mirror of `POST /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve` (TEC-1227): same handler, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
+         */
+        post: operations["mobileResolveWarehouseTransferDiscrepancy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13606,6 +13646,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/partial-ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ship the picked part of a preparing order; the rest becomes a backorder
+         * @description TEC-1227. The default rule stays: an order leaves when every line is fully picked. When stock is short the seller's warehouse staff (orders.ship) may ship the picked part now. In one transaction a line picked in full stays, a partly picked line keeps the picked amount and its rest becomes a line of a new backorder (same unit price, discount, gift and plotter marks; the two line totals add up to the original), and a line nothing was picked for moves to the backorder whole. The backorder is a new order of the same seller, buyer, brand, currency and seller warehouse (`is_backorder`, `backorder_of`); it takes the frozen rate and approval of the order (no new price approval), starts `approved` and falls into the warehouse queue (ORDER_WAREHOUSE_NEW). It is cancelled like any order (active reservations are released). The order moves to `ready` (`reason` is kept in the history) and is shipped with the usual transition. 409 ORDER_NOT_PARTIALLY_SHIPPABLE when not preparing, ORDER_NOTHING_PICKED without an assignment, ORDER_FULLY_PICKED when nothing is short; the buyer gets 403. A caller without a price grant gets the order without money.
+         */
+        post: operations["partialShipOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a receipt discrepancy (missing or damaged unit)
+         * @description TEC-1227. On a received order: a missing unit the buyer found (`delivered`, buyer with orders.receive; the received movement is posted now), a missing unit the seller took back (`returned`, seller with orders.ship; order_cancel_restore puts it back to the order_out's source) or a damaged unit's record (`closed`, either side). `can_resolve_as` on the record lists what the caller may choose. 409 ORDER_DISCREPANCY_CLOSED when already resolved; 403 when the caller may choose nothing.
+         */
+        post: operations["resolveOrderDiscrepancy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach a photo to an open receipt discrepancy
+         * @description TEC-1227. The buyer (orders.receive) attaches a JPEG, PNG or WebP photo (multipart `file`, at most 10 MB) to an open record; at most 5 photos (409 ORDER_DISCREPANCY_PHOTO_LIMIT). 503 ORDER_DOCUMENT_UNAVAILABLE without storage.
+         */
+        post: operations["addOrderDiscrepancyPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream a photo of a receipt discrepancy
+         * @description TEC-1227. Both sides of the order; index is 0-based (`photo_count` on the record).
+         */
+        get: operations["getOrderDiscrepancyPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders/{uuid}/items": {
         parameters: {
             query?: never;
@@ -13637,7 +13757,7 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Transitions (TEC-166, TEC-167): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); processing -> preparing (seller, orders.ship; TEC-261, a migrated order continues on the barcode path); preparing -> ready (seller, orders.ship; every line fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> preparing (seller, orders.ship; TEC-1032: reopen preparation to fix a wrong scan, the assigned units stay); ready -> shipped (seller, orders.ship; one ledger order_out per assigned unit with idempotency key order:order_item_unit:<id>:order_out:<barcode>, serial units go in_transit owned by the buyer, reservations are consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses); draft | submitted | approved | processing | preparing | ready -> cancelled (either side, orders.cancel; active reservations are released). After shipping (TEC-168): shipped -> received (buyer, orders.receive; the whole shipment, no partial receipt: one ledger received per shipped unit with idempotency key order:order_item_unit:<id>:received:<barcode>, the units become available at the buyer organization; orders.received); shipped -> cancelling (either side, orders.cancel; nothing moves, the reason is kept; orders.cancel_requested); cancelling -> cancelled (seller, orders.cancel or orders.ship, once the goods are back: one ledger order_cancel_restore per shipped unit returns it to the seller's source owner and status). A received order cannot be cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate flow). An order with an invoice mark (invoice_status partial or invoiced, TEC-1030 / TEC-1070) is not cancelled either (409 ORDER_INVOICED) and its available_transitions offer no cancel. A request for the current status is a no-op (a repeated ship, receipt or cancel writes no movement). Other moves answer 409 ORDER_INVALID_TRANSITION. Every move writes the status history and an orders.* outbox event. Notifications: shipped and delivered tell the buyer's members holding orders.read (ORDER_SHIPPED, ORDER_DELIVERED); received tells the seller's members holding orders.approve (ORDER_RECEIVED); in-app, web push and Expo push, never the actor. TEC-1024: shipped -> delivered (seller, orders.ship; status and delivered_at only, `reason` is kept as the delivery note in the history; orders.delivered; typical for hand or depot delivery); delivered -> received (buyer, orders.receive; the stock moves here, as from shipped); delivered -> cancelling (either side, orders.cancel). A cargo shipment may still go shipped -> received directly.
+         * @description Transitions (TEC-166, TEC-167): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); processing -> preparing (seller, orders.ship; TEC-261, a migrated order continues on the barcode path); preparing -> ready (seller, orders.ship; every line fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> preparing (seller, orders.ship; TEC-1032: reopen preparation to fix a wrong scan, the assigned units stay); ready -> shipped (seller, orders.ship; one ledger order_out per assigned unit with idempotency key order:order_item_unit:<id>:order_out:<barcode>, serial units go in_transit owned by the buyer, reservations are consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses); draft | submitted | approved | processing | preparing | ready -> cancelled (either side, orders.cancel; active reservations are released). After shipping (TEC-168): shipped -> received (buyer, orders.receive; the whole shipment, no partial receipt: one ledger received per shipped unit with idempotency key order:order_item_unit:<id>:received:<barcode>, the units become available at the buyer organization; orders.received); shipped -> cancelling (either side, orders.cancel; nothing moves, the reason is kept; orders.cancel_requested); cancelling -> cancelled (seller, orders.cancel or orders.ship, once the goods are back: one ledger order_cancel_restore per shipped unit returns it to the seller's source owner and status). A received order cannot be cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate flow). An order with an invoice mark (invoice_status partial or invoiced, TEC-1030 / TEC-1070) is not cancelled either (409 ORDER_INVOICED) and its available_transitions offer no cancel. A request for the current status is a no-op (a repeated ship, receipt or cancel writes no movement). Other moves answer 409 ORDER_INVALID_TRANSITION. Every move writes the status history and an orders.* outbox event. Notifications: shipped and delivered tell the buyer's members holding orders.read (ORDER_SHIPPED, ORDER_DELIVERED); received tells the seller's members holding orders.approve (ORDER_RECEIVED); in-app, web push and Expo push, never the actor. TEC-1024: shipped -> delivered (seller, orders.ship; status and delivered_at only, `reason` is kept as the delivery note in the history; orders.delivered; typical for hand or depot delivery); delivered -> received (buyer, orders.receive; the stock moves here, as from shipped); delivered -> cancelling (either side, orders.cancel). A cargo shipment may still go shipped -> received directly. TEC-1227: the received step may carry `discrepancies` (missing or damaged units, one per shipped unit, with a reason; 400 with any other status). A missing unit gets no received movement and stays in transit under an open record; a damaged unit is received and recorded. At least one unit must be received. The order is `received` with `open_discrepancies`; the seller's members holding orders.approve or orders.ship are notified (ORDER_RECEIPT_DISCREPANCY). The books still run on the order total.
          */
         post: operations["transitionOrder"];
         delete?: never;
@@ -24950,6 +25070,52 @@ export interface components {
             /** Format: uuid */
             location_uuid?: string | null;
             location_code?: string;
+            /** @description TEC-1227 — lines that did not arrive: no transfer_in, they stay in transit and keep their unit lock under an open record. At least one line must arrive. */
+            missing?: {
+                /** Format: uuid */
+                line_uuid: string;
+                note?: string;
+            }[];
+            /** @description TEC-1227 — scanned barcodes that are not on the transfer; recorded only, no stock movement. */
+            surplus?: {
+                barcode: string;
+                note?: string;
+            }[];
+        };
+        WarehouseTransferDiscrepancyResolveInput: {
+            /** @enum {string} */
+            resolution: "found" | "returned_to_source" | "closed";
+            /** Format: uuid */
+            location_uuid?: string | null;
+            location_code?: string;
+            note?: string;
+        };
+        /** @description TEC-1227 — one row of a transfer's record (tutanak). No prices. */
+        WarehouseTransferDiscrepancy: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "missing" | "surplus";
+            /** @enum {string} */
+            status: "open" | "resolved";
+            barcode: string;
+            /** Format: uuid */
+            line_uuid: string | null;
+            /** Format: uuid */
+            unit_uuid: string | null;
+            product_name: string | null;
+            product_sku: string | null;
+            note: string | null;
+            /** @enum {string|null} */
+            resolution: "found" | "returned_to_source" | "closed" | null;
+            resolution_note: string | null;
+            /** @description First name and surname */
+            created_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+            resolved_by: string | null;
+            /** Format: date-time */
+            resolved_at: string | null;
         };
         WarehouseTransferLine: {
             /** Format: uuid */
@@ -24986,6 +25152,13 @@ export interface components {
             line_count: number;
             /** @description Detail responses only. */
             lines?: components["schemas"]["WarehouseTransferLine"][];
+            /** @description TEC-1227 (detail only) — the record of a transfer completed with differences. */
+            discrepancies?: components["schemas"]["WarehouseTransferDiscrepancy"][];
+            /**
+             * Format: int64
+             * @description TEC-1227 — open record rows (detail responses; 0 on list rows).
+             */
+            open_discrepancies?: number;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -28643,6 +28816,18 @@ export interface components {
             supplements?: components["schemas"]["OrderLink"][];
             /** @description TEC-1222 (detail responses only): the caller may open a supplementary order now — the seller with orders.write or orders.ship on a shipped, delivered or received order; omitted when false. */
             can_add_supplement?: boolean;
+            /** @description TEC-1227: the order was split from another by a partial shipment (list rows carry it too). */
+            is_backorder?: boolean;
+            /** @description TEC-1227 (detail only) — the order a backorder was split from. */
+            backorder_of?: components["schemas"]["OrderLink"];
+            /** @description TEC-1227 (detail only) — the backorders split from this order. */
+            backorders?: components["schemas"]["OrderLink"][];
+            /** @description TEC-1227 (detail only): the caller may ship the picked part now (seller, orders.ship, preparing); omitted when false. */
+            can_partial_ship?: boolean;
+            /** @description TEC-1227 (detail only) — receipt records (missing / damaged units). */
+            discrepancies?: components["schemas"]["OrderDiscrepancy"][];
+            /** @description TEC-1227 (detail only) — open receipt records; omitted when 0. */
+            open_discrepancies?: number;
             /** @description Lines (detail responses only) */
             items?: components["schemas"]["OrderItem"][];
             /** @description Status history (detail responses only) */
@@ -28697,6 +28882,12 @@ export interface components {
             plotter_cut?: boolean;
             /** @description TEC-1221 — the line's usage credits set with a plotter_marked step */
             plotter_credits?: number;
+            /** @description TEC-1227 — the other order of a backorder_created (on the shipped order) or backorder_opened (on the backorder) step */
+            related_order_no?: string;
+            /** @description TEC-1227 — missing or damaged on a discrepancy_reported / discrepancy_resolved step */
+            kind?: string;
+            /** @description TEC-1227 — delivered, returned or closed on a discrepancy_resolved step */
+            resolution?: string;
         };
         /** @description TEC-1056: one line of an edit. before is the old amount (null: the line was added), after the new one (null: removed); pieces as a whole number, meters with two decimals. */
         OrderLineChange: {
@@ -28939,7 +29130,7 @@ export interface components {
             /** @example Ayşe Yılmaz */
             name: string;
         };
-        /** @description TEC-1222. A linked order (main order or supplementary order). */
+        /** @description TEC-1222. A linked order (main order, supplementary order or, TEC-1227, backorder). */
         OrderLink: {
             /** Format: uuid */
             uuid: string;
@@ -29256,6 +29447,53 @@ export interface components {
             delivery_method_uuid?: string;
             /** @description Shipping only (TEC-768) */
             tracking_no?: string;
+            /** @description TEC-1227 — received only; missing or damaged units */
+            discrepancies?: components["schemas"]["OrderDiscrepancyInput"][];
+        };
+        OrderDiscrepancyInput: {
+            /** Format: uuid */
+            unit_uuid: string;
+            /** @enum {string} */
+            kind: "missing" | "damaged";
+            reason: string;
+        };
+        OrderPartialShipInput: {
+            /** @description Kept in the history of the ready step */
+            reason?: string;
+        };
+        OrderDiscrepancyResolveInput: {
+            /** @enum {string} */
+            resolution: "delivered" | "returned" | "closed";
+            note?: string;
+        };
+        /** @description TEC-1227: one receipt record (missing or damaged unit). Carries no price; the warehouse roles read it too. */
+        OrderDiscrepancy: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "missing" | "damaged";
+            /** @enum {string} */
+            status: "open" | "resolved";
+            reason: string;
+            /** @enum {string|null} */
+            resolution: "delivered" | "returned" | "closed" | null;
+            resolution_note: string | null;
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            product_name: string;
+            product_sku: string;
+            quantity: number | null;
+            meters: string | null;
+            photo_count: number;
+            created_by: components["schemas"]["OrderUserRef"] | null;
+            /** Format: date-time */
+            created_at: string;
+            resolved_by: components["schemas"]["OrderUserRef"] | null;
+            /** Format: date-time */
+            resolved_at: string | null;
+            can_resolve_as: ("delivered" | "returned" | "closed")[];
+            can_add_photo?: boolean;
         };
         OrderQuoteInput: {
             /**
@@ -47277,6 +47515,39 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    resolveWarehouseTransferDiscrepancy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                discrepancy_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferDiscrepancyResolveInput"];
+            };
+        };
+        responses: {
+            /** @description The transfer with its record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     cancelWarehouseTransfer: {
         parameters: {
             query?: never;
@@ -51972,6 +52243,43 @@ export interface operations {
         };
         responses: {
             /** @description Completed transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseTransfer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileResolveWarehouseTransferDiscrepancy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                discrepancy_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseTransferDiscrepancyResolveInput"];
+            };
+        };
+        responses: {
+            /** @description The transfer with its record */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -57906,6 +58214,132 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    partialShipOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderPartialShipInput"];
+            };
+        };
+        responses: {
+            /** @description The order (ready) with its backorder link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    resolveOrderDiscrepancy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                discrepancy_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderDiscrepancyResolveInput"];
+            };
+        };
+        responses: {
+            /** @description The order with its records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addOrderDiscrepancyPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                discrepancy_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The order with its records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getOrderDiscrepancyPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                discrepancy_uuid: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
     replaceOrderItems: {

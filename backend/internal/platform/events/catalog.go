@@ -233,6 +233,9 @@ const (
 	// OrdersWarehouseNew: an approved order fell into a seller warehouse
 	// (TEC-1028); the warehouse staff are notified.
 	OrdersWarehouseNew = "orders.warehouse_new"
+	// OrdersReceiptDiscrepancy: the buyer received an order with missing
+	// or damaged units (TEC-1227); the seller's staff are notified.
+	OrdersReceiptDiscrepancy = "orders.receipt_discrepancy"
 )
 
 // Announcement domain events (TEC-330): publishing writes one outbox event
@@ -637,6 +640,7 @@ func catalogConstants() []string {
 		OrdersCancelled,
 		OrdersCreatedBySeller,
 		OrdersWarehouseNew,
+		OrdersReceiptDiscrepancy,
 		TransfersRequested,
 		TransfersApproved,
 		TransfersRejected,

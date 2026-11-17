@@ -35,6 +35,7 @@ type Querier interface {
 	// The CHECK rejects a negative result.
 	AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
 	AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (LeadEvent, error)
+	AddOrderReceiptDiscrepancyPhoto(ctx context.Context, arg AddOrderReceiptDiscrepancyPhotoParams) (OrderReceiptDiscrepancy, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddOrganizationProductStock(ctx context.Context, arg AddOrganizationProductStockParams) (OrganizationProductStock, error)
 	AddQuoteViewedEventIfMissing(ctx context.Context, arg AddQuoteViewedEventIfMissingParams) (LeadEvent, error)
@@ -156,8 +157,12 @@ type Querier interface {
 	// when nothing is left, chk_users_email_or_phone). Runs before the target
 	// takes the identifiers over (unique indexes are checked per statement).
 	CloseMergedUser(ctx context.Context, arg CloseMergedUserParams) (User, error)
+	CloseWarehouseTransferLine(ctx context.Context, id int64) error
 	// Releases the unit lock when the transfer is completed or cancelled.
 	CloseWarehouseTransferLines(ctx context.Context, transferID int64) error
+	// Completes a transfer with missing lines: every other line releases its
+	// unit lock; a missing line keeps it until its discrepancy is resolved.
+	CloseWarehouseTransferLinesExcept(ctx context.Context, arg CloseWarehouseTransferLinesExceptParams) error
 	// Completes the VIN of a vin_pending result (status accepted).
 	CompleteMeasurementResultVIN(ctx context.Context, arg CompleteMeasurementResultVINParams) (int64, error)
 	CompleteService(ctx context.Context, arg CompleteServiceParams) (Service, error)
@@ -282,9 +287,11 @@ type Querier interface {
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
 	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
+	CountOpenOrderReceiptDiscrepancies(ctx context.Context, orderID int64) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
+	CountOpenWarehouseTransferDiscrepancies(ctx context.Context, transferID int64) (int64, error)
 	// Used by other flows (stock transfer requests) to respect the lock.
 	CountOpenWarehouseTransferLinesByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountOrderItems(ctx context.Context, orderID int64) (int64, error)
@@ -517,6 +524,7 @@ type Querier interface {
 	// Units assigned to order lines.
 	CreateOrderItemUnit(ctx context.Context, arg CreateOrderItemUnitParams) (OrderItemUnit, error)
 	CreateOrderOutbound(ctx context.Context, arg CreateOrderOutboundParams) (OrderOutbound, error)
+	CreateOrderReceiptDiscrepancy(ctx context.Context, arg CreateOrderReceiptDiscrepancyParams) (OrderReceiptDiscrepancy, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
 	// TEC-487: efficiency and waste analytics. These queries are intentionally
@@ -638,6 +646,8 @@ type Querier interface {
 	// TEC-205: warehouse -> warehouse transfer documents (draft -> in_transit ->
 	// completed / cancelled) inside one organization.
 	CreateWarehouseTransfer(ctx context.Context, arg CreateWarehouseTransferParams) (WarehouseTransfer, error)
+	// TEC-1227: the discrepancy record (tutanak) of a warehouse transfer.
+	CreateWarehouseTransferDiscrepancy(ctx context.Context, arg CreateWarehouseTransferDiscrepancyParams) (WarehouseTransferDiscrepancy, error)
 	// TEC-334 (F3-06a): warranty claim schema (migration 000092). Reads are
 	// bounded by the brand and, when given, the resolved organization ids
 	// (NULL = the whole brand); the API layer owns scope resolution.
@@ -1212,6 +1222,7 @@ type Querier interface {
 	GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error)
 	GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUIDParams) (OrderItem, error)
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
+	GetOrderItemUnitByID(ctx context.Context, id int64) (OrderItemUnit, error)
 	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
 	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
 	GetOrderRefByID(ctx context.Context, id int64) (GetOrderRefByIDRow, error)
@@ -1482,6 +1493,7 @@ type Querier interface {
 	GetWarehouseMember(ctx context.Context, arg GetWarehouseMemberParams) (GetWarehouseMemberRow, error)
 	GetWarehouseSettings(ctx context.Context, organizationID int64) (WarehouseSetting, error)
 	GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
+	GetWarehouseTransferLine(ctx context.Context, id int64) (WarehouseTransferLine, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
 	// Public page /warranty/{public_code} (decision 1).
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
@@ -2351,6 +2363,8 @@ type Querier interface {
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
 	// Assigned (not yet shipped) serial units of an order with their location.
 	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
+	// The backorders split from an order, oldest first.
+	ListOrderBackorders(ctx context.Context, arg ListOrderBackordersParams) ([]Order, error)
 	// TEC-1054: list facts of a page of orders: the line amounts (pieces and
 	// roll meters apart), the seller warehouse and the last actor. TEC-1060:
 	// the last actor is the user of the latest step with a user — a status
@@ -2369,6 +2383,7 @@ type Querier interface {
 	// The units of an order with whether each is still on hand unplaced in the
 	// organization (available, owned by the organization itself, TEC-765).
 	ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlacementUnitsParams) ([]ListOrderPlacementUnitsRow, error)
+	ListOrderReceiptDiscrepancies(ctx context.Context, orderID int64) ([]ListOrderReceiptDiscrepanciesRow, error)
 	// TEC-1085: the units assigned to an order with what the buyer still holds
 	// of each: a serial unit is returnable when the buyer holds it in stock, a
 	// fixed barcode up to the smaller of the order quantity and the buyer's
@@ -3009,6 +3024,7 @@ type Querier interface {
 	// in: placed in one of its locations; left: anywhere else). Sort:
 	// docs/list-contract.md, keys from stock usecase WarehouseUnitSort.
 	ListWarehouseTraceUnits(ctx context.Context, arg ListWarehouseTraceUnitsParams) ([]ListWarehouseTraceUnitsRow, error)
+	ListWarehouseTransferDiscrepancies(ctx context.Context, transferID int64) ([]ListWarehouseTransferDiscrepanciesRow, error)
 	// The lines of the given transfers with their unit, product and locations.
 	ListWarehouseTransferExportLines(ctx context.Context, arg ListWarehouseTransferExportLinesParams) ([]ListWarehouseTransferExportLinesRow, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
@@ -3136,6 +3152,7 @@ type Querier interface {
 	LockOrderItem(ctx context.Context, arg LockOrderItemParams) (OrderItem, error)
 	LockOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	LockOrderOutbound(ctx context.Context, id int64) (OrderOutbound, error)
+	LockOrderReceiptDiscrepancy(ctx context.Context, arg LockOrderReceiptDiscrepancyParams) (OrderReceiptDiscrepancy, error)
 	// TEC-229: locks (FOR SHARE) the orders the return lines of a request were
 	// sold on, so a dispute reversal of the same order (LockOrderForDisputeReversal,
 	// FOR UPDATE) and the receipt of the return are serialized.
@@ -3200,6 +3217,7 @@ type Querier interface {
 	LockUsersForMerge(ctx context.Context, ids []int64) ([]User, error)
 	LockVehicleTransferByUUID(ctx context.Context, arg LockVehicleTransferByUUIDParams) (VehicleTransfer, error)
 	LockWarehouseTransferByUUID(ctx context.Context, arg LockWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
+	LockWarehouseTransferDiscrepancy(ctx context.Context, arg LockWarehouseTransferDiscrepancyParams) (WarehouseTransferDiscrepancy, error)
 	LockWarranty(ctx context.Context, arg LockWarrantyParams) (Warranty, error)
 	// Supersedes the older live versions of the key and points the projection
 	// (and, for country NULL, product_prices.recommended_sale_price) at it.
@@ -3254,6 +3272,11 @@ type Querier interface {
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) (Notification, error)
 	MarkOTPDelivered(ctx context.Context, arg MarkOTPDeliveredParams) error
 	MarkOTPDeliveryFailed(ctx context.Context, arg MarkOTPDeliveryFailedParams) error
+	// TEC-1227: partial shipment, backorders and receipt discrepancies.
+	// A new backorder takes the approval of the order it was split from: the
+	// frozen rate, the approver, the seller warehouse and the link. It starts
+	// approved without a new price approval.
+	MarkOrderBackorder(ctx context.Context, arg MarkOrderBackorderParams) (Order, error)
 	MarkOutboxFailed(ctx context.Context, arg MarkOutboxFailedParams) error
 	MarkOutboxPublished(ctx context.Context, id int64) error
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
@@ -3543,6 +3566,9 @@ type Querier interface {
 	MoveCustomerOrganizations(ctx context.Context, arg MoveCustomerOrganizationsParams) (int64, error)
 	// The source's profile becomes the target's when the target has none.
 	MoveCustomerProfile(ctx context.Context, arg MoveCustomerProfileParams) (int64, error)
+	// A line nothing was picked for moves to the backorder whole (its
+	// released reservations stay with it as history).
+	MoveOrderItemToOrder(ctx context.Context, arg MoveOrderItemToOrderParams) (OrderItem, error)
 	// Services follow their vehicle. A service whose vehicle was transferred to
 	// a third person stays with the source (services_check_row requires the
 	// vehicle to belong to the customer).
@@ -3752,6 +3778,7 @@ type Querier interface {
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
 	// Organizations of the brand with the given uuids (filter "served by").
 	ResolveCampaignOrganizations(ctx context.Context, arg ResolveCampaignOrganizationsParams) ([]ResolveCampaignOrganizationsRow, error)
+	ResolveOrderReceiptDiscrepancy(ctx context.Context, arg ResolveOrderReceiptDiscrepancyParams) (OrderReceiptDiscrepancy, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
@@ -3766,6 +3793,7 @@ type Querier interface {
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
+	ResolveWarehouseTransferDiscrepancy(ctx context.Context, arg ResolveWarehouseTransferDiscrepancyParams) (WarehouseTransferDiscrepancy, error)
 	// Paused conversations whose pause ended return to auto.
 	ResumeExpiredAIPauses(ctx context.Context, now pgtype.Timestamptz) (int64, error)
 	// A failed render is re-queued with a new attempt number (new task id).
@@ -3910,6 +3938,8 @@ type Querier interface {
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
 	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
+	// The picked part of a line stays on the shipped order.
+	SetOrderItemAmount(ctx context.Context, arg SetOrderItemAmountParams) (OrderItem, error)
 	// TEC-1058: the information-only "sent plotter cut" mark of a line.
 	SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPlotterCutParams) (OrderItem, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
