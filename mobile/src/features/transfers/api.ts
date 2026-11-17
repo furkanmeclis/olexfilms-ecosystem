@@ -25,6 +25,11 @@ export const transferKeys = {
   list: (filter: TransferFilter, q: string) => ['transfers', 'list', filter, q] as const,
   one: (uuid: string) => ['transfers', uuid] as const,
   targets: (kind: TransferKind) => ['transfers', 'targets', kind] as const,
+  returnSources: ['transfers', 'return-sources'] as const,
+  returnOrders: (fromOrg: string) => ['transfers', 'return-orders', fromOrg] as const,
+  returnOrderUnits: (order: string, fromOrg: string) => ['transfers', 'return-order-units', order, fromOrg] as const,
+  // Under 'list' so a new return or a transition refreshes the order page too.
+  orderReturns: (order: string) => ['transfers', 'list', 'order', order] as const,
 };
 
 export function transferTone(s: TransferStatus): StatusTone {
@@ -53,12 +58,68 @@ export function useTransfer(uuid: string) {
   });
 }
 
-/** Sibling dealers (same parent, K13) or, for a return, the direct parent only. */
-export function useTransferTargets(kind: TransferKind) {
+/**
+ * Sibling dealers (same parent, K13) or, for a return, the direct parent only.
+ * The route needs transfers.request: a parent with only transfers.approve skips it.
+ */
+export function useTransferTargets(kind: TransferKind, enabled = true) {
   return useQuery({
     queryKey: transferKeys.targets(kind),
     queryFn: () => unwrap(api.GET('/v1/stock-transfers/targets', { params: { query: { kind } } })),
     select: (d) => d.items,
+    enabled,
+  });
+}
+
+/** TEC-1085: the direct dealer / distributor children a parent (transfers.approve) opens a return for. */
+export function useReturnSources(enabled: boolean) {
+  return useQuery({
+    queryKey: transferKeys.returnSources,
+    queryFn: () => unwrap(api.GET('/v1/stock-transfers/return-sources')),
+    select: (d) => d.items,
+    enabled,
+  });
+}
+
+/**
+ * TEC-1085: orders a return may refer to (sold by the parent to the giver, no
+ * draft or cancelled one). fromOrg is the child of a return the parent opens,
+ * '' for the active organization's own return.
+ */
+export function useReturnOrders(fromOrg: string, enabled: boolean) {
+  return useQuery({
+    queryKey: transferKeys.returnOrders(fromOrg),
+    queryFn: () =>
+      unwrap(api.GET('/v1/stock-transfers/return-orders', { params: { query: fromOrg ? { from_org_uuid: fromOrg } : {} } })),
+    select: (d) => d.items,
+    enabled,
+  });
+}
+
+/** TEC-1085: the units of the order offered for the return, with what the giver may still return. */
+export function useReturnOrderUnits(order: string, fromOrg: string, enabled: boolean) {
+  return useQuery({
+    queryKey: transferKeys.returnOrderUnits(order, fromOrg),
+    queryFn: () =>
+      unwrap(
+        api.GET('/v1/stock-transfers/return-orders/{uuid}/units', {
+          params: { path: { uuid: order }, query: fromOrg ? { from_org_uuid: fromOrg } : {} },
+        }),
+      ),
+    select: (d) => d.items,
+    enabled: enabled && order !== '',
+  });
+}
+
+/** TEC-1085: the returns linked to an order (web OrderReturnsCard: kind=return, order_uuid, first 50). */
+export function useOrderReturns(order: string, enabled: boolean) {
+  return useQuery({
+    queryKey: transferKeys.orderReturns(order),
+    queryFn: () =>
+      unwrap(api.GET('/v1/stock-transfers', { params: { query: { kind: 'return', order_uuid: order, limit: 50, offset: 0 } } })),
+    select: (d) => d.items,
+    enabled,
+    retry: false,
   });
 }
 

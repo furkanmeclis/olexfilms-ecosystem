@@ -274,3 +274,12 @@ describe('hidden rows stay hidden', () => {
     assert.deepEqual(layout(menuGroups(viewer({ warehouse: true, multiOrg: true }))).account, ['warehouse', 'search', 'spaces', 'settings']);
   });
 });
+
+describe('transfers row (TEC-1220)', () => {
+  const transfers = ITEMS.find((i) => i.key === 'transfers')!;
+  it('opens for transfers.approve too: the center opens returns in a dealer name', () => {
+    assert.ok(itemVisible(transfers, viewer({ orgType: 'center', workplace: true, permissions: ['transfers.approve'] })));
+    assert.ok(itemVisible(transfers, viewer({ permissions: ['transfers.request'] })));
+    assert.ok(!itemVisible(transfers, viewer({ permissions: ['orders.read'] })));
+  });
+});

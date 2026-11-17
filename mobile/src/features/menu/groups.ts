@@ -100,7 +100,15 @@ export const ITEMS: MenuItem[] = [
   { key: 'stock', icon: 'stock', group: 'stock', permission: 'stock.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   // TEC-958: dealer sales (web Dealer sales; accounting + dealer_accounting modules behind each permission).
   { key: 'quick_sale', icon: 'cart', group: 'stock', permission: 'product_sales.write', spaces: ['bayi'], built: ['bayi'] },
-  { key: 'transfers', icon: 'transfer', group: 'stock', permission: 'transfers.request', spaces: ['bayi'], built: ['bayi'] },
+  // TEC-1220: transfers.approve too, so the center opens returns in a dealer's name (web TEC-1085).
+  {
+    key: 'transfers',
+    icon: 'transfer',
+    group: 'stock',
+    permission: ['transfers.request', 'transfers.approve'],
+    spaces: ['bayi'],
+    built: ['bayi'],
+  },
   { key: 'purchases', icon: 'truck', group: 'stock', permission: 'purchases.write', spaces: ['bayi'], built: ['bayi'] },
   { key: 'catalog', icon: 'package', group: 'stock', fallback: ['business'], permission: 'catalog.read', spaces: ['bayi'], built: ['bayi'] },
 
