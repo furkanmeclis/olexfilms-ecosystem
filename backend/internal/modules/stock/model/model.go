@@ -345,7 +345,7 @@ const (
 )
 
 // UnitStatuses are the units.status values the unit list filters on.
-var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}
+var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void", "quarantine"}
 
 // UnitFilter filters the organization unit list (TEC-216). TEC-373:
 // Statuses is any-of (empty: available and placed); Barcode is an exact

@@ -486,6 +486,7 @@
   "stock.status.reserved": "محجوزة",
   "stock.status.used": "مستخدمة",
   "stock.status.void": "ملغاة",
+  "stock.status.quarantine": "بانتظار الفحص",
   "stock.unit.holder": "الجهة الحائزة",
   "stock.unit.holdings": "الكميات المتوفرة",
   "stock.unit.kind": "نوع الباركود",

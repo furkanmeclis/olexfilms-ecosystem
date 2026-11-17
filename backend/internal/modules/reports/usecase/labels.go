@@ -82,6 +82,7 @@ var labels = map[string]label{
 	"units.status.placed":     {"Rafta", "Placed", "Разположена", "Eingelagert", "Τοποθετημένη", "Розміщено", "Размещено", "Rangée", "Ubicada", "Collocata", "已上架", "Yerləşdirilib", "موضوعة"},
 	"units.status.in_transit": {"Yolda", "In transit", "В транзит", "Unterwegs", "Σε μεταφορά", "У дорозі", "В пути", "En transit", "En tránsito", "In transito", "运输中", "Yoldadır", "قيد النقل"},
 	"units.status.used":       {"Kullanıldı", "Used", "Използвана", "Verbraucht", "Χρησιμοποιήθηκε", "Використано", "Использовано", "Utilisée", "Usada", "Utilizzata", "已使用", "İstifadə olunub", "مستخدمة"},
+	"units.status.quarantine": {"Kontrol bekliyor", "Awaiting inspection", "Очаква проверка", "Prüfung ausstehend", "Αναμένει έλεγχο", "Очікує перевірки", "Ожидает проверки", "En attente de contrôle", "Pendiente de inspección", "In attesa di controllo", "待检验", "Yoxlama gözləyir", "بانتظار الفحص"},
 	"units.status.void":       {"Geçersiz", "Void", "Анулирана", "Ungültig", "Άκυρη", "Анульовано", "Аннулировано", "Annulée", "Anulada", "Annullata", "已作废", "Etibarsız", "ملغاة"},
 
 	// Measurement statuses.

@@ -429,3 +429,66 @@ func movementRows(t *testing.T, e *env, units []int64) string {
 	}
 	return b.String()
 }
+
+// TEC-1226: quarantine, release, void and found replay cleanly; a
+// quarantined unit is held but not counted, and a drifted status is
+// repaired back to quarantine.
+func TestRebuildQuarantine(t *testing.T) {
+	e := newEnv(t)
+	distOrg := &ledger.Owner{Type: ledger.OwnerOrganization, ID: e.dist.ID}
+
+	held := e.unit(t, e.piece, "")
+	e.post(t, mv(ledger.TypeEntry, held, next(), ptr(e.cLoc)))
+	ref := next()
+	e.post(t, mv(ledger.TypeTransferOut, held, ref, distOrg))
+	e.post(t, mv(ledger.TypeTransferIn, held, ref, distOrg))
+	e.post(t, mv(ledger.TypeQuarantine, held, next(), nil))
+
+	released := e.unit(t, e.roll, "15")
+	e.post(t, mv(ledger.TypeEntry, released, next(), ptr(e.cLoc)))
+	ref = next()
+	e.post(t, mv(ledger.TypeTransferOut, released, ref, distOrg))
+	e.post(t, mv(ledger.TypeTransferIn, released, ref, ptr(e.dLoc)))
+	e.post(t, mv(ledger.TypeQuarantine, released, next(), nil))
+	e.post(t, mv(ledger.TypeQuarantineRelease, released, next(), nil))
+	e.post(t, mv(ledger.TypePlacement, released, next(), ptr(e.dLoc2)))
+
+	found := e.unit(t, e.piece, "")
+	e.post(t, mv(ledger.TypeEntry, found, next(), ptr(e.cLoc)))
+	ref = next()
+	e.post(t, mv(ledger.TypeTransferOut, found, ref, distOrg))
+	e.post(t, mv(ledger.TypeTransferIn, found, ref, ptr(e.dLoc)))
+	e.post(t, mv(ledger.TypeQuarantine, found, next(), nil))
+	e.post(t, mv(ledger.TypeVoid, found, next(), nil))
+	e.post(t, mv(ledger.TypeFound, found, next(), ptr(e.dLoc2)))
+
+	rep, err := e.svc.Check(e.ctx, e.dist.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.DiffCount != 0 || len(rep.Anomalies) != 0 {
+		t.Fatalf("quarantine chain: diffs %+v anomalies %v", rep.Diffs, rep.Anomalies)
+	}
+	var status string
+	var pieces int32
+	if err := e.pool.QueryRow(e.ctx, `SELECT status FROM units WHERE id = $1`, held.ID).Scan(&status); err != nil || status != "quarantine" {
+		t.Fatalf("held status = %q (%v)", status, err)
+	}
+	if err := e.pool.QueryRow(e.ctx, `SELECT COALESCE(SUM(quantity), 0)::int FROM organization_product_stocks
+		WHERE organization_id = $1 AND product_id = $2`, e.dist.ID, e.piece.ID).Scan(&pieces); err != nil || pieces != 1 {
+		t.Fatalf("distributor piece stock = %d (%v), want 1 (the quarantined unit is not counted)", pieces, err)
+	}
+
+	e.exec(t, `UPDATE units SET status = 'available' WHERE id = $1`, held.ID)
+	e.exec(t, `UPDATE unit_current_state SET status = 'available' WHERE unit_id = $1`, held.ID)
+	rep, err = e.svc.Run(e.ctx, rebuild.Options{OrganizationID: e.dist.ID, Apply: true, Source: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasDiff(rep, rebuild.TableUnitState, "status", held.ID) || !hasDiff(rep, rebuild.TableUnits, "status", held.ID) {
+		t.Fatalf("status drift not found: %+v", rep.Diffs)
+	}
+	if rep, err = e.svc.Check(e.ctx, e.dist.ID); err != nil || rep.DiffCount != 0 {
+		t.Fatalf("after repair: %v %+v", err, rep.Diffs)
+	}
+}

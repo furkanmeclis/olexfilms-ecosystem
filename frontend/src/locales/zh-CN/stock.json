@@ -152,6 +152,7 @@
   "status.in_transit": "在途",
   "status.used": "已使用",
   "status.void": "已作废",
+  "status.quarantine": "待检验",
   "unit_kind.serial": "序列单位",
   "unit_kind.fixed": "固定条码",
   "list.loading": "加载中…",
@@ -300,5 +301,6 @@
   "credits.reason_required": "必须填写原因（最多 1000 个字符）。",
   "credits.submit": "增加",
   "credits.increased": "额度已增加。",
-  "credits.increase_failed": "无法增加额度。"
+  "credits.increase_failed": "无法增加额度。",
+  "bulk.reason.quarantine": "退货待检验"
 }

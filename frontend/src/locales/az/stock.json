@@ -152,6 +152,7 @@
   "status.in_transit": "Yolda",
   "status.used": "İstifadə olunub",
   "status.void": "Ləğv",
+  "status.quarantine": "Yoxlama gözləyir",
   "unit_kind.serial": "Seriyalı vahid",
   "unit_kind.fixed": "Sabit barkod",
   "list.loading": "Yüklənir…",
@@ -300,5 +301,6 @@
   "credits.reason_required": "Səbəb mütləqdir (ən çox 1000 simvol).",
   "credits.submit": "Artır",
   "credits.increased": "Kredit artırıldı.",
-  "credits.increase_failed": "Kredit artırıla bilmədi."
+  "credits.increase_failed": "Kredit artırıla bilmədi.",
+  "bulk.reason.quarantine": "Qaytarma yoxlama gözləyir"
 }

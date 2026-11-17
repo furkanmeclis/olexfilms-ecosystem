@@ -486,6 +486,7 @@
   "stock.status.reserved": "Reservada",
   "stock.status.used": "Usada",
   "stock.status.void": "Anulada",
+  "stock.status.quarantine": "Pendiente de inspección",
   "stock.unit.holder": "Titular",
   "stock.unit.holdings": "Existencias",
   "stock.unit.kind": "Tipo de código de barras",

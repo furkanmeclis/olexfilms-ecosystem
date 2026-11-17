@@ -209,6 +209,10 @@ const (
 	StockVoid                  = "stock.void"
 	StockExternalOutbound      = "stock.external_outbound"
 	StockSplit                 = "stock.split"
+	// TEC-1226: return inspection (quarantine) and a found unit back in stock.
+	StockQuarantine        = "stock.quarantine"
+	StockQuarantineRelease = "stock.quarantine_release"
+	StockFound             = "stock.found"
 )
 
 // Order domain events (TEC-165): one per status transition, written to the
@@ -626,6 +630,9 @@ func catalogConstants() []string {
 		StockVoid,
 		StockExternalOutbound,
 		StockSplit,
+		StockQuarantine,
+		StockQuarantineRelease,
+		StockFound,
 		OrdersCreated,
 		OrdersUpdated,
 		OrdersSubmitted,

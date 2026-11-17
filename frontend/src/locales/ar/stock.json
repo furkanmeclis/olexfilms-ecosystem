@@ -152,6 +152,7 @@
   "status.in_transit": "قيد النقل",
   "status.used": "مستخدمة",
   "status.void": "ملغاة",
+  "status.quarantine": "بانتظار الفحص",
   "unit_kind.serial": "وحدة تسلسلية",
   "unit_kind.fixed": "باركود ثابت",
   "list.loading": "جارٍ التحميل…",
@@ -300,5 +301,6 @@
   "credits.reason_required": "السبب مطلوب (1000 حرف كحد أقصى).",
   "credits.submit": "إضافة",
   "credits.increased": "تمت إضافة الأرصدة.",
-  "credits.increase_failed": "تعذّرت إضافة الأرصدة."
+  "credits.increase_failed": "تعذّرت إضافة الأرصدة.",
+  "bulk.reason.quarantine": "مرتجع بانتظار الفحص"
 }

@@ -152,6 +152,7 @@
   "status.in_transit": "Σε μεταφορά",
   "status.used": "Χρησιμοποιημένη",
   "status.void": "Άκυρη",
+  "status.quarantine": "Αναμένει έλεγχο",
   "unit_kind.serial": "Σειριακή μονάδα",
   "unit_kind.fixed": "Σταθερό barcode",
   "list.loading": "Φόρτωση…",
@@ -300,5 +301,6 @@
   "credits.reason_required": "Η αιτιολογία είναι υποχρεωτική (έως 1000 χαρακτήρες).",
   "credits.submit": "Προσθήκη",
   "credits.increased": "Οι πιστώσεις προστέθηκαν.",
-  "credits.increase_failed": "Δεν ήταν δυνατή η προσθήκη πιστώσεων."
+  "credits.increase_failed": "Δεν ήταν δυνατή η προσθήκη πιστώσεων.",
+  "bulk.reason.quarantine": "Επιστροφή σε αναμονή ελέγχου"
 }

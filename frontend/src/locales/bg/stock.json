@@ -152,6 +152,7 @@
   "status.in_transit": "В транзит",
   "status.used": "Използвана",
   "status.void": "Анулирана",
+  "status.quarantine": "Очаква проверка",
   "unit_kind.serial": "Серийна единица",
   "unit_kind.fixed": "Фиксиран баркод",
   "list.loading": "Зареждане…",
@@ -300,5 +301,6 @@
   "credits.reason_required": "Причината е задължителна (до 1000 знака).",
   "credits.submit": "Добави",
   "credits.increased": "Кредитите са добавени.",
-  "credits.increase_failed": "Кредитите не можаха да бъдат добавени."
+  "credits.increase_failed": "Кредитите не можаха да бъдат добавени.",
+  "bulk.reason.quarantine": "Връщане, очаква проверка"
 }
