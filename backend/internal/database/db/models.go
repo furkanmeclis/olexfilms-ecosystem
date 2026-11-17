@@ -2145,6 +2145,13 @@ type Order struct {
 	SellerWarehouseID         pgtype.Int8        `json:"seller_warehouse_id"`
 	ParentOrderID             pgtype.Int8        `json:"parent_order_id"`
 	BackorderOfOrderID        pgtype.Int8        `json:"backorder_of_order_id"`
+	Priority                  string             `json:"priority"`
+	DueDate                   pgtype.Date        `json:"due_date"`
+	PickerUserID              pgtype.Int8        `json:"picker_user_id"`
+	ClaimedAt                 pgtype.Timestamptz `json:"claimed_at"`
+	PackageCount              pgtype.Int4        `json:"package_count"`
+	Desi                      pgtype.Numeric     `json:"desi"`
+	WeightKg                  pgtype.Numeric     `json:"weight_kg"`
 }
 
 type OrderInvoice struct {

@@ -13949,7 +13949,7 @@ export interface paths {
         };
         /**
          * Orders inside the orders.read scope (sales and purchases)
-         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index. TEC-1050: a caller without a price permission (any of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; the warehouse roles hold none) gets null money fields, and `total_min` / `total_max` and `sort=total` are ignored for it. The same applies to every order response and to `POST /v1/orders/export` (no currency / subtotal / tax / total columns) and the order slip PDF (prices shown as "—").
+         * @description Every order where an organization of the orders.read scope is the seller or the buyer (managed: the active organization's own sales and purchases; a dealer never sees its distributor's other dealers). side=seller|buyer limits the list to the active organization's sales or purchases. List rows carry no items or history. `q` (TEC-210) searches the order number, tracking number and external reference; when Meilisearch is up (and no created_from / created_to is given) the orders index answers it, which also matches the seller and buyer names and dealer codes, inside the same scope (hits are reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort` is one of order_no, status (flow rank draft → cancelled), total, created_at, and (TEC-1228) queue or its alias priority (urgent first, then the due date with none last, then the oldest: the warehouse work queue) and due_date (default `-created_at`, id tiebreak); `status`, `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of filters; `total_min` / `total_max` bound the order total (inclusive, order currency). The party filters only narrow the scoped set, so an organization outside the scope gives an empty list. An explicit sort, a date, party or total filter makes `q` search Postgres instead of the index. TEC-1050: a caller without a price permission (any of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; the warehouse roles hold none) gets null money fields, and `total_min` / `total_max` and `sort=total` are ignored for it. The same applies to every order response and to `POST /v1/orders/export` (no currency / subtotal / tax / total columns) and the order slip PDF (prices shown as "—").
          */
         get: operations["listOrders"];
         put?: never;
@@ -14145,6 +14145,50 @@ export interface paths {
         put: operations["replaceOrderItems"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the priority and the due date of an order (TEC-1228)
+         * @description The buyer (orders.write) while the order is a draft or submitted; the seller (orders.write or orders.approve) until it ships (409 ORDER_SCHEDULE_LOCKED otherwise). The warehouse roles (orders.ship only) cannot change it. Written to the timeline as schedule_updated.
+         */
+        put: operations["setOrderSchedule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take the warehouse job of an order (TEC-1228)
+         * @description Seller side, orders.ship (or orders.write / orders.approve), status approved, processing, preparing or ready (409 ORDER_NOT_CLAIMABLE otherwise). Taking one's own job again is a no-op. A job someone else holds answers 409 ORDER_ALREADY_CLAIMED with data.picker (OrderUserRef) and data.claimed_at, unless takeover is true and the caller holds orders.write or orders.approve (403 otherwise). Written to the timeline as claimed or claim_taken_over. The body is optional.
+         */
+        post: operations["claimOrder"];
+        /**
+         * Give the warehouse job back (TEC-1228)
+         * @description The holder, or a seller manager (orders.write or orders.approve) for someone else's job (403 otherwise). An unclaimed job is a no-op. Written to the timeline as claim_released.
+         */
+        delete: operations["releaseOrderClaim"];
         options?: never;
         head?: never;
         patch?: never;
@@ -29324,6 +29368,44 @@ export interface components {
             uuid: string;
             /** @example ORD-00000001 */
             order_no: string;
+            priority: components["schemas"]["OrderPriority"];
+            /**
+             * Format: date
+             * @description TEC-1228. The due date (termin); null without one
+             */
+            due_date: string | null;
+            /** @description TEC-1228. The due date passed (in the seller's time zone) and the order has not shipped or been cancelled. */
+            is_overdue: boolean;
+            /** @description TEC-1228. The warehouse user who took the job; null while nobody has */
+            picker: components["schemas"]["OrderUserRef"] | null;
+            /**
+             * Format: date-time
+             * @description TEC-1228. When the job was taken
+             */
+            claimed_at: string | null;
+            /** @description TEC-1228. The caller holds the job */
+            claimed_by_me: boolean;
+            /** @description TEC-1228. The caller may take the job now: seller side with orders.ship (or orders.write / orders.approve), status approved, processing, preparing or ready. */
+            can_claim: boolean;
+            /** @description TEC-1228. The caller may take over or release someone else's job (seller orders.write or orders.approve) */
+            can_take_over: boolean;
+            /** @description TEC-1228. The caller may change priority and due_date (PUT schedule): the buyer (orders.write) in draft / submitted, the seller (orders.write or orders.approve) until shipping. */
+            can_edit_schedule: boolean;
+            /**
+             * Format: int32
+             * @description TEC-1228. Packages entered at shipping
+             */
+            package_count: number | null;
+            /**
+             * @description TEC-1228. Volumetric weight entered at shipping
+             * @example 12.50
+             */
+            desi: string | null;
+            /**
+             * @description TEC-1228. Weight (kg) entered at shipping
+             * @example 7.25
+             */
+            weight_kg: string | null;
             /**
              * Format: int64
              * @description TEC-1054. Sum of the piece lines' quantities (roll lines are in total_meters)
@@ -29466,7 +29548,7 @@ export interface components {
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
         };
-        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned, updated (line edit) or plotter_marked (TEC-1058: product and plotter_cut). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
+        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned, updated (line edit) or plotter_marked (TEC-1058: product and plotter_cut), and (TEC-1228) schedule_updated (priority, due_date), claimed, claim_taken_over and claim_released (previous_picker when it was someone else's). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
         OrderTimelineEntry: {
             /** @example unit_assigned */
             action: string;
@@ -29495,6 +29577,14 @@ export interface components {
             kind?: string;
             /** @description TEC-1227 — delivered, returned or closed on a discrepancy_resolved step */
             resolution?: string;
+            priority?: components["schemas"]["OrderPriority"];
+            /**
+             * Format: date
+             * @description TEC-1228 — the due date set by a schedule_updated step (absent = cleared)
+             */
+            due_date?: string;
+            /** @description TEC-1228 — the user whose job a claim_taken_over or claim_released step took away */
+            previous_picker?: string;
         };
         /** @description TEC-1056: one line of an edit. before is the old amount (null: the line was added), after the new one (null: removed); pieces as a whole number, meters with two decimals. */
         OrderLineChange: {
@@ -29747,6 +29837,12 @@ export interface components {
         };
         OrderSupplementInput: {
             note?: string;
+            priority?: components["schemas"]["OrderPriority"];
+            /**
+             * Format: date
+             * @description TEC-1228. The due date (YYYY-MM-DD)
+             */
+            due_date?: string | null;
             /**
              * Format: uuid
              * @description An active warehouse of the seller (else 400). Omitted: the main order's warehouse while it is active, otherwise the primary one.
@@ -29759,6 +29855,12 @@ export interface components {
         };
         OrderCreateInput: {
             note?: string;
+            priority?: components["schemas"]["OrderPriority"];
+            /**
+             * Format: date
+             * @description TEC-1228. The due date (YYYY-MM-DD)
+             */
+            due_date?: string | null;
             /**
              * Format: uuid
              * @description TEC-1024: the center opens an approved order for this active dealer directly under it. Only for a center (403 otherwise).
@@ -30054,6 +30156,12 @@ export interface components {
             delivery_method_uuid?: string;
             /** @description Shipping only (TEC-768) */
             tracking_no?: string;
+            /** @description Shipping only (TEC-1228); printed on the shipping note */
+            package_count?: number;
+            /** @description Shipping only (TEC-1228); volumetric weight on the shipping note */
+            desi?: number;
+            /** @description Shipping only (TEC-1228); weight in kg on the shipping note */
+            weight_kg?: number;
             /** @description TEC-1227 — received only; missing or damaged units */
             discrepancies?: components["schemas"]["OrderDiscrepancyInput"][];
         };
@@ -30101,6 +30209,23 @@ export interface components {
             resolved_at: string | null;
             can_resolve_as: ("delivered" | "returned" | "closed")[];
             can_add_photo?: boolean;
+        };
+        /**
+         * @description TEC-1228. Order priority; the warehouse queue lists urgent first
+         * @enum {string}
+         */
+        OrderPriority: "normal" | "urgent";
+        OrderScheduleInput: {
+            priority: components["schemas"]["OrderPriority"];
+            /**
+             * Format: date
+             * @description The due date (YYYY-MM-DD); null or omitted clears it
+             */
+            due_date?: string | null;
+        };
+        OrderClaimInput: {
+            /** @description Take over a job someone else holds (seller orders.write or orders.approve, else 403). Without it such a job answers 409 ORDER_ALREADY_CLAIMED with data.picker and data.claimed_at. */
+            takeover?: boolean;
         };
         OrderQuoteInput: {
             /**
@@ -59510,6 +59635,10 @@ export interface operations {
                 product_uuid?: string;
                 /** @description TEC-1216 reverse relation filter (RelatedList): orders the user opened. */
                 created_by_uuid?: string;
+                /** @description TEC-1228. Comma separated priorities (normal, urgent); unknown value → 400. */
+                priority?: string;
+                /** @description TEC-1228. The warehouse job holder: `me` (the caller's jobs), `none` (nobody took it) or a user uuid; other values → 400. */
+                picker?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -59828,6 +59957,92 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    setOrderSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    claimOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderClaimInput"];
+            };
+        };
+        responses: {
+            /** @description Order with the caller as picker */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    releaseOrderClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order without a picker */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     transitionOrder: {
