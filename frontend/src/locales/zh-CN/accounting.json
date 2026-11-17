@@ -271,5 +271,15 @@
   "billing.fields.address": "开票地址",
   "billing.fields.email": "开票邮箱",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "往来方"
+  "cari.counterparty": "往来方",
+  "entry_detail.title": "账簿记录",
+  "entry_detail.not_found": "未找到记录。",
+  "entry_detail.summary": "记录",
+  "entry_detail.related": "相关记录",
+  "entry_detail.source_record": "来源记录",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "对方组织",
+  "entry_detail.revision": "修订版本",
+  "entry_detail.reversal_of": "冲销的记录",
+  "entry_detail.reversed_by": "被以下记录冲销"
 }

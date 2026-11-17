@@ -271,5 +271,15 @@
   "billing.fields.address": "Адрес для счёта",
   "billing.fields.email": "Эл. почта для счетов",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Контрагент"
+  "cari.counterparty": "Контрагент",
+  "entry_detail.title": "Запись в книге",
+  "entry_detail.not_found": "Запись не найдена.",
+  "entry_detail.summary": "Запись",
+  "entry_detail.related": "Связанные записи",
+  "entry_detail.source_record": "Исходная запись",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Организация-контрагент",
+  "entry_detail.revision": "Редакция",
+  "entry_detail.reversal_of": "Сторнирует запись",
+  "entry_detail.reversed_by": "Сторнирована записью"
 }

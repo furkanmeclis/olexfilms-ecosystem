@@ -302,6 +302,11 @@
   "discipline.fields.sales_quantity": "Πωληθείσα ποσότητα (30 ημέρες)",
   "discipline.org_types.dealer": "Αντιπρόσωπος",
   "discipline.org_types.distributor": "Διανομέας",
+  "related.tabs.stock": "Μονάδες αποθέματος",
+  "related.tabs.orders": "Ανοιχτές παραγγελίες",
+  "related.tabs.warranties": "Εγγυήσεις",
+  "related.tabs.prices": "Ιστορικό τιμών",
+  "related.empty_stock": "Δεν υπάρχουν μονάδες αποθέματος αυτού του προϊόντος.",
   "fields.usage_credits": "Πιστώσεις χρήσης",
   "products.usage_credits_hint": "Σε πόσες υπηρεσίες μπορεί να χρησιμοποιηθεί ένας γραμμωτός κώδικας (μεμονωμένο τεμάχιο). Κάθε επιλογή σε υπηρεσία αφαιρεί 1 πίστωση· τα ρολά και οι σταθεροί κωδικοί δεν έχουν πιστώσεις.",
   "validation.usage_credits": "Εισαγάγετε ακέραιο από 1 έως {{max}}"

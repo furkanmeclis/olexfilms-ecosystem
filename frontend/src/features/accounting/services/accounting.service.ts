@@ -297,6 +297,14 @@ export const accountingService = {
     );
   },
 
+  /** GET /v1/accounting/entries/{uuid}: one ledger row (TEC-1218). */
+  getEntry(uuid: string) {
+    return platformRequest<FinanceEntry>(
+      "GET",
+      path("/v1/accounting/entries", uuid),
+    );
+  },
+
   listEntries(params: ListEntriesParams = {}) {
     return platformRequest<AccountingPage<FinanceEntry>>(
       "GET",

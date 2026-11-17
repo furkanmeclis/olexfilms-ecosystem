@@ -271,5 +271,15 @@
   "billing.fields.address": "Invoice address",
   "billing.fields.email": "Invoice e-mail",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Counterparty"
+  "cari.counterparty": "Counterparty",
+  "entry_detail.title": "Ledger entry",
+  "entry_detail.not_found": "Entry not found.",
+  "entry_detail.summary": "Entry",
+  "entry_detail.related": "Related records",
+  "entry_detail.source_record": "Source record",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Counterparty organization",
+  "entry_detail.revision": "Revision",
+  "entry_detail.reversal_of": "Reverses entry",
+  "entry_detail.reversed_by": "Reversed by entry"
 }

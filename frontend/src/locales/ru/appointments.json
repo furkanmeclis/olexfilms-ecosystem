@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Загрузка сети сегодня",
   "occupancy.widget.description": "Сегодняшние записи относительно вместимости вашей сети.",
   "occupancy.widget.open": "Открыть загрузку",
-  "occupancy.widget.breakdown": "Организаций: {{organizations}} · заполнено: {{full}} · высокая: {{high}}"
+  "occupancy.widget.breakdown": "Организаций: {{organizations}} · заполнено: {{full}} · высокая: {{high}}",
+  "detail.summary": "Данные записи",
+  "detail.not_found": "Запись не найдена.",
+  "detail.loading": "Загрузка записи...",
+  "detail.minutes": "{{minutes}} мин",
+  "detail.open": "Открыть страницу деталей",
+  "fields.starts_at": "Начало",
+  "fields.ends_at": "Окончание",
+  "fields.estimated_minutes": "Ориентировочная длительность",
+  "fields.organization": "Организация",
+  "fields.service": "Сервис",
+  "fields.lead": "Лид",
+  "fields.source": "Источник",
+  "fields.created_by": "Создал",
+  "fields.created_at": "Создано",
+  "fields.updated_at": "Обновлено",
+  "source.fleet_plan": "План автопарка"
 }

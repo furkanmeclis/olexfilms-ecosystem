@@ -253,9 +253,11 @@ describe("adapters", () => {
     expect(reportLinkHref({ kind: "organization", uuid: "x" }, "olex")).toBe(
       "/t/olex/organizations/x",
     );
-    expect(
-      reportLinkHref({ kind: "announcement", uuid: "x" }, "olex"),
-    ).toBeNull();
+    // TEC-1218: announcements have a detail page too; no id, no link.
+    expect(reportLinkHref({ kind: "announcement", uuid: "x" }, "olex")).toBe(
+      "/t/olex/announcements/x",
+    );
+    expect(reportLinkHref({ kind: "service", uuid: "" }, "olex")).toBeNull();
     expect(
       gridColumnsFromReport([
         { key: "a", label: "A", type: "money", aggregate: "sum" },

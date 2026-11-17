@@ -5,6 +5,7 @@ import { FileDown, FileSignature, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
+import { EntityLink } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
@@ -87,7 +88,13 @@ export function ServiceContractCard({
       <CardContent className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span dir="ltr" data-testid="service-contract-no">
-            #{contract.contract_no}
+            <EntityLink
+              kind="contract"
+              entity={{
+                uuid: contract.uuid,
+                name: `#${contract.contract_no}`,
+              }}
+            />
           </span>
           <span data-testid="service-contract-status">
             <StatusChip

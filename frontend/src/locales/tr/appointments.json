@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Bugünkü ağ doluluğu",
   "occupancy.widget.description": "Ağınızın kapasitesine göre bugünkü randevular.",
   "occupancy.widget.open": "Doluluğu aç",
-  "occupancy.widget.breakdown": "{{organizations}} organizasyon · {{full}} dolu · {{high}} yoğun"
+  "occupancy.widget.breakdown": "{{organizations}} organizasyon · {{full}} dolu · {{high}} yoğun",
+  "detail.summary": "Randevu bilgileri",
+  "detail.not_found": "Randevu bulunamadı.",
+  "detail.loading": "Randevu yükleniyor...",
+  "detail.minutes": "{{minutes}} dk",
+  "detail.open": "Detay sayfasını aç",
+  "fields.starts_at": "Başlangıç",
+  "fields.ends_at": "Bitiş",
+  "fields.estimated_minutes": "Tahmini süre",
+  "fields.organization": "Organizasyon",
+  "fields.service": "Servis",
+  "fields.lead": "Potansiyel müşteri",
+  "fields.source": "Kaynak",
+  "fields.created_by": "Oluşturan",
+  "fields.created_at": "Oluşturulma",
+  "fields.updated_at": "Güncellenme",
+  "source.fleet_plan": "Filo planı"
 }

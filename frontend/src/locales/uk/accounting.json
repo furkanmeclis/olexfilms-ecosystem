@@ -271,5 +271,15 @@
   "billing.fields.address": "Адреса для рахунку",
   "billing.fields.email": "Ел. пошта для рахунків",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Контрагент"
+  "cari.counterparty": "Контрагент",
+  "entry_detail.title": "Запис у книзі",
+  "entry_detail.not_found": "Запис не знайдено.",
+  "entry_detail.summary": "Запис",
+  "entry_detail.related": "Пов'язані записи",
+  "entry_detail.source_record": "Джерельний запис",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Організація-контрагент",
+  "entry_detail.revision": "Редакція",
+  "entry_detail.reversal_of": "Сторнує запис",
+  "entry_detail.reversed_by": "Сторновано записом"
 }

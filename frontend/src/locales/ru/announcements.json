@@ -58,5 +58,10 @@
   "report.empty": "Пока никто не прочитал.",
   "report.reader": "Читатель",
   "report.email": "Эл. почта",
-  "report.read_at": "Время прочтения"
+  "report.read_at": "Время прочтения",
+  "detail.summary": "Данные объявления",
+  "detail.not_found": "Объявление не найдено.",
+  "detail.author": "Автор",
+  "detail.author_organization": "Организация автора",
+  "detail.read_at": "Прочитано"
 }

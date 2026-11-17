@@ -302,6 +302,11 @@
   "discipline.fields.sales_quantity": "Продадено количество (30 дни)",
   "discipline.org_types.dealer": "Дилър",
   "discipline.org_types.distributor": "Дистрибутор",
+  "related.tabs.stock": "Складови единици",
+  "related.tabs.orders": "Отворени поръчки",
+  "related.tabs.warranties": "Гаранции",
+  "related.tabs.prices": "История на цените",
+  "related.empty_stock": "Няма складови единици от този продукт.",
   "fields.usage_credits": "Кредити за употреба",
   "products.usage_credits_hint": "В колко услуги може да се използва един баркод (единична бройка). Всеки избор в услуга отнема 1 кредит; ролките и фиксираните баркодове нямат кредити.",
   "validation.usage_credits": "Въведете цяло число от 1 до {{max}}"

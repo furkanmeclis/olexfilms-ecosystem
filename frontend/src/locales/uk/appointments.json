@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Завантаженість мережі сьогодні",
   "occupancy.widget.description": "Сьогоднішні записи відносно місткості вашої мережі.",
   "occupancy.widget.open": "Відкрити завантаженість",
-  "occupancy.widget.breakdown": "Організацій: {{organizations}} · заповнено: {{full}} · висока: {{high}}"
+  "occupancy.widget.breakdown": "Організацій: {{organizations}} · заповнено: {{full}} · висока: {{high}}",
+  "detail.summary": "Дані запису",
+  "detail.not_found": "Запис не знайдено.",
+  "detail.loading": "Завантаження запису...",
+  "detail.minutes": "{{minutes}} хв",
+  "detail.open": "Відкрити сторінку деталей",
+  "fields.starts_at": "Початок",
+  "fields.ends_at": "Кінець",
+  "fields.estimated_minutes": "Орієнтовна тривалість",
+  "fields.organization": "Організація",
+  "fields.service": "Сервіс",
+  "fields.lead": "Лід",
+  "fields.source": "Джерело",
+  "fields.created_by": "Створив",
+  "fields.created_at": "Створено",
+  "fields.updated_at": "Оновлено",
+  "source.fleet_plan": "План автопарку"
 }

@@ -9,12 +9,14 @@ import {
   Plus,
   Undo2,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityPage,
   EntityRowActions,
   EntityTable,
@@ -46,6 +48,10 @@ import {
 } from "@/features/accounting/hooks/use-accounting-access";
 import { isEntryVoidable } from "@/features/accounting/lib/access";
 import { isEntryDisputable } from "@/features/accounting/lib/disputes";
+import {
+  entrySourceKind,
+  entrySourceLabelKey,
+} from "@/features/accounting/lib/entry-source";
 import {
   ACCOUNTING_DIRECTIONS,
   accountingService,
@@ -108,6 +114,8 @@ export type EntryColumnOptions = {
   cari: FilterOption[];
   accounts: FilterOption[];
   dispute?: EntryDisputeOptions | null;
+  /** TEC-1218: detail page of a row; the date cell links to it. */
+  entryHref?: (uuid: string) => string;
   /** Row action: open the cari account of the row. */
   onOpenCari?: (cariUuid: string) => void;
   /**
@@ -135,6 +143,7 @@ export function useEntryColumns({
   cari,
   accounts,
   dispute,
+  entryHref,
   onOpenCari,
   onVoid,
 }: EntryColumnOptions) {
@@ -148,11 +157,20 @@ export function useEntryColumns({
           enableSorting: true,
           filterVariant: "date-range",
           param: "created",
-          cell: ({ row }) => (
-            <span className="whitespace-nowrap">
-              {format.dateTime(row.original.created_at)}
-            </span>
-          ),
+          cell: ({ row }) => {
+            const text = format.dateTime(row.original.created_at);
+            return entryHref ? (
+              <Link
+                href={entryHref(row.original.uuid)}
+                className="text-primary whitespace-nowrap underline-offset-4 hover:underline"
+                data-testid="entry-detail-link"
+              >
+                {text}
+              </Link>
+            ) : (
+              <span className="whitespace-nowrap">{text}</span>
+            );
+          },
         }),
         createColumn<FinanceEntry>({
           accessorKey: "direction",
@@ -192,8 +210,20 @@ export function useEntryColumns({
           filterOptions: cari,
           enableColumnFilter: cari.length > 0,
           param: "cari_uuid",
-          cell: ({ row }) =>
-            row.original.counterparty_organization?.name ?? "—",
+          // TEC-1218: the cari account of the row, linked.
+          cell: ({ row }) => {
+            const { cari_uuid: cariUuid, counterparty_organization: org } =
+              row.original;
+            if (!org) return "—";
+            return cariUuid ? (
+              <EntityLink
+                kind="cari"
+                entity={{ uuid: cariUuid, name: org.name }}
+              />
+            ) : (
+              org.name
+            );
+          },
         }),
         createColumn<FinanceEntry>({
           id: "account",
@@ -213,12 +243,18 @@ export function useEntryColumns({
           filterVariant: "faceted",
           filterOptions: enumOptions(ENTRY_SOURCE_TYPES, "accounting.sources"),
           param: "source_type",
+          // TEC-1218: the source record, linked when its kind has a page.
           cell: ({ row }) => {
-            const s = row.original.source_type;
+            const { source_type: s, source_uuid: uuid } = row.original;
             if (!s) return "—";
-            return (ENTRY_SOURCE_TYPES as readonly string[]).includes(s)
-              ? t(`accounting.sources.${s}`)
-              : s;
+            const labelKey = entrySourceLabelKey(s);
+            const label = labelKey ? t(labelKey) : s;
+            const kind = entrySourceKind(s);
+            return kind && uuid ? (
+              <EntityLink kind={kind} entity={{ uuid, name: label }} />
+            ) : (
+              label
+            );
           },
         }),
         createColumn<FinanceEntry>({
@@ -281,7 +317,17 @@ export function useEntryColumns({
           },
         }),
       ] as ColumnDef<FinanceEntry, unknown>[],
-    [accounts, cari, categories, dispute, format, onOpenCari, onVoid, t],
+    [
+      accounts,
+      cari,
+      categories,
+      dispute,
+      entryHref,
+      format,
+      onOpenCari,
+      onVoid,
+      t,
+    ],
   );
 }
 
@@ -353,11 +399,16 @@ export function EntriesPage({
       router.push(routes.tenant.accounting.cariDetail(slug, uuid)),
     [router, slug],
   );
+  const entryHref = useCallback(
+    (uuid: string) => routes.tenant.accounting.entryDetail(slug, uuid),
+    [slug],
+  );
   const columns = useEntryColumns({
     categories,
     cari: cariOptions,
     accounts: accountOptions,
     dispute,
+    entryHref,
     onOpenCari: openCari,
     onVoid: access.canWrite ? setVoiding : undefined,
   });

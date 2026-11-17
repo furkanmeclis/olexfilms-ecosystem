@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { DistributorPricesCard } from "@/features/catalog/components/distributor-prices-card";
 import { ProductPricesCard } from "@/features/catalog/components/product-prices-card";
+import { ProductRelatedTabs } from "@/features/catalog/components/product-related-tabs";
 import { ProductRollCard } from "@/features/catalog/components/product-roll-card";
 import {
   catalogKeys,
@@ -249,6 +250,7 @@ export function ProductDetailPage({
       />
       <ProductPricesCard productUuid={p.uuid} access={pricing} />
       <DistributorPricesCard productUuid={p.uuid} access={pricing} />
+      <ProductRelatedTabs slug={slug} productUuid={p.uuid} />
 
       {catalog.canWrite ? (
         <EntityDeleteDialog

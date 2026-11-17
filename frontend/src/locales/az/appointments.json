@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Bu gün şəbəkə doluluğu",
   "occupancy.widget.description": "Şəbəkənizin tutumuna görə bugünkü rezervasiyalar.",
   "occupancy.widget.open": "Doluluğu aç",
-  "occupancy.widget.breakdown": "{{organizations}} təşkilat · {{full}} dolu · {{high}} sıx"
+  "occupancy.widget.breakdown": "{{organizations}} təşkilat · {{full}} dolu · {{high}} sıx",
+  "detail.summary": "Görüş məlumatları",
+  "detail.not_found": "Görüş tapılmadı.",
+  "detail.loading": "Görüş yüklənir...",
+  "detail.minutes": "{{minutes}} dəq",
+  "detail.open": "Ətraflı səhifəni aç",
+  "fields.starts_at": "Başlanğıc",
+  "fields.ends_at": "Bitmə",
+  "fields.estimated_minutes": "Təxmini müddət",
+  "fields.organization": "Təşkilat",
+  "fields.service": "Servis",
+  "fields.lead": "Potensial müştəri",
+  "fields.source": "Mənbə",
+  "fields.created_by": "Yaradan",
+  "fields.created_at": "Yaradılma",
+  "fields.updated_at": "Yenilənmə",
+  "source.fleet_plan": "Park planı"
 }

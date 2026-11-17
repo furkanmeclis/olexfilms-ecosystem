@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Заетост на мрежата днес",
   "occupancy.widget.description": "Днешните резервации спрямо капацитета на вашата мрежа.",
   "occupancy.widget.open": "Отвори заетостта",
-  "occupancy.widget.breakdown": "{{organizations}} организации · {{full}} пълни · {{high}} натоварени"
+  "occupancy.widget.breakdown": "{{organizations}} организации · {{full}} пълни · {{high}} натоварени",
+  "detail.summary": "Данни за записването",
+  "detail.not_found": "Записването не е намерено.",
+  "detail.loading": "Записването се зарежда...",
+  "detail.minutes": "{{minutes}} мин",
+  "detail.open": "Отвори страницата с детайли",
+  "fields.starts_at": "Начало",
+  "fields.ends_at": "Край",
+  "fields.estimated_minutes": "Очаквана продължителност",
+  "fields.organization": "Организация",
+  "fields.service": "Услуга",
+  "fields.lead": "Потенциален клиент",
+  "fields.source": "Източник",
+  "fields.created_by": "Създадено от",
+  "fields.created_at": "Създадено",
+  "fields.updated_at": "Обновено",
+  "source.fleet_plan": "План за автопарк"
 }

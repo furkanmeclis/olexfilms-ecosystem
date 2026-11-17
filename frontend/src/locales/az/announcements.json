@@ -58,5 +58,10 @@
   "report.empty": "Hələ heç kim oxumayıb.",
   "report.reader": "Oxuyan",
   "report.email": "E-poçt",
-  "report.read_at": "Oxunma vaxtı"
+  "report.read_at": "Oxunma vaxtı",
+  "detail.summary": "Elan məlumatları",
+  "detail.not_found": "Elan tapılmadı.",
+  "detail.author": "Müəllif",
+  "detail.author_organization": "Müəllifin təşkilatı",
+  "detail.read_at": "Oxunma"
 }

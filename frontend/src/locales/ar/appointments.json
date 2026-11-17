@@ -134,5 +134,21 @@
   "occupancy.widget.title": "إشغال الشبكة اليوم",
   "occupancy.widget.description": "حجوزات اليوم مقارنة بسعة شبكتك.",
   "occupancy.widget.open": "فتح الإشغال",
-  "occupancy.widget.breakdown": "{{organizations}} مؤسسة · {{full}} ممتلئة · {{high}} مزدحمة"
+  "occupancy.widget.breakdown": "{{organizations}} مؤسسة · {{full}} ممتلئة · {{high}} مزدحمة",
+  "detail.summary": "تفاصيل الموعد",
+  "detail.not_found": "لم يتم العثور على الموعد.",
+  "detail.loading": "جارٍ تحميل الموعد...",
+  "detail.minutes": "{{minutes}} دقيقة",
+  "detail.open": "فتح صفحة التفاصيل",
+  "fields.starts_at": "البداية",
+  "fields.ends_at": "النهاية",
+  "fields.estimated_minutes": "المدة المقدّرة",
+  "fields.organization": "المؤسسة",
+  "fields.service": "الخدمة",
+  "fields.lead": "عميل محتمل",
+  "fields.source": "المصدر",
+  "fields.created_by": "أنشأه",
+  "fields.created_at": "تاريخ الإنشاء",
+  "fields.updated_at": "تاريخ التحديث",
+  "source.fleet_plan": "خطة الأسطول"
 }

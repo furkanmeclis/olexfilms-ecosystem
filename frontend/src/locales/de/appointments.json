@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Netzwerkauslastung heute",
   "occupancy.widget.description": "Heutige Buchungen im Verhältnis zur Kapazität Ihres Netzwerks.",
   "occupancy.widget.open": "Auslastung öffnen",
-  "occupancy.widget.breakdown": "{{organizations}} Organisationen · {{full}} ausgebucht · {{high}} stark"
+  "occupancy.widget.breakdown": "{{organizations}} Organisationen · {{full}} ausgebucht · {{high}} stark",
+  "detail.summary": "Termindetails",
+  "detail.not_found": "Termin nicht gefunden.",
+  "detail.loading": "Termin wird geladen...",
+  "detail.minutes": "{{minutes}} Min.",
+  "detail.open": "Detailseite öffnen",
+  "fields.starts_at": "Beginn",
+  "fields.ends_at": "Ende",
+  "fields.estimated_minutes": "Geschätzte Dauer",
+  "fields.organization": "Organisation",
+  "fields.service": "Service",
+  "fields.lead": "Lead",
+  "fields.source": "Quelle",
+  "fields.created_by": "Erstellt von",
+  "fields.created_at": "Erstellt",
+  "fields.updated_at": "Aktualisiert",
+  "source.fleet_plan": "Flottenplan"
 }

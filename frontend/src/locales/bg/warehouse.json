@@ -718,5 +718,13 @@
   "home.period.7d": "7 дни",
   "home.period.30d": "30 дни",
   "home.period.90d": "90 дни",
-  "home.period.12m": "12 месеца"
+  "home.period.12m": "12 месеца",
+  "detail.title": "Детайли за склада",
+  "detail.not_found": "Складът не е намерен.",
+  "detail.primary": "Основен склад",
+  "detail.open_locations": "Отвори местата",
+  "detail.updated_at": "Последна промяна",
+  "detail.transfers_out": "Изходящи трансфери",
+  "detail.transfers_in": "Входящи трансфери",
+  "detail.open": "Детайли"
 }

@@ -271,5 +271,15 @@
   "billing.fields.address": "Rechnungsadresse",
   "billing.fields.email": "Rechnungs-E-Mail",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Gegenpartei"
+  "cari.counterparty": "Gegenpartei",
+  "entry_detail.title": "Buchungseintrag",
+  "entry_detail.not_found": "Eintrag nicht gefunden.",
+  "entry_detail.summary": "Eintrag",
+  "entry_detail.related": "Verknüpfte Datensätze",
+  "entry_detail.source_record": "Quelldatensatz",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Gegenpartei-Organisation",
+  "entry_detail.revision": "Revision",
+  "entry_detail.reversal_of": "Storniert Eintrag",
+  "entry_detail.reversed_by": "Storniert durch Eintrag"
 }

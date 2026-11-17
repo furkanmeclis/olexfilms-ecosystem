@@ -748,5 +748,13 @@
   "home.period.7d": "7 gün",
   "home.period.30d": "30 gün",
   "home.period.90d": "90 gün",
-  "home.period.12m": "12 ay"
+  "home.period.12m": "12 ay",
+  "detail.title": "Depo detayı",
+  "detail.not_found": "Depo bulunamadı.",
+  "detail.primary": "Birincil depo",
+  "detail.open_locations": "Konumları aç",
+  "detail.updated_at": "Son güncelleme",
+  "detail.transfers_out": "Giden transferler",
+  "detail.transfers_in": "Gelen transferler",
+  "detail.open": "Detay"
 }

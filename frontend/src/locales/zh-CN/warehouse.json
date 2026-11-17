@@ -718,5 +718,13 @@
   "home.period.7d": "7 天",
   "home.period.30d": "30 天",
   "home.period.90d": "90 天",
-  "home.period.12m": "12 个月"
+  "home.period.12m": "12 个月",
+  "detail.title": "仓库详情",
+  "detail.not_found": "未找到仓库。",
+  "detail.primary": "主仓库",
+  "detail.open_locations": "打开库位",
+  "detail.updated_at": "最后更新",
+  "detail.transfers_out": "调出",
+  "detail.transfers_in": "调入",
+  "detail.open": "详情"
 }

@@ -312,6 +312,11 @@
   "roll.saved": "Збережено.",
   "roll.failed": "Не вдалося зберегти.",
   "roll.invalid": "Введіть число.",
+  "related.tabs.stock": "Складські одиниці",
+  "related.tabs.orders": "Відкриті замовлення",
+  "related.tabs.warranties": "Гарантії",
+  "related.tabs.prices": "Історія цін",
+  "related.empty_stock": "Немає складських одиниць цього товару.",
   "fields.usage_credits": "Кредити використання",
   "products.usage_credits_hint": "У скількох послугах можна використати один штрихкод (поштучну одиницю). Кожен вибір у послузі списує 1 кредит; рулони та фіксовані штрихкоди кредитів не мають.",
   "validation.usage_credits": "Введіть ціле число від 1 до {{max}}"

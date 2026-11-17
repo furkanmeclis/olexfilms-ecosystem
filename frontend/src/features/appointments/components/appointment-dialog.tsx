@@ -418,12 +418,22 @@ export function AppointmentDialog({
           </div>
 
           {current ? (
-            <p className="text-muted-foreground text-xs">
-              {t(`appointments.source.${current.source}`)}
-              {current.created_at
-                ? ` · ${format.dateTime(current.created_at)}`
-                : null}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-muted-foreground text-xs">
+                {t(`appointments.source.${current.source}`)}
+                {current.created_at
+                  ? ` · ${format.dateTime(current.created_at)}`
+                  : null}
+              </p>
+              <Link
+                href={routes.tenant.appointments.detail(slug, current.uuid)}
+                data-testid="appointment-detail-link"
+                className="text-primary inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+              >
+                <ExternalLink className="size-3" />
+                {t("appointments.detail.open")}
+              </Link>
+            </div>
           ) : null}
 
           {error ? (

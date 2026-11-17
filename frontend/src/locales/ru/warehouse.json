@@ -748,5 +748,13 @@
   "home.period.7d": "7 дней",
   "home.period.30d": "30 дней",
   "home.period.90d": "90 дней",
-  "home.period.12m": "12 месяцев"
+  "home.period.12m": "12 месяцев",
+  "detail.title": "Сведения о складе",
+  "detail.not_found": "Склад не найден.",
+  "detail.primary": "Основной склад",
+  "detail.open_locations": "Открыть места",
+  "detail.updated_at": "Последнее обновление",
+  "detail.transfers_out": "Исходящие перемещения",
+  "detail.transfers_in": "Входящие перемещения",
+  "detail.open": "Подробнее"
 }

@@ -312,6 +312,11 @@
   "roll.saved": "Rulo ayarları kaydedildi.",
   "roll.failed": "Kaydedilemedi.",
   "roll.invalid": "Sayısal bir değer girin.",
+  "related.tabs.stock": "Stok birimleri",
+  "related.tabs.orders": "Açık siparişler",
+  "related.tabs.warranties": "Garantiler",
+  "related.tabs.prices": "Fiyat geçmişi",
+  "related.empty_stock": "Bu ürünün stok birimi yok.",
   "fields.usage_credits": "Kullanım kredisi",
   "products.usage_credits_hint": "Bir barkodun (tekil birim) kaç hizmette kullanılabileceği. Her hizmet seçimi 1 kredi düşer; rulo ve sabit barkodlu birimler kredi taşımaz.",
   "validation.usage_credits": "1 ile {{max}} arasında tam sayı girin"

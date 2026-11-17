@@ -1,3 +1,4 @@
+export { ContractDetailPage } from "./components/contract-detail-page";
 export { ContractTemplatesPage } from "./components/contract-templates-page";
 export { ContractTemplateEditor } from "./components/contract-template-editor";
 export { contractTemplatesService } from "./services/contract-templates.service";

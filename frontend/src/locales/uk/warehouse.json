@@ -748,5 +748,13 @@
   "home.period.7d": "7 днів",
   "home.period.30d": "30 днів",
   "home.period.90d": "90 днів",
-  "home.period.12m": "12 місяців"
+  "home.period.12m": "12 місяців",
+  "detail.title": "Деталі складу",
+  "detail.not_found": "Склад не знайдено.",
+  "detail.primary": "Основний склад",
+  "detail.open_locations": "Відкрити місця",
+  "detail.updated_at": "Останнє оновлення",
+  "detail.transfers_out": "Вихідні переміщення",
+  "detail.transfers_in": "Вхідні переміщення",
+  "detail.open": "Деталі"
 }

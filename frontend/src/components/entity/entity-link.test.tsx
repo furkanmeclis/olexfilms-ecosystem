@@ -61,7 +61,10 @@ describe("entityHref (TEC-1217)", () => {
       "/t/olex/stock/units/OLX-1",
     );
     expect(entityHref("cari", "c1", "olex")).toBe("/t/olex/accounting/cari/c1");
-    expect(entityHref("announcement", "a1", "olex")).toBeNull();
+    expect(entityHref("announcement", "a1", "olex")).toBe(
+      "/t/olex/announcements/a1",
+    );
+    expect(entityHref("user", "u1", "olex")).toBe("/t/olex/users/u1");
     expect(entityHref("service", "", "olex")).toBeNull();
     expect(entityHref("service", "s1", null)).toBeNull();
     expect(entityHref("nope", "s1", "olex")).toBeNull();
@@ -109,7 +112,7 @@ describe("EntityLink (TEC-1217)", () => {
     expect(container.textContent).toBe("Ayşe Yılmaz");
   });
 
-  it("renders plain text for a kind without a page and the fallback for null", () => {
+  it("renders plain text for a ref without an id and the fallback for null", () => {
     granted.add("announcements.read");
     render(
       createElement(
@@ -117,7 +120,8 @@ describe("EntityLink (TEC-1217)", () => {
         null,
         createElement(EntityLink, {
           kind: "announcement",
-          entity: { uuid: "a1", name: "Kampanya" },
+          // TEC-1218: every kind has a page now; no id → no link.
+          entity: { uuid: "", name: "Kampanya" },
         }),
         createElement(EntityLink, { kind: "customer", entity: null }),
       ),

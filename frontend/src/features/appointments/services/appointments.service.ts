@@ -75,6 +75,10 @@ export const appointmentsService = {
       { query: { date } },
     );
   },
+  /** One appointment with its refs (TEC-1218 detail page). */
+  get(uuid: string) {
+    return platformRequest<Appointment>("GET", `/v1/appointments/${enc(uuid)}`);
+  },
   create(body: AppointmentInput) {
     return platformRequest<Appointment>("POST", "/v1/appointments", { body });
   },
@@ -163,6 +167,7 @@ export function rescheduleBody(
 
 export const appointmentKeys = {
   all: ["appointments"] as const,
+  detail: (uuid: string) => ["appointments", "detail", uuid] as const,
   range: (from: string, to: string, organizationUuid = "") =>
     ["appointments", "range", from, to, organizationUuid] as const,
   availability: (from: string, to: string, organizationUuid = "") =>

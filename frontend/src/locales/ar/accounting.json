@@ -271,5 +271,15 @@
   "billing.fields.address": "عنوان الفوترة",
   "billing.fields.email": "بريد الفوترة",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "الطرف المقابل"
+  "cari.counterparty": "الطرف المقابل",
+  "entry_detail.title": "قيد دفتر الأستاذ",
+  "entry_detail.not_found": "لم يتم العثور على القيد.",
+  "entry_detail.summary": "القيد",
+  "entry_detail.related": "السجلات المرتبطة",
+  "entry_detail.source_record": "السجل المصدر",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "المنظمة الطرف المقابل",
+  "entry_detail.revision": "المراجعة",
+  "entry_detail.reversal_of": "يعكس القيد",
+  "entry_detail.reversed_by": "تم عكسه بالقيد"
 }

@@ -748,5 +748,13 @@
   "home.period.7d": "7 jours",
   "home.period.30d": "30 jours",
   "home.period.90d": "90 jours",
-  "home.period.12m": "12 mois"
+  "home.period.12m": "12 mois",
+  "detail.title": "Détails de l'entrepôt",
+  "detail.not_found": "Entrepôt introuvable.",
+  "detail.primary": "Entrepôt principal",
+  "detail.open_locations": "Ouvrir les emplacements",
+  "detail.updated_at": "Dernière mise à jour",
+  "detail.transfers_out": "Transferts sortants",
+  "detail.transfers_in": "Transferts entrants",
+  "detail.open": "Détails"
 }

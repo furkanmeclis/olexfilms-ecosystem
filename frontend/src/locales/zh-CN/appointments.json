@@ -134,5 +134,21 @@
   "occupancy.widget.title": "今日网络占用率",
   "occupancy.widget.description": "今日预约与网络容量的对比。",
   "occupancy.widget.open": "打开占用率",
-  "occupancy.widget.breakdown": "{{organizations}} 个组织 · {{full}} 个已满 · {{high}} 个繁忙"
+  "occupancy.widget.breakdown": "{{organizations}} 个组织 · {{full}} 个已满 · {{high}} 个繁忙",
+  "detail.summary": "预约详情",
+  "detail.not_found": "未找到预约。",
+  "detail.loading": "正在加载预约...",
+  "detail.minutes": "{{minutes}} 分钟",
+  "detail.open": "打开详情页",
+  "fields.starts_at": "开始",
+  "fields.ends_at": "结束",
+  "fields.estimated_minutes": "预计时长",
+  "fields.organization": "组织",
+  "fields.service": "服务",
+  "fields.lead": "潜在客户",
+  "fields.source": "来源",
+  "fields.created_by": "创建人",
+  "fields.created_at": "创建时间",
+  "fields.updated_at": "更新时间",
+  "source.fleet_plan": "车队计划"
 }
