@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { StatusChip } from "@/components/common/status-chip";
@@ -166,7 +167,13 @@ function VehicleCustomer({
       >
         <dl className="grid gap-3 sm:grid-cols-2">
           <Field label={t("services.customer.name")}>
-            {dash(customerName(service))}
+            <EntityLink
+              kind="customer"
+              entity={{
+                uuid: service.customer.uuid,
+                name: customerName(service),
+              }}
+            />
             {service.customer.anonymized ? (
               <Badge variant="outline" className="ms-2">
                 {t("services.detail.anonymized")}
@@ -177,7 +184,7 @@ function VehicleCustomer({
             <span dir="ltr">{dash(service.customer.phone)}</span>
           </Field>
           <Field label={t("services.detail.organization")}>
-            {service.organization.name}
+            <EntityLink kind="organization" entity={service.organization} />
           </Field>
           <Field label={t("services.detail.measurement")}>
             {service.has_measurement

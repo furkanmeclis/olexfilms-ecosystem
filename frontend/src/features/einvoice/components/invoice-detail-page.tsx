@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { StatusChip } from "@/components/common/status-chip";
@@ -265,7 +266,14 @@ function DetailBody({ slug, invoice }: { slug: string; invoice: Einvoice }) {
                 </span>
               </Field>
               <Field label={t("einvoice.columns.buyer")}>
-                {invoice.buyer_organization?.name ?? invoice.buyer.name}
+                {invoice.buyer_organization ? (
+                  <EntityLink
+                    kind="organization"
+                    entity={invoice.buyer_organization}
+                  />
+                ) : (
+                  invoice.buyer.name
+                )}
                 <span className="text-muted-foreground block text-xs" dir="ltr">
                   {invoice.buyer.vkn
                     ? `VKN ${invoice.buyer.vkn}`

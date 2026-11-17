@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
@@ -184,11 +185,15 @@ export function TransferDetailPage({
                 {t(`transfers.kind.${r.kind}`)}
               </span>
             </Field>
-            <Field label={t("transfers.columns.sender")}>{r.sender.name}</Field>
-            <Field label={t("transfers.columns.receiver")}>
-              {r.receiver.name}
+            <Field label={t("transfers.columns.sender")}>
+              <EntityLink kind="organization" entity={r.sender} />
             </Field>
-            <Field label={t("transfers.detail.parent")}>{r.parent.name}</Field>
+            <Field label={t("transfers.columns.receiver")}>
+              <EntityLink kind="organization" entity={r.receiver} />
+            </Field>
+            <Field label={t("transfers.detail.parent")}>
+              <EntityLink kind="organization" entity={r.parent} />
+            </Field>
             <Field label={t("transfers.detail.role")}>
               {t(`transfers.role.${r.role}`)}
             </Field>

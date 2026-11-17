@@ -555,3 +555,87 @@ type NestedRoutes<T> = T extends string
       : never;
 
 export type AppRoute = NestedRoutes<typeof routes>;
+
+/**
+ * TEC-1217: entity kind dictionary (same as the backend `refs.Kind` and the
+ * report `_link.kind`, TEC-1216).
+ */
+export const ENTITY_KINDS = [
+  "service",
+  "warranty",
+  "warranty_claim",
+  "customer",
+  "vehicle",
+  "order",
+  "product",
+  "stock_unit",
+  "transfer",
+  "organization",
+  "user",
+  "lead",
+  "appointment",
+  "task",
+  "measurement",
+  "contract",
+  "invoice",
+  "cari",
+  "announcement",
+  "warehouse",
+  "subscription",
+] as const;
+
+export type EntityKind = (typeof ENTITY_KINDS)[number];
+
+export function isEntityKind(value: unknown): value is EntityKind {
+  return (
+    typeof value === "string" &&
+    (ENTITY_KINDS as readonly string[]).includes(value)
+  );
+}
+
+type TenantEntityRoute = (slug: string, id: string) => string;
+
+/**
+ * Tenant detail page of every kind that has one. A kind missing here has no
+ * page yet: `entityHref` returns null and `EntityLink` renders plain text.
+ * `stock_unit` is addressed by its barcode, the others by uuid.
+ */
+const TENANT_ENTITY_ROUTES: Partial<Record<EntityKind, TenantEntityRoute>> = {
+  service: routes.tenant.services.detail,
+  warranty: routes.tenant.warranties.detail,
+  warranty_claim: routes.tenant.warrantyClaims.detail,
+  customer: routes.tenant.customers.detail,
+  vehicle: routes.tenant.vehicles.detail,
+  order: routes.tenant.orders.detail,
+  product: routes.tenant.catalog.product,
+  stock_unit: routes.tenant.stock.unit,
+  transfer: routes.tenant.transfers.detail,
+  lead: routes.tenant.leads.detail,
+  task: routes.tenant.tasks.detail,
+  measurement: routes.tenant.measurements.detail,
+  invoice: routes.tenant.einvoices.detail,
+  cari: routes.tenant.accounting.cariDetail,
+  subscription: routes.tenant.serviceSubscriptions.detail,
+};
+
+/** Whether the tenant shell has a detail page for the kind. */
+export function hasEntityPage(kind: EntityKind): boolean {
+  return Boolean(TENANT_ENTITY_ROUTES[kind]);
+}
+
+/**
+ * TEC-1217: tenant detail page of a record (`null` when the kind has no page
+ * or the id / slug is missing). Report links, search hits and `EntityLink`
+ * all resolve through this registry.
+ */
+export function entityHref(
+  kind: EntityKind | string | null | undefined,
+  id: string | null | undefined,
+  slug: string | null | undefined,
+): string | null {
+  if (!kind || !id || !slug || !isEntityKind(kind)) return null;
+  const route = TENANT_ENTITY_ROUTES[kind];
+  if (!route) return null;
+  // stock.unit encodes the barcode itself.
+  return route(slug, kind === "stock_unit" ? id : encodeURIComponent(id));
+}

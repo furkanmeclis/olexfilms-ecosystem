@@ -373,5 +373,6 @@
   "supplements.parent": "Main order",
   "supplements.create": "Create supplementary shipment",
   "supplements.created": "Supplementary shipment {{no}} created.",
-  "supplements.forbidden": "A supplementary shipment can only be added to a shipped or delivered order, by a user who can edit or ship orders."
+  "supplements.forbidden": "A supplementary shipment can only be added to a shipped or delivered order, by a user who can edit or ship orders.",
+  "detail.created_by": "Created by"
 }

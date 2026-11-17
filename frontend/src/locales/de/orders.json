@@ -373,5 +373,6 @@
   "supplements.parent": "Hauptauftrag",
   "supplements.create": "Zusatzlieferung anlegen",
   "supplements.created": "Zusatzlieferung {{no}} angelegt.",
-  "supplements.forbidden": "Eine Zusatzlieferung kann nur zu einem versendeten oder zugestellten Auftrag hinzugefügt werden, von einem Benutzer, der Aufträge bearbeiten oder versenden darf."
+  "supplements.forbidden": "Eine Zusatzlieferung kann nur zu einem versendeten oder zugestellten Auftrag hinzugefügt werden, von einem Benutzer, der Aufträge bearbeiten oder versenden darf.",
+  "detail.created_by": "Erstellt von"
 }

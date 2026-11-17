@@ -1,3 +1,4 @@
+import type { EntityKind } from "@/config/routes";
 import type { ReactNode } from "react";
 
 import type { ValueFormat, ValueType } from "./format";
@@ -59,14 +60,8 @@ export type ChartChromeProps = ChartStateProps & {
   bare?: boolean;
 };
 
-export type ReportLinkKind =
-  | "service"
-  | "order"
-  | "customer"
-  | "organization"
-  | "warranty"
-  | "measurement"
-  | "product";
+/** TEC-1217: the shared entity kind dictionary (`config/routes`). */
+export type ReportLinkKind = EntityKind;
 
 export type ReportLink = { kind: ReportLinkKind; uuid: string };
 

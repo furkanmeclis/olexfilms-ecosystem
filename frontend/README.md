@@ -122,3 +122,19 @@ Every record list uses `EntityTable` + `useServerListState` (rule: root
 4. Small fixed arrays: plain `DataTable` in client mode (no `manual`).
 
 Reference: `features/users/components/users-page.tsx`.
+
+## Cross-record links (TEC-1217)
+
+- `entityHref(kind, id, slug)` (`@/config/routes`): tenant detail page of a
+  kind from the shared dictionary `ENTITY_KINDS` (same as backend
+  `refs.Kind` / report `_link.kind`); `null` when the kind has no page.
+  Add a page by adding its route to `TENANT_ENTITY_ROUTES`.
+- `<EntityLink kind entity={{ uuid, name, sub? }} />` (`@/components/entity`):
+  the related record's name, linked; plain text without the kind's read
+  permission (`ENTITY_READ_PERMISSIONS`) or a page. `stock_unit` uses
+  `barcode`. Options: `fallback`, `hoverCard`, `children` (label).
+- `refColumn({ id, kind, labelKey, getRef })`: EntityTable column with an
+  `EntityLink` cell (value = name; sorting off unless `enableSorting`).
+- `<RelatedList kind filter={{ customer_uuid }} persistKey hideColumns />`:
+  reverse-relation list on the kind's list endpoint (`RELATED_LIST_SPECS`;
+  add a kind there when its filter exists). No money columns.

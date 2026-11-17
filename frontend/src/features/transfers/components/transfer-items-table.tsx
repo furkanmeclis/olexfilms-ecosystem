@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo } from "react";
 
+import { EntityLink } from "@/components/entity";
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import type { StockTransferItem } from "@/features/transfers/services/transfers.service";
@@ -68,7 +69,13 @@ export function TransferItemsTable({
               dir="ltr"
               data-testid="transfer-item"
             >
-              {row.original.barcode}
+              <EntityLink
+                kind="stock_unit"
+                entity={{
+                  barcode: row.original.barcode,
+                  name: row.original.barcode,
+                }}
+              />
             </span>
           ),
         }),
@@ -79,7 +86,7 @@ export function TransferItemsTable({
           gridSecondary: true,
           cell: ({ row }) => (
             <span>
-              {row.original.product.name}{" "}
+              <EntityLink kind="product" entity={row.original.product} />{" "}
               <span
                 className="text-muted-foreground font-mono text-xs"
                 dir="ltr"

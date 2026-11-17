@@ -270,5 +270,6 @@
   "billing.fields.tax_no": "Vergi no",
   "billing.fields.address": "Fatura adresi",
   "billing.fields.email": "Fatura e-postası",
-  "billing.fields.iban": "IBAN"
+  "billing.fields.iban": "IBAN",
+  "cari.counterparty": "Karşı taraf"
 }
