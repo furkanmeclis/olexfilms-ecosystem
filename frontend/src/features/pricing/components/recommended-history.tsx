@@ -20,6 +20,7 @@ import {
   type ListQuery,
   type RecommendedPriceVersion,
 } from "@/features/pricing/services/recommended.service";
+import { useCurrencyList } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 
 export const RECOMMENDED_HISTORY_PERSIST_KEY =
@@ -32,7 +33,6 @@ const STATUS_VARIANT = {
 } as const;
 
 const SOURCES = ["publish", "price_list", "migration"] as const;
-const CURRENCIES = ["TRY", "EUR", "USD"];
 
 /**
  * Recommended price version history (TEC-506 list contract): sort
@@ -43,6 +43,8 @@ const CURRENCIES = ["TRY", "EUR", "USD"];
 export function RecommendedHistory() {
   const { t, format, locale } = useLocale();
   const countries = useCountries();
+  // TEC-1214: active currencies (GET /v1/currencies) plus country defaults.
+  const activeCurrencies = useCurrencyList();
 
   const countryOptions = useMemo(
     () => [
@@ -58,12 +60,12 @@ export function RecommendedHistory() {
     [countries.data, locale, t],
   );
   const currencyOptions = useMemo(() => {
-    const set = new Set(CURRENCIES);
+    const set = new Set(activeCurrencies.data ?? []);
     for (const c of countries.data ?? []) {
       if (c.default_currency) set.add(c.default_currency);
     }
     return [...set].sort().map((c) => ({ value: c, label: c }));
-  }, [countries.data]);
+  }, [activeCurrencies.data, countries.data]);
 
   const columns = useMemo(
     () =>

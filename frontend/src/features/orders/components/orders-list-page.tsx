@@ -56,6 +56,7 @@ import {
 } from "@/features/warehouse/services/warehouse.service";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useCanSeePrices } from "@/hooks/use-can-see-prices";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -112,6 +113,8 @@ export function OrdersListPage({ slug }: { slug: string }) {
   const { can } = usePermission();
   // TEC-1050: no total column, filter or card amount without a price grant.
   const canSeePrices = useCanSeePrices();
+  // TEC-1214: the small amount is in the local display currency.
+  const { display: localCurrency } = useSessionCurrencies();
   const router = useRouter();
   const org = useActiveOrganization(slug);
   const access = resolveOrderListAccess(can, org?.type);
@@ -298,9 +301,11 @@ export function OrdersListPage({ slug }: { slug: string }) {
                         row.original.currency,
                       )}
                     </span>
-                    {/* TEC-1054: today's rate in lira; a TRY order needs none. */}
+                    {/* TEC-1054: today's rate in the local currency; an
+                        order in that currency needs none. */}
                     {canSeePrices &&
-                    row.original.currency !== "TRY" &&
+                    localCurrency &&
+                    row.original.currency !== localCurrency &&
                     row.original.live_total_try ? (
                       <span
                         className="text-muted-foreground text-xs"
@@ -309,7 +314,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
                         {t("orders.list.live_try", {
                           amount: format.currency(
                             amountNumber(row.original.live_total_try),
-                            "TRY",
+                            localCurrency,
                           ),
                         })}
                       </span>
@@ -399,6 +404,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
       canFilterWarehouse,
       canSeePrices,
       format,
+      localCurrency,
       partyOptions,
       warehouseOptions,
       router,

@@ -17,6 +17,7 @@ import {
   normalizePriceInput,
   PRICE_AMOUNT_RE,
 } from "@/features/catalog/lib/prices";
+import { useCurrencyList, useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 
 export type PriceDialogField = {
@@ -62,6 +63,17 @@ export function PriceDialog({
   onSubmit,
 }: PriceDialogProps) {
   const { t } = useLocale();
+  // TEC-1214: the currency is picked from the active currencies; a new
+  // row starts in the brand currency.
+  const { brand } = useSessionCurrencies();
+  const currencies = useCurrencyList(open && !currencyLocked);
+  const initial: PriceDialogValues = {
+    ...defaults,
+    currency: defaults.currency || brand || "",
+  };
+  const currencyOptions = Array.from(
+    new Set([...(currencies.data ?? []), initial.currency].filter(Boolean)),
+  ).map((code) => ({ value: code, label: code }));
 
   const shape: Record<string, z.ZodType<string>> = {
     currency: z
@@ -96,7 +108,7 @@ export function PriceDialog({
         {open ? (
           <AppForm<PriceDialogValues>
             schema={schema}
-            defaultValues={defaults}
+            defaultValues={initial}
             onSubmit={async (values) => {
               await onSubmit(values);
             }}
@@ -110,13 +122,20 @@ export function PriceDialog({
                 disabled={picker.locked}
               />
             ) : null}
-            <AppInput
-              name="currency"
-              label={t("catalog.prices.currency")}
-              maxLength={3}
-              placeholder="TRY"
-              readOnly={currencyLocked}
-            />
+            {currencyLocked ? (
+              <AppInput
+                name="currency"
+                label={t("catalog.prices.currency")}
+                maxLength={3}
+                readOnly
+              />
+            ) : (
+              <AppSelect
+                name="currency"
+                label={t("catalog.prices.currency")}
+                options={currencyOptions}
+              />
+            )}
             {fields.map((field) => (
               <AppInput
                 key={field.name}

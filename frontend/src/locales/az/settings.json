@@ -42,6 +42,7 @@
   "system.hub.territories": "Ölkələr, vilayətlər, rayonlar və distribyutor əraziləri.",
   "system.hub.plate_formats": "Ölkələr üzrə nömrə nişanı formatları.",
   "system.hub.exchange_rates": "Gündəlik TCMB/ECB məzənnələri və əl ilə düzəlişlər.",
+  "system.hub.brand_currency": "Brendin qiymət və sifariş valyutası, önizləmə ilə dəyişiklik və qiymət çevirmə aləti.",
   "system.hub.legal_texts": "KVKK, Sİ təlimatı və digər hüquqi mətnlər.",
   "system.hub.modules": "Modulların açılıb-bağlanması və standart dəyərləri.",
   "system.hub.whatsapp": "Yeganə WhatsApp nömrəsi və onun sessiyası.",

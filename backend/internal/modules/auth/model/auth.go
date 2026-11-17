@@ -135,6 +135,13 @@ type Me struct {
 	// -> Accept-Language (locale only) -> tr / Europe/Istanbul.
 	EffectiveLocale   string `json:"effective_locale"`
 	EffectiveTimezone string `json:"effective_timezone"`
+	// TEC-1214: BrandCurrency is the price and order currency of the active
+	// organization's brand (else the request brand); OrganizationCurrency
+	// the active organization's ledger currency; DisplayCurrency the local
+	// display currency (pricing.local_currency) shown small next to prices.
+	BrandCurrency        string `json:"brand_currency,omitempty"`
+	OrganizationCurrency string `json:"organization_currency,omitempty"`
+	DisplayCurrency      string `json:"display_currency,omitempty"`
 }
 
 // ProfilePatch is a PATCH /v1/auth/profile body. Nil fields are left as is;

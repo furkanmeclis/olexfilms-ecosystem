@@ -115,6 +115,8 @@ type Repository interface {
 
 // AuthUseCase coordinates identity and session flows.
 type AuthUseCase struct {
+	// currencies resolves the /auth/me currency block (TEC-1214).
+	currencies    CurrencySource
 	repo          Repository
 	tokens        *jwt.Manager
 	now           func() time.Time
@@ -506,6 +508,9 @@ func (u *AuthUseCase) Me(ctx context.Context, userUUID uuid.UUID, impersonatorUU
 	}
 	out.EffectiveLocale = string(resolved.Locale)
 	out.EffectiveTimezone = resolved.Timezone
+	if out.BrandCurrency, out.OrganizationCurrency, out.DisplayCurrency, err = u.sessionCurrencies(ctx, access.OrganizationUUID); err != nil {
+		return model.Me{}, err
+	}
 	if u.orgResolver != nil {
 		memberships, err := u.orgResolver.ListMembershipsForUser(ctx, user.ID)
 		if err != nil {

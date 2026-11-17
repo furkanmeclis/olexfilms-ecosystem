@@ -42,6 +42,7 @@
   "system.hub.territories": "Countries, provinces, districts and distributor territories.",
   "system.hub.plate_formats": "Plate formats by country.",
   "system.hub.exchange_rates": "Daily TCMB/ECB rates and manual overrides.",
+  "system.hub.brand_currency": "Brand price and order currency, change with preview and the price conversion tool.",
   "system.hub.legal_texts": "KVKK, AI guideline and other legal texts.",
   "system.hub.modules": "Turn modules on or off and set their defaults.",
   "system.hub.whatsapp": "The single WhatsApp number and its session.",

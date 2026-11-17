@@ -507,6 +507,10 @@ export const routes = {
     exchangeRates: {
       root: "/platform/settings/exchange-rates",
     },
+    /** TEC-1214: brand price / order currency and the price conversion tool. */
+    brandCurrency: {
+      root: "/platform/settings/brands",
+    },
     /** TEC-150: car brands / models (super_admin). */
     vehicleCatalog: {
       root: "/platform/settings/vehicle-catalog",

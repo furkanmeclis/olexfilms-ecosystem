@@ -39,13 +39,11 @@ import {
   type ProductSaleListItem,
 } from "@/features/dealer-sales/services/dealer-sales.service";
 import { isApiError } from "@/lib/api";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
 export const PRODUCT_SALES_PERSIST_KEY = "tenant-dealer-product-sales-v1";
-
-/** Fallback display currency until a sale or a line names the dealer's. */
-const DEFAULT_CURRENCY = "TRY";
 
 /**
  * "Void" of a sale row: enabled only on the sale day for a sale that is
@@ -152,6 +150,8 @@ function VoidSaleDialog({
  */
 export function QuickSalePage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
+  // TEC-1214: dealer sales are booked in the organization (ledger) currency.
+  const { organization: orgCurrency } = useSessionCurrencies();
   const access = useDealerSalesAccess(slug);
   const queryClient = useQueryClient();
   const [voiding, setVoiding] = useState<ProductSaleListItem | null>(null);
@@ -325,7 +325,7 @@ export function QuickSalePage({ slug }: { slug: string }) {
       ]}
     >
       <QuickSaleForm
-        currency={list.data?.items[0]?.currency ?? DEFAULT_CURRENCY}
+        currency={list.data?.items[0]?.currency ?? orgCurrency ?? ""}
         canSeePurchasePrice={access.canSeePurchasePrice}
         onSaved={() => void invalidate()}
       />

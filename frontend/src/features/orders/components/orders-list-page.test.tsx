@@ -51,6 +51,14 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
+// TEC-1214: the local display currency comes from the session.
+vi.mock("@/lib/currency", () => ({
+  useSessionCurrencies: () => ({
+    brand: "USD",
+    organization: "TRY",
+    display: "TRY",
+  }),
+}));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => state.grants.has(p) }),
 }));
@@ -267,7 +275,7 @@ describe("OrdersListPage (TEC-1054 list facts)", () => {
     expect(handler).toContain("orders.status.preparing");
   });
 
-  it("shows the live TRY amount only with a price grant and a foreign currency", async () => {
+  it("shows the live local amount only with a price grant and a foreign currency", async () => {
     const usd = order({ currency: "USD", live_total_try: "4200.00" });
     // TEC-1050: without a price grant the whole total column is gone.
     state.grants.delete("pricing.sale.read");

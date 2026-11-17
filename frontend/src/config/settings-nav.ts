@@ -1,6 +1,7 @@
 import {
   Activity,
   BadgeCheck,
+  Banknote,
   BellRing,
   Blocks,
   Bot,
@@ -256,6 +257,13 @@ export const platformSettingsNav = defineNav({
           href: routes.platform.exchangeRates.root,
           icon: Coins,
           permission: permissions.rates.read,
+        },
+        {
+          id: "brand-currency",
+          titleKey: "layout.nav_brand_currency",
+          href: routes.platform.brandCurrency.root,
+          icon: Banknote,
+          permission: permissions.organizations.read,
         },
       ],
     },

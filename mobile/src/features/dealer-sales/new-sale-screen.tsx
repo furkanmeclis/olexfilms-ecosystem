@@ -7,6 +7,7 @@ import { Alert, Pressable, TextInput, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
+import { useSessionCurrencies } from '@/core/currency';
 import { useCan } from '@/core/spaces';
 import { Chips, PAGE_SIZE, useDebounced, useFormat, usePagedQuery } from '@/features/admin/kit';
 import { PickerSheet } from '@/features/picker-sheet';
@@ -124,6 +125,7 @@ function ProductPicker({ onPick, onClose }: { onPick: (productUuid: string) => v
  */
 export function NewSaleScreen() {
   const { t } = useTranslation('sales');
+  const { organization: orgCurrency } = useSessionCurrencies();
   const f = useFormat();
   const qc = useQueryClient();
   const seeCost = useCan('pricing.purchase.read');
@@ -178,7 +180,8 @@ export function NewSaleScreen() {
   };
 
   const totals = cartTotals(lines);
-  const currency = lines[0]?.currency ?? 'TRY';
+  // TEC-1214: dealer sales are booked in the organization (ledger) currency.
+  const currency = lines[0]?.currency ?? orgCurrency ?? '';
   const errors = touched ? saleErrors(lines, payment, customer?.uuid ?? null) : {};
 
   // A filled cart lives only on this screen: leaving asks first.

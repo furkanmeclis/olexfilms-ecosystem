@@ -42,6 +42,7 @@
   "system.hub.territories": "国家、省份、区县及经销商区域。",
   "system.hub.plate_formats": "各国车牌格式。",
   "system.hub.exchange_rates": "每日 TCMB/ECB 汇率及手动调整。",
+  "system.hub.brand_currency": "品牌的价格与订单币种、带预览的更改及价格换算工具。",
   "system.hub.legal_texts": "KVKK、AI 准则及其他法律文本。",
   "system.hub.modules": "开启或关闭模块并设置默认值。",
   "system.hub.whatsapp": "唯一的 WhatsApp 号码及其会话。",

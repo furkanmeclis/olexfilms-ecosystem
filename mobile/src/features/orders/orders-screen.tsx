@@ -8,6 +8,7 @@ import { Alert, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
+import { useSessionCurrencies } from '@/core/currency';
 import type { paths } from '@/core/api/schema';
 import { errorMessage } from '@/core/i18n';
 import { hasAmount } from '@/core/price-visibility';
@@ -70,6 +71,8 @@ export function orderTone(s: OrderStatus): StatusTone {
 }
 
 export function OrdersScreen() {
+  // TEC-1214: the small figure is in the local display currency.
+  const { display: local } = useSessionCurrencies();
   const { t } = useTranslation('admin');
   const f = useFormat();
   const href = useChildHref();
@@ -153,11 +156,11 @@ export function OrdersScreen() {
           const other = item.role === 'buyer' ? item.seller : item.buyer;
           // The dealer's name leads the card so everyone recognises the order at a glance; the number follows.
           const party = item.role === 'observer' ? `${item.seller.name} → ${item.buyer.name}` : other.name;
-          // TEC-1055 (revize 5): warehouse, amount, USD with a small live TRY figure, who handles it.
-          const tl = liveTryAmount(item);
+          // TEC-1055 (revize 5): warehouse, amount, brand currency with a small live local figure, who handles it.
+          const tl = liveTryAmount(item, local);
           const money =
             prices && hasAmount(item.total)
-              ? `${f.money(item.total, item.currency)}${tl ? ` (≈ ${f.money(tl, 'TRY')})` : ''}`
+              ? `${f.money(item.total, item.currency)}${tl && local ? ` (≈ ${f.money(tl, local)})` : ''}`
               : null;
           return (
             <CardRow
@@ -179,6 +182,7 @@ export function OrdersScreen() {
 }
 
 export function OrderDetailScreen() {
+  const { display: local } = useSessionCurrencies();
   const { t } = useTranslation('admin');
   const f = useFormat();
   const qc = useQueryClient();
@@ -269,9 +273,9 @@ export function OrderDetailScreen() {
                   <Text variant="title" className="tabular-nums">
                     {f.money(o.total, o.currency)}
                   </Text>
-                  {liveTryAmount(o) ? (
+                  {liveTryAmount(o, local) && local ? (
                     <Text variant="footnote" tone="muted" className="tabular-nums">
-                      {t('orders:card.try_approx', { amount: f.money(liveTryAmount(o), 'TRY') })}
+                      {t('orders:card.try_approx', { amount: f.money(liveTryAmount(o, local), local) })}
                     </Text>
                   ) : null}
                 </View>

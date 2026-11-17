@@ -42,6 +42,7 @@
   "system.hub.territories": "Ülke, il ve ilçe tanımları ile distribütör bölgeleri.",
   "system.hub.plate_formats": "Ülkelere göre plaka biçimleri.",
   "system.hub.exchange_rates": "Günlük TCMB/ECB kurları ve manuel düzeltmeler.",
+  "system.hub.brand_currency": "Markanın fiyat ve sipariş para birimi, ön izlemeli değişiklik ve fiyat geçiş aracı.",
   "system.hub.legal_texts": "KVKK, AI yönergesi ve diğer yasal metinler.",
   "system.hub.modules": "Modüllerin açılıp kapatılması ve varsayılanları.",
   "system.hub.whatsapp": "Tek WhatsApp numarası ve oturum ayarları.",

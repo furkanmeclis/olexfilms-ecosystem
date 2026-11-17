@@ -43,6 +43,9 @@ import (
 	authsettingsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/authsettings"
 	authsettingshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/authsettings/handler"
 	authsettingsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/authsettings/usecase"
+	brandcurrencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/brandcurrency"
+	brandcurrencyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/brandcurrency/handler"
+	brandcurrencyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/brandcurrency/usecase"
 	bulkmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
@@ -226,6 +229,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -519,6 +523,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	customersH := customershandler.New(customersSvc, activityRec).WithLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
+	// TEC-1214: brand currency (preview + change) and the price conversion tool.
+	brandCurrencySvc := brandcurrencyusecase.New(deps.DB, deps.Queries, ratesSvc, sysSvc)
+	brandcurrencymodule.RegisterRoutes(mux, brandcurrencyhandler.New(brandCurrencySvc, activityRec), tokens, loader)
+	uc.SetCurrencySource(func(ctx context.Context, orgUUID *uuid.UUID, brandID *int64) (string, string, string, error) {
+		c, err := brandCurrencySvc.SessionCurrencies(ctx, orgUUID, brandID)
+		return c.Brand, c.Organization, c.Display, err
+	})
 	// TEC-146: price list and effective price views (K8).
 	pricingSvc := pricingusecase.New(deps.Queries)
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),

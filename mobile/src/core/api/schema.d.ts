@@ -9132,6 +9132,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Brands with their currency (platform.organizations.read)
+         * @description TEC-1214. Every brand with its price and order currency (brands.currency) and the local display currency (pricing.local_currency).
+         */
+        get: operations["listPlatformBrands"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/brands/{uuid}/currency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Preview or change the brand currency (platform admin)
+         * @description TEC-1214, platform super admin only. brands.currency is the price and order currency of the brand; organizations.currency (the ledger currency) does not change. With dry_run=true nothing is written and the preview lists the active products without a center sale price in the new currency, the open (draft / submitted) orders, the rate new currency -> local currency (order approvals freeze it) and old -> new (repricing), and the blockers. Without dry_run the change is applied in one transaction only when there is no blocker, else 409 CURRENCY_CHANGE_BLOCKED with details[].code = same_currency | open_orders | missing_prices | rate_to_local_missing | conversion_rate_missing. open_orders: block (default; open orders are a blocker) or reprice (their unfrozen line prices and totals are converted at today's old -> new rate). allow_missing_prices accepts products without a price in the new currency. Approved orders, caris and finance entries keep their own currency and frozen rates. An applied change writes the activity event brands.currency_changed.
+         */
+        put: operations["changePlatformBrandCurrency"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/brands/{uuid}/price-conversion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert the price list to another currency (platform admin)
+         * @description TEC-1214, platform super admin only. Converts the center price list (product_prices: purchase, sale to distributor, recommended) of the active products from source_currency (default: the brand currency) to target_currency at today's rate, rounded to cents. The rows in the target currency stay unused (draft) until the brand currency switches and can be edited in the catalog first. A product that already has a target row is skipped unless overwrite. dry_run=true only previews. 422 RATE_NOT_FOUND without a rate. An applied run writes the activity event brands.prices_converted.
+         */
+        post: operations["convertPlatformBrandPrices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/exchange-rates": {
         parameters: {
             query?: never;
@@ -19384,6 +19444,21 @@ export interface components {
              * @example Europe/Istanbul
              */
             effective_timezone: string;
+            /**
+             * @description TEC-1214. Price and order currency of the active organization's brand (else the request brand). Prices and order totals are in this currency.
+             * @example USD
+             */
+            brand_currency?: string;
+            /**
+             * @description TEC-1214. Ledger (cari / finance) currency of the active organization.
+             * @example TRY
+             */
+            organization_currency?: string;
+            /**
+             * @description TEC-1214. Local display currency (pricing.local_currency): the quote currency of try_rate / live_total_try and of the small converted amount next to brand-currency prices.
+             * @example TRY
+             */
+            display_currency?: string;
             user: components["schemas"]["PublicUser"];
             roles: string[];
             permissions: string[];
@@ -20741,6 +20816,136 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["SessionList"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        PlatformBrand: {
+            /** Format: uuid */
+            uuid: string;
+            slug: string;
+            name: string;
+            status: string;
+            /** @description Price and order currency (ISO 4217). */
+            currency: string;
+        };
+        EnvelopePlatformBrandList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PlatformBrand"][];
+                local_currency: string;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        BrandCurrencyChangeRequest: {
+            /** @example USD */
+            currency: string;
+            /** @default false */
+            dry_run: boolean;
+            /**
+             * @default block
+             * @enum {string}
+             */
+            open_orders: "block" | "reprice";
+            /** @default false */
+            allow_missing_prices: boolean;
+        };
+        BrandCurrencyRate: {
+            base: string;
+            quote: string;
+            rate: string;
+            rate_date: string;
+            source: string;
+        };
+        BrandCurrencyChange: {
+            brand: components["schemas"]["PlatformBrand"];
+            from: string;
+            to: string;
+            local_currency: string;
+            /** @enum {string} */
+            open_orders_option: "block" | "reprice";
+            /** Format: int64 */
+            active_products: number;
+            /** Format: int64 */
+            missing_price_count: number;
+            /** @description First 200 products without a center sale price in the new currency. */
+            missing_prices: {
+                /** Format: uuid */
+                product_uuid: string;
+                sku: string;
+                name: string;
+            }[];
+            /** Format: int64 */
+            open_order_count: number;
+            /** @description First 200 draft / submitted orders. */
+            open_orders: {
+                /** Format: uuid */
+                uuid: string;
+                order_no: string;
+                status: string;
+                currency: string;
+                total: string;
+                seller_name: string;
+                buyer_name: string;
+                /** Format: date-time */
+                created_at: string;
+            }[];
+            rate_to_local: components["schemas"]["BrandCurrencyRate"] | null;
+            conversion_rate: components["schemas"]["BrandCurrencyRate"] | null;
+            blockers: ("same_currency" | "open_orders" | "missing_prices" | "rate_to_local_missing" | "conversion_rate_missing")[];
+            dry_run: boolean;
+            applied: boolean;
+            /** Format: int64 */
+            repriced_orders: number;
+        };
+        EnvelopeBrandCurrencyChange: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["BrandCurrencyChange"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        BrandPriceConversionRequest: {
+            /** @description Default the brand currency. */
+            source_currency?: string;
+            /** @example USD */
+            target_currency: string;
+            /** @default false */
+            dry_run: boolean;
+            /** @default false */
+            overwrite: boolean;
+        };
+        BrandPriceSet: {
+            purchase_price: string | null;
+            sale_to_distributor_price: string | null;
+            recommended_sale_price: string | null;
+        };
+        BrandPriceConversion: {
+            brand: components["schemas"]["PlatformBrand"];
+            source_currency: string;
+            target_currency: string;
+            rate: components["schemas"]["BrandCurrencyRate"];
+            overwrite: boolean;
+            total: number;
+            create: number;
+            update: number;
+            skip: number;
+            rows: {
+                /** Format: uuid */
+                product_uuid: string;
+                sku: string;
+                name: string;
+                /** @enum {string} */
+                action: "create" | "update" | "skip";
+                source: components["schemas"]["BrandPriceSet"];
+                converted: components["schemas"]["BrandPriceSet"];
+                existing: components["schemas"]["BrandPriceSet"] | null;
+            }[];
+            dry_run: boolean;
+            applied: boolean;
+        };
+        EnvelopeBrandPriceConversion: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["BrandPriceConversion"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeMe: {
@@ -49574,6 +49779,90 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listPlatformBrands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Brands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlatformBrandList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    changePlatformBrandCurrency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandCurrencyChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview (dry_run) or applied change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBrandCurrencyChange"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    convertPlatformBrandPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandPriceConversionRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview (dry_run) or applied conversion */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBrandPriceConversion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["BadRequest"];
         };
     };
     listExchangeRates: {

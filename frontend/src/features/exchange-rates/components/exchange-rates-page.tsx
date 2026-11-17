@@ -31,6 +31,7 @@ import {
 } from "@/features/exchange-rates/services/rates.service";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -84,6 +85,9 @@ function today() {
 /** Admin > System settings > Exchange rates (TCMB/ECB daily, overrides). */
 export function ExchangeRatesPage() {
   const { t } = useLocale();
+  // TEC-1214: the override form starts on brand currency -> local currency.
+  const { brand: brandCurrency, display: localCurrency } =
+    useSessionCurrencies();
   const { can } = usePermission();
   const canWrite = can(permissions.rates.write);
   const queryClient = useQueryClient();
@@ -276,8 +280,11 @@ export function ExchangeRatesPage() {
           schema={schema}
           defaultValues={{
             date: today(),
-            base: "EUR",
-            quote: "TRY",
+            base:
+              brandCurrency && brandCurrency !== localCurrency
+                ? brandCurrency
+                : "",
+            quote: localCurrency ?? "",
             rate: "",
             note: "",
           }}
