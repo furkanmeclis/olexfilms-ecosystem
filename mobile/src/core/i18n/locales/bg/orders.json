@@ -167,5 +167,6 @@
   "step.backorder_created": "Частично изпращане, отворена допълнителна поръчка",
   "step.backorder_opened": "Отворена като допълнителна поръчка",
   "step.discrepancy_reported": "Отчетено несъответствие при приемане",
-  "step.discrepancy_resolved": "Несъответствието е затворено"
+  "step.discrepancy_resolved": "Несъответствието е затворено",
+  "receipt.reason_placeholder": "напр. няма го в кашона, смачкано"
 }

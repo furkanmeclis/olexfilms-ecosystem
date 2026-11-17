@@ -107,6 +107,7 @@ export function ReceiptCheckSheet({
                 {v.kind !== 'ok' ? (
                   <Input
                     label={t('receipt.reason')}
+                    placeholder={t('receipt.reason_placeholder')}
                     value={v.reason}
                     maxLength={500}
                     onChangeText={(r) => set(u.unitUuid, { ...v, reason: r })}

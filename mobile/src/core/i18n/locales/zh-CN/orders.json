@@ -167,5 +167,6 @@
   "step.backorder_created": "部分发货，已创建补发订单",
   "step.backorder_opened": "作为补发订单创建",
   "step.discrepancy_reported": "已报告收货差异",
-  "step.discrepancy_resolved": "差异已解决"
+  "step.discrepancy_resolved": "差异已解决",
+  "receipt.reason_placeholder": "例如：箱内没有、压痕"
 }

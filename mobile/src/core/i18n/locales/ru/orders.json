@@ -167,5 +167,6 @@
   "step.backorder_created": "Частичная отгрузка, открыт дозаказ",
   "step.backorder_opened": "Открыт как дозаказ",
   "step.discrepancy_reported": "Сообщено о расхождении при приёмке",
-  "step.discrepancy_resolved": "Расхождение закрыто"
+  "step.discrepancy_resolved": "Расхождение закрыто",
+  "receipt.reason_placeholder": "напр., нет в коробке, вмятина"
 }

@@ -167,5 +167,6 @@
   "step.backorder_created": "Kısmi sevk, bakiye açıldı",
   "step.backorder_opened": "Bakiye sipariş olarak açıldı",
   "step.discrepancy_reported": "Teslimde fark bildirildi",
-  "step.discrepancy_resolved": "Fark kaydı kapatıldı"
+  "step.discrepancy_resolved": "Fark kaydı kapatıldı",
+  "receipt.reason_placeholder": "Örn. kolide yok, ezik"
 }

@@ -167,5 +167,6 @@
   "step.backorder_created": "Qismən göndəriş, qalıq sifariş açıldı",
   "step.backorder_opened": "Qalıq sifariş kimi açıldı",
   "step.discrepancy_reported": "Qəbulda fərq bildirildi",
-  "step.discrepancy_resolved": "Fərq qeydi bağlandı"
+  "step.discrepancy_resolved": "Fərq qeydi bağlandı",
+  "receipt.reason_placeholder": "məs. qutuda yoxdur, əzik"
 }

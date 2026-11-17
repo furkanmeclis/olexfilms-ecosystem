@@ -167,5 +167,6 @@
   "step.backorder_created": "Expédition partielle, reliquat ouvert",
   "step.backorder_opened": "Ouverte comme reliquat",
   "step.discrepancy_reported": "Écart de réception signalé",
-  "step.discrepancy_resolved": "Écart résolu"
+  "step.discrepancy_resolved": "Écart résolu",
+  "receipt.reason_placeholder": "ex. absent du colis, cabossé"
 }

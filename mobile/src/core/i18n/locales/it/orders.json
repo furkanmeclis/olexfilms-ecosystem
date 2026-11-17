@@ -167,5 +167,6 @@
   "step.backorder_created": "Spedizione parziale, ordine arretrato aperto",
   "step.backorder_opened": "Aperto come ordine arretrato",
   "step.discrepancy_reported": "Discrepanza alla ricezione segnalata",
-  "step.discrepancy_resolved": "Discrepanza risolta"
+  "step.discrepancy_resolved": "Discrepanza risolta",
+  "receipt.reason_placeholder": "es. non nella scatola, ammaccato"
 }

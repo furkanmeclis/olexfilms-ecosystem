@@ -167,5 +167,6 @@
   "step.backorder_created": "Envío parcial, pedido pendiente abierto",
   "step.backorder_opened": "Abierto como pedido pendiente",
   "step.discrepancy_reported": "Diferencia en la recepción informada",
-  "step.discrepancy_resolved": "Diferencia resuelta"
+  "step.discrepancy_resolved": "Diferencia resuelta",
+  "receipt.reason_placeholder": "p. ej., no está en la caja, abollado"
 }

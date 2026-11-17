@@ -167,5 +167,6 @@
   "step.backorder_created": "شحن جزئي، تم فتح طلب متأخر",
   "step.backorder_opened": "فُتح كطلب متأخر",
   "step.discrepancy_reported": "تم الإبلاغ عن فرق في الاستلام",
-  "step.discrepancy_resolved": "تمت تسوية الفرق"
+  "step.discrepancy_resolved": "تمت تسوية الفرق",
+  "receipt.reason_placeholder": "مثلًا: غير موجود في الصندوق، مخدوش"
 }

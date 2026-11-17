@@ -167,5 +167,6 @@
   "step.backorder_created": "Partial shipment, backorder opened",
   "step.backorder_opened": "Opened as a backorder",
   "step.discrepancy_reported": "Receipt discrepancy reported",
-  "step.discrepancy_resolved": "Discrepancy resolved"
+  "step.discrepancy_resolved": "Discrepancy resolved",
+  "receipt.reason_placeholder": "e.g. not in the box, dented"
 }

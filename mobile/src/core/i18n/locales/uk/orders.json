@@ -167,5 +167,6 @@
   "step.backorder_created": "Часткове відвантаження, відкрито дозамовлення",
   "step.backorder_opened": "Відкрито як дозамовлення",
   "step.discrepancy_reported": "Повідомлено про розбіжність при прийманні",
-  "step.discrepancy_resolved": "Розбіжність закрито"
+  "step.discrepancy_resolved": "Розбіжність закрито",
+  "receipt.reason_placeholder": "напр., немає в коробці, вм'ятина"
 }

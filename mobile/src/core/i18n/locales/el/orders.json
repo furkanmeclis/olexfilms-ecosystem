@@ -167,5 +167,6 @@
   "step.backorder_created": "Μερική αποστολή, άνοιξε εκκρεμής παραγγελία",
   "step.backorder_opened": "Άνοιξε ως εκκρεμής παραγγελία",
   "step.discrepancy_reported": "Αναφέρθηκε απόκλιση παραλαβής",
-  "step.discrepancy_resolved": "Η απόκλιση επιλύθηκε"
+  "step.discrepancy_resolved": "Η απόκλιση επιλύθηκε",
+  "receipt.reason_placeholder": "π.χ. δεν είναι στο κιβώτιο, χτυπημένο"
 }

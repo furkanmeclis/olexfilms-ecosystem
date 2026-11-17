@@ -167,5 +167,6 @@
   "step.backorder_created": "Teillieferung, Rückstandsauftrag eröffnet",
   "step.backorder_opened": "Als Rückstandsauftrag eröffnet",
   "step.discrepancy_reported": "Abweichung beim Empfang gemeldet",
-  "step.discrepancy_resolved": "Abweichung geklärt"
+  "step.discrepancy_resolved": "Abweichung geklärt",
+  "receipt.reason_placeholder": "z. B. nicht im Karton, eingedrückt"
 }
