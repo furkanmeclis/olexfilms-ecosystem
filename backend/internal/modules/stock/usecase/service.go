@@ -464,7 +464,19 @@ func (s *Service) OrganizationStock(ctx context.Context, f scopefilter.Filter, o
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: fixed barcodes: %w", err)
 	}
-	return stockItems(rows, fixedByProduct(fixed)), total, nil
+	items := stockItems(rows, fixedByProduct(fixed))
+	if err := s.withBalances(ctx, BalanceScope{OrganizationID: o.ID}, items, productIDsOf(rows)); err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
+}
+
+func productIDsOf(rows []db.ListOrganizationProductStockRowsRow) []int64 {
+	ids := make([]int64, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ProductID
+	}
+	return ids
 }
 
 // LocationStock serves GET /v1/stock/locations/{uuid}/products.
@@ -514,7 +526,12 @@ func (s *Service) LocationStock(ctx context.Context, f scopefilter.Filter, locUU
 	for i, r := range fixed {
 		held[i] = db.ListFixedBarcodeQuantitiesByHolderRow(r)
 	}
-	return stockItems(rows, fixedByProduct(held)), total, nil
+	items := stockItems(rows, fixedByProduct(held))
+	scope := BalanceScope{OrganizationID: loc.OrganizationID, WarehouseID: loc.WarehouseID.Int64, LocationID: loc.ID}
+	if err := s.withBalances(ctx, scope, items, productIDsOf(rows)); err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func fixedProductIDs(rows []db.ListOrganizationProductStockRowsRow) []int64 {

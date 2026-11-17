@@ -256,3 +256,31 @@ SELECT id, uuid, barcode, unit_kind, product_id FROM units WHERE id = ANY(sqlc.a
 
 -- name: ListStockCountProducts :many
 SELECT id, uuid, sku, name FROM products WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: RequestStockCountLineRecount :one
+-- TEC-1229: an unresolved difference line goes back for a recount.
+UPDATE stock_count_lines
+SET recount_status = 'requested',
+    recount_requested_at = NOW(),
+    recount_requested_by_user_id = sqlc.narg(user_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: RecordStockCountLineRecount :one
+-- TEC-1229: the recounted values replace the counted ones; the first
+-- count is kept once (first_*).
+UPDATE stock_count_lines
+SET first_counted_quantity = COALESCE(first_counted_quantity, counted_quantity),
+    first_counted_meters = CASE WHEN recount_rounds = 0 THEN counted_meters ELSE first_counted_meters END,
+    first_counted_location_id = CASE WHEN recount_rounds = 0 THEN counted_location_id ELSE first_counted_location_id END,
+    first_result = COALESCE(first_result, result),
+    counted_quantity = sqlc.arg(counted_quantity),
+    counted_meters = sqlc.narg(counted_meters),
+    counted_location_id = sqlc.narg(counted_location_id),
+    result = sqlc.arg(result),
+    recount_status = 'recounted',
+    recounted_at = NOW(),
+    recounted_by_user_id = sqlc.narg(user_id),
+    recount_rounds = recount_rounds + 1
+WHERE id = sqlc.arg(id)
+RETURNING *;

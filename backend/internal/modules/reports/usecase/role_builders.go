@@ -7,8 +7,10 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/google/uuid"
 )
 
 // orderFulfillment: shipped / received time series, the warehouse KPIs
@@ -191,4 +193,76 @@ func (s *Service) stockMovement(ctx context.Context, q query, a args, env *Envel
 	in, out := q.timeSeries("in", vals), q.timeSeries("out", vals)
 	env.Series = []Series{in, out}
 	return nil
+}
+
+// AgingBuckets are the age buckets (days since the last ledger movement)
+// of stock.aging.
+var AgingBuckets = []string{"qty_0_30", "qty_30_60", "qty_60_90", "qty_90_180", "qty_180_plus"}
+
+// stockAging (TEC-1229): stock on hand of the organizations in reach per
+// product and warehouse, bucketed by the days since the last ledger
+// movement, oldest first (the limit parameter caps the rows). The unit price
+// and stock value columns (recommended sale price of the brand price
+// list) need pricing.purchase.read or pricing.sale.read; a warehouse role
+// never sees them.
+func (s *Service) stockAging(ctx context.Context, c Caller, q query, a args, env *Envelope) error {
+	rows, err := s.q.ReportStockAging(ctx, db.ReportStockAgingParams{
+		BrandID: a.brandID, OrgIds: a.orgIDs, AsOf: ts(s.now()), MinDays: 0, RowLimit: q.limit,
+	})
+	if err != nil {
+		return fmt.Errorf("reports: stock aging: %w", err)
+	}
+	priced := orderAmountsVisible(c.Principal)
+	defs := [][2]string{
+		{"product", "string"}, {"sku", "string"}, {"warehouse", "string"}, {"organization", "org"},
+		{"quantity", "integer"}, {"meters", "number"},
+		{"qty_0_30", "integer"}, {"qty_30_60", "integer"}, {"qty_60_90", "integer"},
+		{"qty_90_180", "integer"}, {"qty_180_plus", "integer"},
+		{"oldest_days", "integer"}, {"oldest_movement_at", "datetime"},
+	}
+	if priced {
+		defs = append(defs, [2]string{"unit_price", "money"}, [2]string{"stock_value", "money"})
+	}
+	env.Columns = q.columns(defs)
+	var total, old float64
+	for _, r := range rows {
+		row := map[string]any{
+			"product_uuid": r.ProductUuid, "product": r.ProductName, "sku": r.Sku,
+			"warehouse": nil, "warehouse_uuid": nil,
+			"organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName,
+			"quantity": r.Quantity, "meters": parseNum(r.Meters),
+			"qty_0_30": r.Qty030, "qty_30_60": r.Qty3060, "qty_60_90": r.Qty6090,
+			"qty_90_180": r.Qty90180, "qty_180_plus": r.Qty180Plus,
+			"oldest_days": r.OldestDays, "oldest_movement_at": r.OldestMovementAt.Time.UTC(),
+			rowLink: link(LinkProduct, r.ProductUuid.String()),
+		}
+		if r.WarehouseUuid.Valid {
+			row["warehouse_uuid"], row["warehouse"] = uuid.UUID(r.WarehouseUuid.Bytes).String(), r.WarehouseName.String
+		}
+		if priced {
+			row["unit_price"], row["stock_value"], row["currency"] = nil, nil, nil
+			if r.UnitPrice != "" {
+				price := parseNum(r.UnitPrice)
+				row["unit_price"] = round(price, 2)
+				row["stock_value"] = round(price*float64(r.Quantity), 2)
+				row["currency"] = r.Currency
+			}
+		}
+		total += float64(r.Quantity)
+		old += float64(r.Qty90180 + r.Qty180Plus)
+		env.Rows = append(env.Rows, row)
+	}
+	env.KPIs = append(env.KPIs,
+		KPI{Key: "aging_quantity", Label: translate(q.locale, "kpi.aging_quantity"), Unit: unitCount, Value: total, Good: "down", Spark: []float64{}},
+		KPI{Key: "aging_over_90", Label: translate(q.locale, "kpi.aging_over_90"), Unit: unitCount, Value: old, Good: "down", Spark: []float64{}},
+	)
+	return nil
+}
+
+func parseNum(s string) float64 {
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+	return v
 }

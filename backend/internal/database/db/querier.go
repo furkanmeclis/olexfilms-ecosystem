@@ -362,6 +362,7 @@ type Querier interface {
 	CountStockEntryScanned(ctx context.Context, entryID int64) (CountStockEntryScannedRow, error)
 	CountStockForecastSubtreeSummary(ctx context.Context, arg CountStockForecastSubtreeSummaryParams) (int64, error)
 	CountStockForecasts(ctx context.Context, arg CountStockForecastsParams) (int64, error)
+	CountStockMovementRows(ctx context.Context, arg CountStockMovementRowsParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStockSplitsBySource(ctx context.Context, sourceUnitID int64) (int64, error)
@@ -790,6 +791,7 @@ type Querier interface {
 	DeleteStockEntryLineByID(ctx context.Context, arg DeleteStockEntryLineByIDParams) (int64, error)
 	DeleteStockEntryScan(ctx context.Context, arg DeleteStockEntryScanParams) (int64, error)
 	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
+	DeleteStockReorderRule(ctx context.Context, arg DeleteStockReorderRuleParams) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
 	DeleteStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) error
@@ -815,7 +817,29 @@ type Querier interface {
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	DisableFleetUser(ctx context.Context, id int64) (FleetUser, error)
+	// TEC-1229: current on-hand stock per product of the organization
+	// (warehouse_id NULL: organization_product_stocks, the whole organization)
+	// or of one warehouse (bin_product_stocks of its locations).
+	EODCurrentStock(ctx context.Context, arg EODCurrentStockParams) ([]EODCurrentStockRow, error)
+	// TEC-1229: open work of the organization (or one warehouse) at report
+	// time: open warehouse transfers (draft / in transit, from or to the
+	// warehouse), draft stock entries and confirmed entries with lines still
+	// waiting for a location, unfinished stock counts and sale orders being
+	// prepared (approved / preparing / ready).
+	EODPendingWork(ctx context.Context, arg EODPendingWorkParams) (EODPendingWorkRow, error)
 	EODReportExists(ctx context.Context, arg EODReportExistsParams) (bool, error)
+	// TEC-1229: the on-hand change per product caused by the movements since
+	// period_start, split at period_end (period: [start, end), after: [end,
+	// now)). A movement adds its "after" side when the unit is counted in the
+	// scope after it and removes its "before" side when it was counted there
+	// before it (reclassification moves the stock from metadata
+	// from_product_id to product_id). Rolls carry their remaining meters (the
+	// unit's initial meters plus every meters_delta up to the movement, as the
+	// rebuild replay does). Fixed barcodes change one owner per movement: a
+	// negative quantity_delta debits from_owner, a positive one credits
+	// to_owner. Opening and closing = current - after - period / current -
+	// after (EODBalances).
+	EODStockDeltas(ctx context.Context, arg EODStockDeltasParams) ([]EODStockDeltasRow, error)
 	EfficiencyComparison(ctx context.Context, arg EfficiencyComparisonParams) ([]EfficiencyComparisonRow, error)
 	EfficiencyMonthlyTrend(ctx context.Context, arg EfficiencyMonthlyTrendParams) ([]EfficiencyMonthlyTrendRow, error)
 	EfficiencySummary(ctx context.Context, arg EfficiencySummaryParams) ([]EfficiencySummaryRow, error)
@@ -1428,6 +1452,7 @@ type Querier interface {
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)
 	GetStockReclassificationByUUID(ctx context.Context, argUuid uuid.UUID) (StockReclassification, error)
+	GetStockReorderRuleByUUID(ctx context.Context, arg GetStockReorderRuleByUUIDParams) (StockReorderRule, error)
 	GetStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	GetStockSplitByKey(ctx context.Context, arg GetStockSplitByKeyParams) (StockSplit, error)
 	GetStockTransferRequest(ctx context.Context, arg GetStockTransferRequestParams) (StockTransferRequest, error)
@@ -2265,6 +2290,9 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Label templates.
 	ListLabelTemplates(ctx context.Context, arg ListLabelTemplatesParams) ([]LabelTemplate, error)
+	// Latest 30-day average daily use of products of the organization
+	// (stock_forecasts), for the warehouse day thresholds.
+	ListLatestForecastAvgDaily(ctx context.Context, arg ListLatestForecastAvgDailyParams) ([]ListLatestForecastAvgDailyRow, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]KvkkNotice, error)
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	// The newest version of each language of an item.
@@ -2890,10 +2918,23 @@ type Querier interface {
 	ListStockForecasts(ctx context.Context, arg ListStockForecastsParams) ([]ListStockForecastsRow, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
+	// Stock on its way to the organization, per product: in-transit warehouse
+	// transfers of the organization (to warehouse_id / location_id when given)
+	// and shipped orders bought by it (to the buyer location's warehouse /
+	// the buyer location when given). Serial units count one each (rolls add
+	// their remaining meters); fixed barcodes their line quantity.
+	ListStockIncomingByProduct(ctx context.Context, arg ListStockIncomingByProductParams) ([]ListStockIncomingByProductRow, error)
 	// TEC-763: the document behind each movement of a history page (entry,
 	// warehouse transfer, count, service, order, dealer transfer request,
 	// reclassification); line references resolve to their parent document.
 	ListStockMovementDocuments(ctx context.Context, ids []int64) ([]ListStockMovementDocumentsRow, error)
+	// Ledger movements of the organization (recorded on it, landing on one of
+	// its locations or on the organization itself). warehouse_id narrows to
+	// movements leaving or reaching a location of that warehouse. Filters:
+	// types (any of), product, actor, created_from inclusive / created_to
+	// exclusive, q (barcode, SKU or product name). Sort keys: created_at,
+	// type, product; id tiebreak.
+	ListStockMovementRows(ctx context.Context, arg ListStockMovementRowsParams) ([]ListStockMovementRowsRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.
@@ -2906,12 +2947,28 @@ type Querier interface {
 	// holder_org_id (TEC-94 decision 4).
 	// Barcode history page in ledger order (oldest first).
 	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
+	// TEC-1229 (with TEC-1226): serial units in quarantine held by the
+	// organization (warehouse_id / location_id narrow to the units there).
+	// Quarantined units are not on hand; rolls add their remaining meters.
+	ListStockQuarantineByProduct(ctx context.Context, arg ListStockQuarantineByProductParams) ([]ListStockQuarantineByProductRow, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
 	// TEC-763 list contract (docs/list-contract.md): status and requested_by
 	// (user uuids) are CSV, created_from/_to, from/to product, q (barcode
 	// prefix, product name or SKU, reason). Sort keys from
 	// usecase.ReclassificationSort, id tiebreak.
 	ListStockReclassificationsScoped(ctx context.Context, arg ListStockReclassificationsScopedParams) ([]StockReclassification, error)
+	ListStockReorderOrganizations(ctx context.Context) ([]int64, error)
+	// Reorder rules of the organization; warehouse / product narrow them.
+	ListStockReorderRules(ctx context.Context, arg ListStockReorderRulesParams) ([]ListStockReorderRulesRow, error)
+	// TEC-1229: stock view columns, movement list, reorder rules, aging and
+	// end-of-day balances. Nothing here reads or returns a price except the
+	// aging report value, which the report gates with a pricing permission.
+	// Active order reservations on stock the organization holds, per product.
+	// warehouse_id / location_id narrow to the units placed there. Serial
+	// pieces add their quantity, rolls their reserved meters. A fixed barcode
+	// reservation is capped by the holding in the scope (it names no
+	// location).
+	ListStockReservedByProduct(ctx context.Context, arg ListStockReservedByProductParams) ([]ListStockReservedByProductRow, error)
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
 	ListStockTransferRequestsInScope(ctx context.Context, arg ListStockTransferRequestsInScopeParams) ([]StockTransferRequest, error)
@@ -2961,6 +3018,11 @@ type Querier interface {
 	ListTransferRequestsFiltered(ctx context.Context, arg ListTransferRequestsFilteredParams) ([]StockTransferRequest, error)
 	// Active organizations of the same type, brand and parent (K13 siblings).
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
+	// TEC-1229: credit balances that differ from the sum of their movements
+	// (rebuild check). organization_id 0 checks every unit; otherwise the units
+	// with a movement or a balance of the organization. has_expected: the unit
+	// has movements; has_actual: it has a balance row.
+	ListUnitCreditDrift(ctx context.Context, organizationID int64) ([]ListUnitCreditDriftRow, error)
 	ListUnitCreditMovements(ctx context.Context, unitID int64) ([]ListUnitCreditMovementsRow, error)
 	// Services the unit was selected in (credit uses), newest first.
 	ListUnitCreditServices(ctx context.Context, unitID int64) ([]ListUnitCreditServicesRow, error)
@@ -3029,6 +3091,8 @@ type Querier interface {
 	// List contract: sort keys name, email, created_at (id tiebreak); q on
 	// name, surname, email.
 	ListWarehouseMembers(ctx context.Context, arg ListWarehouseMembersParams) ([]ListWarehouseMembersRow, error)
+	// On-hand totals of products in one warehouse (bin_product_stocks).
+	ListWarehouseOnHandByProduct(ctx context.Context, arg ListWarehouseOnHandByProductParams) ([]ListWarehouseOnHandByProductRow, error)
 	// Active locations of the warehouse holding the products on hand (serial
 	// units and fixed barcode pieces), most stocked first.
 	ListWarehouseProductLocations(ctx context.Context, arg ListWarehouseProductLocationsParams) ([]ListWarehouseProductLocationsRow, error)
@@ -3676,6 +3740,9 @@ type Querier interface {
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
+	// TEC-1229: the recounted values replace the counted ones; the first
+	// count is kept once (first_*).
+	RecordStockCountLineRecount(ctx context.Context, arg RecordStockCountLineRecountParams) (StockCountLine, error)
 	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RefreshNetworkPartExpectations(ctx context.Context, arg RefreshNetworkPartExpectationsParams) (int64, error)
 	// One day of snapshots of a brand: every active dealer / distributor list
@@ -3778,6 +3845,13 @@ type Querier interface {
 	// other service rankings). The center's own row carries its service point
 	// (TEC-1003) so a client can label it apart from the dealers.
 	ReportServicesByOrg(ctx context.Context, arg ReportServicesByOrgParams) ([]ReportServicesByOrgRow, error)
+	// TEC-1229: stock on hand (counted serial units and fixed holdings) of the
+	// organizations in reach, per product and warehouse (NULL: held without a
+	// location), bucketed by the days since the last ledger movement of each
+	// unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
+	// brand price list's recommended sale price; the report shows it only
+	// with a pricing read permission.
+	ReportStockAging(ctx context.Context, arg ReportStockAgingParams) ([]ReportStockAgingRow, error)
 	ReportStockMovementByWarehouse(ctx context.Context, arg ReportStockMovementByWarehouseParams) ([]ReportStockMovementByWarehouseRow, error)
 	// stock.movement: serial unit movements into and out of the warehouses in
 	// reach (a location's warehouse). A move inside one warehouse (placement,
@@ -3798,6 +3872,8 @@ type Querier interface {
 	// Converts the unfrozen line prices of an open order with a rate (brand
 	// currency change, "reprice" option).
 	RepriceOrderItems(ctx context.Context, arg RepriceOrderItemsParams) (int64, error)
+	// TEC-1229: an unresolved difference line goes back for a recount.
+	RequestStockCountLineRecount(ctx context.Context, arg RequestStockCountLineRecountParams) (StockCountLine, error)
 	// Finishes a claimed action: executing → confirmed | failed.
 	ResolveAIPendingAction(ctx context.Context, arg ResolveAIPendingActionParams) (AiPendingAction, error)
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
@@ -4059,6 +4135,7 @@ type Querier interface {
 	SetStockEntryLinesProductionDate(ctx context.Context, arg SetStockEntryLinesProductionDateParams) error
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
+	SetStockReorderRuleAlert(ctx context.Context, arg SetStockReorderRuleAlertParams) error
 	// TEC-212: bulk engine adapter (assign one task, logged + undoable).
 	SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error)
 	SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams) (Task, error)
@@ -4436,10 +4513,13 @@ type Querier interface {
 	// repository contract for daily snapshots and list screens.
 	UpsertStockForecastSnapshot(ctx context.Context, arg UpsertStockForecastSnapshotParams) (StockForecast, error)
 	UpsertStockForecastThreshold(ctx context.Context, arg UpsertStockForecastThresholdParams) (StockForecastThreshold, error)
+	UpsertStockReorderRule(ctx context.Context, arg UpsertStockReorderRuleParams) (StockReorderRule, error)
 	UpsertSupplierProductCode(ctx context.Context, arg UpsertSupplierProductCodeParams) error
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
+	// TEC-1229: rebuild repair sets the balance to the sum of the movements.
+	UpsertUnitCreditBalanceForRepair(ctx context.Context, arg UpsertUnitCreditBalanceForRepairParams) error
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
 	UpsertWarehouseSettings(ctx context.Context, arg UpsertWarehouseSettingsParams) (WarehouseSetting, error)

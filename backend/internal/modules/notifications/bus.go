@@ -230,6 +230,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range StockForecastEventCodes {
 		on(name, stockForecastDispatcher(code))
 	}
+	// TEC-1229: warehouse low stock (reorder rules).
+	on(events.StockReorderLow, stockReorderDispatcher)
 	// TEC-506: recommended price publication and weekly discipline digest.
 	for name, code := range PricingEventCodes {
 		on(name, pricingDispatcher(code))

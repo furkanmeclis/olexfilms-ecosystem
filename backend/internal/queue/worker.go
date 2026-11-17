@@ -123,6 +123,7 @@ type Worker struct {
 	serviceSubscriptionsPostPeriods ServiceSubscriptionsPostPeriodsFunc
 	// TEC-484: stock forecast daily snapshots and low-stock transitions.
 	stockForecastDaily StockForecastDailyFunc
+	stockReorderCheck  StockReorderCheckFunc
 	// TEC-491: daily performance metric projections.
 	performanceDaily PerformanceDailyFunc
 	// TEC-488: weekly efficiency network medians.
@@ -262,6 +263,7 @@ func (w *Worker) bindings() []binding {
 		{TaskServiceSubscriptionsExpire, w.handleServiceSubscriptionsExpire, w.serviceSubscriptionsExpire != nil},
 		{TaskServiceSubscriptionsPostPeriods, w.handleServiceSubscriptionsPostPeriods, w.serviceSubscriptionsPostPeriods != nil},
 		{TaskStockForecastDaily, w.handleStockForecastDaily, w.stockForecastDaily != nil},
+		{TaskStockReorderCheck, w.handleStockReorderCheck, w.stockReorderCheck != nil},
 		{TaskPerformanceDaily, w.handlePerformanceDaily, w.performanceDaily != nil},
 		{TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh, w.efficiencyNetworkRefresh != nil},
 		{TaskFleetReportsSchedule, w.handleFleetReportsSchedule, w.fleetReportsSchedule != nil},

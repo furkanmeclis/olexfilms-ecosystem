@@ -6220,6 +6220,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ledger movements of the active organization (TEC-1229)
+         * @description Needs `stock.read` reaching the active organization (404 otherwise). Every stock ledger movement recorded on the organization, landing on one of its locations or on the organization itself. Filters: `warehouse_uuid` (movements leaving or reaching a location of that warehouse), `type` (CSV of movement types), `product_uuid`, `actor_uuid`, `created_from` / `created_to` and `q` (barcode, SKU or product name). Sort keys: created_at (default -created_at), type, product. No prices.
+         */
+        get: operations["listStockMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/movements/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a movement list export (TEC-1229)
+         * @description stock.read. `query`: the movement list filters (warehouse_uuid, type, product_uuid, actor_uuid, created_from, created_to, q, sort). Resource `stock.movements`.
+         */
+        post: operations["requestStockMovementsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reorder-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reorder rules (min / reorder point / max) with their evaluation (TEC-1229)
+         * @description Needs `stock.read` and the warehouse module. The rules of the active organization, one per warehouse and product, each with its warehouse balance (available = on hand - reserved), level (ok, reorder, below_min, days_low) and suggested quantity. days_low uses the rule's warning_days and the latest stock forecast average. Sort keys: level (default), product, warehouse, available. No prices.
+         */
+        get: operations["listStockReorderRules"];
+        /**
+         * Create or replace the reorder rule of a warehouse and product (TEC-1229)
+         * @description Needs `stock.write` and the warehouse module. min_quantity <= reorder_point <= max_quantity; warning_days / cover_days 1..3650; at least one of min_quantity, reorder_point, max_quantity or warning_days. The hourly check notifies organization owners and warehouse roles (STOCK_REORDER_LOW) when the level leaves ok.
+         */
+        put: operations["putStockReorderRule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/reorder-rules/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a reorder rule (TEC-1229)
+         * @description Needs `stock.write` and the warehouse module.
+         */
+        delete: operations["deleteStockReorderRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/critical": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Critical stock (reorder rules whose level is not ok, TEC-1229)
+         * @description Same as GET /v1/stock/reorder-rules, only the rules at reorder, below_min or days_low. Mobile: /v1/mobile/panel/stock/critical.
+         */
+        get: operations["listStockCritical"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/locations/{uuid}/products": {
         parameters: {
             query?: never;
@@ -7157,9 +7264,49 @@ export interface paths {
         put?: never;
         /**
          * Approve a completed count and apply the resolutions
-         * @description Needs `warehouse.write`, `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN), and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; add_to_stock -> entry of an unexpected, unowned serial unit issued by this organization into its counted location (other organizations' units are refused); ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         * @description Needs `warehouse.write`, `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN), and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). With `partial: true` (TEC-1229) only the given lines are resolved and the count stays pending_review while a difference is open; a resolved line or one waiting for a recount cannot be resolved. In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; add_to_stock -> entry of an unexpected, unowned serial unit issued by this organization into its counted location (other organizations' units are refused); ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["approveStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/recount-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send difference lines back for a recount (TEC-1229)
+         * @description Needs `warehouse.write`. The count must be pending_review (409 COUNT_INVALID_STATUS); every line must be an unresolved difference (400 VALIDATION_ERROR). The lines get recount_status requested and cannot be resolved until recounted.
+         */
+        post: operations["requestStockCountRecount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the recounted values of a line (TEC-1229)
+         * @description Needs `warehouse.write`. The line must wait for a recount (409 COUNT_INVALID_STATUS otherwise). counted_quantity is 0 or 1 for a serial unit (location_uuid required when it is found and was expected in a location; counted_meters for a roll). The result is evaluated again; the first counted values stay in first_count.
+         */
+        post: operations["recountStockCountLine"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10475,6 +10622,46 @@ export interface paths {
          *     Needs `warehouse.write`. draft, in_progress or pending_review -> cancelled; no stock is changed. 409 COUNT_INVALID_STATUS otherwise.
          */
         post: operations["mobileCancelStockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/recount-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send difference lines back for a recount (TEC-1229)
+         * @description Mobile mirror of the panel route (same handler, permission and module gate). Needs `warehouse.write`. The count must be pending_review (409 COUNT_INVALID_STATUS); every line must be an unresolved difference (400 VALIDATION_ERROR). The lines get recount_status requested and cannot be resolved until recounted.
+         */
+        post: operations["mobileRequestStockCountRecount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the recounted values of a line (TEC-1229)
+         * @description Mobile mirror of the panel route (same handler, permission and module gate). Needs `warehouse.write`. The line must wait for a recount (409 COUNT_INVALID_STATUS otherwise). counted_quantity is 0 or 1 for a serial unit (location_uuid required when it is found and was expected in a location; counted_meters for a roll). The result is evaluated again; the first counted values stay in first_count.
+         */
+        post: operations["mobileRecountStockCountLine"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18488,7 +18675,7 @@ export interface paths {
         };
         /**
          * One report in the shared envelope
-         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent, orders.by_buyer, orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand reach only). orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). orders.by_buyer rows carry total / currency only with pricing.purchase.read or pricing.sale.read (else null and no total column). orders.inactive_buyers takes all_time=true instead of a period (dealers that never ordered). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN. TEC-1210 (envelope v2, backend/docs/reports-v2.md): compare=none|previous|year (default none; previous = the same number of days right before, 12m = the 12 months before; year = the same dates a year earlier; ignored by reports without a period and with all_time=true) fills period_info.previous_from / previous_to, series[].previous_total / delta_pct, points[].previous (time series by bucket index, the others by key) and kpis[].previous / delta_pct. Every series has total (null for the cards series). Summary reports put their cards into kpis[] (the cards series stays). Columns carry type (text, number, money, percent = ratio 0..1, date, datetime, duration, status, org, link), align, aggregate and currency; rows may carry _link and _status. New role reports: orders.fulfillment (orders.read; shipped / received series, preparation-time / open / overdue KPIs, rows per shipping warehouse), network.summary (organizations.read, subtree / brand reach; network services / orders / warranties / active dealers, rows per dealer), stock.movement (stock.read; serial units into / out of the warehouses, rows per warehouse).
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, orders.plotter_cut, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent, orders.by_buyer, orders.inactive_buyers, services.by_org (TEC-1090; subtree / brand reach only). orders.plotter_cut (TEC-1058, table): the order lines marked "sent plotter cut" of the orders shipped in the period (orders cancelled after shipping left out), seller or buyer in reach; series plotter_lines / plotter_quantity / plotter_meters are the monthly totals (point key = first day of the month), rows the month (YYYY-MM) x product breakdown (product_uuid, product, sku, unit_type, line_count, quantity, meters). orders.by_buyer rows carry total / currency only with pricing.purchase.read or pricing.sale.read (else null and no total column). orders.inactive_buyers takes all_time=true instead of a period (dealers that never ordered). Periodic reports take period (today (TEC-1072), 7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN. TEC-1210 (envelope v2, backend/docs/reports-v2.md): compare=none|previous|year (default none; previous = the same number of days right before, 12m = the 12 months before; year = the same dates a year earlier; ignored by reports without a period and with all_time=true) fills period_info.previous_from / previous_to, series[].previous_total / delta_pct, points[].previous (time series by bucket index, the others by key) and kpis[].previous / delta_pct. Every series has total (null for the cards series). Summary reports put their cards into kpis[] (the cards series stays). Columns carry type (text, number, money, percent = ratio 0..1, date, datetime, duration, status, org, link), align, aggregate and currency; rows may carry _link and _status. New role reports: orders.fulfillment (orders.read; shipped / received series, preparation-time / open / overdue KPIs, rows per shipping warehouse), network.summary (organizations.read, subtree / brand reach; network services / orders / warranties / active dealers, rows per dealer), stock.movement (stock.read; serial units into / out of the warehouses, rows per warehouse), stock.aging (TEC-1229, stock.read; stock on hand per product and warehouse bucketed by days since the last movement 0-30 / 30-60 / 60-90 / 90-180 / 180+; unit_price and stock_value only with pricing.purchase.read or pricing.sale.read).
          */
         get: operations["getReport"];
         put?: never;
@@ -24289,6 +24476,149 @@ export interface components {
             }[];
             /** Format: date-time */
             updated_at: string;
+            balance?: components["schemas"]["StockBalance"];
+        };
+        /** @description TEC-1229 stock view of a product in the listed scope (organization, warehouse or location). Quantities count pieces, rolls and fixed barcode pieces; meters are roll meters (decimal strings). available = on hand - reserved (active order reservations). incoming (in-transit warehouse transfers and shipped purchase orders) and quarantine (returned serial units in status quarantine, TEC-1226) are not on hand. No prices. */
+        StockBalance: {
+            /** Format: int64 */
+            on_hand_quantity: number;
+            on_hand_meters: string;
+            /** Format: int64 */
+            reserved_quantity: number;
+            reserved_meters: string;
+            /** Format: int64 */
+            available_quantity: number;
+            available_meters: string;
+            /** Format: int64 */
+            incoming_quantity: number;
+            incoming_meters: string;
+            /** Format: int64 */
+            quarantine_quantity: number;
+            quarantine_meters: string;
+        };
+        StockMovementRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        StockMovementEnd: {
+            /** @enum {string} */
+            owner_type: "warehouse_location" | "organization" | "service" | "trash";
+            status: string | null;
+            location: null | components["schemas"]["StockMovementRef"];
+            warehouse: null | components["schemas"]["StockMovementRef"];
+            organization: null | components["schemas"]["StockMovementRef"];
+        };
+        StockMovementRow: {
+            /** Format: uuid */
+            uuid: string;
+            type: string;
+            quantity_delta: number;
+            meters_delta: string;
+            unit: {
+                /** Format: uuid */
+                uuid: string;
+                barcode: string;
+                /** @enum {string} */
+                unit_kind: "serial" | "fixed";
+            };
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: string;
+            };
+            from: null | components["schemas"]["StockMovementEnd"];
+            to: null | components["schemas"]["StockMovementEnd"];
+            actor: null | components["schemas"]["StockMovementRef"];
+            reference_type: string | null;
+            reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeStockMovementPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockMovementRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockReorderRuleInput: {
+            /** Format: uuid */
+            warehouse_uuid: string;
+            /** Format: uuid */
+            product_uuid: string;
+            min_quantity: number;
+            reorder_point?: number | null;
+            max_quantity?: number | null;
+            warning_days?: number | null;
+            cover_days?: number | null;
+        };
+        StockReorderRule: {
+            /** Format: uuid */
+            uuid: string;
+            warehouse: {
+                /** Format: uuid */
+                uuid: string;
+                code: string;
+                name: string;
+            };
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+                unit_type: string;
+                uses_fixed_barcode: boolean;
+                active: boolean;
+                category: {
+                    /** Format: uuid */
+                    uuid: string;
+                    name: string;
+                };
+            };
+            min_quantity: number;
+            reorder_point: number | null;
+            max_quantity: number | null;
+            warning_days: number | null;
+            cover_days: number | null;
+            balance: components["schemas"]["StockBalance"];
+            /** @enum {string} */
+            level: "ok" | "reorder" | "below_min" | "days_low";
+            avg_daily: string | null;
+            days_left: string | null;
+            /** Format: int64 */
+            suggested_quantity: number;
+            /** @enum {string} */
+            alert_state: "ok" | "low";
+            /** Format: date-time */
+            alerted_at: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockReorderRule: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockReorderRule"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockReorderRulePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockReorderRule"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockUnitHistory: {
             /** @enum {boolean} */
@@ -24796,12 +25126,38 @@ export interface components {
             note: string | null;
             /** Format: date-time */
             resolved_at: string | null;
+            /**
+             * @description TEC-1229 recount state.
+             * @enum {string|null}
+             */
+            recount_status: "requested" | "recounted" | null;
+            recount_rounds: number;
+            /** Format: date-time */
+            recounted_at: string | null;
+            /** @description The first counted values of a recounted line. */
+            first_count: null | {
+                counted_quantity: number;
+                counted_meters: string | null;
+                counted_location: null | components["schemas"]["StockCountLocation"];
+                result: string;
+            };
+        };
+        StockCountRecountRequestInput: {
+            line_uuids: string[];
+        };
+        StockCountRecountInput: {
+            counted_quantity: number;
+            counted_meters?: string | null;
+            /** Format: uuid */
+            location_uuid?: string | null;
         };
         StockCountReport: {
             count: components["schemas"]["StockCount"];
             lines: components["schemas"]["StockCountLine"][];
         };
         StockCountApproveInput: {
+            /** @description TEC-1229 partial approval (default false). */
+            partial?: boolean;
             resolutions: {
                 /** Format: uuid */
                 line_uuid: string;
@@ -31488,6 +31844,37 @@ export interface components {
             groups: components["schemas"]["EodGroupTotal"][];
             types: components["schemas"]["EodTypeTotal"][];
             products: components["schemas"]["EodProductLine"][];
+            /** @description TEC-1229 opening (period start) and closing (period end) on-hand stock per product of the scope; empty on reports written before. */
+            balances: components["schemas"]["EodBalance"][];
+            /** @description TEC-1229 open work when the report was written (null on older reports). */
+            pending: null | components["schemas"]["EodPending"];
+        };
+        EodBalance: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            product_name: string;
+            /** Format: int64 */
+            opening_quantity: number;
+            opening_meters: string;
+            /** Format: int64 */
+            closing_quantity: number;
+            closing_meters: string;
+            /** Format: int64 */
+            change_quantity: number;
+            change_meters: string;
+        };
+        EodPending: {
+            /** Format: date-time */
+            as_of: string;
+            /** Format: int64 */
+            open_transfers: number;
+            /** Format: int64 */
+            unplaced_entries: number;
+            /** Format: int64 */
+            pending_counts: number;
+            /** Format: int64 */
+            preparing_orders: number;
         };
         EodReport: {
             /** Format: uuid */
@@ -45550,6 +45937,186 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listStockMovements: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                warehouse_uuid?: string;
+                /** @description CSV of movement types. */
+                type?: string;
+                product_uuid?: string;
+                actor_uuid?: string;
+                created_from?: string;
+                created_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Movement page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockMovementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestStockMovementsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockReorderRules: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                warehouse_uuid?: string;
+                product_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReorderRulePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putStockReorderRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockReorderRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Rule with its evaluation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReorderRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteStockReorderRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockCritical: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                warehouse_uuid?: string;
+                product_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Critical rule page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockReorderRulePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listStockLocationProducts: {
         parameters: {
             query?: {
@@ -47283,6 +47850,72 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    requestStockCountRecount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountRecountRequestInput"];
+            };
+        };
+        responses: {
+            /** @description Count report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    recountStockCountLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountRecountInput"];
+            };
+        };
+        responses: {
+            /** @description Count report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["BadRequest"];
         };
     };
     cancelStockCount: {
@@ -53041,6 +53674,80 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileRequestStockCountRecount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountRecountRequestInput"];
+            };
+        };
+        responses: {
+            /** @description Count report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileRecountStockCountLine: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockCountRecountInput"];
+            };
+        };
+        responses: {
+            /** @description Count report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockCountReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["BadRequest"];
             426: components["responses"]["MobileApiVersionUnsupported"];
         };
     };

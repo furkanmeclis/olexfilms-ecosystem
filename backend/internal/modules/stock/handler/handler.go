@@ -225,3 +225,24 @@ func (h *Handler) LocationStock(w http.ResponseWriter, r *http.Request) {
 		return h.svc.LocationStock(r.Context(), f, id, in)
 	})
 }
+
+// Movements serves GET /v1/stock/movements (TEC-1229): the ledger
+// movements of the active organization with the list filters.
+func (h *Handler) Movements(w http.ResponseWriter, r *http.Request) {
+	f, ok := filterFrom(w, r)
+	if !ok {
+		return
+	}
+	in, err := stockusecase.ParseMovementFilter(r.URL.Query())
+	if err != nil {
+		writeQueryError(w, r, err)
+		return
+	}
+	org := orgctx.MustScope(r.Context())
+	items, total, err := h.svc.Movements(r.Context(), f, org.InternalID, org.BrandID, in)
+	if err != nil {
+		writeQueryError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
+}
