@@ -168,5 +168,14 @@
   "step.backorder_opened": "Bakiye sipariş olarak açıldı",
   "step.discrepancy_reported": "Teslimde fark bildirildi",
   "step.discrepancy_resolved": "Fark kaydı kapatıldı",
-  "receipt.reason_placeholder": "Örn. kolide yok, ezik"
+  "receipt.reason_placeholder": "Örn. kolide yok, ezik",
+  "step.schedule_updated": "Öncelik / termin değişti",
+  "step.claimed": "İşi üstlendi",
+  "step.claim_taken_over": "İşi devraldı",
+  "step.claim_released": "İşi bıraktı",
+  "queue.priority_normal": "Normal",
+  "queue.priority_urgent": "Acil",
+  "queue.due": "Termin: {{date}}",
+  "queue.no_due_date": "Termin yok",
+  "queue.previous_picker": "Önceki: {{name}}"
 }

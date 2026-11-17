@@ -170,3 +170,21 @@ Aynı handler ve usecase'ler, aynı izinler ve `RequireFeature(warehouse)`:
 - `POST .../label-prints` (zaman çizelgesi adımı).
 - `GET .../undo-check`, `POST .../undo` (`stock.adjust` + step-up).
 - `GET /v1/mobile/warehouse/suppliers` (`warehouse.read`).
+
+## 6. Durum güncellemesi (TEC-1228)
+
+Mobil depo sipariş ekranı şu uçları panel aynası (`/v1/mobile/panel/orders/...`,
+allowlist'te `orders` öneki zaten var) üzerinden kullanır; yeni allowlist girdisi
+gerekmedi:
+
+- `GET /v1/orders?sort=queue&picker=me`: iş kuyruğu (önce acil, sonra termin)
+  ve "benim işlerim".
+- `POST` / `DELETE /v1/orders/{uuid}/claim`: işi üstlenme, devralma, bırakma.
+- `POST /v1/orders/{uuid}/transitions`: sevkte koli/desi/ağırlık; iptal,
+  iptal talebi ve "iptal ediliyor → iptal edildi (mal geri geldi)" (web ile
+  aynı `available_transitions` kuralları).
+- `GET /v1/orders/{uuid}/documents/shipping`, `GET .../order-slip.pdf`,
+  `GET .../documents/receipt`: paylaşım (iOS Share, Android expo-sharing).
+- `POST /v1/orders/{uuid}/shipping-document`: irsaliyeyi yeniden üretme.
+- `POST /v1/orders/{uuid}/receipt-document`: alıcının teslim belgesi
+  fotoğrafı (kamera, JPEG).

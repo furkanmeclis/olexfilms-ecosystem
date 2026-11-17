@@ -168,5 +168,14 @@
   "step.backorder_opened": "Ouverte comme reliquat",
   "step.discrepancy_reported": "Écart de réception signalé",
   "step.discrepancy_resolved": "Écart résolu",
-  "receipt.reason_placeholder": "ex. absent du colis, cabossé"
+  "receipt.reason_placeholder": "ex. absent du colis, cabossé",
+  "step.schedule_updated": "Priorité / échéance modifiée",
+  "step.claimed": "A pris le travail",
+  "step.claim_taken_over": "A repris le travail",
+  "step.claim_released": "A libéré le travail",
+  "queue.priority_normal": "Normale",
+  "queue.priority_urgent": "Urgente",
+  "queue.due": "Échéance : {{date}}",
+  "queue.no_due_date": "Sans échéance",
+  "queue.previous_picker": "Avant : {{name}}"
 }

@@ -128,3 +128,12 @@ test('stepParts: line changes and plotter marks of the timeline', () => {
   );
   assert.deepEqual(stepParts({ action: 'approved' }), []);
 });
+
+test('TEC-1228: work queue steps', () => {
+  assert.equal(actionKey('claim_taken_over'), 'step.claim_taken_over');
+  assert.deepEqual(stepParts({ action: 'schedule_updated', priority: 'urgent', due_date: '2026-12-01' }), [
+    { key: 'queue.priority_urgent' },
+    { key: 'queue.due', params: { date: '2026-12-01' } },
+  ]);
+  assert.deepEqual(stepParts({ action: 'claim_released', previous_picker: 'Ayşe' }), [{ key: 'queue.previous_picker', params: { name: 'Ayşe' } }]);
+});

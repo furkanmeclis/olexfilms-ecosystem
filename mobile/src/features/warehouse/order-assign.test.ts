@@ -9,6 +9,7 @@ import {
   fixedSuggestionUnits,
   isCovered,
   missingOf,
+  parseShipment,
 } from './order-assign.ts';
 
 const roll = (uuid: string, meters: string, assigned: string) => ({
@@ -89,5 +90,15 @@ describe('TEC-1048: fixed barcode lines are prepared by quantity', () => {
       { unit_uuid: 'f2', quantity: 1 },
     ]);
     assert.deepEqual(fixedSuggestionUnits([], 5), []);
+  });
+});
+
+describe('TEC-1228 ship sheet', () => {
+  it('parses the shipment details', () => {
+    assert.deepEqual(parseShipment('', '', ''), {});
+    assert.deepEqual(parseShipment('3', '12,5', '7.25'), { package_count: 3, desi: 12.5, weight_kg: 7.25 });
+    assert.equal(parseShipment('0', '', ''), null);
+    assert.equal(parseShipment('2', '1.234', ''), null);
+    assert.equal(parseShipment('x', '', ''), null);
   });
 });

@@ -168,5 +168,14 @@
   "step.backorder_opened": "作为补发订单创建",
   "step.discrepancy_reported": "已报告收货差异",
   "step.discrepancy_resolved": "差异已解决",
-  "receipt.reason_placeholder": "例如：箱内没有、压痕"
+  "receipt.reason_placeholder": "例如：箱内没有、压痕",
+  "step.schedule_updated": "优先级/截止日期已更改",
+  "step.claimed": "领取了任务",
+  "step.claim_taken_over": "接手了任务",
+  "step.claim_released": "释放了任务",
+  "queue.priority_normal": "普通",
+  "queue.priority_urgent": "加急",
+  "queue.due": "截止：{{date}}",
+  "queue.no_due_date": "无截止日期",
+  "queue.previous_picker": "之前：{{name}}"
 }
