@@ -10,7 +10,7 @@
 -- person approves; the creator never approves such a document.
 --
 -- A returned serial unit enters quarantine when its return is received
--- (ledger status quarantine, 000184). The receiving organization inspects it:
+-- (ledger status quarantine, 000191). The receiving organization inspects it:
 -- back to stock (optionally into a bin), scrap (an adjustment document) or
 -- back to the supplier (external_outbound). Each decision is one
 -- return_inspections row.
