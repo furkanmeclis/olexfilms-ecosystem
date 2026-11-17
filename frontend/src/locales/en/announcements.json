@@ -58,5 +58,10 @@
   "report.empty": "Nobody has read it yet.",
   "report.reader": "Reader",
   "report.email": "Email",
-  "report.read_at": "Read at"
+  "report.read_at": "Read at",
+  "detail.summary": "Announcement details",
+  "detail.not_found": "Announcement not found.",
+  "detail.author": "Author",
+  "detail.author_organization": "Author organization",
+  "detail.read_at": "Read at"
 }

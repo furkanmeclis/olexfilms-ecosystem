@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Ocupación de la red hoy",
   "occupancy.widget.description": "Reservas de hoy frente a la capacidad de su red.",
   "occupancy.widget.open": "Abrir ocupación",
-  "occupancy.widget.breakdown": "{{organizations}} organizaciones · {{full}} completas · {{high}} con alta ocupación"
+  "occupancy.widget.breakdown": "{{organizations}} organizaciones · {{full}} completas · {{high}} con alta ocupación",
+  "detail.summary": "Detalles de la cita",
+  "detail.not_found": "Cita no encontrada.",
+  "detail.loading": "Cargando la cita...",
+  "detail.minutes": "{{minutes}} min",
+  "detail.open": "Abrir la página de detalle",
+  "fields.starts_at": "Inicio",
+  "fields.ends_at": "Fin",
+  "fields.estimated_minutes": "Duración estimada",
+  "fields.organization": "Organización",
+  "fields.service": "Servicio",
+  "fields.lead": "Cliente potencial",
+  "fields.source": "Origen",
+  "fields.created_by": "Creado por",
+  "fields.created_at": "Creado",
+  "fields.updated_at": "Actualizado",
+  "source.fleet_plan": "Plan de flota"
 }

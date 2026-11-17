@@ -58,5 +58,10 @@
   "report.empty": "Ще ніхто не прочитав.",
   "report.reader": "Читач",
   "report.email": "Ел. пошта",
-  "report.read_at": "Час прочитання"
+  "report.read_at": "Час прочитання",
+  "detail.summary": "Дані оголошення",
+  "detail.not_found": "Оголошення не знайдено.",
+  "detail.author": "Автор",
+  "detail.author_organization": "Організація автора",
+  "detail.read_at": "Прочитано"
 }

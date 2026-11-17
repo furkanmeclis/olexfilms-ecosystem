@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Network occupancy today",
   "occupancy.widget.description": "Today's bookings against the capacity of your network.",
   "occupancy.widget.open": "Open occupancy",
-  "occupancy.widget.breakdown": "{{organizations}} organizations · {{full}} full · {{high}} busy"
+  "occupancy.widget.breakdown": "{{organizations}} organizations · {{full}} full · {{high}} busy",
+  "detail.summary": "Appointment details",
+  "detail.not_found": "Appointment not found.",
+  "detail.loading": "Loading appointment...",
+  "detail.minutes": "{{minutes}} min",
+  "detail.open": "Open details page",
+  "fields.starts_at": "Starts",
+  "fields.ends_at": "Ends",
+  "fields.estimated_minutes": "Estimated duration",
+  "fields.organization": "Organization",
+  "fields.service": "Service",
+  "fields.lead": "Lead",
+  "fields.source": "Source",
+  "fields.created_by": "Created by",
+  "fields.created_at": "Created",
+  "fields.updated_at": "Updated",
+  "source.fleet_plan": "Fleet plan"
 }

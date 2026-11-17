@@ -58,5 +58,10 @@
   "report.empty": "لم يقرأه أحد بعد.",
   "report.reader": "القارئ",
   "report.email": "البريد الإلكتروني",
-  "report.read_at": "وقت القراءة"
+  "report.read_at": "وقت القراءة",
+  "detail.summary": "تفاصيل الإعلان",
+  "detail.not_found": "لم يتم العثور على الإعلان.",
+  "detail.author": "الكاتب",
+  "detail.author_organization": "مؤسسة الكاتب",
+  "detail.read_at": "تاريخ القراءة"
 }

@@ -58,5 +58,10 @@
   "report.empty": "还没有人阅读。",
   "report.reader": "阅读者",
   "report.email": "电子邮件",
-  "report.read_at": "阅读时间"
+  "report.read_at": "阅读时间",
+  "detail.summary": "公告详情",
+  "detail.not_found": "未找到公告。",
+  "detail.author": "作者",
+  "detail.author_organization": "作者所属组织",
+  "detail.read_at": "阅读时间"
 }

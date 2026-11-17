@@ -772,7 +772,7 @@ export function AnnouncementsPage({ slug }: { slug: string }) {
             <CardTitle>{t("announcements.manage.title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <AnnouncementsManageTable onOpen={setSelectedUuid} />
+            <AnnouncementsManageTable onOpen={setSelectedUuid} slug={slug} />
           </CardContent>
         </Card>
       ) : null}

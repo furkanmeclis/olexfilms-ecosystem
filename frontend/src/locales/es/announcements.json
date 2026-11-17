@@ -58,5 +58,10 @@
   "report.empty": "Nadie lo ha leído todavía.",
   "report.reader": "Lector",
   "report.email": "Correo electrónico",
-  "report.read_at": "Leído el"
+  "report.read_at": "Leído el",
+  "detail.summary": "Detalles del anuncio",
+  "detail.not_found": "Anuncio no encontrado.",
+  "detail.author": "Autor",
+  "detail.author_organization": "Organización del autor",
+  "detail.read_at": "Leído el"
 }

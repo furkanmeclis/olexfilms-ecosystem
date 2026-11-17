@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Πληρότητα δικτύου σήμερα",
   "occupancy.widget.description": "Οι σημερινές κρατήσεις σε σχέση με τη χωρητικότητα του δικτύου σας.",
   "occupancy.widget.open": "Άνοιγμα πληρότητας",
-  "occupancy.widget.breakdown": "{{organizations}} οργανισμοί · {{full}} πλήρεις · {{high}} με υψηλή πληρότητα"
+  "occupancy.widget.breakdown": "{{organizations}} οργανισμοί · {{full}} πλήρεις · {{high}} με υψηλή πληρότητα",
+  "detail.summary": "Στοιχεία ραντεβού",
+  "detail.not_found": "Το ραντεβού δεν βρέθηκε.",
+  "detail.loading": "Φόρτωση ραντεβού...",
+  "detail.minutes": "{{minutes}} λεπτά",
+  "detail.open": "Άνοιγμα σελίδας λεπτομερειών",
+  "fields.starts_at": "Έναρξη",
+  "fields.ends_at": "Λήξη",
+  "fields.estimated_minutes": "Εκτιμώμενη διάρκεια",
+  "fields.organization": "Οργανισμός",
+  "fields.service": "Υπηρεσία",
+  "fields.lead": "Δυνητικός πελάτης",
+  "fields.source": "Πηγή",
+  "fields.created_by": "Δημιουργήθηκε από",
+  "fields.created_at": "Δημιουργήθηκε",
+  "fields.updated_at": "Ενημερώθηκε",
+  "source.fleet_plan": "Πλάνο στόλου"
 }

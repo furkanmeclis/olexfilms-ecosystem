@@ -58,5 +58,10 @@
   "report.empty": "Henüz okuyan yok.",
   "report.reader": "Okuyan",
   "report.email": "E-posta",
-  "report.read_at": "Okunma zamanı"
+  "report.read_at": "Okunma zamanı",
+  "detail.summary": "Duyuru bilgileri",
+  "detail.not_found": "Duyuru bulunamadı.",
+  "detail.author": "Yazar",
+  "detail.author_organization": "Yazarın organizasyonu",
+  "detail.read_at": "Okunma"
 }

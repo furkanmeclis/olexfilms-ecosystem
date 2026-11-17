@@ -58,5 +58,10 @@
   "report.empty": "Δεν το έχει διαβάσει κανείς ακόμη.",
   "report.reader": "Αναγνώστης",
   "report.email": "Email",
-  "report.read_at": "Διαβάστηκε στις"
+  "report.read_at": "Διαβάστηκε στις",
+  "detail.summary": "Στοιχεία ανακοίνωσης",
+  "detail.not_found": "Η ανακοίνωση δεν βρέθηκε.",
+  "detail.author": "Συντάκτης",
+  "detail.author_organization": "Οργανισμός συντάκτη",
+  "detail.read_at": "Αναγνώστηκε"
 }

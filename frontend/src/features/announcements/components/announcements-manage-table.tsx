@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
@@ -29,7 +30,8 @@ export const ANNOUNCEMENTS_MANAGE_PERSIST_KEY =
 
 const ANNOUNCEMENT_STATUSES = ["draft", "published", "archived"] as const;
 
-const STATUS_TONE = {
+/** StatusChip tone per announcement status (list and detail page). */
+export const STATUS_TONE = {
   draft: "warning",
   published: "success",
   archived: "default",
@@ -42,9 +44,12 @@ const STATUS_TONE = {
  */
 export function AnnouncementsManageTable({
   onOpen,
+  slug,
 }: {
   /** Opens a published announcement in the reader detail. */
   onOpen: (uuid: string) => void;
+  /** Tenant slug of the title link (default: the tenant shell's slug). */
+  slug?: string;
 }) {
   const { t, format } = useLocale();
   const qc = useQueryClient();
@@ -95,7 +100,12 @@ export function AnnouncementsManageTable({
         cell: ({ row }) => (
           <span className="flex items-center gap-2 font-medium">
             {row.original.pinned ? <Pin className="size-3.5" /> : null}
-            {row.original.title}
+            {/* TEC-1218: the title opens the announcement detail page. */}
+            <EntityLink
+              kind="announcement"
+              entity={{ uuid: row.original.uuid, name: row.original.title }}
+              slug={slug}
+            />
           </span>
         ),
       }),
@@ -206,7 +216,7 @@ export function AnnouncementsManageTable({
         },
       }),
     ],
-    [archiveOne, busy, format, onOpen, pinOne, publishOne, t],
+    [archiveOne, busy, format, onOpen, pinOne, publishOne, slug, t],
   );
 
   const listState = useServerListState({

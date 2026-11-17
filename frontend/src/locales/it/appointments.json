@@ -134,5 +134,21 @@
   "occupancy.widget.title": "Occupazione della rete oggi",
   "occupancy.widget.description": "Prenotazioni di oggi rispetto alla capacità della tua rete.",
   "occupancy.widget.open": "Apri occupazione",
-  "occupancy.widget.breakdown": "{{organizations}} organizzazioni · {{full}} complete · {{high}} molto occupate"
+  "occupancy.widget.breakdown": "{{organizations}} organizzazioni · {{full}} complete · {{high}} molto occupate",
+  "detail.summary": "Dettagli dell'appuntamento",
+  "detail.not_found": "Appuntamento non trovato.",
+  "detail.loading": "Caricamento appuntamento...",
+  "detail.minutes": "{{minutes}} min",
+  "detail.open": "Apri la pagina di dettaglio",
+  "fields.starts_at": "Inizio",
+  "fields.ends_at": "Fine",
+  "fields.estimated_minutes": "Durata stimata",
+  "fields.organization": "Organizzazione",
+  "fields.service": "Servizio",
+  "fields.lead": "Lead",
+  "fields.source": "Origine",
+  "fields.created_by": "Creato da",
+  "fields.created_at": "Creato",
+  "fields.updated_at": "Aggiornato",
+  "source.fleet_plan": "Piano flotta"
 }
