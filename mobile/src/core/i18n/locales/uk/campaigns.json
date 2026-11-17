@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "Назва кампанії",
+  "filter_all": "Усі",
+  "count_results": "Результати: {{count}}",
+  "empty_filtered": "Немає кампаній за фільтром",
+  "empty_mobile": "Кампанії створюються майстром у вебпанелі; тут ви стежите за ними й затверджуєте їх.",
+  "recipients_count": "Отримувачів: {{count}}",
+  "scheduled_on": "Заплановано: {{date}}",
+  "submit_body": "Надіслати кампанію на затвердження? Після затвердження її можна буде запланувати.",
+  "cancel_body": "Скасувати кампанію? Цю дію не можна скасувати.",
+  "detail.summary": "Підсумок",
+  "detail.not_scheduled": "Не заплановано",
+  "detail.started_at": "Розпочато",
+  "detail.finished_at": "Завершено",
+  "detail.timezone": "Часовий пояс",
+  "detail.delivery": "Доставка",
+  "detail.contents": "Вміст",
+  "approvals.reason_placeholder": "Вкажіть причину рішення"
 }

@@ -23,5 +23,10 @@
   "digits": "Цифри",
   "digits.arab": "Арабсько-індійські цифри (٠١٢٣)",
   "digits.latn": "Латинські цифри (0123)",
-  "switch_organization": "Змінити організацію"
+  "switch_organization": "Змінити організацію",
+  "ota_channel": "Канал оновлень",
+  "ota_runtime": "Версія runtime",
+  "ota_update_id": "ID оновлення",
+  "ota_embedded": "Вбудовано в застосунок",
+  "ota_off": "Вимк. (розробка)"
 }

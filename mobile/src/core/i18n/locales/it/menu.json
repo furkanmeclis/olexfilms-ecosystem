@@ -28,5 +28,18 @@
   "group.other": "Altro",
   "group.account": "Account e impostazioni",
   "measure": "Misurazione",
-  "accounting_queue": "Coda contabile"
+  "accounting_queue": "Coda contabile",
+  "catalog": "Catalogo",
+  "transfers": "Trasferimenti",
+  "certificates": "Certificati",
+  "pricing": "Prezzi",
+  "occupancy": "Occupazione degli appuntamenti",
+  "performance": "Prestazioni",
+  "measurements": "Misurazioni",
+  "fleets": "Flotte",
+  "service_subscriptions": "Abbonamenti ai servizi",
+  "staff": "Personale",
+  "quick_sale": "Vendita rapida",
+  "sale_prices": "I miei prezzi di vendita",
+  "purchases": "Acquisti"
 }

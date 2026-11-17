@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Ankündigungen",
+  "empty": "Noch keine Ankündigungen",
+  "empty_unread": "Sie haben alles gelesen",
+  "filter.all": "Alle",
+  "filter.unread": "Ungelesen",
+  "filter.unread_count": "Ungelesen ({{count}})",
+  "pinned": "Angeheftet",
+  "expires": "Gültig bis {{date}}"
+}

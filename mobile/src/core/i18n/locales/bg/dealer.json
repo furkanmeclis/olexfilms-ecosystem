@@ -280,5 +280,18 @@
   "contract.sign_hint": "Кодът на клиента и двата подписа засега се правят в уеб панела. Отворете връзката или сканирайте QR кода с таблет.",
   "contract.qr_hint": "Сканирайте на таблет с отворен панел; стъпката на договора се отваря.",
   "contract.required_title": "Нужен е договор",
-  "contract.required_body": "Договорът за приемане трябва да бъде подписан от клиента и персонала, преди услугата да продължи. Използвайте картата на договора в детайлите на услугата."
+  "contract.required_body": "Договорът за приемане трябва да бъде подписан от клиента и персонала, преди услугата да продължи. Използвайте картата на договора в детайлите на услугата.",
+  "phone_none": "Няма записан телефонен номер",
+  "placeholder_first_name": "Иван",
+  "placeholder_surname": "Петров",
+  "placeholder_company_name": "Пример Ауто ЕООД",
+  "placeholder_tax_office": "Център",
+  "placeholder_notes": "Бележка за автомобила или работата",
+  "placeholder_cancel_reason": "напр. Клиентът се отказа",
+  "placeholder_quantity": "1 бр.",
+  "placeholder_meters": "1,5 м",
+  "applied_by": "Положено от",
+  "related.warranties": "Гаранции",
+  "related.appointments": "Часове",
+  "related.measurements": "Измервания"
 }

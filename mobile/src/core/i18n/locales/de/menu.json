@@ -28,5 +28,18 @@
   "group.other": "Weiteres",
   "group.account": "Konto und Einstellungen",
   "measure": "Messen",
-  "accounting_queue": "Buchhaltungs-Warteschlange"
+  "accounting_queue": "Buchhaltungs-Warteschlange",
+  "catalog": "Katalog",
+  "transfers": "Umlagerungen",
+  "certificates": "Zertifikate",
+  "pricing": "Preise",
+  "occupancy": "Terminauslastung",
+  "performance": "Leistung",
+  "measurements": "Messungen",
+  "fleets": "Flotten",
+  "service_subscriptions": "Service-Abonnements",
+  "staff": "Personal",
+  "quick_sale": "Schnellverkauf",
+  "sale_prices": "Meine Verkaufspreise",
+  "purchases": "Einkäufe"
 }

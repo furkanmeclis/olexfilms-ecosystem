@@ -114,5 +114,13 @@
   "source.mcp": "Client MCP",
   "source.panel": "Chat del pannello",
   "source.portal": "Chat del portale",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "AAAA-MM-GG",
+  "card.placeholder_time": "HH:MM",
+  "card.placeholder_value": "Inserisci un valore",
+  "history.delete_hint": "Tieni premuto per eliminare",
+  "history.messages": "{{count}} messaggi",
+  "approvals.filter_all": "Tutte",
+  "approvals.confirm_body": "La modifica proposta verrà applicata a tuo nome.",
+  "approvals.reject_body": "La proposta verrà rifiutata e non verrà salvato nulla."
 }

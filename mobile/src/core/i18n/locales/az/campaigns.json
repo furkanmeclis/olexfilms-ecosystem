@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "Kampaniyanın adı",
+  "filter_all": "Hamısı",
+  "count_results": "Nəticələr: {{count}}",
+  "empty_filtered": "Filtrə uyğun kampaniya yoxdur",
+  "empty_mobile": "Kampaniyalar veb paneldəki sehrbazla yaradılır; burada onları izləyir və təsdiqləyirsiniz.",
+  "recipients_count": "{{count}} alıcı",
+  "scheduled_on": "Planlaşdırılıb: {{date}}",
+  "submit_body": "Kampaniya təsdiqə göndərilsin? Təsdiqdən sonra planlaşdırıla bilər.",
+  "cancel_body": "Kampaniya ləğv edilsin? Bunu geri qaytarmaq olmaz.",
+  "detail.summary": "Xülasə",
+  "detail.not_scheduled": "Planlaşdırılmayıb",
+  "detail.started_at": "Başlayıb",
+  "detail.finished_at": "Bitib",
+  "detail.timezone": "Saat qurşağı",
+  "detail.delivery": "Çatdırılma",
+  "detail.contents": "Məzmun",
+  "approvals.reason_placeholder": "Qərarınızın səbəbini yazın"
 }

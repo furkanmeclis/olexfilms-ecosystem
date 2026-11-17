@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Объявления",
+  "empty": "Объявлений пока нет",
+  "empty_unread": "Вы всё прочитали",
+  "filter.all": "Все",
+  "filter.unread": "Непрочитанные",
+  "filter.unread_count": "Непрочитанные ({{count}})",
+  "pinned": "Закреплено",
+  "expires": "Действует до {{date}}"
+}

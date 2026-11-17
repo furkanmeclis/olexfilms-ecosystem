@@ -280,5 +280,18 @@
   "contract.sign_hint": "Le code client et les deux signatures se font pour l’instant sur le panneau web. Ouvrez le lien ou scannez le QR code sur une tablette.",
   "contract.qr_hint": "Scannez-le sur une tablette connectée au panneau ; l’étape du contrat s’ouvre.",
   "contract.required_title": "Contrat requis",
-  "contract.required_body": "Le contrat de réception doit être signé par le client et le personnel avant que le service avance. Utilisez la carte du contrat dans le détail du service."
+  "contract.required_body": "Le contrat de réception doit être signé par le client et le personnel avant que le service avance. Utilisez la carte du contrat dans le détail du service.",
+  "phone_none": "Aucun numéro de téléphone enregistré",
+  "placeholder_first_name": "Jean",
+  "placeholder_surname": "Dupont",
+  "placeholder_company_name": "Auto Exemple SARL",
+  "placeholder_tax_office": "Centre-ville",
+  "placeholder_notes": "Une note sur le véhicule ou le travail",
+  "placeholder_cancel_reason": "ex. Le client a changé d'avis",
+  "placeholder_quantity": "1 pce",
+  "placeholder_meters": "1,5 m",
+  "applied_by": "Posé par",
+  "related.warranties": "Garanties",
+  "related.appointments": "Rendez-vous",
+  "related.measurements": "Mesures"
 }

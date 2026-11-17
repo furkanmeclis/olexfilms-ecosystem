@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "اسم الحملة",
+  "filter_all": "الكل",
+  "count_results": "النتائج: {{count}}",
+  "empty_filtered": "لا توجد حملة تطابق عامل التصفية",
+  "empty_mobile": "تُنشأ الحملات بالمعالج في لوحة الويب؛ وهنا تتابعها وتوافق عليها.",
+  "recipients_count": "{{count}} مستلم",
+  "scheduled_on": "مجدولة: {{date}}",
+  "submit_body": "إرسال الحملة للموافقة؟ يمكن جدولتها بعد الموافقة.",
+  "cancel_body": "إلغاء الحملة؟ لا يمكن التراجع عن ذلك.",
+  "detail.summary": "الملخص",
+  "detail.not_scheduled": "غير مجدولة",
+  "detail.started_at": "بدأت",
+  "detail.finished_at": "انتهت",
+  "detail.timezone": "المنطقة الزمنية",
+  "detail.delivery": "الإرسال",
+  "detail.contents": "المحتوى",
+  "approvals.reason_placeholder": "اكتب سبب قرارك"
 }

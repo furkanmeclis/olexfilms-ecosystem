@@ -280,5 +280,18 @@
   "contract.sign_hint": "يتم رمز العميل والتوقيعان حاليًا في لوحة الويب. افتح الرابط أو امسح رمز QR على جهاز لوحي.",
   "contract.qr_hint": "امسحه على جهاز لوحي مسجّل الدخول إلى اللوحة؛ تُفتح خطوة العقد.",
   "contract.required_title": "العقد مطلوب",
-  "contract.required_body": "يجب أن يوقّع العميل والموظف عقد استلام المركبة قبل متابعة الخدمة. استخدم بطاقة العقد في تفاصيل الخدمة."
+  "contract.required_body": "يجب أن يوقّع العميل والموظف عقد استلام المركبة قبل متابعة الخدمة. استخدم بطاقة العقد في تفاصيل الخدمة.",
+  "phone_none": "لا يوجد رقم هاتف مسجّل",
+  "placeholder_first_name": "أحمد",
+  "placeholder_surname": "علي",
+  "placeholder_company_name": "شركة أوتو المثال",
+  "placeholder_tax_office": "وسط المدينة",
+  "placeholder_notes": "ملاحظة عن المركبة أو العمل",
+  "placeholder_cancel_reason": "مثال: غيّر العميل رأيه",
+  "placeholder_quantity": "1 قطعة",
+  "placeholder_meters": "1.5 م",
+  "applied_by": "طبّقه",
+  "related.warranties": "الضمانات",
+  "related.appointments": "المواعيد",
+  "related.measurements": "القياسات"
 }

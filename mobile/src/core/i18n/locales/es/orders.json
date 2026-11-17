@@ -122,5 +122,20 @@
   "supplement.hint": "El distribuidor y el almacén vienen del pedido principal. Añada productos desde el catálogo; se admiten líneas de regalo.",
   "supplement.leave": "Salir del envío complementario",
   "supplement.replace_cart_title": "¿Vaciar el carrito?",
-  "supplement.replace_cart_body": "El carrito tiene {{n}} productos. Un envío complementario empieza con el carrito vacío."
+  "supplement.replace_cart_body": "El carrito tiene {{n}} productos. Un envío complementario empieza con el carrito vacío.",
+  "new_title": "Nuevo pedido",
+  "lines": "Productos: {{count}}",
+  "browse_catalog": "Explorar el catálogo",
+  "cart_empty_title": "Tu carrito está vacío",
+  "cart_empty_body": "Añade productos del catálogo y luego envía el pedido a tu proveedor.",
+  "note": "Nota",
+  "note_placeholder": "Nota de entrega o embalaje (opcional)",
+  "price_rule": "Los precios provienen de la lista de precios de tu proveedor y se muestran en el pedido una vez guardado; se fijan cuando se aprueba el pedido.",
+  "submit": "Enviar pedido",
+  "save_draft": "Guardar como borrador",
+  "save_failed": "No se pudo guardar el pedido",
+  "clear": "Vaciar",
+  "clear_title": "¿Vaciar el carrito?",
+  "draft_kept": "El borrador se guardó; volver a enviar solo reintenta el envío.",
+  "card.created_by": "Realizado por {{name}}"
 }

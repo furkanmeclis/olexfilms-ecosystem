@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "Име на кампанията",
+  "filter_all": "Всички",
+  "count_results": "Резултати: {{count}}",
+  "empty_filtered": "Няма кампании, отговарящи на филтъра",
+  "empty_mobile": "Кампаниите се създават със съветника в уеб панела; тук ги следите и одобрявате.",
+  "recipients_count": "{{count}} получатели",
+  "scheduled_on": "Насрочена: {{date}}",
+  "submit_body": "Да се изпрати ли кампанията за одобрение? След одобрение може да бъде насрочена.",
+  "cancel_body": "Да се отмени ли кампанията? Това не може да бъде отменено.",
+  "detail.summary": "Обобщение",
+  "detail.not_scheduled": "Не е насрочена",
+  "detail.started_at": "Започната",
+  "detail.finished_at": "Приключена",
+  "detail.timezone": "Часова зона",
+  "detail.delivery": "Доставка",
+  "detail.contents": "Съдържание",
+  "approvals.reason_placeholder": "Напишете причината за решението си"
 }

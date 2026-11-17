@@ -1,5 +1,8 @@
 {
   "title": "Aggiornamento necessario",
   "body": "Questa versione non è più supportata. Aggiorna l'app per continuare.",
-  "button": "Apri lo store"
+  "button": "Apri lo store",
+  "ota_ready": "È pronta una nuova versione",
+  "ota_restart": "Riavvia",
+  "ota_later": "Più tardi"
 }

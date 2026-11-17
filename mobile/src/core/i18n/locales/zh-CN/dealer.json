@@ -280,5 +280,18 @@
   "contract.sign_hint": "客户验证码和双方签名目前在网页端完成。请打开链接或用平板扫描二维码。",
   "contract.qr_hint": "在已登录面板的平板上扫描，即可打开合同步骤。",
   "contract.required_title": "需要合同",
-  "contract.required_body": "服务继续前，车辆接收合同须由客户和员工签署。请使用服务详情中的合同卡片。"
+  "contract.required_body": "服务继续前，车辆接收合同须由客户和员工签署。请使用服务详情中的合同卡片。",
+  "phone_none": "未登记电话号码",
+  "placeholder_first_name": "张",
+  "placeholder_surname": "伟",
+  "placeholder_company_name": "示例汽车有限公司",
+  "placeholder_tax_office": "市中心",
+  "placeholder_notes": "关于车辆或工作的备注",
+  "placeholder_cancel_reason": "例如：客户改变主意了",
+  "placeholder_quantity": "1 件",
+  "placeholder_meters": "1.5 米",
+  "applied_by": "施工人",
+  "related.warranties": "质保",
+  "related.appointments": "预约",
+  "related.measurements": "测量"
 }

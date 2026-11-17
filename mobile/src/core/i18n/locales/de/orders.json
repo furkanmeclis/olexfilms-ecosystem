@@ -122,5 +122,20 @@
   "supplement.hint": "Händler und Lager kommen aus dem Hauptauftrag. Fügen Sie Produkte aus dem Katalog hinzu; Geschenkpositionen sind möglich.",
   "supplement.leave": "Zusatzlieferung verlassen",
   "supplement.replace_cart_title": "Warenkorb leeren?",
-  "supplement.replace_cart_body": "Im Warenkorb sind {{n}} Produkte. Eine Zusatzlieferung beginnt mit leerem Warenkorb."
+  "supplement.replace_cart_body": "Im Warenkorb sind {{n}} Produkte. Eine Zusatzlieferung beginnt mit leerem Warenkorb.",
+  "new_title": "Neue Bestellung",
+  "lines": "Produkte: {{count}}",
+  "browse_catalog": "Katalog durchsuchen",
+  "cart_empty_title": "Ihr Warenkorb ist leer",
+  "cart_empty_body": "Fügen Sie Produkte aus dem Katalog hinzu und senden Sie die Bestellung dann an Ihren Lieferanten.",
+  "note": "Notiz",
+  "note_placeholder": "Liefer- oder Verpackungshinweis (optional)",
+  "price_rule": "Die Preise stammen aus der Preisliste Ihres Lieferanten und erscheinen nach dem Speichern in der Bestellung; mit der Genehmigung der Bestellung werden sie festgeschrieben.",
+  "submit": "Bestellung senden",
+  "save_draft": "Als Entwurf speichern",
+  "save_failed": "Die Bestellung konnte nicht gespeichert werden",
+  "clear": "Leeren",
+  "clear_title": "Warenkorb leeren?",
+  "draft_kept": "Der Entwurf wurde gespeichert; erneutes Senden wiederholt nur die Übermittlung.",
+  "card.created_by": "Aufgegeben von {{name}}"
 }

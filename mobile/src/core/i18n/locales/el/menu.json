@@ -28,5 +28,18 @@
   "group.other": "Άλλα",
   "group.account": "Λογαριασμός και ρυθμίσεις",
   "measure": "Μέτρηση",
-  "accounting_queue": "Ουρά λογιστηρίου"
+  "accounting_queue": "Ουρά λογιστηρίου",
+  "catalog": "Κατάλογος",
+  "transfers": "Μεταφορές",
+  "certificates": "Πιστοποιητικά",
+  "pricing": "Τιμολόγηση",
+  "occupancy": "Πληρότητα ραντεβού",
+  "performance": "Απόδοση",
+  "measurements": "Μετρήσεις",
+  "fleets": "Στόλοι",
+  "service_subscriptions": "Συνδρομές υπηρεσιών",
+  "staff": "Προσωπικό",
+  "quick_sale": "Γρήγορη πώληση",
+  "sale_prices": "Οι τιμές πώλησής μου",
+  "purchases": "Αγορές"
 }

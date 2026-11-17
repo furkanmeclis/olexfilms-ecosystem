@@ -28,5 +28,18 @@
   "group.other": "Други",
   "group.account": "Профил и настройки",
   "measure": "Измерване",
-  "accounting_queue": "Счетоводна опашка"
+  "accounting_queue": "Счетоводна опашка",
+  "catalog": "Каталог",
+  "transfers": "Трансфери",
+  "certificates": "Сертификати",
+  "pricing": "Цени",
+  "occupancy": "Заетост на часовете",
+  "performance": "Представяне",
+  "measurements": "Измервания",
+  "fleets": "Автопаркове",
+  "service_subscriptions": "Абонаменти за услуги",
+  "staff": "Персонал",
+  "quick_sale": "Бърза продажба",
+  "sale_prices": "Моите продажни цени",
+  "purchases": "Покупки"
 }

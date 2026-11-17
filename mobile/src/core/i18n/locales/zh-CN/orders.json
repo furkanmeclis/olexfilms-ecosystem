@@ -122,5 +122,20 @@
   "supplement.hint": "经销商和仓库取自主订单。请从目录添加产品；可添加赠品行。",
   "supplement.leave": "退出补充发货",
   "supplement.replace_cart_title": "清空购物车？",
-  "supplement.replace_cart_body": "购物车中有 {{n}} 件产品。补充发货从空购物车开始。"
+  "supplement.replace_cart_body": "购物车中有 {{n}} 件产品。补充发货从空购物车开始。",
+  "new_title": "新建订单",
+  "lines": "产品：{{count}}",
+  "browse_catalog": "浏览产品目录",
+  "cart_empty_title": "购物车为空",
+  "cart_empty_body": "从目录中添加产品，然后将订单发送给您的供应商。",
+  "note": "备注",
+  "note_placeholder": "配送或包装备注（可选）",
+  "price_rule": "价格来自供应商的价目表，订单保存后显示；订单批准时价格将锁定。",
+  "submit": "发送订单",
+  "save_draft": "保存为草稿",
+  "save_failed": "订单保存失败",
+  "clear": "清空",
+  "clear_title": "清空购物车？",
+  "draft_kept": "草稿已保存；再次发送只会重试提交。",
+  "card.created_by": "下单人 {{name}}"
 }

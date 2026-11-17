@@ -280,5 +280,18 @@
   "contract.sign_hint": "Код клієнта та обидва підписи поки що робляться у вебпанелі. Відкрийте посилання або відскануйте QR-код планшетом.",
   "contract.qr_hint": "Відскануйте на планшеті з відкритою панеллю; відкриється крок договору.",
   "contract.required_title": "Потрібен договір",
-  "contract.required_body": "Договір приймання має підписати клієнт і персонал, перш ніж послуга перейде далі. Скористайтеся карткою договору в деталях послуги."
+  "contract.required_body": "Договір приймання має підписати клієнт і персонал, перш ніж послуга перейде далі. Скористайтеся карткою договору в деталях послуги.",
+  "phone_none": "Номер телефону не вказано",
+  "placeholder_first_name": "Іван",
+  "placeholder_surname": "Петренко",
+  "placeholder_company_name": "ТОВ «Приклад Авто»",
+  "placeholder_tax_office": "Центральний",
+  "placeholder_notes": "Нотатка про автомобіль або роботу",
+  "placeholder_cancel_reason": "напр. Клієнт передумав",
+  "placeholder_quantity": "1 шт.",
+  "placeholder_meters": "1,5 м",
+  "applied_by": "Наніс",
+  "related.warranties": "Гарантії",
+  "related.appointments": "Записи",
+  "related.measurements": "Заміри"
 }

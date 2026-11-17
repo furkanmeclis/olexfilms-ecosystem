@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "Nome della campagna",
+  "filter_all": "Tutte",
+  "count_results": "Risultati: {{count}}",
+  "empty_filtered": "Nessuna campagna corrisponde al filtro",
+  "empty_mobile": "Le campagne si creano con la procedura guidata nel pannello web; qui le segui e le approvi.",
+  "recipients_count": "{{count}} destinatari",
+  "scheduled_on": "Pianificata: {{date}}",
+  "submit_body": "Inviare la campagna per l'approvazione? Una volta approvata potrà essere pianificata.",
+  "cancel_body": "Annullare la campagna? L'operazione è irreversibile.",
+  "detail.summary": "Riepilogo",
+  "detail.not_scheduled": "Non pianificata",
+  "detail.started_at": "Avviata",
+  "detail.finished_at": "Terminata",
+  "detail.timezone": "Fuso orario",
+  "detail.delivery": "Invio",
+  "detail.contents": "Contenuti",
+  "approvals.reason_placeholder": "Scrivi il motivo della tua decisione"
 }

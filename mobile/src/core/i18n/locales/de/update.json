@@ -1,5 +1,8 @@
 {
   "title": "Update erforderlich",
   "body": "Diese Version wird nicht mehr unterstützt. Aktualisieren Sie die App, um fortzufahren.",
-  "button": "Store öffnen"
+  "button": "Store öffnen",
+  "ota_ready": "Eine neue Version ist bereit",
+  "ota_restart": "Neu starten",
+  "ota_later": "Später"
 }

@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Annonces",
+  "empty": "Aucune annonce pour le moment",
+  "empty_unread": "Vous avez tout lu",
+  "filter.all": "Toutes",
+  "filter.unread": "Non lues",
+  "filter.unread_count": "Non lues ({{count}})",
+  "pinned": "Épinglée",
+  "expires": "Valable jusqu'au {{date}}"
+}

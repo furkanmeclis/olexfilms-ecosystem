@@ -23,5 +23,10 @@
   "digits": "Ψηφία",
   "digits.arab": "Αραβοϊνδικά ψηφία (٠١٢٣)",
   "digits.latn": "Λατινικά ψηφία (0123)",
-  "switch_organization": "Αλλαγή οργανισμού"
+  "switch_organization": "Αλλαγή οργανισμού",
+  "ota_channel": "Κανάλι ενημερώσεων",
+  "ota_runtime": "Έκδοση runtime",
+  "ota_update_id": "ID ενημέρωσης",
+  "ota_embedded": "Ενσωματωμένη στην εφαρμογή",
+  "ota_off": "Ανενεργό (ανάπτυξη)"
 }

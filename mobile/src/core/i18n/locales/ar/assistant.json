@@ -114,5 +114,13 @@
   "source.mcp": "عميل MCP",
   "source.panel": "محادثة اللوحة",
   "source.portal": "محادثة البوابة",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "YYYY-MM-DD",
+  "card.placeholder_time": "HH:MM",
+  "card.placeholder_value": "أدخل قيمة",
+  "history.delete_hint": "المس مطولًا للحذف",
+  "history.messages": "{{count}} رسالة",
+  "approvals.filter_all": "الكل",
+  "approvals.confirm_body": "سيُطبَّق التغيير المقترح نيابةً عنك.",
+  "approvals.reject_body": "سيُرفض الاقتراح ولن يُحفظ أي شيء."
 }
