@@ -331,6 +331,8 @@ type transitionBody struct {
 	Reason             *string `json:"reason"`
 	DeliveryMethodUUID *string `json:"delivery_method_uuid"`
 	TrackingNo         *string `json:"tracking_no"`
+	// TEC-1227: missing or damaged units reported with received.
+	Discrepancies []ord.DiscrepancyInput `json:"discrepancies"`
 }
 
 // Transition (POST /v1/orders/{uuid}/transitions).
@@ -345,9 +347,10 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 	}
 	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{
 		Status: body.Status, Reason: body.Reason, DeliveryMethodUUID: body.DeliveryMethodUUID, TrackingNo: body.TrackingNo,
+		Discrepancies: body.Discrepancies,
 	})
 	if err != nil {
-		writeError(w, r, err)
+		writePartialError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, o)

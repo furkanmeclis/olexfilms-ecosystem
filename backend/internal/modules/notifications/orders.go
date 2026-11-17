@@ -1,6 +1,8 @@
 package notifications
 
 import (
+	"strconv"
+
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
@@ -100,4 +102,40 @@ func orderStatusDispatcher(code string) func(events.Event) (notifmodel.DispatchI
 		}
 		return in, true
 	}
+}
+
+// orderReceiptDiscrepancyDispatch tells the seller's staff that the buyer
+// reported missing or damaged units at receipt (TEC-1227). The recipients
+// are resolved by the orders use case (notify_user_ids); none sends nothing.
+func orderReceiptDiscrepancyDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
+	if len(ids) == 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	vars := map[string]string{
+		"order_no":      stringFromPayload(event.Payload, "order_no"),
+		"buyer_name":    stringFromPayload(event.Payload, "buyer_name"),
+		"missing_count": countFromPayload(event.Payload, "missing_count"),
+		"damaged_count": countFromPayload(event.Payload, "damaged_count"),
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: catalog.EventOrderReceiptDiscrepancy, UserIDs: ids, Vars: vars,
+		Payload: map[string]any{
+			"order_uuid": stringFromPayload(event.Payload, "order_uuid"),
+			"order_no":   vars["order_no"],
+			"status":     stringFromPayload(event.Payload, "status"),
+		},
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	return in, true
+}
+
+// countFromPayload renders a numeric payload field ("0" when absent).
+func countFromPayload(p map[string]any, key string) string {
+	if n, ok := int64FromPayload(p, key); ok {
+		return strconv.FormatInt(n, 10)
+	}
+	return "0"
 }

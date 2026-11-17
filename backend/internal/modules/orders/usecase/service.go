@@ -795,6 +795,9 @@ type TransitionInput struct {
 	Reason             *string
 	DeliveryMethodUUID *string
 	TrackingNo         *string
+	// Discrepancies: missing or damaged units reported with the received
+	// step (TEC-1227); refused with any other target.
+	Discrepancies []DiscrepancyInput
 }
 
 func partyOf(c Caller, o db.Order) Party {
@@ -832,6 +835,9 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 	to := strings.TrimSpace(in.Status)
 	if !IsStatus(to) {
 		return OrderView{}, invalid("status", "unknown order status")
+	}
+	if len(in.Discrepancies) > 0 && to != StatusReceived {
+		return OrderView{}, invalid("discrepancies", "are reported only with the received status")
 	}
 	var result db.Order
 	shipped := false
@@ -898,7 +904,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			}
 			shipped = true
 		case StatusReceived:
-			if meta, err = s.receive(ctx, q, tx, c, o); err == nil {
+			if meta, err = s.receive(ctx, q, tx, c, o, in.Discrepancies); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
 			if err == nil && onBehalf {

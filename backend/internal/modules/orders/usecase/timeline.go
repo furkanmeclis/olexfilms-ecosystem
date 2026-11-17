@@ -56,6 +56,11 @@ type TimelineEntry struct {
 	// PlotterCredits: the line's credits after a plotter_marked step
 	// (TEC-1221).
 	PlotterCredits *int32 `json:"plotter_credits,omitempty"`
+	// TEC-1227: RelatedOrderNo is the other order of a backorder step;
+	// Kind and Resolution belong to a discrepancy step.
+	RelatedOrderNo *string `json:"related_order_no,omitempty"`
+	Kind           *string `json:"kind,omitempty"`
+	Resolution     *string `json:"resolution,omitempty"`
 }
 
 // activityPayload is the payload of the order activity events.
@@ -73,6 +78,11 @@ type activityPayload struct {
 	PlotterCut *bool `json:"plotter_cut,omitempty"`
 	// PlotterCredits: the credits set with the mark (TEC-1221).
 	PlotterCredits *int32 `json:"plotter_credits,omitempty"`
+	// TEC-1227: backorder and discrepancy steps.
+	RelatedOrderNo string `json:"related_order_no,omitempty"`
+	Kind           string `json:"kind,omitempty"`
+	Reason         string `json:"reason,omitempty"`
+	Resolution     string `json:"resolution,omitempty"`
 }
 
 func (p activityPayload) mapped() map[string]any {
@@ -274,6 +284,8 @@ func (s *Service) timeline(ctx context.Context, q *db.Queries, o db.Order, hist 
 			User:    userRef(ev.ActorUuid, ev.ActorName, ev.ActorSurname),
 			Product: strRef(p.Product), Barcode: strRef(p.Barcode), Quantity: p.Quantity, Meters: p.Meters, Lines: p.Lines,
 			Changes: p.Changes, PlotterCut: p.PlotterCut, PlotterCredits: p.PlotterCredits,
+			RelatedOrderNo: strRef(p.RelatedOrderNo), Kind: strRef(p.Kind), Resolution: strRef(p.Resolution),
+			Reason: strRef(p.Reason),
 		}
 		if ev.Action == ActionUnitAssigned {
 			recorded[p.ItemUUID+"/"+p.UnitUUID] = struct{}{}
