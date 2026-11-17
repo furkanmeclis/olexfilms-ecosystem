@@ -392,5 +392,15 @@
   "credits.reason_required": "Eine Begründung ist erforderlich (höchstens 1000 Zeichen).",
   "credits.submit": "Erhöhen",
   "credits.increased": "Guthaben erhöht.",
-  "credits.increase_failed": "Das Guthaben konnte nicht erhöht werden."
+  "credits.increase_failed": "Das Guthaben konnte nicht erhöht werden.",
+  "label_templates.fields.output_format": "Ausgabe",
+  "label_templates.output_format.sheet": "A4-Bogen (Raster)",
+  "label_templates.output_format.single": "Einzeletikett-PDF (Thermo)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Die Etiketten werden als Raster auf einer A4-Seite angeordnet.",
+  "label_templates.output_format_hint.single": "Jede Seite ist ein Etikett in Etikettengröße. Über den Systemdruckdialog auf einem Thermodrucker drucken.",
+  "label_templates.output_format_hint.zpl": "Eine .zpl-Datei für Zebra-Drucker (203 dpi). Ein Bildlogo wird nicht gedruckt.",
+  "label_templates.form.thermal_sizes": "Übliche Größen:",
+  "columns.remnant": "Restrolle",
+  "remnant.badge": "Restrolle"
 }

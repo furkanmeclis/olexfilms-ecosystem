@@ -302,5 +302,15 @@
   "credits.submit": "Προσθήκη",
   "credits.increased": "Οι πιστώσεις προστέθηκαν.",
   "credits.increase_failed": "Δεν ήταν δυνατή η προσθήκη πιστώσεων.",
+  "label_templates.fields.output_format": "Έξοδος",
+  "label_templates.output_format.sheet": "Φύλλο A4 (πλέγμα)",
+  "label_templates.output_format.single": "PDF μίας ετικέτας (θερμικό)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Οι ετικέτες τοποθετούνται σε πλέγμα σε σελίδα A4.",
+  "label_templates.output_format_hint.single": "Κάθε σελίδα είναι μία ετικέτα στο μέγεθος της ετικέτας. Εκτυπώστε σε θερμικό εκτυπωτή από το παράθυρο εκτύπωσης.",
+  "label_templates.output_format_hint.zpl": "Αρχείο .zpl για εκτυπωτές Zebra (203 dpi). Το λογότυπο εικόνας δεν εκτυπώνεται.",
+  "label_templates.form.thermal_sizes": "Συνήθη μεγέθη:",
+  "columns.remnant": "Υπόλειμμα",
+  "remnant.badge": "Υπόλειμμα",
   "bulk.reason.quarantine": "Επιστροφή σε αναμονή ελέγχου"
 }

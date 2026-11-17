@@ -392,5 +392,15 @@
   "credits.reason_required": "Il motivo è obbligatorio (massimo 1000 caratteri).",
   "credits.submit": "Aggiungi",
   "credits.increased": "Crediti aggiunti.",
-  "credits.increase_failed": "Impossibile aggiungere i crediti."
+  "credits.increase_failed": "Impossibile aggiungere i crediti.",
+  "label_templates.fields.output_format": "Output",
+  "label_templates.output_format.sheet": "Foglio A4 (griglia)",
+  "label_templates.output_format.single": "PDF etichetta singola (termica)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Le etichette sono disposte a griglia su una pagina A4.",
+  "label_templates.output_format_hint.single": "Ogni pagina è un'etichetta della sua dimensione. Stampa su una stampante termica dalla finestra di sistema.",
+  "label_templates.output_format_hint.zpl": "Un file .zpl per stampanti Zebra (203 dpi). Il logo immagine non viene stampato.",
+  "label_templates.form.thermal_sizes": "Formati comuni:",
+  "columns.remnant": "Scarto",
+  "remnant.badge": "Scarto"
 }

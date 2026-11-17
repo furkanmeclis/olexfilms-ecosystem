@@ -19,6 +19,10 @@ export type WarehouseUnitListQuery = Record<
 >;
 
 export type Warehouse = Schemas["Warehouse"];
+export type StockEntryPlacementSuggestions =
+  Schemas["StockEntryPlacementSuggestions"];
+export type StockEntrySuggestedLocation =
+  Schemas["StockEntrySuggestedLocation"];
 export type WarehouseInput = Schemas["WarehouseInput"];
 export type WarehousePatch = Schemas["WarehousePatch"];
 export type WarehouseRoom = Schemas["WarehouseRoom"];
@@ -372,6 +376,13 @@ export const warehouseService = {
     return platformRequest<StockEntry>(
       "DELETE",
       `/v1/warehouse/stock-entries/${enc(uuid)}/lines/${enc(lineUuid)}`,
+    );
+  },
+  /** TEC-1230: where to place the unplaced lines (advisory). */
+  placementSuggestions(uuid: string) {
+    return platformRequest<StockEntryPlacementSuggestions>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/placement-suggestions`,
     );
   },
   place(uuid: string, body: StockEntryPlaceInput) {

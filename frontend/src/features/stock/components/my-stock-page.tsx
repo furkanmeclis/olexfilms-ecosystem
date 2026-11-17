@@ -265,6 +265,20 @@ export function MyStockPage({
               })
             : "—",
       }) as ColumnDef<StockUnitRow, unknown>,
+      // TEC-1230: a roll left under the product's minimum cut ("ragle").
+      createColumn<StockUnitRow>({
+        accessorKey: "remnant",
+        labelKey: "stock.columns.remnant",
+        enableSorting: false,
+        filterVariant: "boolean",
+        param: "remnant",
+        cell: ({ row }) =>
+          row.original.remnant ? (
+            <StatusChip label={t("stock.remnant.badge")} tone="warning" />
+          ) : (
+            "—"
+          ),
+      }) as ColumnDef<StockUnitRow, unknown>,
       // TEC-1221: usage credits of a serial piece unit (none for rolls and
       // fixed barcodes).
       createColumn<StockUnitRow>({
@@ -628,6 +642,15 @@ export function MyStockPage({
                       initial: r.initial_meters ?? r.remaining_meters,
                     })
                   : format.number(r.quantity)}
+                {r.remnant ? (
+                  <>
+                    {" "}
+                    <StatusChip
+                      label={t("stock.remnant.badge")}
+                      tone="warning"
+                    />
+                  </>
+                ) : null}
               </span>
               <span>{format.dateTime(r.updated_at)}</span>
             </div>

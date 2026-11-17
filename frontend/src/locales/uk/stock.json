@@ -392,5 +392,15 @@
   "credits.reason_required": "Причина обов'язкова (не більше 1000 символів).",
   "credits.submit": "Додати",
   "credits.increased": "Кредити додано.",
-  "credits.increase_failed": "Не вдалося додати кредити."
+  "credits.increase_failed": "Не вдалося додати кредити.",
+  "label_templates.fields.output_format": "Вивід",
+  "label_templates.output_format.sheet": "Аркуш A4 (сітка)",
+  "label_templates.output_format.single": "PDF з однією етикеткою (термо)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Етикетки розміщуються сіткою на сторінці A4.",
+  "label_templates.output_format_hint.single": "Кожна сторінка — одна етикетка розміру етикетки. Друкуйте на термопринтері через системне вікно друку.",
+  "label_templates.output_format_hint.zpl": "Файл .zpl для принтерів Zebra (203 dpi). Логотип-зображення не друкується.",
+  "label_templates.form.thermal_sizes": "Типові розміри:",
+  "columns.remnant": "Залишок",
+  "remnant.badge": "Залишок"
 }

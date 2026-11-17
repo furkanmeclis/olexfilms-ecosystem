@@ -392,5 +392,15 @@
   "credits.reason_required": "Un motif est requis (1000 caractères au maximum).",
   "credits.submit": "Ajouter",
   "credits.increased": "Crédits ajoutés.",
-  "credits.increase_failed": "Impossible d'ajouter les crédits."
+  "credits.increase_failed": "Impossible d'ajouter les crédits.",
+  "label_templates.fields.output_format": "Sortie",
+  "label_templates.output_format.sheet": "Feuille A4 (grille)",
+  "label_templates.output_format.single": "PDF étiquette unique (thermique)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Les étiquettes sont disposées en grille sur une page A4.",
+  "label_templates.output_format_hint.single": "Chaque page est une étiquette à sa taille. Imprimez sur une imprimante thermique via la boîte de dialogue système.",
+  "label_templates.output_format_hint.zpl": "Un fichier .zpl pour imprimantes Zebra (203 dpi). Le logo image n'est pas imprimé.",
+  "label_templates.form.thermal_sizes": "Tailles courantes :",
+  "columns.remnant": "Chute",
+  "remnant.badge": "Chute"
 }

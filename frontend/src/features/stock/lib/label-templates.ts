@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type {
   LabelLogoMode,
+  LabelOutputFormat,
   LabelSymbology,
   LabelTemplate,
   LabelTemplateInput,
@@ -24,6 +25,14 @@ export const COLUMNS = { min: 1, max: 8 } as const;
 export const TEMPLATE_KINDS: LabelTemplateKind[] = ["unit", "location"];
 export const SYMBOLOGIES: LabelSymbology[] = ["code128", "qr"];
 export const LOGO_MODES: LabelLogoMode[] = ["none", "text", "image"];
+/** TEC-1230: A4 grid, one label per page (thermal) or Zebra ZPL. */
+export const OUTPUT_FORMATS: LabelOutputFormat[] = ["sheet", "single", "zpl"];
+/** Common thermal label sizes (width × height mm). */
+export const THERMAL_SIZES = [
+  { width_mm: "50", height_mm: "30" },
+  { width_mm: "100", height_mm: "50" },
+  { width_mm: "100", height_mm: "150" },
+] as const;
 
 /** Built-in defaults of each kind (labels.DefaultUnit / DefaultLocation). */
 export const KIND_DEFAULTS: Record<
@@ -75,6 +84,7 @@ export function labelTemplateSchema(t: Translate) {
       kind: z.enum(["unit", "location"]),
       symbology: z.enum(["code128", "qr"]),
       logo_mode: z.enum(["none", "text", "image"]),
+      output_format: z.enum(["sheet", "single", "zpl"]),
       logo_text: z.string().trim(),
       logo_image: z.string(),
       width_mm: mmField(t, WIDTH_MM),
@@ -156,6 +166,7 @@ export function emptyTemplateValues(
     kind,
     symbology: d.symbology,
     logo_mode: "none",
+    output_format: "sheet",
     logo_text: "",
     logo_image: "",
     width_mm: d.width_mm,
@@ -180,6 +191,7 @@ export function templateValues(tpl: LabelTemplate): LabelTemplateValues {
     kind: tpl.kind,
     symbology: tpl.symbology,
     logo_mode: tpl.logo_mode,
+    output_format: tpl.output_format ?? "sheet",
     logo_text: tpl.logo_text ?? "",
     logo_image: tpl.logo_image ?? "",
     width_mm: mm(tpl.width_mm),
@@ -202,6 +214,7 @@ export function toTemplateInput(v: LabelTemplateValues): LabelTemplateInput {
     kind: v.kind,
     symbology: v.kind === "location" ? "qr" : v.symbology,
     logo_mode: v.logo_mode,
+    output_format: v.output_format,
     ...(v.logo_mode === "text" ? { logo_text: v.logo_text.trim() } : {}),
     ...(v.logo_mode === "image" ? { logo_image: v.logo_image } : {}),
     width_mm: v.width_mm.trim(),

@@ -171,6 +171,15 @@ export function LabelTemplatesPage({ slug }: { slug: string }) {
             t(`stock.label_templates.symbology.${row.original.symbology}`),
         }),
         createColumn<LabelTemplate>({
+          accessorKey: "output_format",
+          labelKey: "stock.label_templates.fields.output_format",
+          enableSorting: true,
+          cell: ({ row }) =>
+            t(
+              `stock.label_templates.output_format.${row.original.output_format ?? "sheet"}`,
+            ),
+        }),
+        createColumn<LabelTemplate>({
           id: "size",
           accessorFn: (r) => Number(r.width_mm) * Number(r.height_mm),
           labelKey: "stock.label_templates.columns.size",

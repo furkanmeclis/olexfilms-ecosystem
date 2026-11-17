@@ -51,6 +51,7 @@ import {
   useEntryImportTemplates,
 } from "@/features/warehouse/components/container-entry";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
+import { EntryPlacementSuggestions } from "@/features/warehouse/components/entry-placement-suggestions";
 import {
   EntryAttachmentsCard,
   EntryReceiptCard,
@@ -710,6 +711,14 @@ export function StockEntryDetailPage({
                     {t("warehouse.entry.place")}
                   </Button>
                 </div>
+                <EntryPlacementSuggestions
+                  entryUuid={entry.uuid}
+                  unplaced={unplaced}
+                  busy={place.isPending}
+                  onPick={(location) =>
+                    place.mutate(placeBody({ location_uuid: location }))
+                  }
+                />
                 {placeError ? (
                   <p
                     role="alert"
