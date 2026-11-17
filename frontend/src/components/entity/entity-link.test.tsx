@@ -112,7 +112,7 @@ describe("EntityLink (TEC-1217)", () => {
     expect(container.textContent).toBe("Ayşe Yılmaz");
   });
 
-  it("renders plain text for a kind without a page and the fallback for null", () => {
+  it("renders plain text for a ref without an id and the fallback for null", () => {
     granted.add("announcements.read");
     render(
       createElement(
@@ -120,7 +120,8 @@ describe("EntityLink (TEC-1217)", () => {
         null,
         createElement(EntityLink, {
           kind: "announcement",
-          entity: { uuid: "a1", name: "Kampanya" },
+          // TEC-1218: every kind has a page now; no id → no link.
+          entity: { uuid: "", name: "Kampanya" },
         }),
         createElement(EntityLink, { kind: "customer", entity: null }),
       ),
