@@ -21,6 +21,7 @@ import {
   useDebounced,
   useFormat,
 } from '@/features/admin/kit';
+import { RefRow } from '@/features/entity/ref-row';
 import { PickerField, PickerSheet } from '@/features/picker-sheet';
 import { ContinuousScanner, type ScanOutcome } from '@/features/warehouse/continuous-scanner';
 import { Button } from '@/ui/button';
@@ -258,8 +259,8 @@ export function TransferDetailScreen() {
 
             <List>
               <InfoRow label={t('kind_label')} value={t(`kind.${tr.kind}`)} />
-              <InfoRow label={t('sender')} value={tr.sender.name} />
-              <InfoRow label={t('receiver')} value={tr.receiver.name} />
+              <RefRow kind="organization" label={t('sender')} value={tr.sender} />
+              <RefRow kind="organization" label={t('receiver')} value={tr.receiver} />
               <InfoRow label={t('created')} value={f.dateTime(tr.created_at)} />
               {tr.shipped_at ? <InfoRow label={t('shipped_at')} value={f.dateTime(tr.shipped_at)} /> : null}
               {tr.received_at ? <InfoRow label={t('received_at')} value={f.dateTime(tr.received_at)} /> : null}

@@ -8,6 +8,7 @@ import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
 import { formatDateTime, fullName } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
+import { RefRow } from '@/features/entity/ref-row';
 import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -169,7 +170,9 @@ export function LeadDetailScreen() {
             </View>
 
             <Section title={t('contact')}>
-              {customer.data ? <InfoRow label={t('customer')} value={fullName(customer.data)} /> : null}
+              {customer.data ? (
+                <RefRow kind="customer" label={t('customer')} value={{ uuid: lead.customer_uuid, name: fullName(customer.data) }} />
+              ) : null}
               <InfoRow label={t('company')} value={lead.candidate_company_name} />
               <InfoRow label={t('contact_name')} value={lead.candidate_contact_name} />
               <InfoRow

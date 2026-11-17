@@ -12,7 +12,7 @@ import { Icon } from '@/ui/icon';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-import { awaitingSignature, canCreateContract, type ContractState, contractState, contractWebUrl, showContract } from './contract';
+import { awaitingSignature, canCreateContract, CONTRACT_MODULE, type ContractState, contractState, contractWebUrl, showContract } from './contract';
 import { type Service, WEB_ORIGIN } from './lib';
 import { QrImage } from './qr-sheet';
 import { errorText, Section } from './ui';
@@ -53,7 +53,7 @@ export function useContractRequiredAlert(serviceUuid: string) {
  */
 export function ServiceContractCard({ s, onChanged }: { s: Service; onChanged: (s: Service) => void }) {
   const { t } = useTranslation('dealer');
-  const on = useModule('contracts');
+  const on = useModule(CONTRACT_MODULE);
   const canWrite = useCan('contracts.write');
   const url = useContractUrl(s.uuid);
   const [qr, setQr] = useState(false);

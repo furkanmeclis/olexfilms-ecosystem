@@ -289,5 +289,6 @@
   "contract.sign_hint": "The customer code and both signatures are done on the web panel for now. Open the link or scan the QR code on a tablet.",
   "contract.qr_hint": "Scan it on a tablet signed in to the panel; the contract step opens.",
   "contract.required_title": "Contract required",
-  "contract.required_body": "The vehicle intake contract must be signed by the customer and the staff before the service moves on. Use the contract card on the service detail."
+  "contract.required_body": "The vehicle intake contract must be signed by the customer and the staff before the service moves on. Use the contract card on the service detail.",
+  "applied_by": "Applied by"
 }

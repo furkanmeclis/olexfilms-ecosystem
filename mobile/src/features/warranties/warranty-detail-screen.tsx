@@ -12,6 +12,7 @@ import {
   vehicleLabel,
   warrantyTone,
 } from '@/features/services/lib';
+import { RefRow, RefText } from '@/features/entity/ref-row';
 import { QrImage } from '@/features/services/qr-sheet';
 import { openWarranty, shareWarranty } from '@/features/services/share';
 import { DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
@@ -55,7 +56,7 @@ export function WarrantyDetailScreen() {
                 </Text>
                 <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
               </View>
-              <Text variant="callout">{w.product.name}</Text>
+              <RefText kind="product" value={w.product} variant="callout" />
               <View className="items-center gap-2 py-2">
                 <View className="overflow-hidden rounded-lg">
                   <QrImage value={publicWarrantyUrl(w.public_code)} size={200} />
@@ -111,7 +112,7 @@ export function WarrantyDetailScreen() {
                   onPress={w.holder.anonymized ? undefined : () => router.push(links.customer(w.holder!.uuid))}
                 />
               ) : null}
-              <InfoRow label={t('organization')} value={w.organization.name} last />
+              <RefRow kind="organization" label={t('organization')} value={w.organization} last />
             </Section>
           </>
         )}

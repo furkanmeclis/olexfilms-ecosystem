@@ -34,6 +34,8 @@ import { WarrantyQrButton } from './qr-sheet';
 import { ServiceHero } from './service-hero';
 import { openWarranty, shareWarranty } from './share';
 import { Sheet } from './sheet';
+import { RefRow } from '@/features/entity/ref-row';
+
 import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from './ui';
 import { partsFromItems } from './wizard';
 
@@ -255,7 +257,8 @@ export function ServiceDetailScreen() {
                 value={s.customer.phone}
                 onPress={s.customer.phone ? () => void Linking.openURL(`tel:${s.customer.phone}`) : undefined}
               />
-              <InfoRow label={t('organization')} value={s.organization.name} last />
+              <RefRow kind="organization" label={t('organization')} value={s.organization} last={!s.applied_by} />
+              <InfoRow label={t('applied_by')} value={s.applied_by} last />
             </Section>
 
             <Section title={t('vehicle')}>
