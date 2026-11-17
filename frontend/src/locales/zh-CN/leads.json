@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "请选择币种。",
   "form.assignee": "负责人",
   "form.customer": "客户",
-  "form.vehicle": "车辆"
+  "form.vehicle": "车辆",
+  "detail.created_by": "创建人",
+  "detail.won_ref": "转化为"
 }

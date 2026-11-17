@@ -14,6 +14,7 @@ import {
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -178,20 +179,18 @@ export function TransfersListPage({ slug }: { slug: string }) {
             />
           ),
         }),
-        createColumn<StockTransfer>({
+        refColumn<StockTransfer>({
           id: "sender",
-          accessorFn: (r) => r.sender.name,
+          kind: "organization",
+          getRef: (r) => r.sender,
           labelKey: "transfers.columns.sender",
-          enableSorting: false,
           gridSecondary: true,
-          cell: ({ row }) => row.original.sender.name,
         }),
-        createColumn<StockTransfer>({
+        refColumn<StockTransfer>({
           id: "receiver",
-          accessorFn: (r) => r.receiver.name,
+          kind: "organization",
+          getRef: (r) => r.receiver,
           labelKey: "transfers.columns.receiver",
-          enableSorting: false,
-          cell: ({ row }) => row.original.receiver.name,
         }),
         // Filter only: sender or receiver is one of the organizations
         // (TEC-373 organization_uuid); the parties show in their columns.

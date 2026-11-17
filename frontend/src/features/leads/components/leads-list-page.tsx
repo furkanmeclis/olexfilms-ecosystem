@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
   EntityCreateButton,
+  EntityLink,
   EntityPage,
   EntityRowActions,
   EntityTable,
@@ -53,7 +54,7 @@ import { usePermission } from "@/providers/permission-provider";
 export const LEADS_PERSIST_KEY = "tenant-leads-v1";
 /** Lead list export (TEC-371, ioengine resource `leads.list`). */
 export const LEADS_EXPORT_PATH = "/v1/leads/export";
-/** `assignee_user_id` filter value for unassigned leads (TEC-371). */
+/** `assignee_uuid` filter value for unassigned leads (TEC-371). */
 export const LEAD_ASSIGNEE_NONE = "none";
 
 type FollowUp = "" | "overdue" | "today";
@@ -141,25 +142,30 @@ export function LeadsListPage({ slug }: { slug: string }) {
   const [followUp, setFollowUp] = useState<FollowUp>("");
   const [items, setItems] = useState<Lead[]>([]);
 
-  // The API has no user directory with internal ids: offer "unassigned"
-  // plus the assignees on the page and the ones already chosen.
+  // Offer "unassigned" plus the assignees on the page and the ones already
+  // chosen (TEC-1216: filtered by uuid, labelled with the ref's name).
   const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
   const assigneeOptions = useMemo(() => {
     const ids = new Set<string>();
+    const names = new Map<string, string>();
     for (const lead of items) {
-      if (lead.assignee_user_id) ids.add(String(lead.assignee_user_id));
+      if (lead.assignee?.uuid) {
+        ids.add(lead.assignee.uuid);
+        names.set(lead.assignee.uuid, lead.assignee.name);
+      }
     }
     for (const id of assigneeFilter) {
       if (id !== LEAD_ASSIGNEE_NONE) ids.add(id);
     }
+    const label = (id: string) => names.get(id) || `${id.slice(0, 8)}…`;
     return [
       {
         value: LEAD_ASSIGNEE_NONE,
         label: t("leads.form.unassigned"),
       },
       ...[...ids]
-        .sort((a, b) => Number(a) - Number(b))
-        .map((id) => ({ value: id, label: `#${id}` })),
+        .map((id) => ({ value: id, label: label(id) }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
     ];
   }, [assigneeFilter, items, t]);
 
@@ -244,19 +250,23 @@ export function LeadsListPage({ slug }: { slug: string }) {
         }),
         createColumn<Lead>({
           id: "assignee",
-          accessorFn: (row) =>
-            row.assignee_user_id
-              ? String(row.assignee_user_id)
-              : LEAD_ASSIGNEE_NONE,
+          accessorFn: (row) => row.assignee?.uuid ?? LEAD_ASSIGNEE_NONE,
           labelKey: "leads.columns.assignee",
           enableSorting: false,
           filterVariant: "faceted",
           filterOptions: assigneeOptions,
-          param: "assignee_user_id",
-          cell: ({ row }) =>
-            row.original.assignee_user_id
-              ? `#${row.original.assignee_user_id}`
-              : t("leads.form.unassigned"),
+          param: "assignee_uuid",
+          cell: ({ row }) => (
+            <EntityLink
+              kind="user"
+              entity={row.original.assignee}
+              fallback={
+                row.original.assignee_user_id
+                  ? `#${row.original.assignee_user_id}`
+                  : t("leads.form.unassigned")
+              }
+            />
+          ),
         }),
         createColumn<Lead>({
           accessorKey: "created_at",

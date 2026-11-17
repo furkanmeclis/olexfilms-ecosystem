@@ -392,5 +392,7 @@
   "detail.created_by": "Създаден от",
   "detail.performed_by": "Изпълнен от",
   "detail.completed_by": "Завършен от",
-  "detail.cancelled_by": "Отменен от"
+  "detail.cancelled_by": "Отменен от",
+  "list.columns.created_by": "Създаден от",
+  "list.columns.performed_by": "Изпълнен от"
 }

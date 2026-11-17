@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Select a currency.",
   "form.assignee": "Assignee",
   "form.customer": "Customer",
-  "form.vehicle": "Vehicle"
+  "form.vehicle": "Vehicle",
+  "detail.created_by": "Created by",
+  "detail.won_ref": "Converted to"
 }

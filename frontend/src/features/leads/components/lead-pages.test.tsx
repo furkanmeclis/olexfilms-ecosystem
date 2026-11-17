@@ -391,6 +391,40 @@ describe("LeadDetailPage", () => {
     });
   });
 
+  it("links the related records (TEC-1218)", async () => {
+    state.grants = new Set([
+      permissions.leads.read,
+      permissions.customers.read,
+      permissions.services.read,
+    ]);
+    api.get.mockResolvedValue(
+      lead({
+        target_type: "customer",
+        status: "won",
+        won_ref_type: "service",
+        customer: {
+          kind: "customer",
+          uuid: "customer-1",
+          name: "Ada Customer",
+        },
+        vehicle: { kind: "vehicle", uuid: "vehicle-1", name: "34 ABC 42" },
+        assignee: { kind: "user", uuid: "user-1", name: "Jane Staff" },
+        won_ref: { kind: "service", uuid: "service-1", name: "S-100" },
+      }),
+    );
+    await render(createElement(LeadDetailPage, { slug: "olex", uuid: "l-1" }));
+    const href = (text: string) =>
+      [...container.querySelectorAll("a")]
+        .find((a) => a.textContent === text)
+        ?.getAttribute("href");
+    expect(href("Ada Customer")).toBe("/t/olex/customers/customer-1");
+    expect(href("S-100")).toBe("/t/olex/services/service-1");
+    // No vehicles.read: the vehicle stays plain text.
+    expect(href("34 ABC 42")).toBeUndefined();
+    expect(container.textContent).toContain("34 ABC 42");
+    expect(container.textContent).toContain("Jane Staff");
+  });
+
   it("requires a reason before marking lost", async () => {
     state.grants = new Set([permissions.leads.read, permissions.leads.write]);
     api.get.mockResolvedValue(lead());

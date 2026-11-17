@@ -13,6 +13,7 @@ import {
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -197,9 +198,10 @@ export function MeasurementsListPage({ slug }: { slug: string }) {
             );
           },
         }),
-        createColumn<MeasurementSummary>({
+        refColumn<MeasurementSummary>({
           id: "organization",
-          accessorFn: (row) => row.organization.name,
+          kind: "organization",
+          getRef: (row) => row.organization,
           labelKey: "measurements.columns.organization",
           enableSorting: false,
           defaultHidden: true,

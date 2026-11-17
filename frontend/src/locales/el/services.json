@@ -392,5 +392,7 @@
   "detail.created_by": "Δημιουργήθηκε από",
   "detail.performed_by": "Εκτελέστηκε από",
   "detail.completed_by": "Ολοκληρώθηκε από",
-  "detail.cancelled_by": "Ακυρώθηκε από"
+  "detail.cancelled_by": "Ακυρώθηκε από",
+  "list.columns.created_by": "Δημιουργήθηκε από",
+  "list.columns.performed_by": "Εκτελέστηκε από"
 }

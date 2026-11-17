@@ -13,6 +13,7 @@ import {
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -151,6 +152,13 @@ export function VehiclesListPage({ slug }: { slug: string }) {
                 : ""}
             </Link>
           ),
+        }),
+        refColumn<Vehicle>({
+          id: "customer",
+          kind: "customer",
+          getRef: (row) => row.customer,
+          labelKey: "vehicles.detail.owner",
+          gridSecondary: true,
         }),
         createColumn<Vehicle>({
           id: "brand",

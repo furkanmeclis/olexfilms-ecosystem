@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "اختر عملة.",
   "form.assignee": "المسؤول",
   "form.customer": "العميل",
-  "form.vehicle": "المركبة"
+  "form.vehicle": "المركبة",
+  "detail.created_by": "أنشأه",
+  "detail.won_ref": "تحوّل إلى"
 }

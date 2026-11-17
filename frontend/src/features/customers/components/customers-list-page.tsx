@@ -15,6 +15,7 @@ import {
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -227,9 +228,10 @@ export function CustomersListPage({ slug }: { slug: string }) {
         // TEC-1074: the organization that opened the customer (first link
         // inside the scope); a dealer only ever sees itself, so it is hidden
         // there by default.
-        createColumn<CustomerSummary>({
+        refColumn<CustomerSummary>({
           id: "opened_by",
-          accessorFn: (row) => row.opened_by?.name ?? "",
+          kind: "organization",
+          getRef: (row) => row.opened_by,
           labelKey: "customers.fields.opened_by",
           enableSorting: true,
           defaultHidden: !canFilterOrg,
@@ -237,7 +239,6 @@ export function CustomersListPage({ slug }: { slug: string }) {
           filterOptions: orgOptions,
           enableColumnFilter: canFilterOrg && orgOptions.length > 0,
           param: "opened_by_uuid",
-          cell: ({ row }) => row.original.opened_by?.name ?? "—",
         }),
         // Filter only: the row carries no organization (TEC-371 matches
         // customers linked to the chosen organizations, inside the scope).

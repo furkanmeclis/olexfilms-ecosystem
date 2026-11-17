@@ -10,10 +10,12 @@ import { useCallback, useMemo, useState } from "react";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityPage,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
   type FilterParamSpecs,
@@ -111,7 +113,13 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
           enableSorting: true,
           cell: ({ row }) => (
             <span className="font-mono text-xs" dir="ltr">
-              {row.original.service.service_no}
+              <EntityLink
+                kind="service"
+                entity={{
+                  uuid: row.original.service.uuid,
+                  name: row.original.service.service_no,
+                }}
+              />
             </span>
           ),
         }),
@@ -133,13 +141,13 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
             />
           ),
         }),
-        createColumn<Warranty>({
+        refColumn<Warranty>({
           id: "product",
-          accessorFn: (row) => row.product.name,
+          kind: "product",
+          getRef: (row) => row.product,
           labelKey: "warranty.list.columns.product",
           enableSorting: true,
           gridSecondary: true,
-          cell: ({ row }) => row.original.product.name,
         }),
         createColumn<Warranty>({
           id: "vehicle",
@@ -148,7 +156,15 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
           enableSorting: false,
           cell: ({ row }) => (
             <div className="min-w-0">
-              <div>{warrantyVehicleTitle(row.original) || "—"}</div>
+              <div>
+                <EntityLink
+                  kind="vehicle"
+                  entity={{
+                    uuid: row.original.vehicle.uuid,
+                    name: warrantyVehicleTitle(row.original),
+                  }}
+                />
+              </div>
               {row.original.vehicle.plate ? (
                 <div
                   className="text-muted-foreground font-mono text-xs"
@@ -160,12 +176,14 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
             </div>
           ),
         }),
-        createColumn<Warranty>({
+        refColumn<Warranty>({
           id: "holder",
-          accessorFn: (row) => warrantyHolderName(row),
+          kind: "customer",
+          getRef: (row) =>
+            row.holder
+              ? { uuid: row.holder.uuid, name: warrantyHolderName(row) }
+              : null,
           labelKey: "warranty.list.columns.holder",
-          enableSorting: false,
-          cell: ({ row }) => warrantyHolderName(row.original) || "—",
         }),
         createColumn<Warranty>({
           id: "organization",
@@ -176,7 +194,12 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
           filterOptions: orgFilter.options,
           enableColumnFilter: orgFilter.enabled,
           param: "organization_uuid",
-          cell: ({ row }) => row.original.organization.name,
+          cell: ({ row }) => (
+            <EntityLink
+              kind="organization"
+              entity={row.original.organization}
+            />
+          ),
         }),
         createColumn<Warranty>({
           id: "expiry",
