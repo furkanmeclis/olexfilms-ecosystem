@@ -18,6 +18,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { BackorderRows, DiscrepancySection, PartialShipButton, ReceiptCheckSheet } from '@/features/orders/discrepancy';
 
 import { resolveScan } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -44,8 +45,10 @@ import {
   fixedSuggestionUnits,
   isCovered,
   isRollItem,
+  parseShipment,
   requiredOf,
 } from './order-assign';
+import { CancelSheet, cancelActions, DocumentsCard, WorkCard, type CancelKind } from './order-extras';
 import { Card, ErrorState, Field, IconButton, ListSkeleton, Segmented } from './parts';
 import { QtyStepper } from './qty-stepper';
 import { useDocAction } from './use-action';
@@ -57,6 +60,15 @@ export function orderTone(s: OrderStatus): StatusTone {
   if (s === 'draft' || s === 'submitted') return 'neutral';
   return 'progress';
 }
+
+/** Ship transition extras: delivery method, tracking number and (TEC-1228) package count, desi, weight. */
+type ShipExtra = {
+  delivery_method_uuid?: string;
+  tracking_no?: string;
+  package_count?: number;
+  desi?: number;
+  weight_kg?: number;
+};
 
 const isRoll = (i: OrderItem) => isRollItem(i);
 const required = (i: OrderItem) => requiredOf(i);
@@ -94,7 +106,11 @@ export function OrderScreen() {
   const [suggestFor, setSuggestFor] = useState<OrderItem | null>(null);
   const [locationsFor, setLocationsFor] = useState<string | null>(null);
   const [shipping, setShipping] = useState(false);
+  // TEC-1228: the cancel move being confirmed (with its reason).
+  const [cancelling, setCancelling] = useState<{ kind: CancelKind; status: OrderStatus; reasonRequired: boolean } | null>(null);
   const [editing, setEditing] = useState(false);
+  // TEC-1227: the buyer receives through the check sheet (missing / damaged units).
+  const [checking, setChecking] = useState(false);
   const [target, setTarget] = useState<{ uuid: string; code: string } | null>(null);
   const [splitKey] = useState(createRetryKey);
 
@@ -113,7 +129,7 @@ export function OrderScreen() {
   };
   const can = (s: OrderStatus) => !!o?.available_transitions.includes(s);
 
-  const transition = (status: OrderStatus, key: string, extra?: { delivery_method_uuid?: string; tracking_no?: string }) =>
+  const transition = (status: OrderStatus, key: string, extra?: ShipExtra) =>
     confirmAction({
       title: t(`orders.actions.${key}.title`),
       body: t(`orders.actions.${key}.description`),
@@ -292,6 +308,23 @@ export function OrderScreen() {
           <Field label={t('m.received')} value={formatDate(o.received_at)} />
         </Card>
 
+        {/* TEC-1227: backorder links and the receipt records (no prices). */}
+        <BackorderRows order={o} />
+        <DiscrepancySection order={o} onUpdated={store} />
+        {/* TEC-1228: priority, due date and who took the job. */}
+        {seller ? (
+          <WorkCard
+            order={o}
+            busy={busy}
+            onClaim={(takeover) =>
+              void run('claim', () => orderApi.claim(uuid, takeover), {
+                done: () => void qc.invalidateQueries({ queryKey: ['warehouse', 'orders'] }),
+              })
+            }
+            onRelease={() => void run('release', () => orderApi.release(uuid))}
+          />
+        ) : null}
+
         {/* Seller actions */}
         {seller && canShip ? (
           <View className="gap-2">
@@ -322,6 +355,14 @@ export function OrderScreen() {
                 onPress={() => transition('ready', 'mark_ready')}
               />
             ) : null}
+            {/* TEC-1227: stock short — ship the picked part, the rest becomes a backorder. */}
+            <PartialShipButton
+              order={o}
+              onReady={(next) => {
+                store(next);
+                if (next.available_transitions.includes('shipped')) setShipping(true);
+              }}
+            />
             {/* TEC-1057: lines are fixed before the order is ready (add, change, remove). */}
             {o.can_edit_items ? (
               <Button variant="outline" title={t('orders:edit.button')} icon="edit" onPress={() => setEditing(true)} />
@@ -377,7 +418,7 @@ export function OrderScreen() {
 
         {/* Buyer actions */}
         {!seller && canReceive && can('received') ? (
-          <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => transition('received', 'receive')} />
+          <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => setChecking(true)} />
         ) : null}
         {received && canPlace ? (
           <Card>
@@ -551,6 +592,31 @@ export function OrderScreen() {
         )}
 
         <OrderTimeline timeline={o.timeline} />
+
+        {/* TEC-1228: shipping note, order slip and the delivery receipt. */}
+        <DocumentsCard
+          order={o}
+          canShip={canShip}
+          canReceive={canReceive}
+          busy={busy}
+          run={run}
+          regenerate={() => orderApi.regenerateShippingDocument(uuid)}
+          attachReceipt={(photo) => orderApi.attachReceipt(uuid, photo)}
+        />
+
+        {/* TEC-1228: cancel moves the server offers (same rules as the web). */}
+        {cancelActions(o).length ? (
+          <View className="gap-2">
+            {cancelActions(o).map((a) => (
+              <Button
+                key={a.kind}
+                variant={a.kind === 'complete_cancel' ? 'secondary' : 'outline'}
+                title={t(`orders.actions.${a.kind}.button`)}
+                onPress={() => setCancelling(a)}
+              />
+            ))}
+          </View>
+        ) : null}
       </Screen>
 
       <OrderLinesEditor order={o} visible={editing} onClose={() => setEditing(false)} />
@@ -637,12 +703,37 @@ export function OrderScreen() {
           }}
         />
       ) : null}
+      <CancelSheet
+        key={cancelling?.kind ?? 'none'}
+        order={o}
+        kind={cancelling}
+        busy={busy === 'cancel'}
+        onClose={() => setCancelling(null)}
+        onSubmit={(status, reason) =>
+          void run('cancel', () => orderApi.transition(uuid, { status, reason }), {
+            done: () => {
+              setCancelling(null);
+              void qc.invalidateQueries({ queryKey: ['warehouse', 'orders'] });
+            },
+          })
+        }
+      />
       <ShipSheet
         visible={shipping}
         busy={busy === 'ship'}
         onClose={() => setShipping(false)}
         onShip={(extra) => transition('shipped', 'ship', extra)}
       />
+      {checking && o ? (
+        <ReceiptCheckSheet
+          order={o}
+          onClose={() => setChecking(false)}
+          onDone={(next) => {
+            store(next);
+            void qc.invalidateQueries({ queryKey: ['warehouse', 'orders'] });
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -760,12 +851,17 @@ function ShipSheet({
   visible: boolean;
   busy: boolean;
   onClose: () => void;
-  onShip: (extra: { delivery_method_uuid?: string; tracking_no?: string }) => void;
+  onShip: (extra: ShipExtra) => void;
 }) {
   const { t } = useTranslation('warehouse');
   const methods = useDeliveryMethods(visible);
   const [method, setMethod] = useState<string | undefined>(undefined);
   const [tracking, setTracking] = useState('');
+  // TEC-1228: package count, desi and weight, printed on the shipping note.
+  const [packages, setPackages] = useState('');
+  const [desi, setDesi] = useState('');
+  const [weight, setWeight] = useState('');
+  const details = parseShipment(packages, desi, weight);
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View className="flex-1 bg-background">
@@ -805,14 +901,31 @@ function ShipSheet({
             autoCapitalize="characters"
             autoCorrect={false}
           />
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Input label={t('shipment.package_count')} placeholder={t('shipment.package_count_placeholder')} value={packages} onChangeText={setPackages} keyboardType="number-pad" />
+            </View>
+            <View className="flex-1">
+              <Input label={t('shipment.desi')} placeholder={t('shipment.desi_placeholder')} value={desi} onChangeText={setDesi} keyboardType="decimal-pad" />
+            </View>
+            <View className="flex-1">
+              <Input label={t('shipment.weight_kg')} placeholder={t('shipment.weight_kg_placeholder')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
+            </View>
+          </View>
+          {details ? null : (
+            <Text variant="footnote" tone="danger">
+              {t('shipment.invalid')}
+            </Text>
+          )}
           <Text variant="footnote" tone="muted">
-            {t('m.shipping_note_web')}
+            {t('shipment.on_note')}
           </Text>
           <Button
             size="lg"
             title={t('orders.actions.ship.button')}
             loading={busy}
-            onPress={() => onShip({ delivery_method_uuid: method, tracking_no: tracking.trim() || undefined })}
+            disabled={!details}
+            onPress={() => onShip({ delivery_method_uuid: method, tracking_no: tracking.trim() || undefined, ...details })}
           />
         </ScrollView>
       </View>

@@ -419,9 +419,12 @@ describe("TransferDetailPage (TEC-232)", () => {
     await flush();
     expect($("transfer-line-target")?.textContent).toBe("WH2-R1-A-S1-02");
 
+    // TEC-1227: the receipt check dialog; every line arrived.
     await click($("transfer-complete"));
-    expect(dialogs.confirm).toHaveBeenCalled();
-    expect(api.completeTransfer).toHaveBeenCalledWith("tr-1");
+    await click(
+      document.querySelector('[data-testid="transfer-complete-confirm"]'),
+    );
+    expect(api.completeTransfer).toHaveBeenCalledWith("tr-1", {});
     await flush();
     expect($("transfer-status")?.getAttribute("data-status")).toBe("completed");
     expect($("transfer-cancel")).toBeNull();
@@ -710,6 +713,10 @@ function countLine(over: Partial<StockCountLine>): StockCountLine {
     allowed_resolutions: ["ignore", "void_missing"],
     note: null,
     resolved_at: null,
+    recount_status: null,
+    recount_rounds: 0,
+    recounted_at: null,
+    first_count: null,
     ...over,
   };
 }

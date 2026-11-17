@@ -56,6 +56,12 @@ func RegisterRoutes(
 	// TEC-1058: the plotter mark of one line, also after shipping.
 	mux.Handle("PATCH /v1/orders/{uuid}/items/{item_uuid}", route(h.PatchItem, editItems))
 	mux.Handle("POST /v1/orders/{uuid}/transitions", route(h.Transition, act))
+	// TEC-1228: the warehouse work queue (priority / due date, taking a job).
+	mux.Handle("PUT /v1/orders/{uuid}/schedule", route(h.SetSchedule,
+		middleware.RequireAnyPermission(rbac.PermOrdersWrite, rbac.PermOrdersApprove)))
+	claim := middleware.RequireAnyPermission(rbac.PermOrdersShip, rbac.PermOrdersWrite, rbac.PermOrdersApprove)
+	mux.Handle("POST /v1/orders/{uuid}/claim", route(h.Claim, claim))
+	mux.Handle("DELETE /v1/orders/{uuid}/claim", route(h.ReleaseClaim, claim))
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)
 	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))
 	mux.Handle("DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}", route(h.UnassignUnit, ship))
@@ -69,6 +75,13 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/orders/{uuid}/documents/{kind}", route(h.Document))
 	receive := middleware.RequirePermission(rbac.PermOrdersReceive)
 	mux.Handle("POST /v1/orders/{uuid}/receipt-document", route(h.AttachReceipt, receive))
+	// TEC-1227: partial shipment (the rest becomes a backorder) and the
+	// receipt discrepancy records (missing / damaged units).
+	mux.Handle("POST /v1/orders/{uuid}/partial-ship", route(h.PartialShip, ship))
+	resolve := middleware.RequireAnyPermission(rbac.PermOrdersReceive, rbac.PermOrdersShip)
+	mux.Handle("POST /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/resolve", route(h.ResolveDiscrepancy, resolve))
+	mux.Handle("POST /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos", route(h.AddDiscrepancyPhoto, receive))
+	mux.Handle("GET /v1/orders/{uuid}/discrepancies/{discrepancy_uuid}/photos/{index}", route(h.DiscrepancyPhoto))
 	// TEC-1030: manual "invoiced" marks by the seller's accounting
 	// (einvoice.manage, the center accounting grant).
 	invoice := middleware.RequirePermission(rbac.PermEinvoiceManage)

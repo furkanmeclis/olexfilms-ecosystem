@@ -11,7 +11,7 @@ import { Field } from './parts';
 
 export function unitStatusTone(status: string): StatusTone {
   if (status === 'void' || status === 'used') return 'problem';
-  if (status === 'in_transit' || status === 'reserved' || status === 'printed') return 'progress';
+  if (status === 'in_transit' || status === 'reserved' || status === 'printed' || status === 'quarantine') return 'progress';
   return 'done';
 }
 

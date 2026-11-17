@@ -152,6 +152,7 @@
   "status.in_transit": "En tránsito",
   "status.used": "Usada",
   "status.void": "Anulada",
+  "status.quarantine": "Pendiente de inspección",
   "unit_kind.serial": "Unidad en serie",
   "unit_kind.fixed": "Código de barras fijo",
   "list.loading": "Cargando…",
@@ -347,6 +348,7 @@
   "bulk.reason.used_in_service": "Usado en un servicio",
   "bulk.reason.consumed": "Consumido / anulado",
   "bulk.reason.in_transit": "En tránsito",
+  "bulk.reason.quarantine": "Devolución pendiente de inspección",
   "bulk.reason.reserved_by_order": "Reservado por un pedido",
   "bulk.reason.not_in_stock": "Aún no en stock",
   "bulk.reason.fixed_barcode": "Código fijo",
@@ -390,5 +392,15 @@
   "credits.reason_required": "El motivo es obligatorio (máximo 1000 caracteres).",
   "credits.submit": "Añadir",
   "credits.increased": "Créditos añadidos.",
-  "credits.increase_failed": "No se pudieron añadir los créditos."
+  "credits.increase_failed": "No se pudieron añadir los créditos.",
+  "label_templates.fields.output_format": "Salida",
+  "label_templates.output_format.sheet": "Hoja A4 (cuadrícula)",
+  "label_templates.output_format.single": "PDF de etiqueta única (térmica)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Las etiquetas se disponen en cuadrícula en una página A4.",
+  "label_templates.output_format_hint.single": "Cada página es una etiqueta de su tamaño. Imprima en una impresora térmica desde el diálogo del sistema.",
+  "label_templates.output_format_hint.zpl": "Un archivo .zpl para impresoras Zebra (203 dpi). El logo de imagen no se imprime.",
+  "label_templates.form.thermal_sizes": "Tamaños comunes:",
+  "columns.remnant": "Retal",
+  "remnant.badge": "Retal"
 }

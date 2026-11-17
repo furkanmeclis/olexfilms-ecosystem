@@ -22,6 +22,8 @@ type OrgRef struct {
 	UUID uuid.UUID `json:"uuid"`
 	Name string    `json:"name"`
 	Type string    `json:"type"`
+	// zone is the organization's time zone (TEC-1228 overdue check).
+	zone string
 }
 
 // ProductRef names an order line's product.
@@ -115,6 +117,24 @@ type OrderView struct {
 	// CreatedBy: the user who opened the order (TEC-1090); null for a
 	// system or migrated order.
 	CreatedBy *CreatorRef `json:"created_by"`
+	// TEC-1228 work queue: Priority (normal / urgent), DueDate
+	// (YYYY-MM-DD), IsOverdue (the due date passed before shipping, in the
+	// seller's time zone), Picker / ClaimedAt (the warehouse user who took
+	// the job), ClaimedByMe, CanClaim (seller orders.ship on an open job),
+	// CanTakeOver (also a seller manager) and CanEditSchedule.
+	Priority        string     `json:"priority"`
+	DueDate         *string    `json:"due_date"`
+	IsOverdue       bool       `json:"is_overdue"`
+	Picker          *UserRef   `json:"picker"`
+	ClaimedAt       *time.Time `json:"claimed_at"`
+	ClaimedByMe     bool       `json:"claimed_by_me"`
+	CanClaim        bool       `json:"can_claim"`
+	CanTakeOver     bool       `json:"can_take_over"`
+	CanEditSchedule bool       `json:"can_edit_schedule"`
+	// Shipment details entered at shipping (TEC-1228), on the shipping note.
+	PackageCount *int32  `json:"package_count"`
+	Desi         *string `json:"desi"`
+	WeightKg     *string `json:"weight_kg"`
 	// SellerWarehouse: the seller warehouse the order falls into
 	// (TEC-1028; seller side only, null before approval or without one;
 	// list rows carry it too since TEC-1054).
@@ -165,11 +185,23 @@ type OrderView struct {
 	// ParentOrder: the main order of a supplement; Supplements: the
 	// supplements of a main order; CanAddSupplement: the caller may open
 	// one now (detail only, TEC-1222).
-	ParentOrder      *OrderLink    `json:"parent_order,omitempty"`
-	Supplements      []OrderLink   `json:"supplements,omitempty"`
-	CanAddSupplement bool          `json:"can_add_supplement,omitempty"`
-	Items            []ItemView    `json:"items,omitempty"`
-	History          []HistoryView `json:"history,omitempty"`
+	ParentOrder      *OrderLink  `json:"parent_order,omitempty"`
+	Supplements      []OrderLink `json:"supplements,omitempty"`
+	CanAddSupplement bool        `json:"can_add_supplement,omitempty"`
+	// IsBackorder: the order was split from another by a partial shipment
+	// (TEC-1227); list rows carry it too. BackorderOf names that order,
+	// Backorders the backorders split from this one, CanPartialShip that
+	// the caller may ship the picked part now (detail only).
+	IsBackorder    bool        `json:"is_backorder"`
+	BackorderOf    *OrderLink  `json:"backorder_of,omitempty"`
+	Backorders     []OrderLink `json:"backorders,omitempty"`
+	CanPartialShip bool        `json:"can_partial_ship,omitempty"`
+	// Discrepancies are the receipt records (missing or damaged units,
+	// TEC-1227); OpenDiscrepancies counts the open ones (detail only).
+	Discrepancies     []DiscrepancyView `json:"discrepancies,omitempty"`
+	OpenDiscrepancies int               `json:"open_discrepancies,omitempty"`
+	Items             []ItemView        `json:"items,omitempty"`
+	History           []HistoryView     `json:"history,omitempty"`
 	// Timeline: every recorded step with its user (detail only, TEC-1060).
 	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
@@ -245,7 +277,7 @@ func (m orgCache) get(ctx context.Context, q *db.Queries, id int64) (OrgRef, err
 	if err != nil {
 		return OrgRef{}, fmt.Errorf("orders: organization: %w", err)
 	}
-	r := OrgRef{UUID: o.Uuid, Name: o.Name, Type: o.Type}
+	r := OrgRef{UUID: o.Uuid, Name: o.Name, Type: o.Type, zone: o.Timezone}
 	m[id] = r
 	return r, nil
 }
@@ -280,7 +312,9 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		AvailableTransitions: invoicedGuard(o, availableTransitions(o.Status, party, c.can)),
 		CanEditItems:         canEditItems(c, o),
 		IsSupplement:         o.ParentOrderID.Valid,
+		IsBackorder:          o.BackorderOfOrderID.Valid,
 	}
+	s.queueFields(c, o, seller.zone, &v)
 	if o.DeliveryMethodID.Valid {
 		m, err := q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)
 		if err != nil {
@@ -330,6 +364,12 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	}
 	v = views[0]
 	if err := s.withSupplements(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
+	if err := s.withBackorders(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
+	if err := s.withDiscrepancies(ctx, q, c, o, &v); err != nil {
 		return OrderView{}, err
 	}
 	items, err := q.ListOrderItems(ctx, o.ID)
@@ -450,6 +490,10 @@ type ListFilter struct {
 	PartyOrgUUIDs []uuid.UUID
 	ProductUUID   pgtype.UUID
 	CreatedByUUID pgtype.UUID
+	// TEC-1228: Priorities is any-of; Picker is "me" (the caller's jobs),
+	// "none" (nobody took the job) or a user uuid.
+	Priorities []string
+	Picker     string
 	// Q searches the order number, tracking number, external reference
 	// and (index) the parties' names and dealer codes (TEC-210).
 	Q            string
@@ -516,6 +560,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		p.SellerWarehouseUuids = f.SellerWarehouseUUIDs
 		p.PartyUuids, p.ProductUuid, p.CreatedByUuid = f.PartyOrgUUIDs, f.ProductUUID, f.CreatedByUUID
 		p.InvoiceStatuses = f.InvoiceStatuses
+		if err = s.pickerArgs(ctx, c, f, &p); err != nil {
+			return nil, 0, err
+		}
 		p.TotalMin, p.TotalMax = numArg(f.TotalMin), numArg(f.TotalMax)
 		p.SortKey, p.SortDesc, p.RowLimit, p.RowOffset = key, desc, f.Limit, f.Offset
 		rows, err = s.q.ListOrdersFiltered(ctx, p)
@@ -526,6 +573,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 				SellerUuids: p.SellerUuids, BuyerUuids: p.BuyerUuids, TotalMin: p.TotalMin, TotalMax: p.TotalMax,
 				SellerWarehouseUuids: p.SellerWarehouseUuids,
 				PartyUuids:           p.PartyUuids, ProductUuid: p.ProductUuid, CreatedByUuid: p.CreatedByUuid,
+				Priorities: p.Priorities, PickerUserID: p.PickerUserID, PickerUnassigned: p.PickerUnassigned,
 			})
 		}
 	}

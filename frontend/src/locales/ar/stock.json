@@ -152,6 +152,7 @@
   "status.in_transit": "قيد النقل",
   "status.used": "مستخدمة",
   "status.void": "ملغاة",
+  "status.quarantine": "بانتظار الفحص",
   "unit_kind.serial": "وحدة تسلسلية",
   "unit_kind.fixed": "باركود ثابت",
   "list.loading": "جارٍ التحميل…",
@@ -300,5 +301,16 @@
   "credits.reason_required": "السبب مطلوب (1000 حرف كحد أقصى).",
   "credits.submit": "إضافة",
   "credits.increased": "تمت إضافة الأرصدة.",
-  "credits.increase_failed": "تعذّرت إضافة الأرصدة."
+  "credits.increase_failed": "تعذّرت إضافة الأرصدة.",
+  "label_templates.fields.output_format": "المخرج",
+  "label_templates.output_format.sheet": "ورقة A4 (شبكة)",
+  "label_templates.output_format.single": "PDF ملصق واحد (حراري)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "تُرتَّب الملصقات كشبكة على صفحة A4.",
+  "label_templates.output_format_hint.single": "كل صفحة ملصق واحد بحجم الملصق. اطبع على طابعة حرارية من نافذة الطباعة في النظام.",
+  "label_templates.output_format_hint.zpl": "ملف ‎.zpl لطابعات Zebra (203 dpi). لا يُطبع شعار الصورة.",
+  "label_templates.form.thermal_sizes": "أحجام شائعة:",
+  "columns.remnant": "بقايا",
+  "remnant.badge": "بقايا",
+  "bulk.reason.quarantine": "مرتجع بانتظار الفحص"
 }

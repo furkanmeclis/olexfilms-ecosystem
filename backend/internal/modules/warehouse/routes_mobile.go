@@ -19,8 +19,8 @@ type MobileHandlers struct {
 	Transfers *whhandler.Transfers
 	Entries   *whhandler.Entries
 	Members   *whhandler.Members
-	// StepUp guards the count approval like the panel route (TEC-1224);
-	// nil fails closed (STEP_UP_REQUIRED).
+	// StepUp guards the stock entry undo (TEC-1225) and the count approval
+	// like the panel route (TEC-1224); nil fails closed (STEP_UP_REQUIRED).
 	StepUp middleware.StepUpChecker
 }
 
@@ -63,11 +63,30 @@ func RegisterMobileRoutes(
 	mux.Handle("GET "+p+"/stock-entries", read(h.Entries.List))
 	mux.Handle("POST "+p+"/stock-entries", write(h.Entries.CreateMobile))
 	mux.Handle("GET "+p+"/stock-entries/{uuid}", read(h.Entries.Get))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/placement-suggestions", read(h.Entries.PlacementSuggestions))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/lines", write(h.Entries.AddLines))
 	mux.Handle("DELETE "+p+"/stock-entries/{uuid}/lines/{line_uuid}", write(h.Entries.DeleteLine))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/place", write(h.Entries.Place))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/confirm", write(h.Entries.Confirm))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/cancel", write(h.Entries.Cancel))
+	// TEC-1225: container receiving on mobile (header, arrival scan, report,
+	// discrepancy record, attachments, line details, undo, label prints).
+	mux.Handle("PATCH "+p+"/stock-entries/{uuid}", write(h.Entries.UpdateHeader))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/arrival-scans", write(h.Entries.Scan))
+	mux.Handle("DELETE "+p+"/stock-entries/{uuid}/arrival-scans", write(h.Entries.Unscan))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/arrival-report", read(h.Entries.ArrivalReport))
+	mux.Handle("PATCH "+p+"/stock-entries/{uuid}/lines/{line_uuid}", write(h.Entries.UpdateLine))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/receipt", read(h.Entries.Receipt))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/receipt.pdf", read(h.Entries.ReceiptPDF))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/attachments", write(h.Entries.AddAttachment))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/attachments/{attachment_uuid}", read(h.Entries.Attachment))
+	mux.Handle("DELETE "+p+"/stock-entries/{uuid}/attachments/{attachment_uuid}", write(h.Entries.DeleteAttachment))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/label-prints", write(h.Entries.LabelPrint))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/undo-check", read(h.Entries.UndoCheck))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/undo",
+		middleware.Chain(http.HandlerFunc(h.Entries.Undo), version, authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(h.StepUp)))
+	mux.Handle("GET "+p+"/suppliers", read(h.Entries.Suppliers))
 
 	mux.Handle("POST "+p+"/moves", write(h.Transfers.Move))
 
@@ -86,6 +105,8 @@ func RegisterMobileRoutes(
 		middleware.Chain(http.HandlerFunc(h.Counts.Approve), version, authn, org, module,
 			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(h.StepUp)))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/cancel", write(h.Counts.Cancel))
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/recount-requests", write(h.Counts.RequestRecount))
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/lines/{line_uuid}/recount", write(h.Counts.Recount))
 
 	mux.Handle("GET "+p+"/transfers", read(h.Transfers.List))
 	mux.Handle("POST "+p+"/transfers", write(h.Transfers.Create))
@@ -96,4 +117,5 @@ func RegisterMobileRoutes(
 	mux.Handle("POST "+p+"/transfers/{uuid}/ship", write(h.Transfers.Ship))
 	mux.Handle("POST "+p+"/transfers/{uuid}/complete", write(h.Transfers.Complete))
 	mux.Handle("POST "+p+"/transfers/{uuid}/cancel", write(h.Transfers.Cancel))
+	mux.Handle("POST "+p+"/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve", write(h.Transfers.ResolveDiscrepancy))
 }

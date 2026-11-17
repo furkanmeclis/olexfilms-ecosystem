@@ -261,6 +261,9 @@ type CreateInput struct {
 	// SelfPrepare: the center user prepares the order himself (TEC-1052,
 	// with BuyerOrgUUID, needs orders.ship): no warehouse staff is told.
 	SelfPrepare bool
+	// TEC-1228: the priority (normal / urgent) and due date (YYYY-MM-DD).
+	Priority string
+	DueDate  *string
 }
 
 // DraftResult reports whether a stock-forecast draft reused an existing open
@@ -523,6 +526,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 		})
 		if err != nil {
 			return fmt.Errorf("orders: create: %w", err)
+		}
+		if o, err = createSchedule(ctx, q, o, in); err != nil {
+			return err
 		}
 		if err := s.insertLines(ctx, q, o, buyer, lines); err != nil {
 			return err
@@ -795,6 +801,11 @@ type TransitionInput struct {
 	Reason             *string
 	DeliveryMethodUUID *string
 	TrackingNo         *string
+	// Discrepancies: missing or damaged units reported with the received
+	// step (TEC-1227); refused with any other target.
+	Discrepancies []DiscrepancyInput
+	// Packages: package count, desi and weight (shipping only, TEC-1228).
+	Packages PackagesInput
 }
 
 func partyOf(c Caller, o db.Order) Party {
@@ -832,6 +843,9 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 	to := strings.TrimSpace(in.Status)
 	if !IsStatus(to) {
 		return OrderView{}, invalid("status", "unknown order status")
+	}
+	if len(in.Discrepancies) > 0 && to != StatusReceived {
+		return OrderView{}, invalid("discrepancies", "are reported only with the received status")
 	}
 	var result db.Order
 	shipped := false
@@ -887,18 +901,25 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			if info, err = in.shipping(ctx, q, o); err != nil {
 				return err
 			}
+			var pk packages
+			if pk, err = in.Packages.parse(); err != nil {
+				return err
+			}
 			if meta, err = s.ship(ctx, q, tx, c, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
 			if err == nil {
 				o, err = setShipping(ctx, q, o, info)
 			}
+			if err == nil {
+				o, err = setPackages(ctx, q, o, pk)
+			}
 			if err == nil && info.method != nil {
 				meta["delivery_method"] = info.method.Code
 			}
 			shipped = true
 		case StatusReceived:
-			if meta, err = s.receive(ctx, q, tx, c, o); err == nil {
+			if meta, err = s.receive(ctx, q, tx, c, o, in.Discrepancies); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
 			if err == nil && onBehalf {

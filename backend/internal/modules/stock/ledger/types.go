@@ -39,6 +39,12 @@ const (
 	TypeCountAdjustment       MovementType = "count_adjustment"
 	TypeVoid                  MovementType = "void"
 	TypeExternalOutbound      MovementType = "external_outbound"
+	// TEC-1226: a returned serial unit waits for inspection (quarantine),
+	// is released back to stock after it (quarantine_release) and a voided
+	// unit that turns up again is found back into stock (found).
+	TypeQuarantine        MovementType = "quarantine"
+	TypeQuarantineRelease MovementType = "quarantine_release"
+	TypeFound             MovementType = "found"
 )
 
 // PostableTypes lists the movement types Post accepts. reclassification is
@@ -47,6 +53,7 @@ var PostableTypes = []MovementType{
 	TypeEntry, TypePlacement, TypeTransferOut, TypeTransferIn, TypeTransferCancelRestore,
 	TypeOrderOut, TypeReceived, TypeOrderCancelRestore, TypeConsumption,
 	TypePartialConsumption, TypeReturn, TypeSale, TypeCountAdjustment, TypeVoid, TypeExternalOutbound,
+	TypeQuarantine, TypeQuarantineRelease, TypeFound,
 }
 
 // OwnerType is the polymorphic owner kind.
@@ -70,10 +77,14 @@ const (
 	StatusInTransit Status = "in_transit"
 	StatusUsed      Status = "used"
 	StatusVoid      Status = "void"
+	// StatusQuarantine (TEC-1226): held by the organization but waiting for
+	// inspection; not counted as stock, not pickable, not usable.
+	StatusQuarantine Status = "quarantine"
 )
 
 // counted reports whether a unit in status s is on hand (product stock
-// projections count available and placed units only).
+// projections count available and placed units only; a quarantined unit is
+// held but not sellable or usable).
 func counted(s Status) bool { return s == StatusAvailable || s == StatusPlaced }
 
 // Unit kinds.

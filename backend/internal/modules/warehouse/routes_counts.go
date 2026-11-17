@@ -48,4 +48,7 @@ func RegisterCountRoutes(
 		middleware.Chain(http.HandlerFunc(h.Approve), authn, org, module,
 			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(stepUp)))
 	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/cancel", write(h.Cancel))
+	// TEC-1229: recount of difference lines.
+	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/recount-requests", write(h.RequestRecount))
+	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount", write(h.Recount))
 }

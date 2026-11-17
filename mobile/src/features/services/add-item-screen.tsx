@@ -6,6 +6,8 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { useScannerInput } from '@/features/scanner/input-mode';
+import { WedgeInput } from '@/features/scanner/wedge-input';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
@@ -176,6 +178,25 @@ function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
   const { t } = useTranslation('dealer');
   const [permission, request] = useCameraPermissions();
   const done = useRef(false);
+  // TEC-1230: a hardware reader (keyboard wedge) instead of the camera.
+  const wedge = useScannerInput((st) => st.mode) === 'wedge';
+  if (wedge) {
+    return (
+      <View className="h-24 items-center justify-center gap-1 rounded-lg bg-black px-4">
+        <Text variant="callout" className="text-center text-white">
+          {t('scan:input.ready')}
+        </Text>
+        <WedgeInput
+          onCode={(code) => {
+            if (done.current) return;
+            done.current = true;
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onCode(code.trim());
+          }}
+        />
+      </View>
+    );
+  }
   if (!permission) return null;
   if (!permission.granted) {
     return <Button title={t('camera_allow')} variant="secondary" onPress={() => void request()} />;

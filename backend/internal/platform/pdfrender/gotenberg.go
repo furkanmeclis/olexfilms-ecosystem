@@ -17,6 +17,7 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -83,6 +84,11 @@ type Request struct {
 	// pageNumber / totalPages classes.
 	FooterHTML string
 	Landscape  bool
+	// PageWidthMm / PageHeightMm set a custom paper size with no margins
+	// (TEC-1230: one thermal label per page); both must be > 0, otherwise
+	// the page is A4 with the default margins.
+	PageWidthMm  float64
+	PageHeightMm float64
 }
 
 // Client renders HTML to PDF via Gotenberg Chromium.
@@ -250,6 +256,18 @@ func buildForm(req Request) ([]byte, string, error) {
 		{"marginLeft", "0.4"},
 		{"marginRight", "0.4"},
 		{"printBackground", "true"},
+	}
+	if req.PageWidthMm > 0 && req.PageHeightMm > 0 {
+		in := func(mm float64) string { return strconv.FormatFloat(mm/25.4, 'f', 4, 64) }
+		fields = [][2]string{
+			{"paperWidth", in(req.PageWidthMm)},
+			{"paperHeight", in(req.PageHeightMm)},
+			{"marginTop", "0"},
+			{"marginBottom", "0"},
+			{"marginLeft", "0"},
+			{"marginRight", "0"},
+			{"printBackground", "true"},
+		}
 	}
 	if req.Landscape {
 		fields = append(fields, [2]string{"landscape", "true"})

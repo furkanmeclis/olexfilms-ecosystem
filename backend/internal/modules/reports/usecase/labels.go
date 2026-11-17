@@ -82,6 +82,7 @@ var labels = map[string]label{
 	"units.status.placed":     {"Rafta", "Placed", "Разположена", "Eingelagert", "Τοποθετημένη", "Розміщено", "Размещено", "Rangée", "Ubicada", "Collocata", "已上架", "Yerləşdirilib", "موضوعة"},
 	"units.status.in_transit": {"Yolda", "In transit", "В транзит", "Unterwegs", "Σε μεταφορά", "У дорозі", "В пути", "En transit", "En tránsito", "In transito", "运输中", "Yoldadır", "قيد النقل"},
 	"units.status.used":       {"Kullanıldı", "Used", "Използвана", "Verbraucht", "Χρησιμοποιήθηκε", "Використано", "Использовано", "Utilisée", "Usada", "Utilizzata", "已使用", "İstifadə olunub", "مستخدمة"},
+	"units.status.quarantine": {"Kontrol bekliyor", "Awaiting inspection", "Очаква проверка", "Prüfung ausstehend", "Αναμένει έλεγχο", "Очікує перевірки", "Ожидает проверки", "En attente de contrôle", "Pendiente de inspección", "In attesa di controllo", "待检验", "Yoxlama gözləyir", "بانتظار الفحص"},
 	"units.status.void":       {"Geçersiz", "Void", "Анулирана", "Ungültig", "Άκυρη", "Анульовано", "Аннулировано", "Annulée", "Anulada", "Annullata", "已作废", "Etibarsız", "ملغاة"},
 
 	// Measurement statuses.
@@ -186,6 +187,19 @@ var labels = map[string]label{
 	"organizations.status.read_only": {"Salt okunur", "Read only", "Само за четене", "Nur lesen", "Μόνο ανάγνωση", "Лише читання", "Только чтение", "Lecture seule", "Solo lectura", "Sola lettura", "只读", "Yalnız oxumaq", "للقراءة فقط"},
 	"organizations.status.suspended": {"Askıda", "Suspended", "Спрян", "Gesperrt", "Σε αναστολή", "Призупинено", "Приостановлен", "Suspendu", "Suspendido", "Sospeso", "已暂停", "Dayandırılıb", "معلق"},
 	"organizations.status.expired":   {"Süresi doldu", "Expired", "Изтекъл", "Abgelaufen", "Έληξε", "Термін минув", "Истёк", "Expiré", "Caducado", "Scaduto", "已过期", "Müddəti bitib", "منتهي"},
+	// TEC-1229: stock.aging.
+	"title.stock.aging":         {"Yaşlanan stok", "Aging stock", "Застояли наличности", "Lagerhüter", "Γηρασμένο απόθεμα", "Застарілі запаси", "Залежавшиеся запасы", "Stock dormant", "Stock envejecido", "Giacenze ferme", "库龄分析", "Köhnələn stok", "المخزون الراكد"},
+	"column.qty_0_30":           {"0-30 gün", "0-30 days", "0-30 дни", "0-30 Tage", "0-30 ημέρες", "0-30 днів", "0-30 дней", "0-30 jours", "0-30 días", "0-30 giorni", "0-30 天", "0-30 gün", "0-30 يومًا"},
+	"column.qty_30_60":          {"30-60 gün", "30-60 days", "30-60 дни", "30-60 Tage", "30-60 ημέρες", "30-60 днів", "30-60 дней", "30-60 jours", "30-60 días", "30-60 giorni", "30-60 天", "30-60 gün", "30-60 يومًا"},
+	"column.qty_60_90":          {"60-90 gün", "60-90 days", "60-90 дни", "60-90 Tage", "60-90 ημέρες", "60-90 днів", "60-90 дней", "60-90 jours", "60-90 días", "60-90 giorni", "60-90 天", "60-90 gün", "60-90 يومًا"},
+	"column.qty_90_180":         {"90-180 gün", "90-180 days", "90-180 дни", "90-180 Tage", "90-180 ημέρες", "90-180 днів", "90-180 дней", "90-180 jours", "90-180 días", "90-180 giorni", "90-180 天", "90-180 gün", "90-180 يومًا"},
+	"column.qty_180_plus":       {"180+ gün", "180+ days", "180+ дни", "180+ Tage", "180+ ημέρες", "180+ днів", "180+ дней", "180+ jours", "180+ días", "180+ giorni", "180+ 天", "180+ gün", "180+ يومًا"},
+	"column.oldest_days":        {"En eski (gün)", "Oldest (days)", "Най-стари (дни)", "Älteste (Tage)", "Παλαιότερο (ημέρες)", "Найстаріші (днів)", "Самые старые (дней)", "Plus ancien (jours)", "Más antiguo (días)", "Più vecchio (giorni)", "最久（天）", "Ən köhnə (gün)", "الأقدم (أيام)"},
+	"column.oldest_movement_at": {"En eski hareket", "Oldest movement", "Най-старо движение", "Älteste Bewegung", "Παλαιότερη κίνηση", "Найстаріший рух", "Самое старое движение", "Mouvement le plus ancien", "Movimiento más antiguo", "Movimento più vecchio", "最早变动", "Ən köhnə hərəkət", "أقدم حركة"},
+	"column.unit_price":         {"Birim fiyat", "Unit price", "Единична цена", "Stückpreis", "Τιμή μονάδας", "Ціна за одиницю", "Цена за единицу", "Prix unitaire", "Precio unitario", "Prezzo unitario", "单价", "Vahid qiyməti", "سعر الوحدة"},
+	"column.stock_value":        {"Stok değeri", "Stock value", "Стойност на наличностите", "Bestandswert", "Αξία αποθέματος", "Вартість запасу", "Стоимость запаса", "Valeur du stock", "Valor del stock", "Valore della giacenza", "库存价值", "Stok dəyəri", "قيمة المخزون"},
+	"kpi.aging_quantity":        {"Stoktaki adet", "Units in stock", "Бройки в наличност", "Stück im Bestand", "Τεμάχια σε απόθεμα", "Одиниць на складі", "Единиц на складе", "Unités en stock", "Unidades en stock", "Unità in giacenza", "在库数量", "Stokdakı ədəd", "الوحدات في المخزون"},
+	"kpi.aging_over_90":         {"90 günden eski", "Older than 90 days", "По-стари от 90 дни", "Älter als 90 Tage", "Παλαιότερα από 90 ημέρες", "Старші за 90 днів", "Старше 90 дней", "Plus de 90 jours", "Más de 90 días", "Oltre 90 giorni", "超过 90 天", "90 gündən köhnə", "أقدم من 90 يومًا"},
 }
 
 // translate resolves key for locale; an unknown locale falls back to en and

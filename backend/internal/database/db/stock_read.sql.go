@@ -96,12 +96,12 @@ const countOrganizationStockUnitRows = `-- name: CountOrganizationStockUnitRows 
 WITH held AS (
     SELECT s.unit_id, s.owner_type, s.owner_id, s.updated_at
     FROM unit_current_state s
-    WHERE s.holder_org_id = $10
+    WHERE s.holder_org_id = $11
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $10
+    WHERE h.holder_org_id = $11
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -121,11 +121,14 @@ WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
        OR l.uuid = ANY ($6::uuid[]))
   AND ($7::timestamptz IS NULL OR held.updated_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR held.updated_at < $8::timestamptz)
+  AND ($9::bool IS NULL
+       OR (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+           AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters) = $9::bool)
   AND (
-    $9::text IS NULL
-    OR p.name ILIKE '%' || $9::text || '%'
-    OR p.sku ILIKE '%' || $9::text || '%'
-    OR u.barcode ILIKE '%' || $9::text || '%'
+    $10::text IS NULL
+    OR p.name ILIKE '%' || $10::text || '%'
+    OR p.sku ILIKE '%' || $10::text || '%'
+    OR u.barcode ILIKE '%' || $10::text || '%'
   )
 `
 
@@ -138,6 +141,7 @@ type CountOrganizationStockUnitRowsParams struct {
 	LocationUuids  []uuid.UUID        `json:"location_uuids"`
 	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
 	UpdatedBefore  pgtype.Timestamptz `json:"updated_before"`
+	Remnant        pgtype.Bool        `json:"remnant"`
 	Q              pgtype.Text        `json:"q"`
 	OrganizationID int64              `json:"organization_id"`
 }
@@ -152,6 +156,7 @@ func (q *Queries) CountOrganizationStockUnitRows(ctx context.Context, arg CountO
 		arg.LocationUuids,
 		arg.UpdatedFrom,
 		arg.UpdatedBefore,
+		arg.Remnant,
 		arg.Q,
 		arg.OrganizationID,
 	)
@@ -513,13 +518,13 @@ const listOrganizationStockUnitRows = `-- name: ListOrganizationStockUnitRows :m
 WITH held AS (
     SELECT s.unit_id, 1::int AS quantity, s.owner_type, s.owner_id, s.updated_at
     FROM unit_current_state s
-    WHERE s.holder_org_id = $15
+    WHERE s.holder_org_id = $16
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity,
            NULL::varchar AS owner_type, NULL::bigint AS owner_id, MAX(h.updated_at) AS updated_at
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $15
+    WHERE h.holder_org_id = $16
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -529,6 +534,9 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        held.quantity, held.updated_at,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
+       -- TEC-1230: a roll with less left than the product's minimum cut.
+       (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+        AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters)::bool AS remnant,
        c.uuid AS category_uuid, c.name AS category_name,
        l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name,
        -- TEC-1221: credits of a serial piece unit (-1: none), uses so far.
@@ -553,32 +561,35 @@ WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
        OR l.uuid = ANY ($6::uuid[]))
   AND ($7::timestamptz IS NULL OR held.updated_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR held.updated_at < $8::timestamptz)
-  AND ($9::uuid[] IS NULL OR u.uuid = ANY ($9::uuid[]))
+  AND ($9::bool IS NULL
+       OR (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+           AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters) = $9::bool)
+  AND ($10::uuid[] IS NULL OR u.uuid = ANY ($10::uuid[]))
   AND (
-    $10::text IS NULL
-    OR p.name ILIKE '%' || $10::text || '%'
-    OR p.sku ILIKE '%' || $10::text || '%'
-    OR u.barcode ILIKE '%' || $10::text || '%'
+    $11::text IS NULL
+    OR p.name ILIKE '%' || $11::text || '%'
+    OR p.sku ILIKE '%' || $11::text || '%'
+    OR u.barcode ILIKE '%' || $11::text || '%'
   )
 ORDER BY
-  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END ASC,
-  CASE WHEN $11::bool THEN CASE $12::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END DESC,
-  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
+  CASE WHEN NOT $12::bool THEN CASE $13::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END ASC,
+  CASE WHEN $12::bool THEN CASE $13::text WHEN 'product' THEN p.name WHEN 'barcode' THEN u.barcode END END DESC,
+  CASE WHEN NOT $12::bool THEN CASE $13::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
     CASE u.status WHEN 'reserved' THEN 1 WHEN 'printed' THEN 2 WHEN 'available' THEN 3 WHEN 'placed' THEN 4
                  WHEN 'in_transit' THEN 5 WHEN 'used' THEN 6 ELSE 7 END END END ASC,
-  CASE WHEN $11::bool THEN CASE $12::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
+  CASE WHEN $12::bool THEN CASE $13::text WHEN 'quantity' THEN held.quantity WHEN 'status' THEN
     CASE u.status WHEN 'reserved' THEN 1 WHEN 'printed' THEN 2 WHEN 'available' THEN 3 WHEN 'placed' THEN 4
                  WHEN 'in_transit' THEN 5 WHEN 'used' THEN 6 ELSE 7 END END END DESC,
-  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'meters' THEN u.remaining_meters END END ASC NULLS LAST,
-  CASE WHEN $11::bool THEN CASE $12::text WHEN 'meters' THEN u.remaining_meters END END DESC NULLS LAST,
-  CASE WHEN NOT $11::bool THEN CASE $12::text WHEN 'updated_at' THEN held.updated_at END END ASC NULLS LAST,
-  CASE WHEN $11::bool THEN CASE $12::text WHEN 'updated_at' THEN held.updated_at END END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool THEN CASE $13::text WHEN 'meters' THEN u.remaining_meters END END ASC NULLS LAST,
+  CASE WHEN $12::bool THEN CASE $13::text WHEN 'meters' THEN u.remaining_meters END END DESC NULLS LAST,
+  CASE WHEN NOT $12::bool THEN CASE $13::text WHEN 'updated_at' THEN held.updated_at END END ASC NULLS LAST,
+  CASE WHEN $12::bool THEN CASE $13::text WHEN 'updated_at' THEN held.updated_at END END DESC NULLS LAST,
   -- product sort: barcode inside one product (the former fixed order)
-  CASE WHEN $12::text = 'product' AND NOT $11::bool THEN u.barcode END ASC,
-  CASE WHEN $12::text = 'product' AND $11::bool THEN u.barcode END DESC,
-  CASE WHEN $11::bool THEN u.id END DESC,
+  CASE WHEN $13::text = 'product' AND NOT $12::bool THEN u.barcode END ASC,
+  CASE WHEN $13::text = 'product' AND $12::bool THEN u.barcode END DESC,
+  CASE WHEN $12::bool THEN u.id END DESC,
   u.id ASC
-LIMIT $14 OFFSET $13
+LIMIT $15 OFFSET $14
 `
 
 type ListOrganizationStockUnitRowsParams struct {
@@ -590,6 +601,7 @@ type ListOrganizationStockUnitRowsParams struct {
 	LocationUuids  []uuid.UUID        `json:"location_uuids"`
 	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
 	UpdatedBefore  pgtype.Timestamptz `json:"updated_before"`
+	Remnant        pgtype.Bool        `json:"remnant"`
 	Uuids          []uuid.UUID        `json:"uuids"`
 	Q              pgtype.Text        `json:"q"`
 	SortDesc       bool               `json:"sort_desc"`
@@ -615,6 +627,7 @@ type ListOrganizationStockUnitRowsRow struct {
 	ProductName      string             `json:"product_name"`
 	UnitType         string             `json:"unit_type"`
 	UsesFixedBarcode bool               `json:"uses_fixed_barcode"`
+	Remnant          bool               `json:"remnant"`
 	CategoryUuid     uuid.UUID          `json:"category_uuid"`
 	CategoryName     string             `json:"category_name"`
 	LocationUuid     pgtype.UUID        `json:"location_uuid"`
@@ -633,7 +646,8 @@ type ListOrganizationStockUnitRowsRow struct {
 // TEC-373 (DT-BE-5): statuses is any-of (empty: available + placed),
 // barcode exact or barcode_prefix (LIKE, the caller escapes % and _),
 // location_uuids any-of (fixed barcodes have no single location and drop
-// out), updated_from / updated_before (exclusive) on the holding's last
+// out), remnant (TEC-1230: rolls under the product's minimum cut, or not),
+// updated_from / updated_before (exclusive) on the holding's last
 // change. sort_key: product, barcode, status (unit flow rank), quantity,
 // meters (remaining, empty last), updated_at; id is the tiebreak.
 func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error) {
@@ -646,6 +660,7 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 		arg.LocationUuids,
 		arg.UpdatedFrom,
 		arg.UpdatedBefore,
+		arg.Remnant,
 		arg.Uuids,
 		arg.Q,
 		arg.SortDesc,
@@ -677,6 +692,7 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 			&i.ProductName,
 			&i.UnitType,
 			&i.UsesFixedBarcode,
+			&i.Remnant,
 			&i.CategoryUuid,
 			&i.CategoryName,
 			&i.LocationUuid,

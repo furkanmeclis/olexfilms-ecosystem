@@ -16,6 +16,7 @@ import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -52,6 +53,13 @@ import {
   useEntryImportTemplates,
 } from "@/features/warehouse/components/container-entry";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
+import { EntryPlacementSuggestions } from "@/features/warehouse/components/entry-placement-suggestions";
+import {
+  EntryAttachmentsCard,
+  EntryReceiptCard,
+  EntryUndoButton,
+  ReceivingConfirmDialog,
+} from "@/features/warehouse/components/entry-receiving";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
@@ -67,6 +75,10 @@ import {
   unplacedLines,
 } from "@/features/warehouse/lib/entries";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import {
+  arrivalChecked,
+  timelineDetail,
+} from "@/features/warehouse/lib/receiving";
 import { entryImportConfirmCopy } from "@/features/warehouse/lib/entry-import";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import {
@@ -113,6 +125,7 @@ export function StockEntryDetailPage({
   const { t, format } = useLocale();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
+  const canAdjust = access.can(Permission.StockAdjust);
   const qc = useQueryClient();
   const { confirm } = useDialogs();
   const [selected, setSelected] = useState<string[]>([]);
@@ -121,6 +134,14 @@ export function StockEntryDetailPage({
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  // TEC-1225: discrepancy record dialog, lot and production date of new lines.
+  const [receivingOpen, setReceivingOpen] = useState(false);
+  const [lot, setLot] = useState("");
+  const [productionDate, setProductionDate] = useState("");
+  const lineDetails = {
+    ...(lot.trim() ? { lot: lot.trim() } : {}),
+    ...(productionDate ? { production_date: productionDate } : {}),
+  };
   const [fixedPending, setFixedPending] = useState<{
     barcode: string;
     product: string;
@@ -233,12 +254,10 @@ export function StockEntryDetailPage({
     if (ok) voidSelected.mutate();
   };
   const finish = useMutation({
-    mutationFn: (action: "confirm" | "cancel" | "confirm_drop_missing") =>
-      action === "cancel"
-        ? warehouseService.cancel(uuid)
-        : warehouseService.confirm(uuid, {
-            drop_missing: action === "confirm_drop_missing",
-          }),
+    mutationFn: (action: "confirm" | "cancel") =>
+      action === "confirm"
+        ? warehouseService.confirm(uuid)
+        : warehouseService.cancel(uuid),
     onSuccess: (next, action) => {
       apply(next);
       appToast.success(
@@ -247,41 +266,32 @@ export function StockEntryDetailPage({
           : t("warehouse.entry.confirmed"),
       );
     },
-    onError: (err, action) => {
-      // TEC-1224: lines not scanned on arrival block the confirm; offer
-      // to remove them from the entry and confirm the rest.
-      if (
-        action === "confirm" &&
-        isApiError(err) &&
-        err.code === "STOCK_ENTRY_ARRIVAL_MISSING"
-      ) {
-        void qc.invalidateQueries({ queryKey: key });
-        void askDropMissing();
+    onError: (err) => {
+      if (isApiError(err) && err.code === "STOCK_ENTRY_DISCREPANCY_REQUIRED") {
+        setReceivingOpen(true);
         return;
       }
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error")));
     },
   });
-  const askDropMissing = async () => {
-    const missing = (entry?.lines ?? []).filter((l) => !l.scanned_at).length;
-    const ok = await confirm({
-      title: t("warehouse.entry.arrival_missing_title"),
-      description: t("warehouse.entry.arrival_missing_description", {
-        count: missing,
-      }),
-      confirmLabel: t("warehouse.entry.drop_missing_confirm"),
-      variant: "destructive",
-    });
-    if (ok) finish.mutate("confirm_drop_missing");
-  };
+  const recordPrint = () =>
+    void warehouseService.recordEntryLabelPrint(uuid).then(
+      () => qc.invalidateQueries({ queryKey: key }),
+      () => undefined,
+    );
   // TEC-1224: downloading a label sheet changes nothing; after the user
-  // confirms it was printed, the reserved units are marked printed.
+  // confirms it was printed, the reserved units are marked printed and the
+  // print is recorded on the entry timeline (TEC-1225). A reprint (no
+  // reserved unit left) is only recorded.
   const askMarkPrinted = async (barcodes: string[]) => {
     const wanted = new Set(barcodes);
     const reserved = (entry?.lines ?? [])
       .filter((l) => wanted.has(l.barcode) && l.unit_status === "reserved")
       .map((l) => l.barcode);
-    if (reserved.length === 0) return;
+    if (reserved.length === 0) {
+      recordPrint();
+      return;
+    }
     const ok = await confirm({
       title: t("warehouse.labels.printed_title"),
       description: t("warehouse.labels.printed_description", {
@@ -292,6 +302,7 @@ export function StockEntryDetailPage({
     if (!ok) return;
     try {
       await stockService.markUnitsPrinted(reserved);
+      recordPrint();
       await qc.invalidateQueries({ queryKey: key });
     } catch (err) {
       appToast.error(
@@ -305,6 +316,7 @@ export function StockEntryDetailPage({
       await addLines.mutateAsync({
         barcodes: [barcode],
         ...(fixedQuantity ? { fixed_quantity: fixedQuantity } : {}),
+        ...lineDetails,
       });
     } catch (err) {
       setLineError(
@@ -342,6 +354,10 @@ export function StockEntryDetailPage({
   };
 
   const askFinish = async (action: "confirm" | "cancel") => {
+    if (action === "confirm" && entry && arrivalChecked(entry)) {
+      setReceivingOpen(true);
+      return;
+    }
     const ok = await confirm({
       title: t(`warehouse.entry.${action}_title`),
       description: t(`warehouse.entry.${action}_description`),
@@ -368,7 +384,14 @@ export function StockEntryDetailPage({
         },
       ]}
       actions={
-        entry && editable ? (
+        entry &&
+        !editable &&
+        canWrite &&
+        canAdjust &&
+        entry.status === "confirmed" &&
+        entry.mode !== "import" ? (
+          <EntryUndoButton entry={entry} onUndone={apply} />
+        ) : entry && editable ? (
           <div className="flex flex-wrap gap-2">
             {selected.length > 0 ? (
               <Button
@@ -390,6 +413,17 @@ export function StockEntryDetailPage({
               <XCircle className="size-4" />
               {t("warehouse.entry.cancel")}
             </Button>
+            {!arrivalChecked(entry) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReceivingOpen(true)}
+                disabled={finish.isPending || !canConfirm(entry)}
+                data-testid="entry-confirm-record"
+              >
+                {t("warehouse.receiving.report_damage")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               onClick={() => void askFinish("confirm")}
@@ -558,11 +592,41 @@ export function StockEntryDetailPage({
                 <CardTitle>{t("warehouse.entry.add_title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="entry-lot">
+                      {t("warehouse.fields.lot")}
+                    </Label>
+                    <Input
+                      id="entry-lot"
+                      value={lot}
+                      maxLength={64}
+                      onChange={(e) => setLot(e.target.value)}
+                      data-testid="entry-lot"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="entry-production-date">
+                      {t("warehouse.fields.production_date")}
+                    </Label>
+                    <DatePicker
+                      id="entry-production-date"
+                      value={productionDate}
+                      onChange={setProductionDate}
+                      data-testid="entry-production-date"
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-xs sm:col-span-2">
+                    {t("warehouse.receiving.line_details_hint")}
+                  </p>
+                </div>
                 {entry.mode === "generate_new" ? (
                   <GenerateForm
                     submitLabel={t("warehouse.entry.generate")}
                     pending={addLines.isPending}
-                    onSubmit={(body) => addLines.mutateAsync(body)}
+                    onSubmit={(body) =>
+                      addLines.mutateAsync({ ...body, ...lineDetails })
+                    }
                   />
                 ) : (
                   <>
@@ -679,6 +743,14 @@ export function StockEntryDetailPage({
                     {t("warehouse.entry.place")}
                   </Button>
                 </div>
+                <EntryPlacementSuggestions
+                  entryUuid={entry.uuid}
+                  unplaced={unplaced}
+                  busy={place.isPending}
+                  onPick={(location) =>
+                    place.mutate(placeBody({ location_uuid: location }))
+                  }
+                />
                 {placeError ? (
                   <p
                     role="alert"
@@ -703,6 +775,7 @@ export function StockEntryDetailPage({
                     filename={`entry-labels-${i + 1}.pdf`}
                     label={t("warehouse.labels.print_batch", { n: i + 1 })}
                     testId="entry-batch-labels"
+                    onPrinted={recordPrint}
                   />
                 ))}
                 {/* TEC-1032: print every line (chunks of MAX_UNIT_LABELS) or the selection, in any mode. */}
@@ -718,7 +791,7 @@ export function StockEntryDetailPage({
                       count: selected.length,
                     })}
                     testId="entry-selected-labels"
-                    onDownloaded={() =>
+                    onPrinted={() =>
                       void askMarkPrinted(
                         lines
                           .filter((l) => selected.includes(l.uuid))
@@ -743,7 +816,7 @@ export function StockEntryDetailPage({
                                 })
                           }
                           testId="entry-all-labels"
-                          onDownloaded={() => void askMarkPrinted(chunk)}
+                          onPrinted={() => void askMarkPrinted(chunk)}
                         />
                       ),
                     )
@@ -773,6 +846,15 @@ export function StockEntryDetailPage({
               )}
             </CardContent>
           </Card>
+          {/* TEC-1225: discrepancy record and attachments. */}
+          <EntryReceiptCard entry={entry} />
+          {entry.mode !== "import" ? (
+            <EntryAttachmentsCard
+              entry={entry}
+              canWrite={canWrite}
+              onChanged={() => void qc.invalidateQueries({ queryKey: key })}
+            />
+          ) : null}
           {/* TEC-1060: who took each step. */}
           <Card>
             <CardHeader>
@@ -785,11 +867,27 @@ export function StockEntryDetailPage({
                   key: `${s.action}-${s.at}-${i}`,
                   at: s.at,
                   user: s.user?.name ?? null,
-                  label: t(`warehouse.entry.activity.${s.action}`),
+                  label: [
+                    t(`warehouse.entry.activity.${s.action}`),
+                    timelineDetail(s.details, t),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
                 }))}
               />
             </CardContent>
           </Card>
+          {editable ? (
+            <ReceivingConfirmDialog
+              entry={entry}
+              open={receivingOpen}
+              onOpenChange={setReceivingOpen}
+              onConfirmed={(next) => {
+                apply(next);
+                appToast.success(t("warehouse.entry.confirmed"));
+              }}
+            />
+          ) : null}
           <EntryFixedQuantityDialog
             key={fixedPending?.barcode ?? "closed"}
             pending={fixedPending}

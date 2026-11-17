@@ -287,10 +287,69 @@ func EODPDFHTML(d EODPDFDoc, loc i18n.Locale, title string) string {
 		}
 		b.WriteString(`</tbody></table>`)
 	}
+	eodBalancesHTML(&b, s, t, esc)
+	eodPendingHTML(&b, s, t, esc, pdfrender.Zone(d.Timezone, r.Timezone), loc)
 	b.WriteString(`<p class="muted">` + esc(t("warehouse.eod.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(r.GeneratedAt, pdfrender.Zone(d.Timezone, r.Timezone), loc)) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML()
+}
+
+// eodBalancesHTML prints the opening and closing stock per product
+// (TEC-1229); a report written before TEC-1229 has no balances.
+func eodBalancesHTML(b *strings.Builder, s EODSummary, t func(string) string, esc func(string) string) {
+	b.WriteString(`<h2>` + esc(t("warehouse.eod.balances")) + `</h2>`)
+	if len(s.Balances) == 0 {
+		b.WriteString(`<p class="muted">` + esc(t("warehouse.eod.balances_empty")) + `</p>`)
+		return
+	}
+	b.WriteString(`<table class="eod"><thead><tr><th>` + esc(t("warehouse.eod.product")) + `</th>`)
+	for _, k := range []string{"opening_quantity", "opening_meters", "closing_quantity", "closing_meters", "change_quantity", "change_meters"} {
+		b.WriteString(`<th class="num">` + esc(t("warehouse.eod."+k)) + `</th>`)
+	}
+	b.WriteString(`</tr></thead><tbody>`)
+	var oq, cq int64
+	for _, x := range s.Balances {
+		oq += x.OpeningQuantity
+		cq += x.ClosingQuantity
+		b.WriteString(`<tr><td><strong>` + esc(x.ProductName) + `</strong>`)
+		if x.SKU != "" {
+			b.WriteString(` <span class="muted" dir="ltr">` + esc(x.SKU) + `</span>`)
+		}
+		b.WriteString(`</td>`)
+		for _, v := range []string{
+			strconv.FormatInt(x.OpeningQuantity, 10), x.OpeningMeters,
+			strconv.FormatInt(x.ClosingQuantity, 10), x.ClosingMeters,
+			signed(x.ChangeQuantity), x.ChangeMeters,
+		} {
+			b.WriteString(`<td class="num" dir="ltr">` + esc(v) + `</td>`)
+		}
+		b.WriteString(`</tr>`)
+	}
+	b.WriteString(`<tr class="total"><td>` + esc(t("warehouse.eod.total")) + `</td><td class="num" dir="ltr">` +
+		strconv.FormatInt(oq, 10) + `</td><td></td><td class="num" dir="ltr">` + strconv.FormatInt(cq, 10) +
+		`</td><td></td><td class="num" dir="ltr">` + esc(signed(cq-oq)) + `</td><td></td></tr></tbody></table>`)
+}
+
+// eodPendingHTML prints the open work at report time (TEC-1229).
+func eodPendingHTML(b *strings.Builder, s EODSummary, t func(string) string, esc func(string) string, zone *time.Location, loc i18n.Locale) {
+	if s.Pending == nil {
+		return
+	}
+	p := s.Pending
+	b.WriteString(`<h2>` + esc(t("warehouse.eod.pending")) + `</h2><table class="eod"><tbody>`)
+	for _, row := range []struct {
+		key string
+		v   int64
+	}{
+		{"open_transfers", p.OpenTransfers}, {"unplaced_entries", p.UnplacedEntries},
+		{"pending_counts", p.PendingCounts}, {"preparing_orders", p.PreparingOrders},
+	} {
+		b.WriteString(`<tr><td>` + esc(t("warehouse.eod.pending."+row.key)) + `</td><td class="num" dir="ltr">` +
+			strconv.FormatInt(row.v, 10) + `</td></tr>`)
+	}
+	b.WriteString(`</tbody></table><p class="muted">` + esc(t("warehouse.eod.pending_as_of")) + `: ` +
+		esc(pdfrender.IssuedAt(p.AsOf, zone, loc)) + `</p>`)
 }
 
 // eodPDFCSS lays out the report with logical properties, so the layout

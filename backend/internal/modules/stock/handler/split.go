@@ -17,6 +17,8 @@ const (
 	CodeSplitUnitElsewhere      = "STOCK_SPLIT_UNIT_ELSEWHERE"
 	CodeSplitUnitInUse          = "STOCK_SPLIT_UNIT_IN_USE"
 	CodeSplitKeyConflict        = "STOCK_SPLIT_KEY_CONFLICT"
+	// TEC-1230: shorter than products.min_cut_meters (not the whole rest).
+	CodeSplitBelowMinCut = "STOCK_SPLIT_BELOW_MIN_CUT"
 )
 
 var splitErrors = []reclassError{
@@ -25,6 +27,7 @@ var splitErrors = []reclassError{
 	{ledger.ErrSplitUnitElsewhere, http.StatusConflict, CodeSplitUnitElsewhere, "The roll is not on hand at the organization"},
 	{stockusecase.ErrReclassUnitInUse, http.StatusConflict, CodeSplitUnitInUse, "The roll is on an open service or order"},
 	{ledger.ErrIdempotencyConflict, http.StatusConflict, CodeSplitKeyConflict, "The idempotency key was used for another split"},
+	{ledger.ErrBelowMinCut, http.StatusUnprocessableEntity, CodeSplitBelowMinCut, "The cut is shorter than the product's minimum cut"},
 }
 
 // Split serves POST /v1/stock/splits (TEC-184).

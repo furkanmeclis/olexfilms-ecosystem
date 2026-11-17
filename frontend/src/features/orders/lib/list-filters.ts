@@ -29,3 +29,22 @@ export const ORDER_FILTER_STATUSES = [
   "cancelling",
   "cancelled",
 ] as const satisfies readonly OrderStatus[];
+
+/** TEC-1228: order priorities (the priority filter). */
+export const ORDER_PRIORITIES = ["normal", "urgent"] as const;
+
+/** TEC-1228: statuses of a warehouse job; a list of only these sorts as the queue. */
+export const ORDER_QUEUE_STATUSES: readonly string[] = [
+  "approved",
+  "processing",
+  "preparing",
+  "ready",
+];
+
+/** Whether a status filter is a work queue (only open warehouse statuses). */
+export function isWorkQueueFilter(statuses: readonly string[]): boolean {
+  return (
+    statuses.length > 0 &&
+    statuses.every((s) => ORDER_QUEUE_STATUSES.includes(s))
+  );
+}

@@ -23,7 +23,7 @@ export function LabelButton({
   size = "sm",
   variant = "outline",
   testId,
-  onDownloaded,
+  onPrinted,
 }: {
   path: string;
   filename: string;
@@ -31,8 +31,8 @@ export function LabelButton({
   size?: "sm" | "default" | "icon-sm";
   variant?: "outline" | "ghost" | "default";
   testId?: string;
-  /** TEC-1224: called after the sheet was downloaded (ask "printed?"). */
-  onDownloaded?: () => void;
+  /** TEC-1225: called after the sheet was downloaded (timeline step). */
+  onPrinted?: () => void;
 }) {
   const { t } = useLocale();
   const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ export function LabelButton({
     try {
       const { blob, filename: served } = await platformDownloadFile(path);
       triggerBrowserDownload(blob, served ?? filename);
-      onDownloaded?.();
+      onPrinted?.();
     } catch {
       appToast.error(t("warehouse.labels.failed"));
     } finally {

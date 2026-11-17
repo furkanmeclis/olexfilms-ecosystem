@@ -141,6 +141,34 @@ func TestSerialTransitions(t *testing.T) {
 			cur: roll(held(StatusPlaced, distLoc), 1500, 600), wantErr: ErrInvalidMovement},
 		{name: "count piece", m: Movement{Type: TypeCountAdjustment, Centimeters: 100, RefType: "doc", RefID: 7},
 			cur: held(StatusPlaced, distLoc), wantErr: ErrTransitionNotAllowed},
+		// TEC-1226 quarantine / found
+		{name: "quarantine available", m: mv(TypeQuarantine, nil), cur: held(StatusAvailable, distOrg),
+			wantStatus: StatusQuarantine, wantOwner: distOrg, wantQty: -1},
+		{name: "quarantine placed keeps bin", m: mv(TypeQuarantine, nil), cur: held(StatusPlaced, distLoc),
+			wantStatus: StatusQuarantine, wantOwner: distLoc, wantQty: -1},
+		{name: "quarantine moves nothing", m: mv(TypeQuarantine, ptr(distLoc)), cur: held(StatusAvailable, distOrg), wantErr: ErrInvalidMovement},
+		{name: "quarantine in transit", m: mv(TypeQuarantine, nil), cur: held(StatusInTransit, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "quarantine twice", m: mv(TypeQuarantine, nil), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "release quarantine", m: mv(TypeQuarantineRelease, nil), cur: held(StatusQuarantine, distOrg),
+			wantStatus: StatusAvailable, wantOwner: distOrg, wantQty: 1},
+		{name: "release roll keeps meters", m: mv(TypeQuarantineRelease, nil), cur: roll(held(StatusQuarantine, distLoc), 5000, 1200),
+			wantStatus: StatusAvailable, wantOwner: distLoc, wantQty: 1},
+		{name: "release available", m: mv(TypeQuarantineRelease, nil), cur: held(StatusAvailable, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "placement from quarantine", m: mv(TypePlacement, ptr(distLoc)), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "consumption from quarantine", m: mv(TypeConsumption, &Owner{Type: OwnerService, ID: 901, OrgID: dist}), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "order_out from quarantine", m: mv(TypeOrderOut, ptr(dealerOrg)), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "transfer_out from quarantine", m: mv(TypeTransferOut, ptr(dealerOrg)), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "sale from quarantine", m: mv(TypeSale, nil), cur: held(StatusQuarantine, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "void quarantine", m: mv(TypeVoid, nil), cur: held(StatusQuarantine, distOrg),
+			wantStatus: StatusVoid, wantOwner: Owner{Type: OwnerTrash, ID: dist, OrgID: dist}},
+		{name: "external_outbound quarantine", m: mv(TypeExternalOutbound, nil), cur: held(StatusQuarantine, distLoc),
+			wantStatus: StatusUsed, wantOwner: Owner{Type: OwnerTrash, ID: dist, OrgID: dist}},
+		{name: "found void", m: mv(TypeFound, ptr(distLoc)), cur: held(StatusVoid, Owner{Type: OwnerTrash, ID: dist, OrgID: dist}),
+			wantStatus: StatusAvailable, wantOwner: distLoc, wantQty: 1},
+		{name: "found at other org", m: mv(TypeFound, ptr(centerLoc)), cur: held(StatusVoid, Owner{Type: OwnerTrash, ID: dist, OrgID: dist}), wantErr: ErrOwnerNotAllowed},
+		{name: "found used", m: mv(TypeFound, ptr(dealerOrg)), cur: held(StatusUsed, Owner{Type: OwnerTrash, ID: dealer, OrgID: dealer}), wantErr: ErrTransitionNotAllowed},
+		{name: "found available", m: mv(TypeFound, ptr(distLoc)), cur: held(StatusAvailable, distOrg), wantErr: ErrTransitionNotAllowed},
+		{name: "found without target", m: mv(TypeFound, nil), cur: held(StatusVoid, Owner{Type: OwnerTrash, ID: dist, OrgID: dist}), wantErr: ErrInvalidMovement},
 		// void / external
 		{name: "void label", m: mv(TypeVoid, nil), cur: label(StatusPrinted),
 			wantStatus: StatusVoid, wantOwner: Owner{Type: OwnerTrash, ID: center, OrgID: center}},
@@ -185,14 +213,17 @@ func TestSerialTransitions(t *testing.T) {
 }
 
 // Every postable type has a serial rule; placement and partial
-// consumption have no fixed rule (decision 1).
+// consumption have no fixed rule (decision 1), nor do the serial-only
+// quarantine movements (TEC-1226: fixed barcode returns are not quarantined).
 func TestRuleCoverage(t *testing.T) {
 	for _, typ := range PostableTypes {
 		if _, ok := serialRules[typ]; !ok {
 			t.Errorf("no serial rule for %s", typ)
 		}
 		_, fixed := fixedRules[typ]
-		if want := typ != TypePlacement && typ != TypePartialConsumption; fixed != want {
+		serialOnly := typ == TypePlacement || typ == TypePartialConsumption ||
+			typ == TypeQuarantine || typ == TypeQuarantineRelease || typ == TypeFound
+		if want := !serialOnly; fixed != want {
 			t.Errorf("fixed rule for %s = %v, want %v", typ, fixed, want)
 		}
 		if name := EventName(typ); !events.IsKnownEvent(name) {

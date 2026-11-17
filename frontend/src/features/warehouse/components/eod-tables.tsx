@@ -135,3 +135,89 @@ export function EodProductsTable({ products }: { products: EodProduct[] }) {
     />
   );
 }
+
+export const EOD_BALANCES_PERSIST_KEY = "tenant-warehouse-eod-balances-v1";
+
+type EodBalanceRow = EodReport["summary"]["balances"][number];
+
+/**
+ * Opening and closing on-hand stock per product of an end-of-day report
+ * (TEC-1229): pieces and roll meters apart, a client-side DataTable with
+ * sort and search. No prices.
+ */
+export function EodBalancesTable({ balances }: { balances: EodBalanceRow[] }) {
+  const { t, format } = useLocale();
+  const columns = useMemo(
+    () =>
+      [
+        createColumn<EodBalanceRow>({
+          id: "product",
+          accessorFn: (p) => `${p.product_name} ${p.sku}`,
+          labelKey: "warehouse.fields.product",
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <div data-testid="eod-balance-row">
+              {row.original.product_name}
+              <div
+                className="text-muted-foreground font-mono text-xs"
+                dir="ltr"
+              >
+                {row.original.sku}
+              </div>
+            </div>
+          ),
+        }),
+        createColumn<EodBalanceRow>({
+          accessorKey: "opening_quantity",
+          labelKey: "warehouse.eod.opening_quantity",
+          cell: ({ row }) => format.number(row.original.opening_quantity),
+        }),
+        createColumn<EodBalanceRow>({
+          accessorKey: "closing_quantity",
+          labelKey: "warehouse.eod.closing_quantity",
+          cell: ({ row }) => format.number(row.original.closing_quantity),
+        }),
+        createColumn<EodBalanceRow>({
+          accessorKey: "change_quantity",
+          labelKey: "warehouse.eod.change_quantity",
+          cell: ({ row }) =>
+            format.number(row.original.change_quantity, {
+              signDisplay: "exceptZero",
+            }),
+        }),
+        createColumn<EodBalanceRow>({
+          id: "opening_meters",
+          accessorFn: (p) => Number(p.opening_meters),
+          labelKey: "warehouse.eod.opening_meters",
+          cell: ({ row }) => (
+            <span dir="ltr">{row.original.opening_meters}</span>
+          ),
+        }),
+        createColumn<EodBalanceRow>({
+          id: "closing_meters",
+          accessorFn: (p) => Number(p.closing_meters),
+          labelKey: "warehouse.eod.closing_meters",
+          cell: ({ row }) => (
+            <span dir="ltr">{row.original.closing_meters}</span>
+          ),
+        }),
+      ] as ColumnDef<EodBalanceRow, unknown>[],
+    [format],
+  );
+  return (
+    <EntityTable
+      columns={columns}
+      data={balances}
+      getRowId={(row) => row.product_uuid}
+      manual={CLIENT_SIDE_MANUAL}
+      emptyTitle={t("warehouse.eod.no_balances")}
+      emptyDescription=""
+      initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+      features={{
+        persistKey: EOD_BALANCES_PERSIST_KEY,
+        rowSelection: false,
+        viewMode: true,
+      }}
+    />
+  );
+}

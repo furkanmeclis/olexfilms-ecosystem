@@ -20,7 +20,7 @@ SET status = 'approved',
     rate_snapshot = $2,
     try_rate = $3
 WHERE id = $4 AND approved_at IS NULL
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type ApproveOrderParams struct {
@@ -80,6 +80,14 @@ func (q *Queries) ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Ord
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -333,6 +341,9 @@ WHERE o.brand_id = $1
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
                                       AND sw.uuid = ANY ($17::uuid[])))
+  AND (COALESCE(cardinality($18::text[]), 0) = 0 OR o.priority = ANY ($18::text[]))
+  AND ($19::bigint IS NULL OR o.picker_user_id = $19::bigint)
+  AND (NOT COALESCE($20::bool, false) OR o.picker_user_id IS NULL)
 `
 
 type CountOrdersFilteredParams struct {
@@ -353,6 +364,9 @@ type CountOrdersFilteredParams struct {
 	TotalMin             pgtype.Numeric     `json:"total_min"`
 	TotalMax             pgtype.Numeric     `json:"total_max"`
 	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
+	Priorities           []string           `json:"priorities"`
+	PickerUserID         pgtype.Int8        `json:"picker_user_id"`
+	PickerUnassigned     pgtype.Bool        `json:"picker_unassigned"`
 }
 
 func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error) {
@@ -374,6 +388,9 @@ func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilter
 		arg.TotalMin,
 		arg.TotalMax,
 		arg.SellerWarehouseUuids,
+		arg.Priorities,
+		arg.PickerUserID,
+		arg.PickerUnassigned,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -419,7 +436,7 @@ VALUES (
     $6, $7, $8, $9,
     $10, $11, $12
 )
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type CreateOrderParams struct {
@@ -501,6 +518,14 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -824,7 +849,7 @@ func (q *Queries) DeleteReleasedReservationsByItem(ctx context.Context, orderIte
 }
 
 const findOpenDraftOrderForBuyerSeller = `-- name: FindOpenDraftOrderForBuyerSeller :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE brand_id = $1
   AND buyer_org_id = $2
   AND seller_org_id = $3
@@ -884,12 +909,20 @@ func (q *Queries) FindOpenDraftOrderForBuyerSeller(ctx context.Context, arg Find
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
 
 const getOrder = `-- name: GetOrder :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -942,12 +975,20 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
 
 const getOrderByExternalReference = `-- name: GetOrderByExternalReference :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE brand_id = $1 AND external_reference = $2
 `
 
@@ -1000,12 +1041,20 @@ func (q *Queries) GetOrderByExternalReference(ctx context.Context, arg GetOrderB
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
 
 const getOrderByUUID = `-- name: GetOrderByUUID :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1058,6 +1107,14 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) 
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -1711,7 +1768,7 @@ func (q *Queries) ListOrderStatusHistory(ctx context.Context, orderID int64) ([]
 }
 
 const listOrderSupplements = `-- name: ListOrderSupplements :many
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE parent_order_id = $1 AND brand_id = $2
 ORDER BY created_at, id
 `
@@ -1772,6 +1829,14 @@ func (q *Queries) ListOrderSupplements(ctx context.Context, arg ListOrderSupplem
 			&i.InvoiceStatus,
 			&i.SellerWarehouseID,
 			&i.ParentOrderID,
+			&i.BackorderOfOrderID,
+			&i.Priority,
+			&i.DueDate,
+			&i.PickerUserID,
+			&i.ClaimedAt,
+			&i.PackageCount,
+			&i.Desi,
+			&i.WeightKg,
 		); err != nil {
 			return nil, err
 		}
@@ -1838,7 +1903,7 @@ func (q *Queries) ListOrderWarehouseNotifyUserIDs(ctx context.Context, arg ListO
 }
 
 const listOrdersFiltered = `-- name: ListOrdersFiltered :many
-SELECT o.id, o.uuid, o.order_no, o.organization_id, o.brand_id, o.seller_org_id, o.buyer_org_id, o.seller_warehouse_location_id, o.buyer_warehouse_location_id, o.status, o.currency, o.rate_snapshot, o.try_rate, o.subtotal, o.tax_total, o.total, o.delivery_mode, o.tracking_no, o.shipping_document_key, o.receipt_document_key, o.external_reference, o.note, o.cancel_reason, o.created_by_user_id, o.approved_by_user_id, o.submitted_at, o.approved_at, o.ready_at, o.shipped_at, o.delivered_at, o.received_at, o.cancel_requested_at, o.cancelled_at, o.created_at, o.updated_at, o.delivery_method_id, o.created_by_seller, o.invoice_status, o.seller_warehouse_id, o.parent_order_id FROM orders o
+SELECT o.id, o.uuid, o.order_no, o.organization_id, o.brand_id, o.seller_org_id, o.buyer_org_id, o.seller_warehouse_location_id, o.buyer_warehouse_location_id, o.status, o.currency, o.rate_snapshot, o.try_rate, o.subtotal, o.tax_total, o.total, o.delivery_mode, o.tracking_no, o.shipping_document_key, o.receipt_document_key, o.external_reference, o.note, o.cancel_reason, o.created_by_user_id, o.approved_by_user_id, o.submitted_at, o.approved_at, o.ready_at, o.shipped_at, o.delivered_at, o.received_at, o.cancel_requested_at, o.cancelled_at, o.created_at, o.updated_at, o.delivery_method_id, o.created_by_seller, o.invoice_status, o.seller_warehouse_id, o.parent_order_id, o.backorder_of_order_id, o.priority, o.due_date, o.picker_user_id, o.claimed_at, o.package_count, o.desi, o.weight_kg FROM orders o
 WHERE o.brand_id = $1
   AND ($2::bigint IS NULL OR o.organization_id = $2::bigint)
   AND ($3::bigint IS NULL OR o.buyer_org_id = $3::bigint)
@@ -1871,25 +1936,38 @@ WHERE o.brand_id = $1
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
                                       AND sw.uuid = ANY ($17::uuid[])))
-  AND ($18::uuid[] IS NULL OR o.uuid = ANY ($18::uuid[]))
+  AND (COALESCE(cardinality($18::text[]), 0) = 0 OR o.priority = ANY ($18::text[]))
+  AND ($19::bigint IS NULL OR o.picker_user_id = $19::bigint)
+  AND (NOT COALESCE($20::bool, false) OR o.picker_user_id IS NULL)
+  AND ($21::uuid[] IS NULL OR o.uuid = ANY ($21::uuid[]))
 ORDER BY
-  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'order_no' THEN o.order_no END END ASC,
-  CASE WHEN $19::bool THEN CASE $20::text WHEN 'order_no' THEN o.order_no END END DESC,
-  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'status' THEN
+  -- TEC-1228: queue = urgent first, then the due date (none last), then
+  -- the oldest; priority and due_date sort alone.
+  CASE WHEN NOT $22::bool AND $23::text IN ('queue', 'priority') THEN
+    CASE o.priority WHEN 'urgent' THEN 0 ELSE 1 END END ASC,
+  CASE WHEN $22::bool AND $23::text IN ('queue', 'priority') THEN
+    CASE o.priority WHEN 'urgent' THEN 0 ELSE 1 END END DESC,
+  CASE WHEN NOT $22::bool AND $23::text IN ('queue', 'due_date') THEN o.due_date END ASC NULLS LAST,
+  CASE WHEN $22::bool AND $23::text IN ('queue', 'due_date') THEN o.due_date END DESC NULLS LAST,
+  CASE WHEN NOT $22::bool AND $23::text = 'queue' THEN o.created_at END ASC,
+  CASE WHEN $22::bool AND $23::text = 'queue' THEN o.created_at END DESC,
+  CASE WHEN NOT $22::bool THEN CASE $23::text WHEN 'order_no' THEN o.order_no END END ASC,
+  CASE WHEN $22::bool THEN CASE $23::text WHEN 'order_no' THEN o.order_no END END DESC,
+  CASE WHEN NOT $22::bool THEN CASE $23::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END ASC,
-  CASE WHEN $19::bool THEN CASE $20::text WHEN 'status' THEN
+  CASE WHEN $22::bool THEN CASE $23::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END DESC,
-  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'total' THEN o.total END END ASC,
-  CASE WHEN $19::bool THEN CASE $20::text WHEN 'total' THEN o.total END END DESC,
-  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'created_at' THEN o.created_at END END ASC,
-  CASE WHEN $19::bool THEN CASE $20::text WHEN 'created_at' THEN o.created_at END END DESC,
-  CASE WHEN $19::bool THEN o.id END DESC,
+  CASE WHEN NOT $22::bool THEN CASE $23::text WHEN 'total' THEN o.total END END ASC,
+  CASE WHEN $22::bool THEN CASE $23::text WHEN 'total' THEN o.total END END DESC,
+  CASE WHEN NOT $22::bool THEN CASE $23::text WHEN 'created_at' THEN o.created_at END END ASC,
+  CASE WHEN $22::bool THEN CASE $23::text WHEN 'created_at' THEN o.created_at END END DESC,
+  CASE WHEN $22::bool THEN o.id END DESC,
   o.id ASC
-LIMIT $22 OFFSET $21
+LIMIT $25 OFFSET $24
 `
 
 type ListOrdersFilteredParams struct {
@@ -1910,6 +1988,9 @@ type ListOrdersFilteredParams struct {
 	TotalMin             pgtype.Numeric     `json:"total_min"`
 	TotalMax             pgtype.Numeric     `json:"total_max"`
 	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
+	Priorities           []string           `json:"priorities"`
+	PickerUserID         pgtype.Int8        `json:"picker_user_id"`
+	PickerUnassigned     pgtype.Bool        `json:"picker_unassigned"`
 	Uuids                []uuid.UUID        `json:"uuids"`
 	SortDesc             bool               `json:"sort_desc"`
 	SortKey              string             `json:"sort_key"`
@@ -1943,6 +2024,9 @@ func (q *Queries) ListOrdersFiltered(ctx context.Context, arg ListOrdersFiltered
 		arg.TotalMin,
 		arg.TotalMax,
 		arg.SellerWarehouseUuids,
+		arg.Priorities,
+		arg.PickerUserID,
+		arg.PickerUnassigned,
 		arg.Uuids,
 		arg.SortDesc,
 		arg.SortKey,
@@ -1997,6 +2081,14 @@ func (q *Queries) ListOrdersFiltered(ctx context.Context, arg ListOrdersFiltered
 			&i.InvoiceStatus,
 			&i.SellerWarehouseID,
 			&i.ParentOrderID,
+			&i.BackorderOfOrderID,
+			&i.Priority,
+			&i.DueDate,
+			&i.PickerUserID,
+			&i.ClaimedAt,
+			&i.PackageCount,
+			&i.Desi,
+			&i.WeightKg,
 		); err != nil {
 			return nil, err
 		}
@@ -2184,7 +2276,7 @@ func (q *Queries) LockActiveReservationsByUnit(ctx context.Context, unitID int64
 }
 
 const lockOrder = `-- name: LockOrder :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2238,12 +2330,20 @@ func (q *Queries) LockOrder(ctx context.Context, arg LockOrderParams) (Order, er
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
 
 const lockOrderByUUID = `-- name: LockOrderByUUID :one
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2297,6 +2397,14 @@ func (q *Queries) LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2483,7 +2591,7 @@ FROM (
     FROM order_items WHERE order_id = $1
 ) s
 WHERE o.id = $1
-RETURNING o.id, o.uuid, o.order_no, o.organization_id, o.brand_id, o.seller_org_id, o.buyer_org_id, o.seller_warehouse_location_id, o.buyer_warehouse_location_id, o.status, o.currency, o.rate_snapshot, o.try_rate, o.subtotal, o.tax_total, o.total, o.delivery_mode, o.tracking_no, o.shipping_document_key, o.receipt_document_key, o.external_reference, o.note, o.cancel_reason, o.created_by_user_id, o.approved_by_user_id, o.submitted_at, o.approved_at, o.ready_at, o.shipped_at, o.delivered_at, o.received_at, o.cancel_requested_at, o.cancelled_at, o.created_at, o.updated_at, o.delivery_method_id, o.created_by_seller, o.invoice_status, o.seller_warehouse_id, o.parent_order_id
+RETURNING o.id, o.uuid, o.order_no, o.organization_id, o.brand_id, o.seller_org_id, o.buyer_org_id, o.seller_warehouse_location_id, o.buyer_warehouse_location_id, o.status, o.currency, o.rate_snapshot, o.try_rate, o.subtotal, o.tax_total, o.total, o.delivery_mode, o.tracking_no, o.shipping_document_key, o.receipt_document_key, o.external_reference, o.note, o.cancel_reason, o.created_by_user_id, o.approved_by_user_id, o.submitted_at, o.approved_at, o.ready_at, o.shipped_at, o.delivered_at, o.received_at, o.cancel_requested_at, o.cancelled_at, o.created_at, o.updated_at, o.delivery_method_id, o.created_by_seller, o.invoice_status, o.seller_warehouse_id, o.parent_order_id, o.backorder_of_order_id, o.priority, o.due_date, o.picker_user_id, o.claimed_at, o.package_count, o.desi, o.weight_kg
 `
 
 // Recomputes the subtotal from the lines (total = subtotal + tax_total).
@@ -2531,6 +2639,14 @@ func (q *Queries) RecalculateOrderTotals(ctx context.Context, id int64) (Order, 
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2648,7 +2764,7 @@ const setOrderCancelReason = `-- name: SetOrderCancelReason :one
 UPDATE orders
 SET cancel_reason = $1
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type SetOrderCancelReasonParams struct {
@@ -2700,6 +2816,14 @@ func (q *Queries) SetOrderCancelReason(ctx context.Context, arg SetOrderCancelRe
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2708,7 +2832,7 @@ const setOrderExternalReference = `-- name: SetOrderExternalReference :one
 UPDATE orders
 SET external_reference = $1
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type SetOrderExternalReferenceParams struct {
@@ -2760,6 +2884,14 @@ func (q *Queries) SetOrderExternalReference(ctx context.Context, arg SetOrderExt
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2841,11 +2973,157 @@ func (q *Queries) SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItem
 	return i, err
 }
 
+const setOrderPackages = `-- name: SetOrderPackages :one
+UPDATE orders
+SET package_count = $1, desi = $2, weight_kg = $3
+WHERE id = $4
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
+`
+
+type SetOrderPackagesParams struct {
+	PackageCount pgtype.Int4    `json:"package_count"`
+	Desi         pgtype.Numeric `json:"desi"`
+	WeightKg     pgtype.Numeric `json:"weight_kg"`
+	ID           int64          `json:"id"`
+}
+
+// TEC-1228: package count, desi and weight entered at shipping.
+func (q *Queries) SetOrderPackages(ctx context.Context, arg SetOrderPackagesParams) (Order, error) {
+	row := q.db.QueryRow(ctx, setOrderPackages,
+		arg.PackageCount,
+		arg.Desi,
+		arg.WeightKg,
+		arg.ID,
+	)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.BuyerOrgID,
+		&i.SellerWarehouseLocationID,
+		&i.BuyerWarehouseLocationID,
+		&i.Status,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.TryRate,
+		&i.Subtotal,
+		&i.TaxTotal,
+		&i.Total,
+		&i.DeliveryMode,
+		&i.TrackingNo,
+		&i.ShippingDocumentKey,
+		&i.ReceiptDocumentKey,
+		&i.ExternalReference,
+		&i.Note,
+		&i.CancelReason,
+		&i.CreatedByUserID,
+		&i.ApprovedByUserID,
+		&i.SubmittedAt,
+		&i.ApprovedAt,
+		&i.ReadyAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.ReceivedAt,
+		&i.CancelRequestedAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeliveryMethodID,
+		&i.CreatedBySeller,
+		&i.InvoiceStatus,
+		&i.SellerWarehouseID,
+		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
+	)
+	return i, err
+}
+
+const setOrderPicker = `-- name: SetOrderPicker :one
+UPDATE orders
+SET picker_user_id = $1,
+    claimed_at = CASE WHEN $1::bigint IS NULL THEN NULL ELSE NOW() END
+WHERE id = $2
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
+`
+
+type SetOrderPickerParams struct {
+	PickerUserID pgtype.Int8 `json:"picker_user_id"`
+	ID           int64       `json:"id"`
+}
+
+// TEC-1228: the warehouse user who took the job (NULL releases it).
+func (q *Queries) SetOrderPicker(ctx context.Context, arg SetOrderPickerParams) (Order, error) {
+	row := q.db.QueryRow(ctx, setOrderPicker, arg.PickerUserID, arg.ID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.BuyerOrgID,
+		&i.SellerWarehouseLocationID,
+		&i.BuyerWarehouseLocationID,
+		&i.Status,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.TryRate,
+		&i.Subtotal,
+		&i.TaxTotal,
+		&i.Total,
+		&i.DeliveryMode,
+		&i.TrackingNo,
+		&i.ShippingDocumentKey,
+		&i.ReceiptDocumentKey,
+		&i.ExternalReference,
+		&i.Note,
+		&i.CancelReason,
+		&i.CreatedByUserID,
+		&i.ApprovedByUserID,
+		&i.SubmittedAt,
+		&i.ApprovedAt,
+		&i.ReadyAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.ReceivedAt,
+		&i.CancelRequestedAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeliveryMethodID,
+		&i.CreatedBySeller,
+		&i.InvoiceStatus,
+		&i.SellerWarehouseID,
+		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
+	)
+	return i, err
+}
+
 const setOrderReceiptDocument = `-- name: SetOrderReceiptDocument :one
 UPDATE orders
 SET receipt_document_key = $1
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type SetOrderReceiptDocumentParams struct {
@@ -2897,6 +3175,84 @@ func (q *Queries) SetOrderReceiptDocument(ctx context.Context, arg SetOrderRecei
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
+	)
+	return i, err
+}
+
+const setOrderSchedule = `-- name: SetOrderSchedule :one
+UPDATE orders
+SET priority = $1, due_date = $2
+WHERE id = $3
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
+`
+
+type SetOrderScheduleParams struct {
+	Priority string      `json:"priority"`
+	DueDate  pgtype.Date `json:"due_date"`
+	ID       int64       `json:"id"`
+}
+
+// TEC-1228: the priority and the due date of an order.
+func (q *Queries) SetOrderSchedule(ctx context.Context, arg SetOrderScheduleParams) (Order, error) {
+	row := q.db.QueryRow(ctx, setOrderSchedule, arg.Priority, arg.DueDate, arg.ID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.BuyerOrgID,
+		&i.SellerWarehouseLocationID,
+		&i.BuyerWarehouseLocationID,
+		&i.Status,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.TryRate,
+		&i.Subtotal,
+		&i.TaxTotal,
+		&i.Total,
+		&i.DeliveryMode,
+		&i.TrackingNo,
+		&i.ShippingDocumentKey,
+		&i.ReceiptDocumentKey,
+		&i.ExternalReference,
+		&i.Note,
+		&i.CancelReason,
+		&i.CreatedByUserID,
+		&i.ApprovedByUserID,
+		&i.SubmittedAt,
+		&i.ApprovedAt,
+		&i.ReadyAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.ReceivedAt,
+		&i.CancelRequestedAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeliveryMethodID,
+		&i.CreatedBySeller,
+		&i.InvoiceStatus,
+		&i.SellerWarehouseID,
+		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2906,7 +3262,7 @@ const setOrderSellerWarehouse = `-- name: SetOrderSellerWarehouse :one
 UPDATE orders
 SET seller_warehouse_id = $1
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type SetOrderSellerWarehouseParams struct {
@@ -2960,6 +3316,14 @@ func (q *Queries) SetOrderSellerWarehouse(ctx context.Context, arg SetOrderSelle
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -2971,7 +3335,7 @@ SET delivery_method_id = $1,
     tracking_no = $3,
     shipping_document_key = $4
 WHERE id = $5
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type SetOrderShippingParams struct {
@@ -3033,6 +3397,14 @@ func (q *Queries) SetOrderShipping(ctx context.Context, arg SetOrderShippingPara
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -3065,7 +3437,7 @@ SET seller_warehouse_location_id = $1,
     delivery_mode                = $3,
     note                         = $4
 WHERE id = $5 AND brand_id = $6
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type UpdateOrderDraftParams struct {
@@ -3128,6 +3500,14 @@ func (q *Queries) UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftPara
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -3246,7 +3626,7 @@ SET status = $1::text,
     cancel_requested_at = CASE WHEN $1::text = 'cancelling' THEN COALESCE(cancel_requested_at, NOW()) ELSE cancel_requested_at END,
     cancelled_at = CASE WHEN $1::text = 'cancelled' THEN COALESCE(cancelled_at, NOW()) ELSE cancelled_at END
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type UpdateOrderStatusParams struct {
@@ -3300,6 +3680,14 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }
@@ -3308,7 +3696,7 @@ const updateOrderTotals = `-- name: UpdateOrderTotals :one
 UPDATE orders
 SET subtotal = $1, tax_total = $2, total = $3
 WHERE id = $4
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg
 `
 
 type UpdateOrderTotalsParams struct {
@@ -3367,6 +3755,14 @@ func (q *Queries) UpdateOrderTotals(ctx context.Context, arg UpdateOrderTotalsPa
 		&i.InvoiceStatus,
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
+		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }

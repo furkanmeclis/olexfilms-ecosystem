@@ -20,7 +20,6 @@ import {
   MAX_UNIT_LABELS,
   stockService,
 } from "@/features/stock/services/stock.service";
-import { warehouseService } from "../services/warehouse.service";
 import { LabelButton } from "./label-button";
 import { click, mount, render, unmount, type Mounted } from "./test-helpers";
 
@@ -56,8 +55,8 @@ describe("TEC-1224 label print confirmation", () => {
     );
   });
 
-  it("calls onDownloaded only after the sheet was downloaded", async () => {
-    const onDownloaded = vi.fn();
+  it("calls onPrinted only after the sheet was downloaded", async () => {
+    const onPrinted = vi.fn();
     files.platformDownloadFile.mockResolvedValueOnce({
       blob: new Blob(["%PDF"]),
       filename: null,
@@ -68,34 +67,16 @@ describe("TEC-1224 label print confirmation", () => {
         path: "/v1/stock/labels/units.pdf?barcode=A",
         filename: "a.pdf",
         testId: "lbl",
-        onDownloaded,
+        onPrinted,
       }),
     );
     await click(m.container.querySelector('[data-testid="lbl"]'));
     expect(files.triggerBrowserDownload).toHaveBeenCalled();
-    expect(onDownloaded).toHaveBeenCalledTimes(1);
+    expect(onPrinted).toHaveBeenCalledTimes(1);
 
     files.platformDownloadFile.mockRejectedValueOnce(new Error("boom"));
     await click(m.container.querySelector('[data-testid="lbl"]'));
-    expect(onDownloaded).toHaveBeenCalledTimes(1);
+    expect(onPrinted).toHaveBeenCalledTimes(1);
     expect(toast.error).toHaveBeenCalledWith("warehouse.labels.failed");
-  });
-});
-
-describe("TEC-1224 stock entry confirm", () => {
-  it("sends drop_missing only when asked", async () => {
-    req.platformRequest.mockResolvedValue({});
-    await warehouseService.confirm("e-1");
-    expect(req.platformRequest).toHaveBeenLastCalledWith(
-      "POST",
-      "/v1/warehouse/stock-entries/e-1/confirm",
-      undefined,
-    );
-    await warehouseService.confirm("e-1", { drop_missing: true });
-    expect(req.platformRequest).toHaveBeenLastCalledWith(
-      "POST",
-      "/v1/warehouse/stock-entries/e-1/confirm",
-      { body: { drop_missing: true } },
-    );
   });
 });

@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -87,6 +89,10 @@ var eodGroupOf = map[string]string{
 	"reclassification":        EODGroupAdjustment,
 	"void":                    EODGroupDisposal,
 	"external_outbound":       EODGroupDisposal,
+	// TEC-1226: return inspection and adjustment documents.
+	"quarantine":         EODGroupReturn,
+	"quarantine_release": EODGroupReturn,
+	"found":              EODGroupAdjustment,
 }
 
 // EODGroupOf returns the group of a movement type (unknown types fall in
@@ -139,6 +145,39 @@ type EODSummary struct {
 	Groups   []EODGroupTotal  `json:"groups"`
 	Types    []EODTypeTotal   `json:"types"`
 	Products []EODProductLine `json:"products"`
+	// Balances are the opening and closing on-hand stock per product of
+	// the scope (TEC-1229). Reports written before TEC-1229 have none.
+	Balances []EODBalance `json:"balances"`
+	// Pending is the open work of the scope when the report was written
+	// (TEC-1229; null on older reports).
+	Pending *EODPending `json:"pending"`
+}
+
+// EODBalance is the on-hand stock of one product at the period start
+// (opening) and end (closing): pieces / rolls / fixed pieces and roll
+// meters apart. No prices.
+type EODBalance struct {
+	ProductUUID     uuid.UUID `json:"product_uuid"`
+	SKU             string    `json:"sku"`
+	ProductName     string    `json:"product_name"`
+	OpeningQuantity int64     `json:"opening_quantity"`
+	OpeningMeters   string    `json:"opening_meters"`
+	ClosingQuantity int64     `json:"closing_quantity"`
+	ClosingMeters   string    `json:"closing_meters"`
+	ChangeQuantity  int64     `json:"change_quantity"`
+	ChangeMeters    string    `json:"change_meters"`
+}
+
+// EODPending counts the open work of the scope at AsOf: open warehouse
+// transfers, stock entries not yet placed (drafts and confirmed entries
+// with units waiting for a location), unfinished stock counts and sale
+// orders being prepared.
+type EODPending struct {
+	AsOf            time.Time `json:"as_of"`
+	OpenTransfers   int64     `json:"open_transfers"`
+	UnplacedEntries int64     `json:"unplaced_entries"`
+	PendingCounts   int64     `json:"pending_counts"`
+	PreparingOrders int64     `json:"preparing_orders"`
 }
 
 // EODWarehouseRef names the report's warehouse.
@@ -311,7 +350,106 @@ func (s *EOD) Summarize(ctx context.Context, orgID, warehouseID int64, start, en
 	if err != nil {
 		return EODSummary{}, fmt.Errorf("warehouse eod: summarize: %w", err)
 	}
-	return BuildEODSummary(rows)
+	sum, err := BuildEODSummary(rows)
+	if err != nil {
+		return EODSummary{}, err
+	}
+	if sum.Balances, err = s.Balances(ctx, orgID, warehouseID, start, end); err != nil {
+		return EODSummary{}, err
+	}
+	if sum.Pending, err = s.PendingWork(ctx, orgID, warehouseID); err != nil {
+		return EODSummary{}, err
+	}
+	return sum, nil
+}
+
+// Balances computes the opening and closing on-hand stock per product of
+// the scope (TEC-1229): closing = current projection - the movements
+// since end; opening = closing - the movements in [start, end) (see
+// EODStockDeltas). Products with nothing at both ends and no change are
+// left out.
+func (s *EOD) Balances(ctx context.Context, orgID, warehouseID int64, start, end time.Time) ([]EODBalance, error) {
+	wh := pgtype.Int8{Int64: warehouseID, Valid: warehouseID > 0}
+	cur, err := s.q.EODCurrentStock(ctx, db.EODCurrentStockParams{OrganizationID: orgID, WarehouseID: wh})
+	if err != nil {
+		return nil, fmt.Errorf("warehouse eod: current stock: %w", err)
+	}
+	deltas, err := s.q.EODStockDeltas(ctx, db.EODStockDeltasParams{
+		OrganizationID: orgID, WarehouseID: wh,
+		PeriodStart: pgtype.Timestamptz{Time: start, Valid: true},
+		PeriodEnd:   pgtype.Timestamptz{Time: end, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("warehouse eod: stock deltas: %w", err)
+	}
+	type acc struct {
+		uuid       uuid.UUID
+		sku, name  string
+		curQ, curC int64
+		perQ, perC int64
+		aftQ, aftC int64
+	}
+	byID := map[int64]*acc{}
+	get := func(id int64, u uuid.UUID, sku, name string) *acc {
+		a, ok := byID[id]
+		if !ok {
+			a = &acc{uuid: u, sku: sku, name: name}
+			byID[id] = a
+		}
+		return a
+	}
+	for _, r := range cur {
+		a := get(r.ProductID, r.ProductUuid, r.Sku, r.ProductName)
+		a.curQ, a.curC = r.Quantity, cmOrZero(r.Meters)
+	}
+	for _, r := range deltas {
+		a := get(r.ProductID, r.ProductUuid, r.Sku, r.ProductName)
+		a.perQ, a.perC = r.PeriodQuantity, cmOrZero(r.PeriodMeters)
+		a.aftQ, a.aftC = r.AfterQuantity, cmOrZero(r.AfterMeters)
+	}
+	out := make([]EODBalance, 0, len(byID))
+	for _, a := range byID {
+		closeQ, closeC := a.curQ-a.aftQ, a.curC-a.aftC
+		openQ, openC := closeQ-a.perQ, closeC-a.perC
+		if openQ == 0 && openC == 0 && closeQ == 0 && closeC == 0 && a.perQ == 0 && a.perC == 0 {
+			continue
+		}
+		out = append(out, EODBalance{
+			ProductUUID: a.uuid, SKU: a.sku, ProductName: a.name,
+			OpeningQuantity: openQ, OpeningMeters: ledger.FormatMeters(openC),
+			ClosingQuantity: closeQ, ClosingMeters: ledger.FormatMeters(closeC),
+			ChangeQuantity: closeQ - openQ, ChangeMeters: ledger.FormatMeters(closeC - openC),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ProductName != out[j].ProductName {
+			return out[i].ProductName < out[j].ProductName
+		}
+		return out[i].ProductUUID.String() < out[j].ProductUUID.String()
+	})
+	return out, nil
+}
+
+// PendingWork counts the open work of the scope now (TEC-1229).
+func (s *EOD) PendingWork(ctx context.Context, orgID, warehouseID int64) (*EODPending, error) {
+	row, err := s.q.EODPendingWork(ctx, db.EODPendingWorkParams{
+		OrganizationID: orgID, WarehouseID: pgtype.Int8{Int64: warehouseID, Valid: warehouseID > 0},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("warehouse eod: pending work: %w", err)
+	}
+	return &EODPending{
+		AsOf: s.now(), OpenTransfers: row.OpenTransfers, UnplacedEntries: row.UnplacedEntries,
+		PendingCounts: row.PendingCounts, PreparingOrders: row.PreparingOrders,
+	}, nil
+}
+
+func cmOrZero(s string) int64 {
+	v, err := ledger.ParseMeters(s)
+	if err != nil {
+		return 0
+	}
+	return v
 }
 
 // eodAcc accumulates totals; meters are kept in hundredths.
@@ -436,6 +574,9 @@ func (s *EOD) view(ctx context.Context, q *db.Queries, r db.EodReport) (EODRepor
 	}
 	if err := json.Unmarshal(r.Summary, &v.Summary); err != nil {
 		return EODReport{}, fmt.Errorf("warehouse eod: summary: %w", err)
+	}
+	if v.Summary.Balances == nil {
+		v.Summary.Balances = []EODBalance{}
 	}
 	if r.WarehouseID.Valid {
 		w, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: r.WarehouseID.Int64, OrganizationID: r.OrganizationID})

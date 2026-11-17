@@ -91,5 +91,6 @@
   "resources.stock.products": "المخزون حسب المنتج",
   "resources.stock.location_stock": "مخزون الموقع",
   "resources.stock.unit_history": "سجل حركة الوحدة",
-  "resources.stock.barcode_batches": "دفعات الباركود"
+  "resources.stock.barcode_batches": "دفعات الباركود",
+  "resources.stock.movements": "حركات المخزون"
 }

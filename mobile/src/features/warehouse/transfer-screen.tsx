@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
+import { transferMissing } from '@/features/orders/discrepancy-logic';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -35,10 +36,19 @@ export function TransferScreen() {
   const [qty, setQty] = useState(1);
   const [source, setSource] = useState<Loc | null>(null);
   const [target, setTarget] = useState<Loc | null>(null);
+  // TEC-1227: lines marked as not arrived; they stay in transit under the record.
+  const [missing, setMissing] = useState<Set<string>>(new Set());
+  const toggleMissing = (line: string) =>
+    setMissing((m) => {
+      const n = new Set(m);
+      if (n.has(line)) n.delete(line);
+      else n.add(line);
+      return n;
+    });
 
   const x = q.data;
   const lines = x?.lines ?? [];
-  const unplaced = lines.filter((l) => !l.target_location);
+  const unplaced = lines.filter((l) => !l.target_location && !missing.has(l.uuid));
   // Receiving needs a target for every line: per line, the transfer's own target, or a scanned bin.
   const receiveBlocked = unplaced.length > 0 && !x?.to_location && !target;
 
@@ -177,15 +187,23 @@ export function TransferScreen() {
                     title={t('transfer.complete')}
                     loading={busy === 'complete'}
                     // The backend refuses to complete while a line has no target location.
-                    disabled={receiveBlocked}
+                    disabled={receiveBlocked || missing.size >= lines.length}
                     onPress={() =>
                       confirmAction({
                         title: t('transfer.complete_title'),
-                        body: t('transfer.complete_description'),
+                        body: missing.size
+                          ? t('discrepancy.complete_missing', { n: missing.size })
+                          : t('transfer.complete_description'),
                         action: t('transfer.complete'),
                         onConfirm: () =>
-                          void run('complete', () =>
-                            transferApi.complete(uuid, target && unplaced.length ? { location_uuid: target.uuid } : undefined),
+                          void run(
+                            'complete',
+                            () =>
+                              transferApi.complete(uuid, {
+                                ...(target && unplaced.length ? { location_uuid: target.uuid } : {}),
+                                ...(missing.size ? { missing: transferMissing(lines, arrivedOf(lines, missing)) } : {}),
+                              }),
+                            { done: () => setMissing(new Set()) },
                           ),
                       })
                     }
@@ -202,6 +220,8 @@ export function TransferScreen() {
             )}
           </View>
         ) : null}
+
+        <TransferDiscrepancies transfer={x} writable={write} busy={busy} run={run} />
 
         <SectionHeader title={`${t('entry.lines')} (${lines.length})`} />
         {lines.length === 0 ? (
@@ -227,6 +247,13 @@ export function TransferScreen() {
                     {l.target_location?.full_code ?? l.target_location?.code ?? t('entry.unplaced')}
                   </Text>
                 </View>
+                {write && transit ? (
+                  <Button
+                    variant={missing.has(l.uuid) ? 'destructive' : 'outline'}
+                    title={missing.has(l.uuid) ? t('discrepancy.kind.missing') : t('discrepancy.mark_missing')}
+                    onPress={() => toggleMissing(l.uuid)}
+                  />
+                ) : null}
                 {write && draft ? (
                   <IconButton
                     icon="delete"
@@ -290,6 +317,71 @@ export function TransferScreen() {
           </View>
         }
       />
+    </>
+  );
+}
+
+/** The arrived lines: every line not marked missing. */
+function arrivedOf(lines: { uuid: string }[], missing: Set<string>): Set<string> {
+  return new Set(lines.filter((l) => !missing.has(l.uuid)).map((l) => l.uuid));
+}
+
+/**
+ * TEC-1227: the discrepancy record of a completed transfer. A missing line
+ * is found (placed on its target in the target warehouse) or returned to
+ * its source; a surplus row is closed.
+ */
+function TransferDiscrepancies({
+  transfer,
+  writable,
+  busy,
+  run,
+}: {
+  transfer: Transfer;
+  writable: boolean;
+  busy: string | null;
+  run: (name: string, fn: () => Promise<Transfer>) => Promise<void>;
+}) {
+  const { t } = useTranslation('warehouse');
+  const rows = transfer.discrepancies ?? [];
+  if (!rows.length) return null;
+  return (
+    <>
+      <SectionHeader title={t('discrepancy.card_count', { n: transfer.open_discrepancies })} />
+      <View className="gap-2">
+        {rows.map((d) => (
+          <View key={d.uuid} className="gap-1.5 rounded-lg border border-border bg-card p-3">
+            <View className="flex-row items-center justify-between gap-2">
+              <Text variant="callout" className="flex-1 font-mono" numberOfLines={1}>
+                {d.barcode}
+              </Text>
+              <StatusPill
+                tone={d.status === 'open' ? 'problem' : 'done'}
+                label={d.resolution ? t(`discrepancy.resolution.${d.resolution}`) : t(`discrepancy.kind.${d.kind}`)}
+              />
+            </View>
+            {d.product_name || d.note ? (
+              <Text variant="footnote" tone="muted" numberOfLines={2}>
+                {[d.product_name, d.note].filter(Boolean).join(' · ')}
+              </Text>
+            ) : null}
+            {writable && d.status === 'open' ? (
+              <View className="flex-row flex-wrap gap-2">
+                {(d.kind === 'missing' ? (['found', 'returned_to_source'] as const) : (['closed'] as const)).map((r) => (
+                  <Button
+                    key={r}
+                    variant={r === 'found' ? 'secondary' : 'outline'}
+                    title={t(`discrepancy.resolve.${r}`)}
+                    loading={busy === `disc:${d.uuid}:${r}`}
+                    disabled={!!busy}
+                    onPress={() => void run(`disc:${d.uuid}:${r}`, () => transferApi.resolveDiscrepancy(transfer.uuid, d.uuid, { resolution: r }))}
+                  />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
     </>
   );
 }

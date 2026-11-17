@@ -91,5 +91,6 @@
   "resources.stock.products": "Bestand nach Produkt",
   "resources.stock.location_stock": "Lagerplatzbestand",
   "resources.stock.unit_history": "Bewegungsverlauf der Einheit",
-  "resources.stock.barcode_batches": "Barcode-Chargen"
+  "resources.stock.barcode_batches": "Barcode-Chargen",
+  "resources.stock.movements": "Lagerbewegungen"
 }

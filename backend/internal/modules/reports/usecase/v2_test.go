@@ -585,3 +585,37 @@ func TestExportReport(t *testing.T) {
 
 // tr0 drops the limit (summaries take none).
 func tr0(in Input) Input { in.Limit = ""; return in }
+
+// TEC-1229: stock.aging buckets the stock on hand by its last movement;
+// the price columns need a pricing permission, so a warehouse role never
+// sees them.
+func TestStockAgingPriceGate(t *testing.T) {
+	f := newFixture(t)
+	s := f.svc(featureMap{})
+	in := in30
+	in.Limit = "50"
+	wh := f.caller(t, f.center, rbac.RoleCenterWarehouse)
+	env, err := s.Report(f.ctx, wh, ReportStockAging, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasColumn(env, "unit_price") || hasColumn(env, "stock_value") || !hasColumn(env, "qty_0_30") {
+		t.Fatalf("warehouse columns = %v", env.Columns)
+	}
+	for _, r := range env.Rows {
+		if _, ok := r["unit_price"]; ok {
+			t.Fatalf("warehouse row carries a price: %v", r)
+		}
+	}
+	if kpi(env, "aging_quantity") < 6 {
+		t.Fatalf("aging quantity = %v", kpi(env, "aging_quantity"))
+	}
+	sales := f.caller(t, f.center, rbac.RoleCenterSales, rbac.RoleCenterWarehouse)
+	env, err = s.Report(f.ctx, sales, ReportStockAging, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasColumn(env, "unit_price") || !hasColumn(env, "stock_value") {
+		t.Fatalf("priced columns = %v", env.Columns)
+	}
+}

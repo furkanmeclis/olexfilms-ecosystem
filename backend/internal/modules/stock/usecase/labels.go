@@ -360,14 +360,29 @@ func (s *Labels) render(ctx context.Context, org int64, tpl labels.Template, ite
 	if o, err := s.q.GetOrganizationByID(ctx, org); err == nil && o.Locale != "" {
 		lang = o.Locale
 	}
-	html, err := labels.Sheet(lang, tpl, items)
+	req := pdfrender.Request{}
+	var err error
+	switch tpl.Output {
+	case labels.OutputZPL:
+		// TEC-1230: ZPL is text, the PDF engine is not involved.
+		out, err := labels.ZPL(tpl, items)
+		if err != nil {
+			return nil, fmt.Errorf("stock: labels: %w", err)
+		}
+		return out, nil
+	case labels.OutputSingle:
+		req.HTML, err = labels.Single(lang, tpl, items)
+		req.PageWidthMm, req.PageHeightMm = labels.PageSize(tpl)
+	default:
+		req.HTML, err = labels.Sheet(lang, tpl, items)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("stock: labels: %w", err)
 	}
 	if s.pdf == nil {
 		return nil, ErrRendererUnavailable
 	}
-	pdf, err := s.pdf.Convert(ctx, pdfrender.Request{HTML: html})
+	pdf, err := s.pdf.Convert(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrRendererUnavailable, err)
 	}

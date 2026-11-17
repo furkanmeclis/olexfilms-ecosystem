@@ -152,6 +152,7 @@
   "status.in_transit": "В пути",
   "status.used": "Использована",
   "status.void": "Аннулирована",
+  "status.quarantine": "Ожидает проверки",
   "unit_kind.serial": "Серийная единица",
   "unit_kind.fixed": "Фиксированный штрихкод",
   "list.loading": "Загрузка…",
@@ -347,6 +348,7 @@
   "bulk.reason.used_in_service": "Использован в услуге",
   "bulk.reason.consumed": "Израсходован / списан",
   "bulk.reason.in_transit": "В пути",
+  "bulk.reason.quarantine": "Возврат ожидает проверки",
   "bulk.reason.reserved_by_order": "Зарезервирован заказом",
   "bulk.reason.not_in_stock": "Ещё не на складе",
   "bulk.reason.fixed_barcode": "Фиксированный штрихкод",
@@ -390,5 +392,15 @@
   "credits.reason_required": "Причина обязательна (не более 1000 символов).",
   "credits.submit": "Добавить",
   "credits.increased": "Кредиты добавлены.",
-  "credits.increase_failed": "Не удалось добавить кредиты."
+  "credits.increase_failed": "Не удалось добавить кредиты.",
+  "label_templates.fields.output_format": "Вывод",
+  "label_templates.output_format.sheet": "Лист A4 (сетка)",
+  "label_templates.output_format.single": "PDF с одной этикеткой (термо)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Этикетки располагаются сеткой на странице A4.",
+  "label_templates.output_format_hint.single": "Каждая страница — одна этикетка размера этикетки. Печатайте на термопринтере через системное окно печати.",
+  "label_templates.output_format_hint.zpl": "Файл .zpl для принтеров Zebra (203 dpi). Логотип-изображение не печатается.",
+  "label_templates.form.thermal_sizes": "Типовые размеры:",
+  "columns.remnant": "Остаток",
+  "remnant.badge": "Остаток"
 }

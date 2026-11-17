@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Die Rolle ist nicht im Bestand dieser Organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Die Rolle wird in einem offenen Service oder Auftrag verwendet.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "Der Schnitt ist kürzer als der Mindestzuschnitt des Produkts. Nehmen Sie den ganzen Rest der Rolle oder schneiden Sie länger.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "Der Schnitt ist kürzer als der Mindestzuschnitt des Produkts. Verwenden Sie den ganzen Rest der Rolle oder schneiden Sie länger.",
   "codes.LEADS_MODULE_DISABLED": "Das Lead-Modul ist systemweit deaktiviert; aktivieren Sie zuerst das Modul.",
   "codes.FLEET_ALREADY_EXISTS": "Eine Flotte mit dieser Steuernummer existiert bereits; senden Sie eine Verknüpfungsanfrage.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Die Steuernummer ist ungültig (Prüfziffer von VKN oder TCKN stimmt nicht).",
@@ -183,5 +185,8 @@
   "codes.ORDER_INVOICED": "Eine fakturierte Bestellung kann nicht storniert werden; löschen Sie zuerst den Rechnungseintrag.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Eine Zusatzlieferung kann nur zu einem versendeten, zugestellten oder empfangenen Auftrag hinzugefügt werden.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Für diesen Barcode ist kein Nutzungsguthaben mehr übrig; er kann in keinem weiteren Service ausgewählt werden.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rollen und feste Barcodes haben kein Nutzungsguthaben."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rollen und feste Barcodes haben kein Nutzungsguthaben.",
+  "codes.ORDER_ALREADY_CLAIMED": "Jemand anderes hat diesen Auftrag übernommen.",
+  "codes.ORDER_NOT_CLAIMABLE": "Nur eine bestätigte, noch nicht versandte Bestellung ist ein Lagerauftrag.",
+  "codes.ORDER_SCHEDULE_LOCKED": "Priorität und Termin können in diesem Status nicht geändert werden."
 }

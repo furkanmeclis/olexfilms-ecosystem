@@ -161,14 +161,14 @@ sayım CSV'si (`stock-counts/{uuid}/export`) ve `/v1/mobile/stock/*`
   `POST /v1/stock/labels/units/mark-printed` (`{"barcodes": [...]}`) çağırır;
   reserved birimler printed olur, çağrı tekrarlanabilir. Mobil bu uca panel
   aynasından ulaşır (`/v1/mobile/panel/stock/labels/units/mark-printed`).
-  Parti etiketi (`/v1/stock/barcodes/{uuid}/labels.pdf`) eskisi gibi basım
-  sayar.
+  Fiş ekranında aynı onay `POST .../stock-entries/{uuid}/label-prints` ile
+  zaman çizelgesine de yazılır (TEC-1225). Parti etiketi
+  (`/v1/stock/barcodes/{uuid}/labels.pdf`) eskisi gibi basım sayar.
 - **Rulo etiketi:** yeniden basımda ilk boy değil kalan metre yazar.
-- **Konteyner fişi onayı:** tedarikçi, konteyner ya da irsaliye taşıyan veya
-  varış okutması başlamış fiş, okutulmamış satır varken onaylanmaz (409
-  `STOCK_ENTRY_ARRIVAL_MISSING`). `confirm` gövdesinde `drop_missing: true`
-  bu satırları fişten çıkarır ve kalanı onaylar. Panel ve mobil
-  (`/v1/mobile/warehouse/stock-entries/{uuid}/confirm`) aynı kuralı izler.
+- **Eksik kabul:** okutulmamış satırlı fiş TEC-1225 tutanak akışıyla
+  onaylanır: her eksik satır için `left_out` kararı gerekir, karar yoksa 409
+  `STOCK_ENTRY_DISCREPANCY_REQUIRED` (bkz. §5). Ayrı bir `drop_missing`
+  seçeneği yoktur.
 - **Mobil sayım onayı:** `POST /v1/mobile/warehouse/stock-counts/{uuid}/approve`
   paneldeki gibi step-up ister (403 `STEP_UP_REQUIRED`). Uygulama izni
   `/v1/mobile/panel/auth/step-up/password` veya `/totp` ile alır.
@@ -180,3 +180,39 @@ sayım CSV'si (`stock-counts/{uuid}/export`) ve `/v1/mobile/stock/*`
   sipariş fişinde (fiyat görme yetkisiyle) kalır. Sipariş onay geçmişi
   metadata'sı ve outbox payload'ındaki `total` / `rate_snapshot` depo
   rollerine açılmaz (testle korunur).
+
+## 5. Mal kabul istisnaları (TEC-1225)
+
+Aynı handler ve usecase'ler, aynı izinler ve `RequireFeature(warehouse)`:
+
+- `PATCH /v1/mobile/warehouse/stock-entries/{uuid}` (fiş başlığı: tedarikçi,
+  konteyner no, irsaliye no, varış tarihi, varsayılan göz); oluşturma
+  (`POST .../stock-entries`) başlık alanlarını da kabul eder.
+- `POST`/`DELETE .../stock-entries/{uuid}/arrival-scans`,
+  `GET .../arrival-report` (varış okutması, beklenen/okutulan/eksik/fazla).
+- `POST .../stock-entries/{uuid}/confirm` gövdesinde tutanak kararları
+  (`decisions`); eksik karar 409 `STOCK_ENTRY_DISCREPANCY_REQUIRED`.
+- `GET .../receipt`, `GET .../receipt.pdf` (kabul tutanağı).
+- `POST .../attachments` (multipart), `GET`/`DELETE .../attachments/{attachment_uuid}`.
+- `PATCH .../lines/{line_uuid}` (lot, üretim tarihi, koli no).
+- `POST .../label-prints` (zaman çizelgesi adımı).
+- `GET .../undo-check`, `POST .../undo` (`stock.adjust` + step-up).
+- `GET /v1/mobile/warehouse/suppliers` (`warehouse.read`).
+
+## 6. Durum güncellemesi (TEC-1228)
+
+Mobil depo sipariş ekranı şu uçları panel aynası (`/v1/mobile/panel/orders/...`,
+allowlist'te `orders` öneki zaten var) üzerinden kullanır; yeni allowlist girdisi
+gerekmedi:
+
+- `GET /v1/orders?sort=queue&picker=me`: iş kuyruğu (önce acil, sonra termin)
+  ve "benim işlerim".
+- `POST` / `DELETE /v1/orders/{uuid}/claim`: işi üstlenme, devralma, bırakma.
+- `POST /v1/orders/{uuid}/transitions`: sevkte koli/desi/ağırlık; iptal,
+  iptal talebi ve "iptal ediliyor → iptal edildi (mal geri geldi)" (web ile
+  aynı `available_transitions` kuralları).
+- `GET /v1/orders/{uuid}/documents/shipping`, `GET .../order-slip.pdf`,
+  `GET .../documents/receipt`: paylaşım (iOS Share, Android expo-sharing).
+- `POST /v1/orders/{uuid}/shipping-document`: irsaliyeyi yeniden üretme.
+- `POST /v1/orders/{uuid}/receipt-document`: alıcının teslim belgesi
+  fotoğrafı (kamera, JPEG).

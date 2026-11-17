@@ -87,3 +87,58 @@ func TestSheetUnitQRUsesUnitPrefix(t *testing.T) {
 		t.Fatal("unit qr payload")
 	}
 }
+
+func TestSingleOnePagePerLabel(t *testing.T) {
+	tpl := DefaultUnit
+	tpl.WidthMm, tpl.HeightMm, tpl.Output = 100, 50, OutputSingle
+	doc, err := Single("tr", tpl, []Item{{Code: "OLEX-00000001", Title: "PPF"}, {Code: "OLEX-00000002"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`@page{size:100.0mm 50.0mm;margin:0}`, `break-after:page`, `OLEX-00000002`, `font-size:10pt`} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(doc, ".sheet{display:grid") {
+		t.Error("single output must not be a grid")
+	}
+	if w, h := PageSize(tpl); w != 100 || h != 50 {
+		t.Fatalf("page = %vx%v", w, h)
+	}
+}
+
+func TestZPLUnitAndLocation(t *testing.T) {
+	tpl := DefaultUnit
+	tpl.WidthMm, tpl.HeightMm, tpl.Output = 100, 50, OutputZPL
+	tpl.LogoMode, tpl.LogoText = LogoText, "Olex^Films"
+	out, err := ZPL(tpl, []Item{
+		{Code: "OLEX-00000001", Title: "PPF_Gloss", Subtitle: "SKU-1 · 12.50 m"},
+		{Code: "OLEX-00000002", Title: "PPF"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(out)
+	if !IsZPL(out) || strings.Count(s, "^XA") != 2 || strings.Count(s, "^XZ") != 2 {
+		t.Fatalf("blocks: %s", s)
+	}
+	for _, want := range []string{"^PW800^LL400", "^BCN,", "^FDOLEX-00000001^FS", "PPF_5FGloss", "Olex_5EFilms", "12.50 m", "^CI28"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %q in %s", want, s)
+		}
+	}
+	loc, err := ZPL(DefaultLocation, []Item{{Code: "D1-A-01", Title: "A-01"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(loc), "^BQN,2,") || !strings.Contains(string(loc), "^FDQA,OFW:LOC:D1-A-01^FS") {
+		t.Fatalf("location qr: %s", loc)
+	}
+	if _, err := ZPL(tpl, []Item{{Code: " "}}); err != ErrEmptyCode {
+		t.Fatalf("empty: %v", err)
+	}
+	if IsZPL([]byte("%PDF-1.7")) {
+		t.Fatal("pdf is not zpl")
+	}
+}

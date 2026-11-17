@@ -53,6 +53,11 @@ func (h *Exports) Counts(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, wh.ResourceCountsExport)
 }
 
+// Adjustments list (POST /v1/warehouse/adjustments/export, 202; TEC-1226).
+func (h *Exports) Adjustments(w http.ResponseWriter, r *http.Request) {
+	h.list(w, r, wh.ResourceAdjustmentsExport)
+}
+
 // Transfers list (POST /v1/warehouse/transfers/export, 202).
 func (h *Exports) Transfers(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, wh.ResourceTransfersExport)

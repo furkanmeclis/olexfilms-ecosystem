@@ -8,6 +8,16 @@ export const ORDER_ACTIVITY_ACTIONS = [
   "unit_unassigned",
   "updated",
   "plotter_marked",
+  // TEC-1227: partial shipment and receipt discrepancies.
+  "backorder_created",
+  "backorder_opened",
+  "discrepancy_reported",
+  "discrepancy_resolved",
+  // TEC-1228: the work queue steps.
+  "schedule_updated",
+  "claimed",
+  "claim_taken_over",
+  "claim_released",
 ] as const;
 
 type Translate = (
@@ -84,6 +94,20 @@ export function orderTimelineSteps(
         );
       }
     }
+    // TEC-1228: the new schedule and whose job was taken.
+    if (e.action === "schedule_updated") {
+      if (e.priority) parts.push(t(`orders.queue.priority_${e.priority}`));
+      parts.push(
+        e.due_date
+          ? t("orders.queue.due", { date: e.due_date })
+          : t("orders.queue.no_due_date"),
+      );
+    }
+    if (e.previous_picker) {
+      parts.push(
+        t("orders.queue.previous_picker", { name: e.previous_picker }),
+      );
+    }
     // TEC-1056: the lines an edit added, changed or removed.
     for (const c of e.changes ?? []) {
       if (c.before == null && c.after != null) {
@@ -120,6 +144,12 @@ export function orderTimelineSteps(
         );
       }
     }
+    // TEC-1227: the other order of a backorder step, the discrepancy kind
+    // and its resolution.
+    if (e.related_order_no) parts.push(e.related_order_no);
+    if (e.kind) parts.push(t(`orders.receipt.kind.${e.kind}`));
+    if (e.resolution)
+      parts.push(t(`orders.receipt.resolution.${e.resolution}`));
     if (e.reason) parts.push(e.reason);
     return {
       key: `${e.at}-${i}`,

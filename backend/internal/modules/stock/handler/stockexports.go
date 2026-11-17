@@ -129,3 +129,13 @@ func (h *StockExports) withPath(w http.ResponseWriter, r *http.Request, resource
 	}
 	response.JSON(w, r, http.StatusAccepted, job)
 }
+
+// Movements (POST /v1/stock/movements/export, 202): the movement list of
+// the active organization with its filters (TEC-1229).
+func (h *StockExports) Movements(w http.ResponseWriter, r *http.Request) {
+	h.withPath(w, r, stockusecase.ResourceMovementsExport, func(b unitsExportBody) (ioengine.ExportQuery, error) {
+		f, _ := scopefilter.From(r.Context())
+		v := stockusecase.UnitViewer{Org: orgctx.MustScope(r.Context()), Filter: f}
+		return h.x.MovementsExportQuery(r.Context(), v, b.Query)
+	})
+}

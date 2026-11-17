@@ -152,6 +152,7 @@
   "status.in_transit": "В транзит",
   "status.used": "Използвана",
   "status.void": "Анулирана",
+  "status.quarantine": "Очаква проверка",
   "unit_kind.serial": "Серийна единица",
   "unit_kind.fixed": "Фиксиран баркод",
   "list.loading": "Зареждане…",
@@ -300,5 +301,16 @@
   "credits.reason_required": "Причината е задължителна (до 1000 знака).",
   "credits.submit": "Добави",
   "credits.increased": "Кредитите са добавени.",
-  "credits.increase_failed": "Кредитите не можаха да бъдат добавени."
+  "credits.increase_failed": "Кредитите не можаха да бъдат добавени.",
+  "label_templates.fields.output_format": "Изход",
+  "label_templates.output_format.sheet": "A4 лист (решетка)",
+  "label_templates.output_format.single": "PDF с един етикет (термичен)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Етикетите се подреждат в решетка на страница A4.",
+  "label_templates.output_format_hint.single": "Всяка страница е един етикет с размера на етикета. Печатайте на термичен принтер от системния диалог.",
+  "label_templates.output_format_hint.zpl": "Файл .zpl за принтери Zebra (203 dpi). Логото изображение не се печата.",
+  "label_templates.form.thermal_sizes": "Готови размери:",
+  "columns.remnant": "Остатък",
+  "remnant.badge": "Остатък",
+  "bulk.reason.quarantine": "Връщане, очаква проверка"
 }

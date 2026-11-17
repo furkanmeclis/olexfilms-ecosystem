@@ -240,9 +240,17 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	chainMoves += ",transfer_out"
 	c.owned("R1 shipped", "in_transit", "organization", c.dist.ID, c.dist.ID, chainMoves)
 	move(c.distTok, r1.UUID, "received")
-	chainMoves += ",transfer_in"
-	c.owned("R1 received", "available", "organization", c.dist.ID, c.dist.ID, chainMoves)
-	stocks("R1 received", c.centerStockBefore-2, 2, 0)
+	// TEC-1226: a received return waits for inspection (quarantine, not
+	// counted) until the warehouse puts it back on stock.
+	chainMoves += ",transfer_in,quarantine"
+	c.owned("R1 received", "quarantine", "organization", c.dist.ID, c.dist.ID, chainMoves)
+	stocks("R1 received", c.centerStockBefore-2, 0, 0)
+	for _, u := range c.rolls {
+		it.restockReturn(c.distTok, u.Barcode)
+	}
+	chainMoves += ",quarantine_release"
+	c.owned("R1 inspected", "available", "organization", c.dist.ID, c.dist.ID, chainMoves)
+	stocks("R1 inspected", c.centerStockBefore-2, 2, 0)
 
 	// 5. The distributor returns both rolls to the center. The center
 	// warehouse role holds transfers.approve (TEC-228) and decides and
@@ -260,8 +268,13 @@ func TestIntegrationF1ReverseChain(t *testing.T) {
 	chainMoves += ",transfer_out"
 	c.owned("R2 shipped", "in_transit", "organization", c.center.ID, c.center.ID, chainMoves)
 	move(whTok, r2.UUID, "received")
-	chainMoves += ",transfer_in"
-	c.owned("R2 received", "available", "organization", c.center.ID, c.center.ID, chainMoves)
+	chainMoves += ",transfer_in,quarantine"
+	c.owned("R2 received", "quarantine", "organization", c.center.ID, c.center.ID, chainMoves)
+	for _, u := range c.rolls {
+		it.restockReturn(whTok, u.Barcode)
+	}
+	chainMoves += ",quarantine_release"
+	c.owned("R2 inspected", "available", "organization", c.center.ID, c.center.ID, chainMoves)
 	if c.centerStockBefore != 100 {
 		t.Fatalf("center stock before the chain = %d, want 100 (generated)", c.centerStockBefore)
 	}

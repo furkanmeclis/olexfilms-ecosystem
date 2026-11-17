@@ -94,6 +94,7 @@ describe("label template form (TEC-764)", () => {
       show_code_text: false,
       is_default: true,
       active: true,
+      output_format: "sheet",
       created_at: "2026-10-01T09:00:00Z",
       updated_at: "2026-10-01T09:00:00Z",
     };
@@ -104,6 +105,7 @@ describe("label template form (TEC-764)", () => {
       kind: "unit",
       symbology: "code128",
       logo_mode: "text",
+      output_format: "sheet",
       logo_text: "OLEX",
       width_mm: "70",
       height_mm: "37.5",
@@ -137,5 +139,21 @@ describe("label template form (TEC-764)", () => {
         logo: true,
       }),
     ).toBe(10);
+  });
+});
+
+describe("label output format (TEC-1230)", () => {
+  it("defaults to the A4 sheet and sends the chosen format", () => {
+    const values = emptyTemplateValues();
+    expect(values.output_format).toBe("sheet");
+    expect(
+      toTemplateInput({
+        ...values,
+        name: "Zebra",
+        output_format: "zpl",
+        width_mm: "100",
+        height_mm: "50",
+      }),
+    ).toMatchObject({ output_format: "zpl", width_mm: "100", height_mm: "50" });
   });
 });

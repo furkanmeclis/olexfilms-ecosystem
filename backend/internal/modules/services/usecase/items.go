@@ -200,6 +200,15 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 			if rem := numericRat(unit.RemainingMeters); rem != nil && r.Cmp(rem) > 0 {
 				return invalid("meters", "more than the remaining meters of the roll")
 			}
+			// TEC-1230: the product's minimum cut; the whole rest of a
+			// roll (a remnant) may always be used.
+			if cut, err := ledger.ParseMeters(m); err == nil {
+				if rem, err := ledger.NumericToCentimeters(unit.RemainingMeters); err == nil {
+					if err := ledger.CheckMinCut(cut, rem, product.MinCutMeters); err != nil {
+						return ErrBelowMinCut
+					}
+				}
+			}
 			if params.Meters, err = numeric(m); err != nil {
 				return err
 			}

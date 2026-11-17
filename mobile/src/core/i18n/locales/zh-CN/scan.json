@@ -14,5 +14,12 @@
   "open_warranty": "打开保修",
   "next_hint.unit": "您无权查看此库存单元。",
   "next_hint.location": "仓库库位需在仓库界面中扫描。",
-  "next_hint.unknown": "无法识别此代码。请扫描产品标签上的条码或保修证书上的二维码。"
+  "next_hint.unknown": "无法识别此代码。请扫描产品标签上的条码或保修证书上的二维码。",
+  "input.section": "读码方式",
+  "input.camera": "相机",
+  "input.camera_hint": "使用手机相机扫描。",
+  "input.wedge": "硬件扫描器",
+  "input.wedge_hint": "蓝牙/USB 扫描器或手持终端（键盘模式，以回车结束）。",
+  "input.ready": "扫描器已就绪，请扫码",
+  "input.ready_hint": "在 Zebra/Honeywell 终端上，将 DataWedge 配置文件设为键盘输出。"
 }

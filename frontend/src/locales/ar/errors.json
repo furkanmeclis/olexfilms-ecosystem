@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "اللفة ليست في مخزون هذه المؤسسة.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "اللفة مستخدمة في خدمة أو طلب مفتوح.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "استُخدم مفتاح منع التكرار هذا لتقسيم آخر.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "القطع أقصر من الحد الأدنى للقطع لهذا المنتج. خذ كامل المتبقي من اللفة أو اقطع طولًا أكبر.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "القطع أقصر من الحد الأدنى للقطع لهذا المنتج. استخدم كامل المتبقي من اللفة أو اقطع طولًا أكبر.",
   "codes.LEADS_MODULE_DISABLED": "وحدة العملاء المحتملين مغلقة على مستوى النظام؛ فعّل الوحدة أولًا.",
   "codes.FLEET_ALREADY_EXISTS": "يوجد أسطول بهذا الرقم الضريبي بالفعل؛ أرسل إليه طلب ربط.",
   "codes.FLEET_INVALID_TAX_NUMBER": "الرقم الضريبي غير صالح (فشل التحقق من VKN أو TCKN).",
@@ -180,5 +182,8 @@
   "codes.ORDER_INVOICED": "لا يمكن إلغاء طلب مفوتر؛ احذف سجل الفاتورة أولاً.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "لا يمكن إضافة شحنة تكميلية إلا إلى طلب مشحون أو مُسلَّم أو مُستلَم.",
   "codes.UNIT_CREDITS_EXHAUSTED": "لم يتبقَّ لهذا الرمز الشريطي أي رصيد استخدام؛ لا يمكن اختياره في خدمة أخرى.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة استخدام."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة استخدام.",
+  "codes.ORDER_ALREADY_CLAIMED": "تولّى شخص آخر هذا العمل.",
+  "codes.ORDER_NOT_CLAIMABLE": "العمل المستودعي هو فقط طلب معتمد لم يُشحن بعد.",
+  "codes.ORDER_SCHEDULE_LOCKED": "لا يمكن تغيير الأولوية والموعد في هذه الحالة."
 }

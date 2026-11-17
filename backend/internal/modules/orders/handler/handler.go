@@ -39,6 +39,10 @@ const (
 	CodeItemAlreadyInvoiced       = "ORDER_ITEM_ALREADY_INVOICED"
 	CodeNothingToInvoice          = "ORDER_NOTHING_TO_INVOICE"
 	CodeInvoiceNoTaken            = "ORDER_INVOICE_NO_TAKEN"
+	// TEC-1228 work queue.
+	CodeAlreadyClaimed = "ORDER_ALREADY_CLAIMED"
+	CodeNotClaimable   = "ORDER_NOT_CLAIMABLE"
+	CodeScheduleLocked = "ORDER_SCHEDULE_LOCKED"
 )
 
 // Handler serves order endpoints.
@@ -58,7 +62,16 @@ func caller(r *http.Request) ord.Caller {
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *ord.ValidationError
 	var qe *apiquery.ValidationError
+	var ce *ord.ClaimedError
 	switch {
+	case errors.As(err, &ce):
+		// TEC-1228: the client shows who holds the job and when.
+		response.ErrorWithData(w, r, http.StatusConflict, CodeAlreadyClaimed, "Another user has taken this job", nil,
+			map[string]any{"picker": ce.Picker, "claimed_at": ce.ClaimedAt})
+	case errors.Is(err, ord.ErrNotClaimable):
+		response.Conflict(w, r, CodeNotClaimable, "Only an approved order that has not shipped is a warehouse job")
+	case errors.Is(err, ord.ErrScheduleLocked):
+		response.Conflict(w, r, CodeScheduleLocked, "The priority and due date cannot change in this status")
 	case errors.As(err, &qe):
 		details := make([]response.Detail, 0, len(qe.Details))
 		for _, d := range qe.Details {
@@ -229,6 +242,9 @@ type createBody struct {
 	SellerWarehouseUUID *string `json:"seller_warehouse_uuid"`
 	// SelfPrepare: the creator prepares the order himself (TEC-1052).
 	SelfPrepare bool `json:"self_prepare"`
+	// TEC-1228: priority (normal / urgent) and due date (YYYY-MM-DD).
+	Priority string  `json:"priority"`
+	DueDate  *string `json:"due_date"`
 }
 
 // Create (POST /v1/orders): a draft order of the active organization to its
@@ -242,6 +258,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	o, err := h.svc.Create(r.Context(), caller(r), ord.CreateInput{
 		Note: body.Note, Items: toItems(body.Items), BuyerOrgUUID: body.BuyerOrgUUID,
 		SellerWarehouseUUID: body.SellerWarehouseUUID, SelfPrepare: body.SelfPrepare,
+		Priority: body.Priority, DueDate: body.DueDate,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -256,6 +273,8 @@ type supplementBody struct {
 	// SellerWarehouseUUID: another warehouse than the main order's.
 	SellerWarehouseUUID *string `json:"seller_warehouse_uuid"`
 	SelfPrepare         bool    `json:"self_prepare"`
+	Priority            string  `json:"priority"`
+	DueDate             *string `json:"due_date"`
 }
 
 // CreateSupplement (POST /v1/orders/{uuid}/supplements): a supplementary
@@ -273,6 +292,7 @@ func (h *Handler) CreateSupplement(w http.ResponseWriter, r *http.Request) {
 	o, err := h.svc.CreateSupplement(r.Context(), caller(r), id, ord.CreateInput{
 		Note: body.Note, Items: toItems(body.Items),
 		SellerWarehouseUUID: body.SellerWarehouseUUID, SelfPrepare: body.SelfPrepare,
+		Priority: body.Priority, DueDate: body.DueDate,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -331,6 +351,12 @@ type transitionBody struct {
 	Reason             *string `json:"reason"`
 	DeliveryMethodUUID *string `json:"delivery_method_uuid"`
 	TrackingNo         *string `json:"tracking_no"`
+	// TEC-1227: missing or damaged units reported with received.
+	Discrepancies []ord.DiscrepancyInput `json:"discrepancies"`
+	// TEC-1228: shipment details (shipping only).
+	PackageCount *int32   `json:"package_count"`
+	Desi         *float64 `json:"desi"`
+	WeightKg     *float64 `json:"weight_kg"`
 }
 
 // Transition (POST /v1/orders/{uuid}/transitions).
@@ -345,9 +371,11 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 	}
 	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{
 		Status: body.Status, Reason: body.Reason, DeliveryMethodUUID: body.DeliveryMethodUUID, TrackingNo: body.TrackingNo,
+		Discrepancies: body.Discrepancies,
+		Packages:      ord.PackagesInput{PackageCount: body.PackageCount, Desi: body.Desi, WeightKg: body.WeightKg},
 	})
 	if err != nil {
-		writeError(w, r, err)
+		writePartialError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusOK, o)

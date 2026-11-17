@@ -152,6 +152,7 @@
   "status.in_transit": "Yolda",
   "status.used": "Kullanıldı",
   "status.void": "İptal",
+  "status.quarantine": "Kontrol bekliyor",
   "unit_kind.serial": "Seri birim",
   "unit_kind.fixed": "Sabit barkod",
   "list.loading": "Yükleniyor…",
@@ -347,6 +348,7 @@
   "bulk.reason.used_in_service": "Hizmette kullanılmış",
   "bulk.reason.consumed": "Tükenmiş / iptal",
   "bulk.reason.in_transit": "Yolda",
+  "bulk.reason.quarantine": "İade kontrolü bekliyor",
   "bulk.reason.reserved_by_order": "Siparişe ayrılmış",
   "bulk.reason.not_in_stock": "Stoğa girmemiş",
   "bulk.reason.fixed_barcode": "Sabit barkod",
@@ -390,5 +392,15 @@
   "credits.reason_required": "Gerekçe zorunludur (en fazla 1000 karakter).",
   "credits.submit": "Artır",
   "credits.increased": "Kredi artırıldı.",
-  "credits.increase_failed": "Kredi artırılamadı."
+  "credits.increase_failed": "Kredi artırılamadı.",
+  "label_templates.fields.output_format": "Çıktı",
+  "label_templates.output_format.sheet": "A4 sayfa (ızgara)",
+  "label_templates.output_format.single": "Tek etiket PDF (termal)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Etiketler A4 sayfaya ızgara olarak dizilir.",
+  "label_templates.output_format_hint.single": "Her sayfa bir etikettir; sayfa boyutu etiket boyutudur. Termal yazıcıya sistem yazdırma penceresinden basılır.",
+  "label_templates.output_format_hint.zpl": "Zebra yazıcılar için .zpl dosyası (203 dpi). Görsel logo basılmaz.",
+  "label_templates.form.thermal_sizes": "Hazır boyutlar:",
+  "columns.remnant": "Ragle",
+  "remnant.badge": "Ragle"
 }

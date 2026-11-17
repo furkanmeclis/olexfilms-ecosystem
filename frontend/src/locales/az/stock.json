@@ -152,6 +152,7 @@
   "status.in_transit": "Yolda",
   "status.used": "İstifadə olunub",
   "status.void": "Ləğv",
+  "status.quarantine": "Yoxlama gözləyir",
   "unit_kind.serial": "Seriyalı vahid",
   "unit_kind.fixed": "Sabit barkod",
   "list.loading": "Yüklənir…",
@@ -300,5 +301,16 @@
   "credits.reason_required": "Səbəb mütləqdir (ən çox 1000 simvol).",
   "credits.submit": "Artır",
   "credits.increased": "Kredit artırıldı.",
-  "credits.increase_failed": "Kredit artırıla bilmədi."
+  "credits.increase_failed": "Kredit artırıla bilmədi.",
+  "label_templates.fields.output_format": "Çıxış",
+  "label_templates.output_format.sheet": "A4 vərəq (şəbəkə)",
+  "label_templates.output_format.single": "Tək etiket PDF (termal)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Etiketlər A4 səhifədə şəbəkə şəklində düzülür.",
+  "label_templates.output_format_hint.single": "Hər səhifə bir etiketdir, səhifə ölçüsü etiket ölçüsüdür. Sistem çap pəncərəsindən termal printerə çap edin.",
+  "label_templates.output_format_hint.zpl": "Zebra printerləri üçün .zpl faylı (203 dpi). Şəkil loqosu çap olunmur.",
+  "label_templates.form.thermal_sizes": "Hazır ölçülər:",
+  "columns.remnant": "Qalıq",
+  "remnant.badge": "Qalıq",
+  "bulk.reason.quarantine": "Qaytarma yoxlama gözləyir"
 }

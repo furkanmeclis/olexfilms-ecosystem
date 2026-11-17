@@ -44,6 +44,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -72,10 +73,6 @@ var (
 	// ErrEntryLedger: the ledger refused a movement at confirm.
 	ErrEntryLedger        = errors.New("warehouse: ledger refused the stock entry")
 	ErrEntryPrintedLabels = errors.New("warehouse: printed labels prevent draft cancellation")
-	// ErrEntryArrivalMissing (TEC-1224): a container entry (delivery header
-	// or arrival scan) still has lines that were not scanned on arrival.
-	// Confirm with DropMissing removes them first.
-	ErrEntryArrivalMissing = errors.New("warehouse: stock entry has lines not scanned on arrival")
 )
 
 // Stock entry modes and statuses (stock_entries).
@@ -130,6 +127,9 @@ type StockEntries struct {
 	q        *db.Queries
 	ledger   *ledger.Ledger
 	barcodes *stockusecase.Barcodes
+	// TEC-1225: attachments (object storage) and the discrepancy record PDF.
+	store platstorage.Driver
+	pdf   PDFRenderer
 }
 
 // NewStockEntries builds the use case; ledger events go to out.
@@ -185,6 +185,8 @@ type EntryLine struct {
 	Lot       *string    `json:"lot"`
 	Meters    *string    `json:"meters"`
 	ScannedAt *time.Time `json:"scanned_at"`
+	// TEC-1225: production date of the goods (YYYY-MM-DD).
+	ProductionDate *string `json:"production_date"`
 }
 
 // StockEntry is the entry document.
@@ -216,6 +218,11 @@ type StockEntry struct {
 	CreatedAt   time.Time   `json:"created_at"`
 	ConfirmedAt *time.Time  `json:"confirmed_at"`
 	CancelledAt *time.Time  `json:"cancelled_at"`
+	// TEC-1225: attachments, discrepancy record and undo (detail).
+	Attachments   []EntryAttachment  `json:"attachments,omitempty"`
+	Discrepancies []EntryDiscrepancy `json:"discrepancies,omitempty"`
+	UndoneAt      *time.Time         `json:"undone_at"`
+	UndoReason    *string            `json:"undo_reason"`
 }
 
 // --- inputs ------------------------------------------------------------------
@@ -244,6 +251,9 @@ type EntryLinesInput struct {
 	Prefix        string
 	TemplateUUID  string
 	FixedQuantity *int32
+	// TEC-1225: lot and production date (YYYY-MM-DD) of every added line.
+	Lot            string
+	ProductionDate string
 }
 
 // PlaceInput places lines on one location. Lines: LineUUIDs, or the lines
@@ -389,6 +399,14 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 	if in.FixedQuantity != nil && *in.FixedQuantity < 1 {
 		return StockEntry{}, invalid("fixed_quantity", "must be at least 1")
 	}
+	lot, err := normLot(in.Lot)
+	if err != nil {
+		return StockEntry{}, err
+	}
+	prodDate, err := parseProductionDate(in.ProductionDate)
+	if err != nil {
+		return StockEntry{}, err
+	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
@@ -433,7 +451,10 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 				return err
 			}
 		}
-		return nil
+		if err := applyLineDetails(ctx, q, e, units, lot, prodDate); err != nil {
+			return err
+		}
+		return audit(ctx, q, c, AuditStockEntryLinesAdded, e, map[string]any{"count": len(units), "barcode": firstBarcode(units)})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -538,6 +559,18 @@ func (s *StockEntries) DeleteLine(ctx context.Context, c EntryCaller, id, lineID
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
+		var barcode string
+		lines, err := q.ListStockEntryLines(ctx, e.ID)
+		if err != nil {
+			return err
+		}
+		for _, l := range lines {
+			if l.Uuid == lineID {
+				if u, err := q.GetUnit(ctx, l.UnitID); err == nil {
+					barcode = u.Barcode
+				}
+			}
+		}
 		n, err := q.DeleteStockEntryLine(ctx, db.DeleteStockEntryLineParams{Uuid: lineID, EntryID: e.ID})
 		if err != nil {
 			return err
@@ -545,7 +578,7 @@ func (s *StockEntries) DeleteLine(ctx context.Context, c EntryCaller, id, lineID
 		if n == 0 {
 			return ErrEntryLineNotFound
 		}
-		return nil
+		return audit(ctx, q, c, AuditStockEntryLineDeleted, e, map[string]any{"barcode": barcode})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -590,10 +623,16 @@ func (s *StockEntries) Place(ctx context.Context, c EntryCaller, id uuid.UUID, i
 		if len(ids) == 0 {
 			return ErrEntryEmpty
 		}
-		_, err = q.SetStockEntryLineLocation(ctx, db.SetStockEntryLineLocationParams{
+		if _, err = q.SetStockEntryLineLocation(ctx, db.SetStockEntryLineLocationParams{
 			LocationID: pgtype.Int8{Int64: loc.ID, Valid: true}, Ids: ids, EntryID: e.ID,
-		})
-		return err
+		}); err != nil {
+			return err
+		}
+		locCode := loc.Code
+		if loc.FullCode.Valid {
+			locCode = loc.FullCode.String
+		}
+		return audit(ctx, q, c, AuditStockEntryPlaced, e, map[string]any{"count": len(ids), "location": locCode})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -682,26 +721,17 @@ func pickLines(ctx context.Context, q *db.Queries, lines []db.StockEntryLine, uu
 	return ids, nil
 }
 
-// ConfirmOptions tune Confirm (TEC-1224).
-type ConfirmOptions struct {
-	// DropMissing removes the lines of a container entry that were not
-	// scanned on arrival before the entry is posted.
-	DropMissing bool
-}
-
 // Confirm posts the entry and placement movements of every line in one
 // transaction and closes the entry. A confirmed entry is refused
 // (ErrEntryNotDraft); nothing is written twice.
 func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID) (StockEntry, error) {
-	return s.ConfirmWith(ctx, c, id, ConfirmOptions{})
+	return s.ConfirmWith(ctx, c, id, ConfirmInput{})
 }
 
-// ConfirmWith is Confirm with options. TEC-1224: a container entry (it names
-// a supplier, container or waybill, or its arrival scan has started) whose
-// lines were not all scanned on arrival is refused (ErrEntryArrivalMissing)
-// so missing goods never enter stock; DropMissing removes those lines (like
-// DeleteLine) and confirms the rest.
-func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.UUID, opt ConfirmOptions) (StockEntry, error) {
+// ConfirmWith confirms with the decisions of the discrepancy record
+// (TEC-1225): a missing line or an extra without a decision refuses the
+// confirm (DiscrepancyRequiredError).
+func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.UUID, in ConfirmInput) (StockEntry, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return StockEntry{}, err
@@ -711,12 +741,11 @@ func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.U
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
-		lines, err := q.ListStockEntryLines(ctx, e.ID)
-		if err != nil {
+		if err := s.applyDecisions(ctx, q, c, e, in); err != nil {
 			return err
 		}
-		dropped := 0
-		if lines, dropped, err = s.arrivalCheck(ctx, q, e, lines, opt.DropMissing); err != nil {
+		lines, err := q.ListStockEntryLines(ctx, e.ID)
+		if err != nil {
 			return err
 		}
 		if len(lines) == 0 {
@@ -741,63 +770,12 @@ func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.U
 		if e, err = q.ConfirmStockEntry(ctx, db.ConfirmStockEntryParams{UserID: c.actor(), ID: e.ID}); err != nil {
 			return notFound(err, ErrEntryNotDraft)
 		}
-		meta := map[string]any{"lines": len(lines)}
-		if dropped > 0 {
-			meta["dropped_missing"] = dropped
-		}
-		return audit(ctx, q, c, AuditStockEntryConfirm, e, meta)
+		return audit(ctx, q, c, AuditStockEntryConfirm, e, map[string]any{"lines": len(lines)})
 	})
 	if err != nil {
 		return StockEntry{}, err
 	}
 	return s.view(ctx, s.q, e, true)
-}
-
-// isContainerEntry: the entry names its delivery or its arrival scan has
-// started (a scanned line or an extra).
-func isContainerEntry(e db.StockEntry, lines []db.StockEntryLine, extras int) bool {
-	if e.SupplierID.Valid || strings.TrimSpace(e.ContainerNo.String) != "" || strings.TrimSpace(e.WaybillNo.String) != "" || extras > 0 {
-		return true
-	}
-	for _, l := range lines {
-		if l.ScannedAt.Valid {
-			return true
-		}
-	}
-	return false
-}
-
-// arrivalCheck refuses a container entry with unscanned lines, or with drop
-// removes those lines and returns the rest.
-func (s *StockEntries) arrivalCheck(ctx context.Context, q *db.Queries, e db.StockEntry, lines []db.StockEntryLine, drop bool) ([]db.StockEntryLine, int, error) {
-	extras, err := q.ListStockEntryScans(ctx, e.ID)
-	if err != nil {
-		return nil, 0, err
-	}
-	if !isContainerEntry(e, lines, len(extras)) {
-		return lines, 0, nil
-	}
-	kept := make([]db.StockEntryLine, 0, len(lines))
-	var missing []db.StockEntryLine
-	for _, l := range lines {
-		if l.ScannedAt.Valid {
-			kept = append(kept, l)
-		} else {
-			missing = append(missing, l)
-		}
-	}
-	if len(missing) == 0 {
-		return lines, 0, nil
-	}
-	if !drop {
-		return nil, 0, fmt.Errorf("%w: %d of %d", ErrEntryArrivalMissing, len(missing), len(lines))
-	}
-	for _, l := range missing {
-		if _, err := q.DeleteStockEntryLine(ctx, db.DeleteStockEntryLineParams{Uuid: l.Uuid, EntryID: e.ID}); err != nil {
-			return nil, 0, err
-		}
-	}
-	return kept, len(missing), nil
 }
 
 // postLine writes the movements of one line.
@@ -1031,6 +1009,7 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 	out := StockEntry{
 		UUID: e.Uuid, Mode: e.Mode, Status: e.Status, Note: textPtr(e.Note),
 		CreatedAt: ts(e.CreatedAt), ConfirmedAt: tsPtr(e.ConfirmedAt), CancelledAt: tsPtr(e.CancelledAt),
+		UndoneAt: tsPtr(e.UndoneAt), UndoReason: textPtr(e.UndoReason),
 	}
 	if err := s.viewHeader(ctx, q, e, &out); err != nil {
 		return out, err
@@ -1069,6 +1048,12 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		return out, err
 	}
 	out.Timeline = timeline
+	if out.Attachments, err = s.listAttachments(ctx, q, e); err != nil {
+		return out, err
+	}
+	if out.Discrepancies, err = s.discrepancies(ctx, q, e); err != nil {
+		return out, err
+	}
 	lines, err := q.ListStockEntryLines(ctx, e.ID)
 	if err != nil {
 		return out, err
@@ -1098,6 +1083,10 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 			LabelURL: stockusecase.UnitLabelPath(u.Barcode), Undone: l.UndoMovementID.Valid,
 			BoxNo: textPtr(l.BoxNo), Lot: textPtr(u.Lot), Meters: numericString(u.InitialMeters),
 			ScannedAt: tsPtr(l.ScannedAt),
+		}
+		if l.ProductionDate.Valid {
+			d := l.ProductionDate.Time.Format(time.DateOnly)
+			line.ProductionDate = &d
 		}
 		if l.ScannedAt.Valid {
 			scanned++
@@ -1144,4 +1133,11 @@ func movementUUID(ctx context.Context, q *db.Queries, id pgtype.Int8) (*uuid.UUI
 	}
 	u := m.Uuid
 	return &u, nil
+}
+
+func firstBarcode(units []db.Unit) string {
+	if len(units) == 0 {
+		return ""
+	}
+	return units[0].Barcode
 }

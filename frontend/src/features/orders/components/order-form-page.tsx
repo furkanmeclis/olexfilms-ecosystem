@@ -42,6 +42,7 @@ import {
 import { CenterOrderForm } from "@/features/orders/components/center-order-form";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
+import { ScheduleFields } from "@/features/orders/components/order-work-queue";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -82,6 +83,9 @@ export function OrderForm({
     initial ? linesFromOrder(initial) : [],
   );
   const [note, setNote] = useState("");
+  // TEC-1228: priority and due date of a new order.
+  const [urgent, setUrgent] = useState(false);
+  const [due, setDue] = useState("");
   const [saved, setSaved] = useState<Order | null>(initial);
   const [touched, setTouched] = useState(false);
   const errors = useMemo(() => validateOrderForm(lines), [lines]);
@@ -100,6 +104,8 @@ export function OrderForm({
       : await ordersService.create({
           items,
           ...(note.trim() ? { note: note.trim() } : {}),
+          ...(urgent ? { priority: "urgent" as const } : {}),
+          ...(due ? { due_date: due } : {}),
         });
     qc.setQueryData(orderKeys.detail(order.uuid), order);
     void qc.invalidateQueries({ queryKey: ["orders", "list"] });
@@ -204,6 +210,14 @@ export function OrderForm({
                     onChange={(e) => setNote(e.target.value)}
                   />
                 </div>
+              ) : null}
+              {!saved ? (
+                <ScheduleFields
+                  urgent={urgent}
+                  onUrgent={setUrgent}
+                  due={due}
+                  onDue={setDue}
+                />
               ) : null}
               <div className="flex flex-col gap-2">
                 <Button

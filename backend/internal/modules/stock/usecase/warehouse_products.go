@@ -65,6 +65,9 @@ func (s *Service) WarehouseStock(ctx context.Context, f scopefilter.Filter, orgI
 		held[i] = db.ListFixedBarcodeQuantitiesByHolderRow(r)
 	}
 	items := stockItems(base, fixedByProduct(held))
+	if err := s.withBalances(ctx, BalanceScope{OrganizationID: wh.OrganizationID, WarehouseID: wh.ID}, items, productIDsOf(base)); err != nil {
+		return nil, 0, err
+	}
 	out := make([]model.WarehouseProductStock, len(items))
 	for i, it := range items {
 		out[i] = model.WarehouseProductStock{ProductStock: it, RollCount: rows[i].RollCount}

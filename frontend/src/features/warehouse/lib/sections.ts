@@ -3,9 +3,11 @@ import {
   ArrowLeftRight,
   Barcode,
   ClipboardCheck,
+  FilePenLine,
   FolderTree,
   PackageCheck,
   PackagePlus,
+  PackageSearch,
   ScanLine,
   Settings2,
   Sunset,
@@ -31,7 +33,7 @@ export type WarehouseSection = {
   /** Every permission is needed. */
   permissions: string[];
   orgTypes: WarehouseOrgType[];
-  slice: "TEC-231" | "TEC-232" | "TEC-769" | "TEC-1024";
+  slice: "TEC-231" | "TEC-232" | "TEC-769" | "TEC-1024" | "TEC-1226";
 };
 
 /**
@@ -115,6 +117,25 @@ export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
     permissions: [Permission.WarehouseRead],
     orgTypes: ["center", "distributor"],
     slice: "TEC-232",
+  },
+  // --- TEC-1226: return inspection and stock adjustments ---
+  {
+    id: "returns",
+    key: "stock_adjustments.sections.returns",
+    icon: PackageSearch,
+    href: routes.tenant.warehouse.returns,
+    permissions: [Permission.WarehouseRead],
+    orgTypes: ["center", "distributor"],
+    slice: "TEC-1226",
+  },
+  {
+    id: "adjustments",
+    key: "stock_adjustments.sections.adjustments",
+    icon: FilePenLine,
+    href: routes.tenant.warehouse.adjustments,
+    permissions: [Permission.WarehouseRead],
+    orgTypes: ["center", "distributor"],
+    slice: "TEC-1226",
   },
   // --- TEC-769: settings (end-of-day cutoff) ---
   {

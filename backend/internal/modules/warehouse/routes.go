@@ -99,6 +99,7 @@ func RegisterEntryRoutes(
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
 	q *db.Queries,
+	stepUp middleware.StepUpChecker,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
@@ -112,6 +113,7 @@ func RegisterEntryRoutes(
 	mux.Handle("GET /v1/warehouse/stock-entries", read(h.List))
 	mux.Handle("POST /v1/warehouse/stock-entries", write(h.Create))
 	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}", read(h.Get))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/placement-suggestions", read(h.PlacementSuggestions))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/lines", write(h.AddLines))
 	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}", write(h.DeleteLine))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/place", write(h.Place))
@@ -128,6 +130,19 @@ func RegisterEntryRoutes(
 	mux.Handle("GET /v1/warehouse/entry-import-templates", read(h.MappingTemplates))
 	mux.Handle("POST /v1/warehouse/entry-import-templates", write(h.SaveMappingTemplate))
 	mux.Handle("DELETE /v1/warehouse/entry-import-templates/{uuid}", write(h.DeleteMappingTemplate))
+	// TEC-1225: receiving exceptions. Undo also needs stock.adjust (use
+	// case) and a recent step-up.
+	mux.Handle("PATCH /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}", write(h.UpdateLine))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/receipt", read(h.Receipt))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/receipt.pdf", read(h.ReceiptPDF))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/attachments", write(h.AddAttachment))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}", read(h.Attachment))
+	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}", write(h.DeleteAttachment))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/label-prints", write(h.LabelPrint))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/undo-check", read(h.UndoCheck))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/undo",
+		middleware.Chain(http.HandlerFunc(h.Undo), authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(stepUp)))
 }
 
 // RegisterEntryImportRoutes mounts the record-scoped barcode import upload and template.
@@ -177,6 +192,8 @@ func RegisterTransferRoutes(
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/ship", write(h.Ship))
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/complete", write(h.Complete))
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/cancel", write(h.Cancel))
+	// TEC-1227: the discrepancy record of a completed transfer.
+	mux.Handle("POST /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve", write(h.ResolveDiscrepancy))
 }
 
 // RegisterMemberRoutes mounts the TEC-769 user <-> warehouse membership.

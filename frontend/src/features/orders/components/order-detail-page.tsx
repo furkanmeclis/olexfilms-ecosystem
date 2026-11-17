@@ -46,12 +46,22 @@ import {
   ShippingCard,
 } from "@/features/orders/components/order-picking";
 import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
+import {
+  OrderQueueBadges,
+  OrderWorkCard,
+} from "@/features/orders/components/order-work-queue";
 import { PlotterLineControl } from "@/features/orders/components/plotter-toggle";
 import {
   AddSupplementButton,
   OrderSupplementsCard,
   SupplementBadge,
 } from "@/features/orders/components/order-supplements";
+import {
+  BackorderBadge,
+  OrderBackordersCard,
+  OrderDiscrepanciesCard,
+  PartialShipButton,
+} from "@/features/orders/components/order-partial";
 import {
   canAssignUnits,
   canEditDraft,
@@ -941,6 +951,13 @@ export function OrderDetailPage({
         order ? (
           <div className="flex flex-wrap items-center gap-2">
             <SupplementBadge order={order} />
+            <BackorderBadge order={order} />
+            {order.open_discrepancies ? (
+              <Badge variant="danger" data-testid="open-discrepancies">
+                {t("orders.receipt.open_badge")}
+              </Badge>
+            ) : null}
+            <OrderQueueBadges order={order} />
             {order.created_by_seller ? (
               <Badge variant="secondary" data-testid="created-by-seller">
                 {t("orders.detail.created_by_seller")}
@@ -1004,7 +1021,8 @@ export function OrderDetailPage({
       canEditDraft(can, order) ||
       pickList ||
       editLines ||
-      order.can_add_supplement ? (
+      order.can_add_supplement ||
+      order.can_partial_ship ? (
         <div className="flex flex-wrap gap-2" data-testid="order-actions">
           {canEditDraft(can, order) ? (
             <Button asChild variant="outline">
@@ -1040,6 +1058,14 @@ export function OrderDetailPage({
             </Button>
           ) : null}
           <AddSupplementButton slug={slug} order={order} />
+          <PartialShipButton
+            order={order}
+            onReady={(updated) => {
+              // TEC-1227: the picked part is ready; go on with shipping.
+              const ship = orderActions(updated).find((a) => a.kind === "ship");
+              if (ship) setAction(ship);
+            }}
+          />
           {actions.map((a) => (
             <Button
               key={a.kind}
@@ -1096,7 +1122,10 @@ export function OrderDetailPage({
           }
         >
           <Parties order={order} />
+          <OrderWorkCard order={order} />
           <OrderSupplementsCard slug={slug} order={order} />
+          <OrderBackordersCard slug={slug} order={order} />
+          <OrderDiscrepanciesCard order={order} />
           {orderInvoiceable(order) ? (
             <InvoicesCard
               order={order}

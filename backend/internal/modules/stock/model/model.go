@@ -328,6 +328,30 @@ type ProductStock struct {
 	Meters        string                 `json:"meters"`
 	FixedBarcodes []FixedBarcodeQuantity `json:"fixed_barcodes"`
 	UpdatedAt     time.Time              `json:"updated_at"`
+	// Balance splits the on-hand stock (TEC-1229): reserved, available,
+	// incoming and quarantine. Filled by the organization, warehouse and
+	// location product lists.
+	Balance *StockBalance `json:"balance,omitempty"`
+}
+
+// StockBalance is the TEC-1229 stock view of one product in a scope
+// (organization, warehouse or location). Quantities count pieces, rolls
+// and fixed barcode pieces; meters are roll meters ("12.50"), kept apart.
+// Available = on hand - reserved (never below 0). Incoming is stock on its
+// way (in-transit transfers and shipped purchase orders) and quarantine the
+// returned units waiting for inspection (TEC-1226); neither is part of on
+// hand. No prices.
+type StockBalance struct {
+	OnHandQuantity     int64  `json:"on_hand_quantity"`
+	OnHandMeters       string `json:"on_hand_meters"`
+	ReservedQuantity   int64  `json:"reserved_quantity"`
+	ReservedMeters     string `json:"reserved_meters"`
+	AvailableQuantity  int64  `json:"available_quantity"`
+	AvailableMeters    string `json:"available_meters"`
+	IncomingQuantity   int64  `json:"incoming_quantity"`
+	IncomingMeters     string `json:"incoming_meters"`
+	QuarantineQuantity int64  `json:"quarantine_quantity"`
+	QuarantineMeters   string `json:"quarantine_meters"`
 }
 
 // WarehouseProductStock is one product of a warehouse (TEC-1090,
@@ -345,7 +369,7 @@ const (
 )
 
 // UnitStatuses are the units.status values the unit list filters on.
-var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}
+var UnitStatuses = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void", "quarantine"}
 
 // UnitFilter filters the organization unit list (TEC-216). TEC-373:
 // Statuses is any-of (empty: available and placed); Barcode is an exact
@@ -361,7 +385,10 @@ type UnitFilter struct {
 	LocationUUIDs []uuid.UUID
 	UpdatedFrom   *time.Time
 	UpdatedBefore *time.Time
-	Q             string
+	// Remnant (TEC-1230): only rolls under the product's minimum cut
+	// (true) or only the others (false); nil lists both.
+	Remnant *bool
+	Q       string
 	// Family (TEC-1078): the split family of this barcode instead of the
 	// on-hand list (the other filters are ignored).
 	Family       string
@@ -384,14 +411,17 @@ type UnitPurchasePrice struct {
 // hand) held by an organization. PurchasePrice is null when the viewer
 // may not read it (pricing.purchase.read) or no price is set.
 type StockUnitRow struct {
-	UUID            uuid.UUID  `json:"uuid"`
-	Barcode         string     `json:"barcode"`
-	UnitKind        string     `json:"unit_kind"`
-	Status          string     `json:"status"`
-	Quantity        int32      `json:"quantity"`
-	InitialMeters   *string    `json:"initial_meters"`
-	RemainingMeters *string    `json:"remaining_meters"`
-	Product         ProductRef `json:"product"`
+	UUID            uuid.UUID `json:"uuid"`
+	Barcode         string    `json:"barcode"`
+	UnitKind        string    `json:"unit_kind"`
+	Status          string    `json:"status"`
+	Quantity        int32     `json:"quantity"`
+	InitialMeters   *string   `json:"initial_meters"`
+	RemainingMeters *string   `json:"remaining_meters"`
+	// Remnant (TEC-1230): a roll with meters left but fewer than the
+	// product's minimum cut ("ragle"/artık).
+	Remnant bool       `json:"remnant"`
+	Product ProductRef `json:"product"`
 	// Category of the product (TEC-870: the transfer form's stock picker).
 	Category      CategoryRef        `json:"category"`
 	Location      *LocationRef       `json:"location"`

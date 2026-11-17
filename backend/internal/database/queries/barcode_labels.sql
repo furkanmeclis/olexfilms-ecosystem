@@ -23,13 +23,14 @@ WHERE organization_id = sqlc.arg(organization_id) AND kind = sqlc.arg(kind) AND 
 -- name: CreateLabelTemplate :one
 INSERT INTO label_templates (
     organization_id, name, kind, symbology, logo_mode, logo_text, logo_image,
-    width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active
+    width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, output_format
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(name), sqlc.arg(kind), sqlc.arg(symbology),
     sqlc.arg(logo_mode), sqlc.narg(logo_text), sqlc.narg(logo_image),
     sqlc.arg(width_mm), sqlc.arg(height_mm), sqlc.arg(grid_columns),
-    sqlc.arg(show_name), sqlc.arg(show_code_text), sqlc.arg(is_default), sqlc.arg(active)
+    sqlc.arg(show_name), sqlc.arg(show_code_text), sqlc.arg(is_default), sqlc.arg(active),
+    sqlc.arg(output_format)
 )
 RETURNING *;
 
@@ -46,7 +47,8 @@ SET name = sqlc.arg(name),
     show_name = sqlc.arg(show_name),
     show_code_text = sqlc.arg(show_code_text),
     is_default = sqlc.arg(is_default),
-    active = sqlc.arg(active)
+    active = sqlc.arg(active),
+    output_format = sqlc.arg(output_format)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
 RETURNING *;
 

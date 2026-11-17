@@ -75,6 +75,7 @@ const (
 	ReasonUsedInService  = "used_in_service"
 	ReasonConsumed       = "consumed" // used or void
 	ReasonInTransit      = "in_transit"
+	ReasonQuarantine     = "quarantine" // TEC-1226: return waiting for inspection
 	ReasonReserved       = "reserved_by_order"
 	ReasonNotInStock     = "not_in_stock" // label not entered yet
 	ReasonFixedBarcode   = "fixed_barcode"
@@ -320,6 +321,8 @@ func classify(action string, orgID int64, u db.ListStockBulkCandidatesRow, r res
 		return ReasonAtOtherOrg, 0
 	case status == "in_transit":
 		return ReasonInTransit, 0
+	case status == "quarantine":
+		return ReasonQuarantine, 0
 	case u.Reserved:
 		return ReasonReserved, 0
 	case u.OwnerType == "" && !lotOrNote:
@@ -396,7 +399,7 @@ func (s *Service) resolve(ctx context.Context, c Caller, in PreviewInput) (resol
 		r.locations = append(r.locations, l.ID)
 	}
 	for _, st := range sel.Statuses {
-		if !slices.Contains([]string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}, st) {
+		if !slices.Contains([]string{"reserved", "printed", "available", "placed", "in_transit", "used", "void", "quarantine"}, st) {
 			return r, invalid("selection.statuses", "unknown status")
 		}
 	}

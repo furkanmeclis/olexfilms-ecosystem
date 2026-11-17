@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Le rouleau n'est pas dans le stock de cette organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Le rouleau est utilisé dans un service ou une commande en cours.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Cette clé d'idempotence a servi à un autre découpage.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "La coupe est plus courte que la coupe minimale du produit. Prenez tout le reste du rouleau ou coupez plus long.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "La coupe est plus courte que la coupe minimale du produit. Utilisez tout le reste du rouleau ou coupez plus long.",
   "codes.LEADS_MODULE_DISABLED": "Le module prospects est fermé pour tout le système ; activez d'abord le module.",
   "codes.FLEET_ALREADY_EXISTS": "Une flotte avec ce numéro fiscal existe déjà ; envoyez-lui une demande de liaison.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Le numéro fiscal est invalide (la clé de contrôle VKN ou TCKN ne correspond pas).",
@@ -183,5 +185,8 @@
   "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée, livrée ou réceptionnée.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Ce code-barres n'a plus de crédits d'utilisation ; il ne peut pas être sélectionné dans une autre prestation.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation.",
+  "codes.ORDER_ALREADY_CLAIMED": "Quelqu'un d'autre a pris ce travail.",
+  "codes.ORDER_NOT_CLAIMABLE": "Seule une commande approuvée non expédiée est un travail d'entrepôt.",
+  "codes.ORDER_SCHEDULE_LOCKED": "La priorité et l'échéance ne peuvent pas changer dans ce statut."
 }

@@ -84,6 +84,8 @@ const (
 	ReportOrdersFulfillment = "orders.fulfillment"
 	ReportNetworkSummary    = "network.summary"
 	ReportStockMovement     = "stock.movement"
+	// TEC-1229: slow moving / aging stock by the last ledger movement.
+	ReportStockAging = "stock.aging"
 )
 
 // Definition is one catalog entry.
@@ -138,6 +140,7 @@ var Definitions = []Definition{
 	{Key: ReportOrdersFulfillment, Kind: KindSummary, Module: features.ModuleOrders, Permission: rbac.PermOrdersRead, Periodic: true, Granular: true},
 	{Key: ReportNetworkSummary, Kind: KindSummary, Module: features.ModuleOrganizations, Permission: rbac.PermOrganizationsRead, Periodic: true, Granular: true, Limited: true, Network: true},
 	{Key: ReportStockMovement, Kind: KindTimeseries, Module: features.ModuleStock, Permission: rbac.PermStockRead, Periodic: true, Granular: true, Limited: true},
+	{Key: ReportStockAging, Kind: KindTable, Module: features.ModuleStock, Permission: rbac.PermStockRead, Limited: true},
 }
 
 // networkDef gates the overview's dealer count cards.

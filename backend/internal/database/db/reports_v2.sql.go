@@ -270,6 +270,141 @@ func (q *Queries) ReportNetworkDealers(ctx context.Context, arg ReportNetworkDea
 	return items, nil
 }
 
+const reportStockAging = `-- name: ReportStockAging :many
+WITH stock AS (
+    SELECT u.product_id, st.holder_org_id AS org_id, wl.warehouse_id,
+           1::bigint AS qty, COALESCE(u.remaining_meters, 0)::numeric(14,2) AS meters,
+           COALESCE(m.created_at, u.created_at) AS last_at
+    FROM unit_current_state st
+    JOIN units u ON u.id = st.unit_id
+    LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+    LEFT JOIN stock_movements m ON m.id = st.last_movement_id
+    WHERE st.status IN ('available', 'placed')
+      AND st.brand_id = $3
+      AND ($4::bigint[] IS NULL OR st.holder_org_id = ANY ($4::bigint[]))
+    UNION ALL
+    SELECT u.product_id, h.holder_org_id AS org_id, wl.warehouse_id,
+           h.quantity_on_hand::bigint AS qty, 0::numeric(14,2) AS meters,
+           COALESCE(m.created_at, h.updated_at) AS last_at
+    FROM fixed_barcode_holdings h
+    JOIN units u ON u.id = h.unit_id
+    LEFT JOIN warehouse_locations wl ON wl.id = h.owner_location_id
+    LEFT JOIN stock_movements m ON m.id = h.last_movement_id
+    WHERE h.quantity_on_hand > 0
+      AND h.owner_type IN ('warehouse_location', 'organization')
+      AND h.brand_id = $3
+      AND ($4::bigint[] IS NULL OR h.holder_org_id = ANY ($4::bigint[]))
+), aged AS (
+    SELECT s.product_id, s.org_id, s.warehouse_id, s.qty, s.meters, s.last_at, GREATEST(0, EXTRACT(EPOCH FROM ($5::timestamptz - s.last_at)) / 86400)::int AS age_days
+    FROM stock s
+)
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       o.uuid AS organization_uuid, o.name AS organization_name,
+       w.uuid AS warehouse_uuid, w.name AS warehouse_name,
+       SUM(a.qty)::bigint AS quantity,
+       SUM(a.meters)::numeric(14,2)::text AS meters,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days < 30), 0)::bigint AS qty_0_30,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 30 AND a.age_days < 60), 0)::bigint AS qty_30_60,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 60 AND a.age_days < 90), 0)::bigint AS qty_60_90,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 90 AND a.age_days < 180), 0)::bigint AS qty_90_180,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 180), 0)::bigint AS qty_180_plus,
+       MAX(a.age_days)::int AS oldest_days,
+       MIN(a.last_at)::timestamptz AS oldest_movement_at,
+       COALESCE(pp.recommended_sale_price::numeric(14,4)::text, '')::text AS unit_price,
+       b.currency::text AS currency
+FROM aged a
+JOIN products p ON p.id = a.product_id
+JOIN organizations o ON o.id = a.org_id
+JOIN brands b ON b.id = p.brand_id
+LEFT JOIN warehouses w ON w.id = a.warehouse_id
+LEFT JOIN product_prices pp ON pp.product_id = p.id AND pp.currency = b.currency
+GROUP BY p.id, p.uuid, p.sku, p.name, o.id, o.uuid, o.name, w.id, w.uuid, w.name,
+         pp.recommended_sale_price, b.currency
+HAVING MAX(a.age_days) >= $1::int
+ORDER BY MAX(a.age_days) DESC, p.name, p.id, o.id, w.id NULLS FIRST
+LIMIT $2
+`
+
+type ReportStockAgingParams struct {
+	MinDays  int32              `json:"min_days"`
+	RowLimit int32              `json:"row_limit"`
+	BrandID  int64              `json:"brand_id"`
+	OrgIds   []int64            `json:"org_ids"`
+	AsOf     pgtype.Timestamptz `json:"as_of"`
+}
+
+type ReportStockAgingRow struct {
+	ProductUuid      uuid.UUID          `json:"product_uuid"`
+	Sku              string             `json:"sku"`
+	ProductName      string             `json:"product_name"`
+	OrganizationUuid uuid.UUID          `json:"organization_uuid"`
+	OrganizationName string             `json:"organization_name"`
+	WarehouseUuid    pgtype.UUID        `json:"warehouse_uuid"`
+	WarehouseName    pgtype.Text        `json:"warehouse_name"`
+	Quantity         int64              `json:"quantity"`
+	Meters           string             `json:"meters"`
+	Qty030           int64              `json:"qty_0_30"`
+	Qty3060          int64              `json:"qty_30_60"`
+	Qty6090          int64              `json:"qty_60_90"`
+	Qty90180         int64              `json:"qty_90_180"`
+	Qty180Plus       int64              `json:"qty_180_plus"`
+	OldestDays       int32              `json:"oldest_days"`
+	OldestMovementAt pgtype.Timestamptz `json:"oldest_movement_at"`
+	UnitPrice        string             `json:"unit_price"`
+	Currency         string             `json:"currency"`
+}
+
+// TEC-1229: stock on hand (counted serial units and fixed holdings) of the
+// organizations in reach, per product and warehouse (NULL: held without a
+// location), bucketed by the days since the last ledger movement of each
+// unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
+// brand price list's recommended sale price; the report shows it only
+// with a pricing read permission.
+func (q *Queries) ReportStockAging(ctx context.Context, arg ReportStockAgingParams) ([]ReportStockAgingRow, error) {
+	rows, err := q.db.Query(ctx, reportStockAging,
+		arg.MinDays,
+		arg.RowLimit,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.AsOf,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReportStockAgingRow{}
+	for rows.Next() {
+		var i ReportStockAgingRow
+		if err := rows.Scan(
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.WarehouseUuid,
+			&i.WarehouseName,
+			&i.Quantity,
+			&i.Meters,
+			&i.Qty030,
+			&i.Qty3060,
+			&i.Qty6090,
+			&i.Qty90180,
+			&i.Qty180Plus,
+			&i.OldestDays,
+			&i.OldestMovementAt,
+			&i.UnitPrice,
+			&i.Currency,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reportStockMovementByWarehouse = `-- name: ReportStockMovementByWarehouse :many
 WITH m AS (
     SELECT fl.warehouse_id AS from_wh, fl.organization_id AS from_org,

@@ -61,6 +61,7 @@ import showcase from "./showcase.json";
 import staffReports from "./staff_reports.json";
 import stepup from "./stepup.json";
 import stock from "./stock.json";
+import stockAdjustments from "./stock_adjustments.json";
 import stockForecast from "./stock_forecast.json";
 import storage from "./storage.json";
 import table from "./table.json";
@@ -132,6 +133,7 @@ const catalog: LocaleCatalog = {
   staff_reports: staffReports,
   stepup,
   stock,
+  stock_adjustments: stockAdjustments,
   stock_forecast: stockForecast,
   storage,
   table,

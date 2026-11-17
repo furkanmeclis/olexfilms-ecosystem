@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/labels"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -65,9 +66,16 @@ func writeLabelError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
+// writePDF writes a label document. A ZPL template (TEC-1230) renders
+// ZPL text instead of a PDF: it is served as a .zpl attachment.
 func writePDF(w http.ResponseWriter, name string, pdf []byte) {
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `inline; filename="`+name+`"`)
+	if labels.IsZPL(pdf) {
+		w.Header().Set("Content-Type", labels.ZPLContentType)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+strings.TrimSuffix(name, ".pdf")+`.zpl"`)
+	} else {
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", `inline; filename="`+name+`"`)
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Length", strconv.Itoa(len(pdf)))
 	w.WriteHeader(http.StatusOK)
@@ -202,6 +210,7 @@ type templateBody struct {
 	ShowCodeText *bool   `json:"show_code_text"`
 	IsDefault    bool    `json:"is_default"`
 	Active       *bool   `json:"active"`
+	OutputFormat string  `json:"output_format"`
 }
 
 func (b templateBody) input() stockusecase.TemplateInput {
@@ -209,7 +218,7 @@ func (b templateBody) input() stockusecase.TemplateInput {
 		Name: b.Name, Kind: b.Kind, Symbology: b.Symbology, LogoMode: b.LogoMode,
 		LogoText: b.LogoText, LogoImage: b.LogoImage, WidthMm: b.WidthMm, HeightMm: b.HeightMm,
 		Columns: b.Columns, ShowName: b.ShowName, ShowCodeText: b.ShowCodeText,
-		IsDefault: b.IsDefault, Active: b.Active,
+		IsDefault: b.IsDefault, Active: b.Active, OutputFormat: b.OutputFormat,
 	}
 }
 

@@ -23,6 +23,7 @@ const (
 	CodeWarehouseUnitBusy                  = "WAREHOUSE_UNIT_BUSY"
 	CodeWarehouseLedgerRefused             = "WAREHOUSE_LEDGER_REFUSED"
 	CodeWarehouseOrderNotReceived          = "WAREHOUSE_ORDER_NOT_RECEIVED"
+	CodeWarehouseDiscrepancyClosed         = "WAREHOUSE_TRANSFER_DISCREPANCY_CLOSED"
 )
 
 // Transfers serves /v1/warehouse/moves, /v1/warehouse/transfers and
@@ -38,6 +39,10 @@ func writeTransferError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, wh.ErrTransferNotFound):
 		response.NotFound(w, r, "Warehouse transfer not found")
+	case errors.Is(err, wh.ErrTransferDiscrepancyNotFound):
+		response.NotFound(w, r, "Transfer discrepancy not found")
+	case errors.Is(err, wh.ErrTransferDiscrepancyClosed):
+		response.Conflict(w, r, CodeWarehouseDiscrepancyClosed, "The transfer discrepancy is already resolved")
 	case errors.Is(err, wh.ErrTransferLineNotFound):
 		response.NotFound(w, r, "Warehouse transfer line not found")
 	case errors.Is(err, wh.ErrOrderNotFound):
@@ -91,6 +96,17 @@ type transferLinesBody struct {
 type completeBody struct {
 	LocationUUID *uuid.UUID `json:"location_uuid"`
 	LocationCode string     `json:"location_code"`
+	// TEC-1227: lines that did not arrive and scanned barcodes that are
+	// not on the transfer (the discrepancy record).
+	Missing []wh.TransferMissingInput `json:"missing"`
+	Surplus []wh.TransferSurplusInput `json:"surplus"`
+}
+
+type resolveDiscrepancyBody struct {
+	Resolution   string     `json:"resolution"`
+	LocationUUID *uuid.UUID `json:"location_uuid"`
+	LocationCode string     `json:"location_code"`
+	Note         *string    `json:"note"`
 }
 
 // Move (POST /v1/warehouse/moves).
@@ -268,7 +284,39 @@ func (h *Transfers) Complete(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
 		return
 	}
-	out, err := h.svc.Complete(r.Context(), entryCaller(r), id, wh.CompleteInput{LocationUUID: b.LocationUUID, LocationCode: b.LocationCode})
+	out, err := h.svc.Complete(r.Context(), entryCaller(r), id, wh.CompleteInput{
+		LocationUUID: b.LocationUUID, LocationCode: b.LocationCode, Missing: b.Missing, Surplus: b.Surplus,
+	})
+	if err != nil {
+		writeTransferError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// ResolveDiscrepancy (POST /v1/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve):
+// a missing line found or returned to its source, or a surplus row closed
+// (TEC-1227).
+func (h *Transfers) ResolveDiscrepancy(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	d, err := uuid.Parse(r.PathValue("discrepancy_uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Transfer discrepancy not found")
+		return
+	}
+	var b resolveDiscrepancyBody
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
+		return
+	}
+	out, err := h.svc.ResolveTransferDiscrepancy(r.Context(), entryCaller(r), id, d, wh.ResolveTransferDiscrepancyInput{
+		Resolution: b.Resolution, LocationUUID: b.LocationUUID, LocationCode: b.LocationCode, Note: b.Note,
+	})
 	if err != nil {
 		writeTransferError(w, r, err)
 		return

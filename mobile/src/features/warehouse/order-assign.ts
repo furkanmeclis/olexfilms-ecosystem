@@ -81,3 +81,27 @@ export function fixedSuggestionUnits(
 export function asksWholeRoll(item: AssignItem, meters: string): boolean {
   return isRollItem(item) && meters.trim() === '';
 }
+
+/**
+ * TEC-1228: package count (1–9999), desi and weight typed in the ship sheet
+ * (comma or dot, at most two decimals; empty = not given). null when one is
+ * invalid.
+ */
+export function parseShipment(packages: string, desi: string, weight: string): { package_count?: number; desi?: number; weight_kg?: number } | null {
+  const out: { package_count?: number; desi?: number; weight_kg?: number } = {};
+  const p = packages.trim();
+  if (p) {
+    if (!/^\d{1,4}$/.test(p) || Number(p) < 1) return null;
+    out.package_count = Number(p);
+  }
+  for (const [key, raw] of [
+    ['desi', desi],
+    ['weight_kg', weight],
+  ] as const) {
+    const v = raw.trim().replace(',', '.');
+    if (!v) continue;
+    if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
+    out[key] = Number(v);
+  }
+  return out;
+}

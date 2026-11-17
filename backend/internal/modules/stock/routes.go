@@ -36,6 +36,9 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/stock/units/by-barcode/{barcode}", read(h.UnitHistory))
 	mux.Handle("GET /v1/stock/organizations/{uuid}/products", read(h.OrganizationStock))
+	// TEC-1229: ledger movements of the active organization (warehouse,
+	// type, product, actor and date filters).
+	mux.Handle("GET /v1/stock/movements", read(h.Movements))
 	// TEC-216: unit list; the distributor reaches its dealers (subtree).
 	mux.Handle("GET /v1/stock/organizations/{uuid}/units", read(h.OrganizationUnits))
 	// TEC-373: unit list export with the list filters (stock.read scope).
@@ -51,6 +54,16 @@ func RegisterRoutes(
 	// TEC-1090 (TEC-1069): product totals of one warehouse (no prices).
 	mux.Handle("GET /v1/stock/warehouses/{uuid}/products", scoped(h.WarehouseStock, rbac.PermStockRead,
 		middleware.RequireFeature(checker, features.ModuleWarehouse)))
+
+	// TEC-1229: min / reorder point / max per warehouse and product, and the
+	// critical stock list (warehouse module; no prices).
+	whScoped := func(fn http.HandlerFunc, slug string) http.Handler {
+		return scoped(fn, slug, middleware.RequireFeature(checker, features.ModuleWarehouse))
+	}
+	mux.Handle("GET /v1/stock/reorder-rules", whScoped(h.ReorderRules, rbac.PermStockRead))
+	mux.Handle("PUT /v1/stock/reorder-rules", whScoped(h.PutReorderRule, rbac.PermStockWrite))
+	mux.Handle("DELETE /v1/stock/reorder-rules/{uuid}", whScoped(h.DeleteReorderRule, rbac.PermStockWrite))
+	mux.Handle("GET /v1/stock/critical", whScoped(h.CriticalStock, rbac.PermStockRead))
 
 	// TEC-157 reclassification: the holding organization requests
 	// (stock.write), the center approves (stock.reclassify, sensitive:

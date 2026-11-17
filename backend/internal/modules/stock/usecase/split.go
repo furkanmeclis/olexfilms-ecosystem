@@ -89,10 +89,14 @@ func (s *Splits) Split(ctx context.Context, c Caller, in SplitInput) (model.Spli
 			return err
 		}
 		if prev == nil {
-			if _, err := q.LockUnit(ctx, unitID); err != nil {
+			unit, err := q.LockUnit(ctx, unitID)
+			if err != nil {
 				return fmt.Errorf("stock: lock unit: %w", err)
 			}
 			if err := checkNotInUse(ctx, q, unitID); err != nil {
+				return err
+			}
+			if err := checkSplitMinCut(ctx, q, unit, cm); err != nil {
 				return err
 			}
 		}
@@ -108,7 +112,30 @@ func (s *Splits) Split(ctx context.Context, c Caller, in SplitInput) (model.Spli
 	if err != nil {
 		return model.Split{}, false, err
 	}
-	return SplitView(res), res.Replayed, nil
+	out := SplitView(res)
+	if p, err := s.q.GetProductByIDAnyBrand(ctx, res.Source.ProductID); err == nil {
+		out.Source.Remnant = ledger.IsRemnant(res.Source.RemainingMeters, p.MinCutMeters)
+		out.NewUnit.Remnant = ledger.IsRemnant(res.New.RemainingMeters, p.MinCutMeters)
+	}
+	return out, res.Replayed, nil
+}
+
+// checkSplitMinCut applies the product's minimum cut (TEC-1230) to a cut of
+// cm centimeters from the locked roll. A unit without meters is left to
+// ledger.Split (ErrSplitNotRoll).
+func checkSplitMinCut(ctx context.Context, q *db.Queries, unit db.Unit, cm int64) error {
+	if !unit.RemainingMeters.Valid {
+		return nil
+	}
+	p, err := q.GetProductByIDAnyBrand(ctx, unit.ProductID)
+	if err != nil {
+		return fmt.Errorf("stock: product: %w", err)
+	}
+	remaining, err := ledger.NumericToCentimeters(unit.RemainingMeters)
+	if err != nil {
+		return fmt.Errorf("stock: remaining meters: %w", err)
+	}
+	return ledger.CheckMinCut(cm, remaining, p.MinCutMeters)
 }
 
 func (s *Splits) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {

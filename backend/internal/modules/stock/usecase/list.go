@@ -106,6 +106,9 @@ func ParseUnitFilter(values url.Values) (model.UnitFilter, error) {
 		}
 		in.LocationUUIDs = append(in.LocationUUIDs, id)
 	}
+	if in.Remnant, err = apiquery.Bool(values, "remnant"); err != nil {
+		return in, err
+	}
 	updated, err := apiquery.DateRange(values, "updated")
 	if err != nil {
 		return in, err
@@ -122,7 +125,7 @@ func ParseUnitFilter(values url.Values) (model.UnitFilter, error) {
 // units index cannot answer (q then searches SQL, TEC-373).
 func unitSQLOnly(in model.UnitFilter) bool {
 	return in.Barcode != "" || in.SortExplicit || len(in.LocationUUIDs) > 0 ||
-		in.UpdatedFrom != nil || in.UpdatedBefore != nil
+		in.UpdatedFrom != nil || in.UpdatedBefore != nil || in.Remnant != nil
 }
 
 func resolvedSort(r apiquery.ResolvedSort, spec apiquery.SortSpec) (string, bool) {

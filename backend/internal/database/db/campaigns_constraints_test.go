@@ -70,7 +70,9 @@ func (f *orderFixture) recipient(t *testing.T, c db.Campaign, u db.User, channel
 	return r
 }
 
-func phoneFor(seq int) string { return fmt.Sprintf("+90555%07d", (time.Now().UnixNano()/1000+int64(seq))%10000000) }
+func phoneFor(seq int) string {
+	return fmt.Sprintf("+90555%07d", (time.Now().UnixNano()/1000+int64(seq))%10000000)
+}
 
 func TestCampaignSchemaConstraints(t *testing.T) {
 	f := newOrderFixture(t)

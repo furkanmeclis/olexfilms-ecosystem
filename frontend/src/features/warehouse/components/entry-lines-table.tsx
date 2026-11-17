@@ -145,6 +145,15 @@ export function EntryLinesTable({
           cell: ({ row }) => row.original.lot ?? "—",
         }),
         createColumn<StockEntryLine>({
+          id: "production_date",
+          accessorFn: (l) => l.production_date ?? "",
+          labelKey: "warehouse.fields.production_date",
+          cell: ({ row }) =>
+            row.original.production_date
+              ? format.date(row.original.production_date)
+              : "—",
+        }),
+        createColumn<StockEntryLine>({
           id: "box_no",
           accessorFn: (l) => l.box_no ?? "",
           labelKey: "warehouse.fields.box_no",
@@ -216,7 +225,7 @@ export function EntryLinesTable({
                   filename={`${l.barcode}.pdf`}
                   size="icon-sm"
                   variant="ghost"
-                  onDownloaded={
+                  onPrinted={
                     onLabelDownloaded
                       ? () => onLabelDownloaded([l.barcode])
                       : undefined

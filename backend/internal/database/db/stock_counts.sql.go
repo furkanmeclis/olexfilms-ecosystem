@@ -441,7 +441,7 @@ VALUES (
     $5, $6, $7,
     $8, $9, $10, $11
 )
-RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at
+RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at, recount_status, recount_requested_at, recount_requested_by_user_id, recounted_at, recounted_by_user_id, recount_rounds, first_counted_quantity, first_counted_meters, first_counted_location_id, first_result
 `
 
 type InsertStockCountLineParams struct {
@@ -493,6 +493,16 @@ func (q *Queries) InsertStockCountLine(ctx context.Context, arg InsertStockCount
 		&i.Note,
 		&i.ResolvedAt,
 		&i.CreatedAt,
+		&i.RecountStatus,
+		&i.RecountRequestedAt,
+		&i.RecountRequestedByUserID,
+		&i.RecountedAt,
+		&i.RecountedByUserID,
+		&i.RecountRounds,
+		&i.FirstCountedQuantity,
+		&i.FirstCountedMeters,
+		&i.FirstCountedLocationID,
+		&i.FirstResult,
 	)
 	return i, err
 }
@@ -793,7 +803,7 @@ func (q *Queries) ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSu
 }
 
 const listStockCountLines = `-- name: ListStockCountLines :many
-SELECT id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at FROM stock_count_lines WHERE count_id = $1 ORDER BY id
+SELECT id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at, recount_status, recount_requested_at, recount_requested_by_user_id, recounted_at, recounted_by_user_id, recount_rounds, first_counted_quantity, first_counted_meters, first_counted_location_id, first_result FROM stock_count_lines WHERE count_id = $1 ORDER BY id
 `
 
 func (q *Queries) ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error) {
@@ -823,6 +833,16 @@ func (q *Queries) ListStockCountLines(ctx context.Context, countID int64) ([]Sto
 			&i.Note,
 			&i.ResolvedAt,
 			&i.CreatedAt,
+			&i.RecountStatus,
+			&i.RecountRequestedAt,
+			&i.RecountRequestedByUserID,
+			&i.RecountedAt,
+			&i.RecountedByUserID,
+			&i.RecountRounds,
+			&i.FirstCountedQuantity,
+			&i.FirstCountedMeters,
+			&i.FirstCountedLocationID,
+			&i.FirstResult,
 		); err != nil {
 			return nil, err
 		}
@@ -1185,11 +1205,132 @@ func (q *Queries) LockStockCountByUUID(ctx context.Context, arg LockStockCountBy
 	return i, err
 }
 
+const recordStockCountLineRecount = `-- name: RecordStockCountLineRecount :one
+UPDATE stock_count_lines
+SET first_counted_quantity = COALESCE(first_counted_quantity, counted_quantity),
+    first_counted_meters = CASE WHEN recount_rounds = 0 THEN counted_meters ELSE first_counted_meters END,
+    first_counted_location_id = CASE WHEN recount_rounds = 0 THEN counted_location_id ELSE first_counted_location_id END,
+    first_result = COALESCE(first_result, result),
+    counted_quantity = $1,
+    counted_meters = $2,
+    counted_location_id = $3,
+    result = $4,
+    recount_status = 'recounted',
+    recounted_at = NOW(),
+    recounted_by_user_id = $5,
+    recount_rounds = recount_rounds + 1
+WHERE id = $6
+RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at, recount_status, recount_requested_at, recount_requested_by_user_id, recounted_at, recounted_by_user_id, recount_rounds, first_counted_quantity, first_counted_meters, first_counted_location_id, first_result
+`
+
+type RecordStockCountLineRecountParams struct {
+	CountedQuantity   int32          `json:"counted_quantity"`
+	CountedMeters     pgtype.Numeric `json:"counted_meters"`
+	CountedLocationID pgtype.Int8    `json:"counted_location_id"`
+	Result            string         `json:"result"`
+	UserID            pgtype.Int8    `json:"user_id"`
+	ID                int64          `json:"id"`
+}
+
+// TEC-1229: the recounted values replace the counted ones; the first
+// count is kept once (first_*).
+func (q *Queries) RecordStockCountLineRecount(ctx context.Context, arg RecordStockCountLineRecountParams) (StockCountLine, error) {
+	row := q.db.QueryRow(ctx, recordStockCountLineRecount,
+		arg.CountedQuantity,
+		arg.CountedMeters,
+		arg.CountedLocationID,
+		arg.Result,
+		arg.UserID,
+		arg.ID,
+	)
+	var i StockCountLine
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.CountID,
+		&i.LineKind,
+		&i.UnitID,
+		&i.ProductID,
+		&i.ExpectedLocationID,
+		&i.CountedLocationID,
+		&i.ExpectedQuantity,
+		&i.CountedQuantity,
+		&i.ExpectedMeters,
+		&i.CountedMeters,
+		&i.Result,
+		&i.Resolution,
+		&i.Note,
+		&i.ResolvedAt,
+		&i.CreatedAt,
+		&i.RecountStatus,
+		&i.RecountRequestedAt,
+		&i.RecountRequestedByUserID,
+		&i.RecountedAt,
+		&i.RecountedByUserID,
+		&i.RecountRounds,
+		&i.FirstCountedQuantity,
+		&i.FirstCountedMeters,
+		&i.FirstCountedLocationID,
+		&i.FirstResult,
+	)
+	return i, err
+}
+
+const requestStockCountLineRecount = `-- name: RequestStockCountLineRecount :one
+UPDATE stock_count_lines
+SET recount_status = 'requested',
+    recount_requested_at = NOW(),
+    recount_requested_by_user_id = $1
+WHERE id = $2
+RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at, recount_status, recount_requested_at, recount_requested_by_user_id, recounted_at, recounted_by_user_id, recount_rounds, first_counted_quantity, first_counted_meters, first_counted_location_id, first_result
+`
+
+type RequestStockCountLineRecountParams struct {
+	UserID pgtype.Int8 `json:"user_id"`
+	ID     int64       `json:"id"`
+}
+
+// TEC-1229: an unresolved difference line goes back for a recount.
+func (q *Queries) RequestStockCountLineRecount(ctx context.Context, arg RequestStockCountLineRecountParams) (StockCountLine, error) {
+	row := q.db.QueryRow(ctx, requestStockCountLineRecount, arg.UserID, arg.ID)
+	var i StockCountLine
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.CountID,
+		&i.LineKind,
+		&i.UnitID,
+		&i.ProductID,
+		&i.ExpectedLocationID,
+		&i.CountedLocationID,
+		&i.ExpectedQuantity,
+		&i.CountedQuantity,
+		&i.ExpectedMeters,
+		&i.CountedMeters,
+		&i.Result,
+		&i.Resolution,
+		&i.Note,
+		&i.ResolvedAt,
+		&i.CreatedAt,
+		&i.RecountStatus,
+		&i.RecountRequestedAt,
+		&i.RecountRequestedByUserID,
+		&i.RecountedAt,
+		&i.RecountedByUserID,
+		&i.RecountRounds,
+		&i.FirstCountedQuantity,
+		&i.FirstCountedMeters,
+		&i.FirstCountedLocationID,
+		&i.FirstResult,
+	)
+	return i, err
+}
+
 const resolveStockCountLine = `-- name: ResolveStockCountLine :one
 UPDATE stock_count_lines
 SET resolution = $1, note = $2, resolved_at = NOW()
 WHERE id = $3
-RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at
+RETURNING id, uuid, count_id, line_kind, unit_id, product_id, expected_location_id, counted_location_id, expected_quantity, counted_quantity, expected_meters, counted_meters, result, resolution, note, resolved_at, created_at, recount_status, recount_requested_at, recount_requested_by_user_id, recounted_at, recounted_by_user_id, recount_rounds, first_counted_quantity, first_counted_meters, first_counted_location_id, first_result
 `
 
 type ResolveStockCountLineParams struct {
@@ -1219,6 +1360,16 @@ func (q *Queries) ResolveStockCountLine(ctx context.Context, arg ResolveStockCou
 		&i.Note,
 		&i.ResolvedAt,
 		&i.CreatedAt,
+		&i.RecountStatus,
+		&i.RecountRequestedAt,
+		&i.RecountRequestedByUserID,
+		&i.RecountedAt,
+		&i.RecountedByUserID,
+		&i.RecountRounds,
+		&i.FirstCountedQuantity,
+		&i.FirstCountedMeters,
+		&i.FirstCountedLocationID,
+		&i.FirstResult,
 	)
 	return i, err
 }

@@ -34,4 +34,5 @@ func RegisterExportRoutes(
 	mux.Handle("POST /v1/stock/locations/{uuid}/products/export", read(h.LocationStock))
 	mux.Handle("POST /v1/stock/units/by-barcode/{barcode}/export", read(h.UnitHistory))
 	mux.Handle("POST /v1/stock/barcodes/export", read(h.Batches))
+	mux.Handle("POST /v1/stock/movements/export", read(h.Movements))
 }

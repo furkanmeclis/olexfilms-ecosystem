@@ -165,10 +165,15 @@ type WarehouseTransfer struct {
 	ToLocation    *EntryLocation `json:"to_location"`
 	LineCount     int64          `json:"line_count"`
 	Lines         []TransferLine `json:"lines,omitempty"`
-	CreatedAt     time.Time      `json:"created_at"`
-	ShippedAt     *time.Time     `json:"shipped_at"`
-	CompletedAt   *time.Time     `json:"completed_at"`
-	CancelledAt   *time.Time     `json:"cancelled_at"`
+	// Discrepancies: the record of a transfer completed with missing or
+	// surplus units (TEC-1227); OpenDiscrepancies counts the open rows
+	// (detail only).
+	Discrepancies     []TransferDiscrepancy `json:"discrepancies,omitempty"`
+	OpenDiscrepancies int64                 `json:"open_discrepancies"`
+	CreatedAt         time.Time             `json:"created_at"`
+	ShippedAt         *time.Time            `json:"shipped_at"`
+	CompletedAt       *time.Time            `json:"completed_at"`
+	CancelledAt       *time.Time            `json:"cancelled_at"`
 }
 
 // MovedUnit is one unit a move or an order placement handled.
@@ -215,9 +220,14 @@ type TransferInput struct {
 }
 
 // CompleteInput optionally names the location for lines without a target.
+// TEC-1227: Missing names the lines that did not arrive (they stay in
+// transit under a loss investigation) and Surplus the scanned barcodes that
+// are not on the transfer; both are written to the discrepancy record.
 type CompleteInput struct {
 	LocationUUID *uuid.UUID
 	LocationCode string
+	Missing      []TransferMissingInput
+	Surplus      []TransferSurplusInput
 }
 
 // --- move (bin <-> bin) ------------------------------------------------------
@@ -805,8 +815,15 @@ func (s *WarehouseTransfers) Complete(ctx context.Context, c EntryCaller, id uui
 		if err != nil {
 			return err
 		}
+		missing, err := missingLines(lines, in.Missing)
+		if err != nil {
+			return err
+		}
 		targets := make([]int64, len(lines))
 		for i, l := range lines {
+			if _, gone := missing[l.ID]; gone {
+				continue
+			}
 			switch {
 			case l.TargetLocationID.Valid:
 				targets[i] = l.TargetLocationID.Int64
@@ -824,59 +841,31 @@ func (s *WarehouseTransfers) Complete(ctx context.Context, c EntryCaller, id uui
 				return invalid("location_uuid", "target location "+loc.Code+" is inactive or outside the target warehouse")
 			}
 		}
-		self := ledger.Owner{Type: ledger.OwnerOrganization, ID: org, OrgID: org}
 		for i, l := range lines {
-			u, err := q.GetUnit(ctx, l.UnitID)
-			if err != nil {
-				return err
-			}
-			meta := transferMeta(t, l)
-			if u.UnitKind == ledger.KindFixed {
-				loc := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: targets[i], OrgID: org}
-				mv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: u.ID, To: &loc,
-					Quantity: l.Quantity, Source: transferSource, RefType: transferRefType, RefID: l.ID,
-					ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse transfer received", Metadata: meta})
-				if err != nil {
-					return err
-				}
-				if err := q.SetWarehouseTransferLineIn(ctx, db.SetWarehouseTransferLineInParams{ID: l.ID,
-					InMovementID: pgtype.Int8{Int64: mv.ID, Valid: true}, TargetLocationID: pgtype.Int8{Int64: targets[i], Valid: true}}); err != nil {
-					return err
-				}
+			if _, gone := missing[l.ID]; gone {
 				continue
 			}
-			inMv, err := s.post(ctx, tx, u, ledger.Movement{
-				Type: ledger.TypeTransferIn, UnitID: u.ID, To: &self,
-				Source: transferSource, RefType: transferRefType, RefID: l.ID,
-				ActorUserID: actorPtr(c), Reason: "warehouse transfer received", Metadata: meta,
-			})
-			if err != nil {
-				return err
-			}
-			loc := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: targets[i], OrgID: org}
-			pl, err := s.post(ctx, tx, u, ledger.Movement{
-				Type: ledger.TypePlacement, UnitID: u.ID, From: &self, To: &loc,
-				Source: transferSource, RefType: transferRefType, RefID: l.ID,
-				ActorUserID: actorPtr(c), Reason: "warehouse transfer placement", Metadata: meta,
-			})
-			if err != nil {
-				return err
-			}
-			if err := q.SetWarehouseTransferLineIn(ctx, db.SetWarehouseTransferLineInParams{
-				ID: l.ID, InMovementID: pgtype.Int8{Int64: inMv.ID, Valid: true},
-				PlacementMovementID: pgtype.Int8{Int64: pl.ID, Valid: true},
-				TargetLocationID:    pgtype.Int8{Int64: targets[i], Valid: true},
-			}); err != nil {
+			if err := s.receiveLine(ctx, q, tx, c, org, t, l, targets[i]); err != nil {
 				return err
 			}
 		}
-		if err := q.CloseWarehouseTransferLines(ctx, t.ID); err != nil {
+		keep := make([]int64, 0, len(missing))
+		for id := range missing {
+			keep = append(keep, id)
+		}
+		if err := q.CloseWarehouseTransferLinesExcept(ctx, db.CloseWarehouseTransferLinesExceptParams{TransferID: t.ID, KeepIds: keep}); err != nil {
+			return err
+		}
+		surplus, err := s.recordTransferDiscrepancies(ctx, q, c, t, lines, missing, in.Surplus)
+		if err != nil {
 			return err
 		}
 		if t, err = q.CompleteWarehouseTransfer(ctx, db.CompleteWarehouseTransferParams{UserID: c.actor(), ID: t.ID}); err != nil {
 			return notFound(err, ErrTransferState)
 		}
-		return s.audit(ctx, q, c, AuditTransferCompleted, t, map[string]any{"lines": len(lines)})
+		return s.audit(ctx, q, c, AuditTransferCompleted, t, map[string]any{
+			"lines": len(lines), "missing": len(missing), "surplus": surplus,
+		})
 	})
 	if err != nil {
 		return WarehouseTransfer{}, err
@@ -1500,6 +1489,9 @@ func (s *WarehouseTransfers) view(ctx context.Context, q *db.Queries, t db.Wareh
 			return out, err
 		}
 		return out, nil
+	}
+	if out.Discrepancies, out.OpenDiscrepancies, err = transferDiscrepancies(ctx, q, t); err != nil {
+		return out, err
 	}
 	lines, err := q.ListWarehouseTransferLines(ctx, t.ID)
 	if err != nil {
