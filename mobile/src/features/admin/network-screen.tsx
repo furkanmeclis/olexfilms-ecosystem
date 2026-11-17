@@ -184,10 +184,10 @@ function NetworkRelated({ orgUuid }: { orgUuid: string }) {
         kind="order"
         title={t('network.related_orders')}
         enabled={canOrders}
-        queryKey={['orders', 'list', { buyer: orgUuid }]}
+        queryKey={['orders', 'list', { organization: orgUuid }]}
         fetch={async (limit) => {
           const r = await unwrap(
-            api.GET('/v1/orders', { params: { query: { buyer_org_uuid: orgUuid, limit, offset: 0 } } }),
+            api.GET('/v1/orders', { params: { query: { organization_uuid: [orgUuid], limit, offset: 0 } } }),
           );
           return {
             total: r.total,

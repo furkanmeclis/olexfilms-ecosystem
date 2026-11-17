@@ -290,5 +290,8 @@
   "contract.qr_hint": "Tablette panel oturumu açıkken okutun; sözleşme adımı açılır.",
   "contract.required_title": "Sözleşme gerekli",
   "contract.required_body": "Hizmet bu duruma geçmeden önce araç kabul sözleşmesi müşteri ve personel tarafından imzalanmalı. Hizmet detayındaki sözleşme kartından imzalatabilirsiniz.",
-  "applied_by": "Uygulayan"
+  "applied_by": "Uygulayan",
+  "related.warranties": "Garantiler",
+  "related.appointments": "Randevular",
+  "related.measurements": "Ölçümler"
 }
