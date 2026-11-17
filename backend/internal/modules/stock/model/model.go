@@ -361,7 +361,10 @@ type UnitFilter struct {
 	LocationUUIDs []uuid.UUID
 	UpdatedFrom   *time.Time
 	UpdatedBefore *time.Time
-	Q             string
+	// Remnant (TEC-1230): only rolls under the product's minimum cut
+	// (true) or only the others (false); nil lists both.
+	Remnant *bool
+	Q       string
 	// Family (TEC-1078): the split family of this barcode instead of the
 	// on-hand list (the other filters are ignored).
 	Family       string
@@ -384,14 +387,17 @@ type UnitPurchasePrice struct {
 // hand) held by an organization. PurchasePrice is null when the viewer
 // may not read it (pricing.purchase.read) or no price is set.
 type StockUnitRow struct {
-	UUID            uuid.UUID  `json:"uuid"`
-	Barcode         string     `json:"barcode"`
-	UnitKind        string     `json:"unit_kind"`
-	Status          string     `json:"status"`
-	Quantity        int32      `json:"quantity"`
-	InitialMeters   *string    `json:"initial_meters"`
-	RemainingMeters *string    `json:"remaining_meters"`
-	Product         ProductRef `json:"product"`
+	UUID            uuid.UUID `json:"uuid"`
+	Barcode         string    `json:"barcode"`
+	UnitKind        string    `json:"unit_kind"`
+	Status          string    `json:"status"`
+	Quantity        int32     `json:"quantity"`
+	InitialMeters   *string   `json:"initial_meters"`
+	RemainingMeters *string   `json:"remaining_meters"`
+	// Remnant (TEC-1230): a roll with meters left but fewer than the
+	// product's minimum cut ("ragle"/artık).
+	Remnant bool       `json:"remnant"`
+	Product ProductRef `json:"product"`
 	// Category of the product (TEC-870: the transfer form's stock picker).
 	Category      CategoryRef        `json:"category"`
 	Location      *LocationRef       `json:"location"`

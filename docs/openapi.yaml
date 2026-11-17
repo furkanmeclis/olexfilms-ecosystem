@@ -10992,6 +10992,14 @@ paths:
             TEC-1078: list the split family of this barcode (the roll and
             every part cut from it) instead of the on-hand units.
           schema: { type: string, maxLength: 64 }
+        - name: remnant
+          in: query
+          required: false
+          description: >-
+            TEC-1230: `true` keeps only remnants (rolls with meters left but
+            fewer than the product's `min_cut_meters`, "ragle"), `false`
+            leaves them out. Searches Postgres, not the index.
+          schema: { type: boolean }
       responses:
         "200":
           description: Units of the organization
@@ -11674,7 +11682,10 @@ paths:
         nothing; reused for another roll or meters it answers 409
         STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not
         write (a distributor on dealer stock, TEC-216) answers 403. Label
-        printing: TEC-95.
+        printing: TEC-95. TEC-1230: a cut shorter than the product's
+        `min_cut_meters` answers 422 STOCK_SPLIT_BELOW_MIN_CUT unless it
+        takes the whole rest of the roll; a roll left with less than the
+        minimum is flagged `remnant`.
       security:
         - bearerAuth: []
       requestBody:
@@ -12744,6 +12755,9 @@ paths:
         batch through the PDF engine (Gotenberg) with the template given by
         `template`, else the batch's template, else the organization's
         default unit template, else the built-in code128 70x37 mm sheet.
+        TEC-1230: the template's `output_format` picks an A4 sheet, one
+        label per page (label-sized PDF) or ZPL text; a roll label shows
+        the meters left on the roll.
         Advances reserved units to printed and counts the print
         (`print_count`, `last_printed_at`). 503
         STOCK_LABEL_RENDERER_UNAVAILABLE when the PDF engine is down.
@@ -12761,6 +12775,8 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
+            application/vnd.zebra.zpl:
+              schema: { type: string, description: "TEC-1230: ZPL II text of a zpl template" }
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -12949,6 +12965,8 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
+            application/vnd.zebra.zpl:
+              schema: { type: string, description: "TEC-1230: ZPL II text of a zpl template" }
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -13006,6 +13024,8 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
+            application/vnd.zebra.zpl:
+              schema: { type: string, description: "TEC-1230: ZPL II text of a zpl template" }
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -13595,6 +13615,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}/placement-suggestions:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryPlacementSuggestions
+      summary: Location suggestions for placing an entry (TEC-1230)
+      description: >-
+        TEC-1230. Needs `warehouse.read`. For the unplaced lines of the
+        entry: per product, up to 3 active locations of the entry's
+        warehouse already holding it (most stocked first, like the picking
+        suggestion), then up to 5 empty leaf locations of the warehouse.
+        Advisory only; place accepts any active location of the warehouse.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryPlacementSuggestions"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -20100,6 +20149,32 @@ paths:
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
 
+  /v1/mobile/warehouse/stock-entries/{uuid}/placement-suggestions:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryPlacementSuggestions
+      summary: Location suggestions for placing an entry (TEC-1230)
+      description: >-
+        Mobile mirror of `GET /v1/warehouse/stock-entries/{uuid}/placement-suggestions` (same use case, permission and scope). Bearer with `aud=mobile`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryPlacementSuggestions"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/mobile/warehouse/stock-entries/{uuid}:
     get:
       tags: [Mobile]
@@ -24563,7 +24638,9 @@ paths:
         in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or
         cancelling the service gives the credits back; completion consumes
         the unit only when its last credit is used and no other open
-        service holds it.
+        service holds it. TEC-1230: a partial cut shorter than the
+        product's `min_cut_meters` answers 422 SERVICE_ITEM_BELOW_MIN_CUT
+        unless it takes the whole rest of the roll (a remnant).
       security:
         - bearerAuth: []
       requestBody:
@@ -42851,6 +42928,11 @@ components:
         quantity: { type: integer, description: "1 for a serial unit, the quantity on hand for a fixed barcode" }
         initial_meters: { type: [string, "null"], description: "Roll length (decimal string, 2 places)" }
         remaining_meters: { type: [string, "null"] }
+        remnant:
+          type: boolean
+          description: >-
+            TEC-1230: a roll with meters left but fewer than the product's
+            minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle").
         product:
           type: object
           required: [uuid, sku, name, unit_type, uses_fixed_barcode]
@@ -43935,6 +44017,50 @@ components:
             - $ref: "#/components/schemas/OrderUserRef"
             - type: "null"
 
+    StockEntrySuggestedLocation:
+      type: object
+      required: [uuid, code, full_code, name, quantity]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        full_code: { type: [string, "null"] }
+        name: { type: string }
+        quantity:
+          type: [integer, "null"]
+          description: What the location already holds of the product (null for an empty location)
+
+    StockEntryPlacementSuggestions:
+      type: object
+      required: [products, empty_locations]
+      properties:
+        products:
+          type: array
+          items:
+            type: object
+            required: [product, locations]
+            properties:
+              product:
+                type: object
+                required: [uuid, sku, name]
+                properties:
+                  uuid: { type: string, format: uuid }
+                  sku: { type: string }
+                  name: { type: string }
+              locations:
+                type: array
+                maxItems: 3
+                items: { $ref: "#/components/schemas/StockEntrySuggestedLocation" }
+        empty_locations:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/StockEntrySuggestedLocation" }
+
+    EnvelopeStockEntryPlacementSuggestions:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/StockEntryPlacementSuggestions" }
+
     EnvelopeStockEntry:
       type: object
       required: [success, data, meta]
@@ -44554,6 +44680,11 @@ components:
         label_url:
           type: string
           description: Label print endpoint of the unit (TEC-202; set on the new unit of a split)
+        remnant:
+          type: boolean
+          description: >-
+            TEC-1230: meters are left but fewer than the product's minimum cut
+            (a remnant, "ragle").
 
     StockSplit:
       type: object
@@ -51340,7 +51471,7 @@ components:
     LabelTemplate:
       type: object
       required: [uuid, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm,
-        columns, show_name, show_code_text, is_default, active, created_at, updated_at]
+        columns, show_name, show_code_text, is_default, active, output_format, created_at, updated_at]
       properties:
         uuid: { type: string, format: uuid }
         name: { type: string }
@@ -51356,8 +51487,20 @@ components:
         show_code_text: { type: boolean }
         is_default: { type: boolean }
         active: { type: boolean }
+        output_format: { $ref: "#/components/schemas/LabelOutputFormat" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+
+    LabelOutputFormat:
+      type: string
+      enum: [sheet, single, zpl]
+      description: >-
+        TEC-1230: `sheet` is the A4 grid PDF (default); `single` is a PDF
+        with one label per page, the page being the label size (thermal
+        printers, e.g. 50x30, 100x50, 100x150 mm); `zpl` is Zebra ZPL II
+        text for 203 dpi printers (one ^XA..^XZ block per label, an image
+        logo is left out). The print endpoints answer `application/pdf` or,
+        for zpl, `application/vnd.zebra.zpl` as a `.zpl` attachment.
 
     LabelTemplateInput:
       type: object
@@ -51378,6 +51521,9 @@ components:
         show_code_text: { type: boolean }
         is_default: { type: boolean }
         active: { type: boolean }
+        output_format:
+          allOf: [{ $ref: "#/components/schemas/LabelOutputFormat" }]
+          description: Empty keeps the current format (sheet on create)
 
     BarcodeBatchInput:
       type: object

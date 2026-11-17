@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Il rotolo non è nello stock di questa organizzazione.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Il rotolo è in un servizio o ordine aperto.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Questa chiave di idempotenza è stata usata per un'altra divisione.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "Il taglio è più corto del taglio minimo del prodotto. Prendi tutto il resto del rotolo o taglia più lungo.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "Il taglio è più corto del taglio minimo del prodotto. Usa tutto il resto del rotolo o taglia più lungo.",
   "codes.LEADS_MODULE_DISABLED": "Il modulo contatti è chiuso in tutto il sistema; attiva prima il modulo.",
   "codes.FLEET_ALREADY_EXISTS": "Esiste già una flotta con questo codice fiscale; invii una richiesta di collegamento.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Il codice fiscale non è valido (il controllo VKN o TCKN non torna).",

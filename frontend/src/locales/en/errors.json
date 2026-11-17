@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "The roll is not in this organization's stock.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "The roll is on an open service or order.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "This idempotency key was used for another split.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "The cut is shorter than the product's minimum cut. Take the whole rest of the roll or cut longer.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "The cut is shorter than the product's minimum cut. Use the whole rest of the roll or cut longer.",
   "codes.LEADS_MODULE_DISABLED": "The leads module is closed system wide; open the module first.",
   "codes.FLEET_ALREADY_EXISTS": "A fleet with this tax number already exists; send it a link request.",
   "codes.FLEET_INVALID_TAX_NUMBER": "The tax number is invalid (VKN or TCKN checksum fails).",

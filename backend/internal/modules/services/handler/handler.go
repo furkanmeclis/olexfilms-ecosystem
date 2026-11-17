@@ -40,6 +40,8 @@ const (
 	CodeCertificateApprovalRequired = "CERTIFICATE_APPROVAL_REQUIRED"
 	CodeIncomeAlreadyRecorded       = "SERVICE_INCOME_ALREADY_RECORDED"
 	CodeIncomeNotRecorded           = "SERVICE_INCOME_NOT_RECORDED"
+	// TEC-1230: a roll cut shorter than products.min_cut_meters.
+	CodeBelowMinCut = "SERVICE_ITEM_BELOW_MIN_CUT"
 
 	// TEC-230: consumption correction.
 	CodeCorrectionWindowClosed   = "SERVICE_CORRECTION_WINDOW_CLOSED"
@@ -100,6 +102,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeNotEditable, "The service status does not allow this change")
 	case errors.Is(err, svcuc.ErrUnitCreditsExhausted):
 		response.Conflict(w, r, CodeUnitCreditsExhausted, "The unit has no usage credits left")
+	case errors.Is(err, svcuc.ErrBelowMinCut):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeBelowMinCut, "The cut is shorter than the product's minimum cut")
 	case errors.Is(err, svcuc.ErrUnitInUse):
 		response.Conflict(w, r, CodeUnitInUse, "The unit is already in another open service")
 	case errors.Is(err, svcuc.ErrUnitNotAvailable):

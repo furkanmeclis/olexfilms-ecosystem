@@ -92,7 +92,7 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 		OrganizationID: o.ID, BrandID: brand, ProductID: product, Statuses: in.Statuses, Barcode: barcode,
 		BarcodePrefix: prefix, LocationUuids: in.LocationUUIDs, UpdatedFrom: tsArg(in.UpdatedFrom),
 		UpdatedBefore: tsArg(in.UpdatedBefore), Q: q, SortKey: key, SortDesc: desc,
-		LimitCount: in.Limit, OffsetCount: in.Offset,
+		LimitCount: in.Limit, OffsetCount: in.Offset, Remnant: boolArg(in.Remnant),
 	}
 	var (
 		rows    []db.ListOrganizationStockUnitRowsRow
@@ -109,7 +109,7 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 		total, err = s.q.CountOrganizationStockUnitRows(ctx, db.CountOrganizationStockUnitRowsParams{
 			OrganizationID: o.ID, BrandID: brand, ProductID: product, Statuses: lp.Statuses, Barcode: barcode,
 			BarcodePrefix: prefix, LocationUuids: lp.LocationUuids, UpdatedFrom: lp.UpdatedFrom,
-			UpdatedBefore: lp.UpdatedBefore, Q: q,
+			UpdatedBefore: lp.UpdatedBefore, Q: q, Remnant: lp.Remnant,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("stock: count units: %w", err)
@@ -140,6 +140,7 @@ func unitRow(r db.ListOrganizationStockUnitRowsRow) model.StockUnitRow {
 	row := model.StockUnitRow{
 		UUID: r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind, Status: r.Status, Quantity: r.Quantity,
 		InitialMeters: numericPtr(r.InitialMeters), RemainingMeters: numericPtr(r.RemainingMeters),
+		Remnant: r.Remnant,
 		Product: model.ProductRef{
 			UUID: r.ProductUuid, SKU: r.Sku, Name: r.ProductName,
 			UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
@@ -155,6 +156,13 @@ func unitRow(r db.ListOrganizationStockUnitRowsRow) model.StockUnitRow {
 		row.CreditsTotal, row.CreditsRemaining, row.CreditsUsed = &total, &remaining, &used
 	}
 	return row
+}
+
+func boolArg(b *bool) pgtype.Bool {
+	if b == nil {
+		return pgtype.Bool{}
+	}
+	return pgtype.Bool{Bool: *b, Valid: true}
 }
 
 func textArg(s string) pgtype.Text {

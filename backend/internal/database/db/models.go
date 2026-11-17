@@ -1572,6 +1572,7 @@ type LabelTemplate struct {
 	Active         bool               `json:"active"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	OutputFormat   string             `json:"output_format"`
 }
 
 type Lead struct {

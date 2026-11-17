@@ -80,6 +80,9 @@ type TemplateInput struct {
 	ShowCodeText *bool
 	IsDefault    bool
 	Active       *bool
+	// OutputFormat is sheet, single or zpl (TEC-1230); empty keeps the
+	// current one (sheet on create).
+	OutputFormat string
 }
 
 // List returns the organization's templates, optionally of one kind.
@@ -153,6 +156,7 @@ func (s *LabelTemplates) Create(ctx context.Context, c Caller, in TemplateInput)
 		LogoMode: arg.LogoMode, LogoText: arg.LogoText, LogoImage: arg.LogoImage,
 		WidthMm: arg.WidthMm, HeightMm: arg.HeightMm, GridColumns: arg.GridColumns,
 		ShowName: arg.ShowName, ShowCodeText: arg.ShowCodeText, IsDefault: false, Active: arg.Active,
+		OutputFormat: arg.OutputFormat,
 	})
 	if err != nil {
 		return model.LabelTemplate{}, templateDBErr(err)
@@ -219,7 +223,7 @@ func (s *LabelTemplates) setDefault(ctx context.Context, org int64, t db.LabelTe
 		ID: t.ID, OrganizationID: org, Name: t.Name, Symbology: t.Symbology, LogoMode: t.LogoMode,
 		LogoText: t.LogoText, LogoImage: t.LogoImage, WidthMm: t.WidthMm, HeightMm: t.HeightMm,
 		GridColumns: t.GridColumns, ShowName: t.ShowName, ShowCodeText: t.ShowCodeText,
-		IsDefault: true, Active: t.Active,
+		IsDefault: true, Active: t.Active, OutputFormat: t.OutputFormat,
 	}
 	t, err := s.q.UpdateLabelTemplate(ctx, arg)
 	if err != nil {
@@ -295,6 +299,18 @@ func templateArgs(in TemplateInput, base labels.Template) (db.UpdateLabelTemplat
 	arg.ShowName = boolOr(in.ShowName, base.ShowName)
 	arg.ShowCodeText = boolOr(in.ShowCodeText, base.ShowCodeText)
 	arg.Active = boolOr(in.Active, true)
+	arg.OutputFormat = strings.TrimSpace(in.OutputFormat)
+	if arg.OutputFormat == "" {
+		arg.OutputFormat = base.Output
+	}
+	if arg.OutputFormat == "" {
+		arg.OutputFormat = labels.OutputSheet
+	}
+	switch arg.OutputFormat {
+	case labels.OutputSheet, labels.OutputSingle, labels.OutputZPL:
+	default:
+		return arg, invalid("output_format", "must be sheet, single or zpl")
+	}
 	return arg, nil
 }
 
@@ -389,7 +405,7 @@ func templateOf(t db.LabelTemplate) labels.Template {
 		Kind: t.Kind, Symbology: t.Symbology, LogoMode: t.LogoMode,
 		LogoText: t.LogoText.String, LogoImage: t.LogoImage.String,
 		WidthMm: numericFloat(t.WidthMm), HeightMm: numericFloat(t.HeightMm), Columns: int(t.GridColumns),
-		ShowName: t.ShowName, ShowCodeText: t.ShowCodeText,
+		ShowName: t.ShowName, ShowCodeText: t.ShowCodeText, Output: t.OutputFormat,
 	}
 }
 
@@ -400,6 +416,6 @@ func TemplateView(t db.LabelTemplate) model.LabelTemplate {
 		LogoText: textPtr(t.LogoText), LogoImage: textPtr(t.LogoImage),
 		WidthMm: numericString1(t.WidthMm), HeightMm: numericString1(t.HeightMm), Columns: int(t.GridColumns),
 		ShowName: t.ShowName, ShowCodeText: t.ShowCodeText, IsDefault: t.IsDefault, Active: t.Active,
-		CreatedAt: tsTime(t.CreatedAt), UpdatedAt: tsTime(t.UpdatedAt),
+		OutputFormat: t.OutputFormat, CreatedAt: tsTime(t.CreatedAt), UpdatedAt: tsTime(t.UpdatedAt),
 	}
 }

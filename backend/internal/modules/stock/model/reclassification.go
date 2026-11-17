@@ -53,6 +53,9 @@ type SplitUnit struct {
 	// LabelURL is the label print endpoint of the unit (TEC-202; set for
 	// the new unit of a split).
 	LabelURL string `json:"label_url,omitempty"`
+	// Remnant: meters are left but fewer than the product's minimum cut
+	// (TEC-1230, "ragle"/artık).
+	Remnant bool `json:"remnant"`
 }
 
 // Split is a roll split (TEC-184): meters cut off a roll as a new unit with

@@ -50,6 +50,9 @@ var (
 	ErrNotEditable = errors.New("services: service is not editable")
 	// ErrUnitInUse: the serial unit is already in another open service.
 	ErrUnitInUse = errors.New("services: unit is in another open service")
+	// ErrBelowMinCut: a roll cut shorter than the product's minimum cut
+	// that does not take the whole rest of the roll (TEC-1230).
+	ErrBelowMinCut = errors.New("services: cut below the minimum cut length")
 	// ErrUnitCreditsExhausted: the unit has no usage credits left
 	// (TEC-1221, UNIT_CREDITS_EXHAUSTED).
 	ErrUnitCreditsExhausted = errors.New("services: unit credits exhausted")

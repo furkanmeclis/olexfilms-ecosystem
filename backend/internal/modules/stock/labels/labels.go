@@ -35,6 +35,11 @@ const (
 	LogoNone  = "none"
 	LogoText  = "text"
 	LogoImage = "image"
+
+	// Output formats (TEC-1230, label_templates.output_format).
+	OutputSheet  = "sheet"
+	OutputSingle = "single"
+	OutputZPL    = "zpl"
 )
 
 // Scanner payload prefixes.
@@ -59,6 +64,8 @@ type Template struct {
 	Columns      int
 	ShowName     bool
 	ShowCodeText bool
+	// Output is sheet (A4 grid), single (one label per page) or zpl.
+	Output string
 }
 
 // DefaultUnit is the built-in unit template (code128, 70x37 mm, 3 columns).
@@ -144,20 +151,54 @@ func Code128PNG(content string, height int) ([]byte, error) {
 // Sheet renders the label grid as a full HTML document (pdfrender.Document)
 // for the given language. An item without a code is refused.
 func Sheet(lang string, t Template, items []Item) (string, error) {
+	return document(lang, t, items, false)
+}
+
+// Single renders one label per page (TEC-1230): the page is the label size
+// with no margin, for thermal printers. The caller converts it with
+// pdfrender.Request.PageWidthMm / PageHeightMm set to the template size.
+func Single(lang string, t Template, items []Item) (string, error) {
+	return document(lang, t, items, true)
+}
+
+// PageSize is the label size in mm after defaults (the page of Single).
+func PageSize(t Template) (float64, float64) {
+	t = normalize(t)
+	return t.WidthMm, t.HeightMm
+}
+
+func document(lang string, t Template, items []Item, single bool) (string, error) {
 	t = normalize(t)
 	var b strings.Builder
-	fmt.Fprintf(&b, `<style>
+	if single {
+		fmt.Fprintf(&b, `<style>
+@page{size:%.1fmm %.1fmm;margin:0}
+html,body{margin:0;padding:0}
+.sheet{display:block}
+.label{width:%.1fmm;height:%.1fmm;box-sizing:border-box;padding:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8mm;overflow:hidden;break-after:page;text-align:center}
+.label:last-child{break-after:auto}
+`, t.WidthMm, t.HeightMm, t.WidthMm, t.HeightMm)
+	} else {
+		fmt.Fprintf(&b, `<style>
 .sheet{display:grid;grid-template-columns:repeat(%d,%.1fmm);gap:2mm;justify-content:start}
 .label{width:%.1fmm;height:%.1fmm;box-sizing:border-box;border:0.2mm dashed #cbd5e1;padding:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.8mm;overflow:hidden;break-inside:avoid;text-align:center}
-.label .logo{font-weight:700;font-size:7pt;color:var(--primary);max-height:6mm;overflow:hidden}
+`, t.Columns, t.WidthMm, t.WidthMm, t.HeightMm)
+	}
+	fmt.Fprintf(&b, `.label .logo{font-weight:700;font-size:7pt;color:var(--primary);max-height:6mm;overflow:hidden}
 .label .logo img{max-height:6mm;max-width:%.1fmm}
 .label img.code{max-width:100%%;height:auto}
 .label img.qr{width:%.1fmm;height:%.1fmm}
 .label .text{font-family:"DejaVu Sans Mono",monospace;font-size:7.5pt;letter-spacing:0.3pt;word-break:break-all}
 .label .title{font-size:7pt;font-weight:700;line-height:1.2;max-height:8mm;overflow:hidden}
 .label .sub{font-size:6pt;color:#475569;line-height:1.2}
-</style>
-<div class="sheet">`, t.Columns, t.WidthMm, t.WidthMm, t.HeightMm, t.WidthMm-4, qrSide(t), qrSide(t))
+`, t.WidthMm-4, qrSide(t), qrSide(t))
+	if single && t.HeightMm >= 40 {
+		// Larger thermal labels (100x50, 100x150): readable text.
+		b.WriteString(`.label .text{font-size:10pt}.label .title{font-size:10pt;max-height:14mm}.label .sub{font-size:8.5pt}.label .logo{font-size:10pt}
+`)
+	}
+	b.WriteString(`</style>
+<div class="sheet">`)
 	for _, it := range items {
 		code := strings.TrimSpace(it.Code)
 		if code == "" {
@@ -236,6 +277,9 @@ func normalize(t Template) Template {
 	}
 	if t.Columns <= 0 {
 		t.Columns = 3
+	}
+	if t.Output == "" {
+		t.Output = OutputSheet
 	}
 	return t
 }

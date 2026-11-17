@@ -2094,7 +2094,15 @@ type Querier interface {
 	// -issue_date; id is the stable tiebreak. q matches number, buyer legal/name
 	// fields and ETTN. status/profile/buyer_org_ids are multi-value filters.
 	ListEinvoices(ctx context.Context, arg ListEinvoicesParams) ([]ListEinvoicesRow, error)
+	// Active typed leaf locations of the warehouse that hold nothing.
+	ListEmptyWarehouseLocations(ctx context.Context, arg ListEmptyWarehouseLocationsParams) ([]ListEmptyWarehouseLocationsRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
+	// TEC-1230: location suggestions for placing a stock entry. Same idea as
+	// the picking suggestion (orders_picking.sql: placed units first): put the
+	// product where the warehouse already keeps it, otherwise an empty
+	// location of the warehouse.
+	// The products of an entry's lines that are not placed yet.
+	ListEntryLineProducts(ctx context.Context, entryID int64) ([]int64, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	// TEC-308: open subscriptions past ends_on (scheduled ones that never
 	// started included), oldest end first.
@@ -2456,7 +2464,8 @@ type Querier interface {
 	// TEC-373 (DT-BE-5): statuses is any-of (empty: available + placed),
 	// barcode exact or barcode_prefix (LIKE, the caller escapes % and _),
 	// location_uuids any-of (fixed barcodes have no single location and drop
-	// out), updated_from / updated_before (exclusive) on the holding's last
+	// out), remnant (TEC-1230: rolls under the product's minimum cut, or not),
+	// updated_from / updated_before (exclusive) on the holding's last
 	// change. sort_key: product, barcode, status (unit flow rank), quantity,
 	// meters (remaining, empty last), updated_at; id is the tiebreak.
 	ListOrganizationStockUnitRows(ctx context.Context, arg ListOrganizationStockUnitRowsParams) ([]ListOrganizationStockUnitRowsRow, error)
@@ -3008,6 +3017,9 @@ type Querier interface {
 	// List contract: sort keys name, email, created_at (id tiebreak); q on
 	// name, surname, email.
 	ListWarehouseMembers(ctx context.Context, arg ListWarehouseMembersParams) ([]ListWarehouseMembersRow, error)
+	// Active locations of the warehouse holding the products on hand (serial
+	// units and fixed barcode pieces), most stocked first.
+	ListWarehouseProductLocations(ctx context.Context, arg ListWarehouseProductLocationsParams) ([]ListWarehouseProductLocationsRow, error)
 	// TEC-1090 (TEC-1069): product totals of one warehouse, summed over its
 	// locations (bin_product_stocks). quantity counts pieces, rolls and fixed
 	// barcode quantities like the organization list; roll_count is the serial

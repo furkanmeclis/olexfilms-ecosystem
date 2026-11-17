@@ -6360,7 +6360,7 @@ export interface paths {
         put?: never;
         /**
          * Split a roll (cut meters off as a new unit)
-         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product at the roll's owner. TEC-1078: its barcode is `<roll barcode>-<meters>M` (whole meters without decimals `-3M`, otherwise a dot without trailing zeros `-2.5M`); the same length cut again from that roll gets `-3M-2`, `-3M-3`, ...; when that would pass 64 characters the legacy `<roll barcode>-S<n>` is used. Earlier `-S<n>` barcodes stay as they are. The roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95.
+         * @description Needs `stock.write` (TEC-184). The roll (by `barcode` or `unit_uuid`) must be on hand (available or placed) at the caller's active organization (409 STOCK_SPLIT_UNIT_ELSEWHERE) and not on an open service or order reservation (409 STOCK_SPLIT_UNIT_IN_USE). The meters leave as a new unit of the same product at the roll's owner. TEC-1078: its barcode is `<roll barcode>-<meters>M` (whole meters without decimals `-3M`, otherwise a dot without trailing zeros `-2.5M`); the same length cut again from that roll gets `-3M-2`, `-3M-3`, ...; when that would pass 64 characters the legacy `<roll barcode>-S<n>` is used. Earlier `-S<n>` barcodes stay as they are. The roll keeps the rest and is used up at 0 m. Both split movements are written in one transaction; product stock totals do not change. Pieces and fixed barcodes are not split (422 STOCK_SPLIT_NOT_ROLL); more meters than the roll has answer 422 STOCK_SPLIT_INSUFFICIENT_METERS. The same `idempotency_key` returns the earlier split with 200 and writes nothing; reused for another roll or meters it answers 409 STOCK_SPLIT_KEY_CONFLICT. A roll the caller may read but not write (a distributor on dealer stock, TEC-216) answers 403. Label printing: TEC-95. TEC-1230: a cut shorter than the product's `min_cut_meters` answers 422 STOCK_SPLIT_BELOW_MIN_CUT unless it takes the whole rest of the roll; a roll left with less than the minimum is flagged `remnant`.
          */
         post: operations["createStockSplit"];
         delete?: never;
@@ -6872,7 +6872,7 @@ export interface paths {
         };
         /**
          * Label sheet PDF of a batch
-         * @description Needs `stock.read` at the center. Renders one label per unit of the batch through the PDF engine (Gotenberg) with the template given by `template`, else the batch's template, else the organization's default unit template, else the built-in code128 70x37 mm sheet. Advances reserved units to printed and counts the print (`print_count`, `last_printed_at`). 503 STOCK_LABEL_RENDERER_UNAVAILABLE when the PDF engine is down.
+         * @description Needs `stock.read` at the center. Renders one label per unit of the batch through the PDF engine (Gotenberg) with the template given by `template`, else the batch's template, else the organization's default unit template, else the built-in code128 70x37 mm sheet. TEC-1230: the template's `output_format` picks an A4 sheet, one label per page (label-sized PDF) or ZPL text; a roll label shows the meters left on the roll. Advances reserved units to printed and counts the print (`print_count`, `last_printed_at`). 503 STOCK_LABEL_RENDERER_UNAVAILABLE when the PDF engine is down.
          */
         get: operations["printBarcodeBatchLabels"];
         put?: never;
@@ -7224,6 +7224,26 @@ export interface paths {
          * @description Needs `warehouse.write`. The warehouse must be an active warehouse of the active organization. `with_existing` links printed or reserved barcodes, `generate_new` reserves new barcodes (TEC-202; center only, 403 STOCK_ENTRY_CENTER_ONLY otherwise, K14).
          */
         post: operations["createStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/placement-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Location suggestions for placing an entry (TEC-1230)
+         * @description TEC-1230. Needs `warehouse.read`. For the unplaced lines of the entry: per product, up to 3 active locations of the entry's warehouse already holding it (most stocked first, like the picking suggestion), then up to 5 empty leaf locations of the warehouse. Advisory only; place accepts any active location of the warehouse.
+         */
+        get: operations["getStockEntryPlacementSuggestions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10575,6 +10595,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/placement-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Location suggestions for placing an entry (TEC-1230)
+         * @description Mobile mirror of `GET /v1/warehouse/stock-entries/{uuid}/placement-suggestions` (same use case, permission and scope). Bearer with `aud=mobile`.
+         */
+        get: operations["mobileGetStockEntryPlacementSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/warehouse/stock-entries/{uuid}": {
         parameters: {
             query?: never;
@@ -12731,7 +12771,7 @@ export interface paths {
         put?: never;
         /**
          * Add a stock unit to a service (by barcode)
-         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts. TEC-1221 (kredili kod): a serial piece unit takes one usage credit per service (finish_product takes all the rest) and may sit in several open services while it has credits; with none left it is 409 UNIT_CREDITS_EXHAUSTED, twice in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or cancelling the service gives the credits back; completion consumes the unit only when its last credit is used and no other open service holds it.
+         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts. TEC-1221 (kredili kod): a serial piece unit takes one usage credit per service (finish_product takes all the rest) and may sit in several open services while it has credits; with none left it is 409 UNIT_CREDITS_EXHAUSTED, twice in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or cancelling the service gives the credits back; completion consumes the unit only when its last credit is used and no other open service holds it. TEC-1230: a partial cut shorter than the product's `min_cut_meters` answers 422 SERVICE_ITEM_BELOW_MIN_CUT unless it takes the whole rest of the roll (a remnant).
          */
         post: operations["addServiceItem"];
         delete?: never;
@@ -23906,6 +23946,8 @@ export interface components {
             /** @description Roll length (decimal string, 2 places) */
             initial_meters: string | null;
             remaining_meters: string | null;
+            /** @description TEC-1230: a roll with meters left but fewer than the product's minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle"). */
+            remnant?: boolean;
             product: {
                 /** Format: uuid */
                 uuid: string;
@@ -24796,6 +24838,30 @@ export interface components {
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
         };
+        StockEntrySuggestedLocation: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            full_code: string | null;
+            name: string;
+            /** @description What the location already holds of the product (null for an empty location) */
+            quantity: number | null;
+        };
+        StockEntryPlacementSuggestions: {
+            products: {
+                product: {
+                    /** Format: uuid */
+                    uuid: string;
+                    sku: string;
+                    name: string;
+                };
+                locations: components["schemas"]["StockEntrySuggestedLocation"][];
+            }[];
+            empty_locations: components["schemas"]["StockEntrySuggestedLocation"][];
+        };
+        EnvelopeStockEntryPlacementSuggestions: {
+            data: components["schemas"]["StockEntryPlacementSuggestions"];
+        };
         EnvelopeStockEntry: {
             /** @enum {boolean} */
             success: true;
@@ -25259,6 +25325,8 @@ export interface components {
             remaining_meters: string;
             /** @description Label print endpoint of the unit (TEC-202; set on the new unit of a split) */
             label_url?: string;
+            /** @description TEC-1230: meters are left but fewer than the product's minimum cut (a remnant, "ragle"). */
+            remnant?: boolean;
         };
         StockSplit: {
             /** Format: uuid */
@@ -30561,11 +30629,17 @@ export interface components {
             show_code_text: boolean;
             is_default: boolean;
             active: boolean;
+            output_format: components["schemas"]["LabelOutputFormat"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description TEC-1230: `sheet` is the A4 grid PDF (default); `single` is a PDF with one label per page, the page being the label size (thermal printers, e.g. 50x30, 100x50, 100x150 mm); `zpl` is Zebra ZPL II text for 203 dpi printers (one ^XA..^XZ block per label, an image logo is left out). The print endpoints answer `application/pdf` or, for zpl, `application/vnd.zebra.zpl` as a `.zpl` attachment.
+         * @enum {string}
+         */
+        LabelOutputFormat: "sheet" | "single" | "zpl";
         LabelTemplateInput: {
             name: string;
             /** @description Create only (default unit); ignored on update */
@@ -30590,6 +30664,8 @@ export interface components {
             show_code_text?: boolean;
             is_default?: boolean;
             active?: boolean;
+            /** @description Empty keeps the current format (sheet on create) */
+            output_format?: components["schemas"]["LabelOutputFormat"];
         };
         BarcodeBatchInput: {
             /** Format: uuid */
@@ -44412,6 +44488,8 @@ export interface operations {
                 updated_to?: components["parameters"]["UpdatedTo"];
                 /** @description TEC-1078: list the split family of this barcode (the roll and every part cut from it) instead of the on-hand units. */
                 family?: string;
+                /** @description TEC-1230: `true` keeps only remnants (rolls with meters left but fewer than the product's `min_cut_meters`, "ragle"), `false` leaves them out. Searches Postgres, not the index. */
+                remnant?: boolean;
             };
             header?: never;
             path: {
@@ -45965,6 +46043,7 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                    "application/vnd.zebra.zpl": string;
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -46136,6 +46215,7 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                    "application/vnd.zebra.zpl": string;
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -46174,6 +46254,7 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                    "application/vnd.zebra.zpl": string;
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -46677,6 +46758,32 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getStockEntryPlacementSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suggestions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryPlacementSuggestions"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -52476,6 +52583,35 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntryPlacementSuggestions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suggestions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryPlacementSuggestions"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     mobileGetStockEntry: {
