@@ -18,7 +18,8 @@ export type WarehouseUnitListQuery = Record<
 export type Warehouse = Schemas["Warehouse"];
 export type StockEntryPlacementSuggestions =
   Schemas["StockEntryPlacementSuggestions"];
-export type StockEntrySuggestedLocation = Schemas["StockEntrySuggestedLocation"];
+export type StockEntrySuggestedLocation =
+  Schemas["StockEntrySuggestedLocation"];
 export type WarehouseInput = Schemas["WarehouseInput"];
 export type WarehousePatch = Schemas["WarehousePatch"];
 export type WarehouseRoom = Schemas["WarehouseRoom"];
