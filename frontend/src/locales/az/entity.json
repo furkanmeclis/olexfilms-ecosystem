@@ -47,5 +47,22 @@
   "related.empty.service": "Xidmət yoxdur.",
   "related.empty.warranty": "Zəmanət yoxdur.",
   "related.empty.order": "Sifariş yoxdur.",
-  "related.empty.task": "Tapşırıq yoxdur."
+  "related.empty.task": "Tapşırıq yoxdur.",
+  "related.columns.temperature": "Temperatur",
+  "related.columns.follow_up": "İzləmə",
+  "related.columns.measured_at": "Ölçmə tarixi",
+  "related.columns.starts_at": "Başlanğıc",
+  "related.columns.service": "Xidmət",
+  "related.empty.lead": "Lead yoxdur.",
+  "related.empty.measurement": "Ölçmə yoxdur.",
+  "related.empty.appointment": "Görüş yoxdur.",
+  "related.empty.contract": "Müqavilə yoxdur.",
+  "related.section_title": "Əlaqəli qeydlər",
+  "related.tabs.service": "Xidmətlər",
+  "related.tabs.warranty": "Zəmanətlər",
+  "related.tabs.appointment": "Görüşlər",
+  "related.tabs.lead": "Lead-lər",
+  "related.tabs.measurement": "Ölçmələr",
+  "related.tabs.contract": "Müqavilələr",
+  "related.columns.subject": "Mövzu"
 }

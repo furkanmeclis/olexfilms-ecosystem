@@ -47,5 +47,22 @@
   "related.empty.service": "Няма услуги.",
   "related.empty.warranty": "Няма гаранции.",
   "related.empty.order": "Няма поръчки.",
-  "related.empty.task": "Няма задачи."
+  "related.empty.task": "Няма задачи.",
+  "related.columns.temperature": "Температура",
+  "related.columns.follow_up": "Проследяване",
+  "related.columns.measured_at": "Измерено",
+  "related.columns.starts_at": "Начало",
+  "related.columns.service": "Услуга",
+  "related.empty.lead": "Няма лийдове.",
+  "related.empty.measurement": "Няма измервания.",
+  "related.empty.appointment": "Няма часове.",
+  "related.empty.contract": "Няма договори.",
+  "related.section_title": "Свързани записи",
+  "related.tabs.service": "Услуги",
+  "related.tabs.warranty": "Гаранции",
+  "related.tabs.appointment": "Часове",
+  "related.tabs.lead": "Лийдове",
+  "related.tabs.measurement": "Измервания",
+  "related.tabs.contract": "Договори",
+  "related.columns.subject": "Предмет"
 }

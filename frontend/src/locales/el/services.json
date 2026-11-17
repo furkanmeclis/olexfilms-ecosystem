@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Σε αναμονή, σε επεξεργασία, έτοιμες · {{draft}} πρόχειρα",
   "list.stats.completed": "Ολοκληρωμένες",
   "list.stats.active_warranties": "Ενεργές εγγυήσεις",
-  "list.stats.warranties_hint": "Σύνολο {{total}} εγγυήσεις"
+  "list.stats.warranties_hint": "Σύνολο {{total}} εγγυήσεις",
+  "detail.created_by": "Δημιουργήθηκε από",
+  "detail.performed_by": "Εκτελέστηκε από",
+  "detail.completed_by": "Ολοκληρώθηκε από",
+  "detail.cancelled_by": "Ακυρώθηκε από"
 }

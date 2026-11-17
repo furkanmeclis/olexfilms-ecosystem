@@ -47,5 +47,22 @@
   "related.empty.service": "Nessun servizio.",
   "related.empty.warranty": "Nessuna garanzia.",
   "related.empty.order": "Nessun ordine.",
-  "related.empty.task": "Nessuna attività."
+  "related.empty.task": "Nessuna attività.",
+  "related.columns.temperature": "Temperatura",
+  "related.columns.follow_up": "Follow-up",
+  "related.columns.measured_at": "Misurato",
+  "related.columns.starts_at": "Inizio",
+  "related.columns.service": "Servizio",
+  "related.empty.lead": "Nessun lead.",
+  "related.empty.measurement": "Nessuna misurazione.",
+  "related.empty.appointment": "Nessun appuntamento.",
+  "related.empty.contract": "Nessun contratto.",
+  "related.section_title": "Record collegati",
+  "related.tabs.service": "Servizi",
+  "related.tabs.warranty": "Garanzie",
+  "related.tabs.appointment": "Appuntamenti",
+  "related.tabs.lead": "Lead",
+  "related.tabs.measurement": "Misurazioni",
+  "related.tabs.contract": "Contratti",
+  "related.columns.subject": "Oggetto"
 }

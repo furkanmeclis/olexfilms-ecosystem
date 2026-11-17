@@ -157,6 +157,11 @@ export const routes = {
     dealers: {
       list: (slug: string) => `/t/${slug}/dealers`,
     },
+    /** TEC-1217: organization (dealer / distributor) detail with tabs. */
+    organizations: {
+      detail: (slug: string, uuid: string, tab?: string) =>
+        `/t/${slug}/organizations/${uuid}${tab ? `?tab=${tab}` : ""}`,
+    },
     orders: {
       list: (slug: string) => `/t/${slug}/orders`,
       create: (slug: string) => `/t/${slug}/orders/new`,
@@ -610,6 +615,7 @@ const TENANT_ENTITY_ROUTES: Partial<Record<EntityKind, TenantEntityRoute>> = {
   product: routes.tenant.catalog.product,
   stock_unit: routes.tenant.stock.unit,
   transfer: routes.tenant.transfers.detail,
+  organization: (slug, id) => routes.tenant.organizations.detail(slug, id),
   lead: routes.tenant.leads.detail,
   task: routes.tenant.tasks.detail,
   measurement: routes.tenant.measurements.detail,

@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Gözləyən, emalda, hazır · {{draft}} qaralama",
   "list.stats.completed": "Tamamlanan",
   "list.stats.active_warranties": "Aktiv zəmanət",
-  "list.stats.warranties_hint": "Cəmi {{total}} zəmanət"
+  "list.stats.warranties_hint": "Cəmi {{total}} zəmanət",
+  "detail.created_by": "Yaradan",
+  "detail.performed_by": "İcra edən",
+  "detail.completed_by": "Tamamlayan",
+  "detail.cancelled_by": "Ləğv edən"
 }

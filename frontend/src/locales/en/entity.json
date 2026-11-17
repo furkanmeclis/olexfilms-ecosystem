@@ -47,5 +47,22 @@
   "related.empty.service": "No services.",
   "related.empty.warranty": "No warranties.",
   "related.empty.order": "No orders.",
-  "related.empty.task": "No tasks."
+  "related.empty.task": "No tasks.",
+  "related.columns.temperature": "Temperature",
+  "related.columns.follow_up": "Follow-up",
+  "related.columns.measured_at": "Measured",
+  "related.columns.starts_at": "Starts",
+  "related.columns.service": "Service",
+  "related.empty.lead": "No leads.",
+  "related.empty.measurement": "No measurements.",
+  "related.empty.appointment": "No appointments.",
+  "related.empty.contract": "No contracts.",
+  "related.section_title": "Related records",
+  "related.tabs.service": "Services",
+  "related.tabs.warranty": "Warranties",
+  "related.tabs.appointment": "Appointments",
+  "related.tabs.lead": "Leads",
+  "related.tabs.measurement": "Measurements",
+  "related.tabs.contract": "Contracts",
+  "related.columns.subject": "Subject"
 }

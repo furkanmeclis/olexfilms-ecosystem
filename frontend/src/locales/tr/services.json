@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Bekleyen, işlemde, hazır · {{draft}} taslak",
   "list.stats.completed": "Tamamlanan",
   "list.stats.active_warranties": "Aktif garanti",
-  "list.stats.warranties_hint": "Toplam {{total}} garanti"
+  "list.stats.warranties_hint": "Toplam {{total}} garanti",
+  "detail.created_by": "Oluşturan",
+  "detail.performed_by": "Uygulayan",
+  "detail.completed_by": "Tamamlayan",
+  "detail.cancelled_by": "İptal eden"
 }

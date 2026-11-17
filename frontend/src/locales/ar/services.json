@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "معلقة، قيد المعالجة، جاهزة · {{draft}} مسودات",
   "list.stats.completed": "المكتملة",
   "list.stats.active_warranties": "الضمانات النشطة",
-  "list.stats.warranties_hint": "إجمالي {{total}} ضمانات"
+  "list.stats.warranties_hint": "إجمالي {{total}} ضمانات",
+  "detail.created_by": "أنشأه",
+  "detail.performed_by": "نفّذه",
+  "detail.completed_by": "أكمله",
+  "detail.cancelled_by": "ألغاه"
 }

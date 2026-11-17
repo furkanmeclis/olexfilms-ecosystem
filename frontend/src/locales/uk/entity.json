@@ -47,5 +47,22 @@
   "related.empty.service": "Немає послуг.",
   "related.empty.warranty": "Немає гарантій.",
   "related.empty.order": "Немає замовлень.",
-  "related.empty.task": "Немає завдань."
+  "related.empty.task": "Немає завдань.",
+  "related.columns.temperature": "Температура",
+  "related.columns.follow_up": "Контроль",
+  "related.columns.measured_at": "Дата вимірювання",
+  "related.columns.starts_at": "Початок",
+  "related.columns.service": "Послуга",
+  "related.empty.lead": "Немає лідів.",
+  "related.empty.measurement": "Немає вимірювань.",
+  "related.empty.appointment": "Немає записів.",
+  "related.empty.contract": "Немає договорів.",
+  "related.section_title": "Пов'язані записи",
+  "related.tabs.service": "Послуги",
+  "related.tabs.warranty": "Гарантії",
+  "related.tabs.appointment": "Записи",
+  "related.tabs.lead": "Ліди",
+  "related.tabs.measurement": "Вимірювання",
+  "related.tabs.contract": "Договори",
+  "related.columns.subject": "Предмет"
 }

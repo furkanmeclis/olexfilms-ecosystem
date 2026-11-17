@@ -4,9 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Store, ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
-import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityLink,
+  EntityTable,
+} from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
 import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
@@ -38,6 +43,7 @@ export function dealerOrdersHref(slug: string, uuid: string): string {
 export function DealerDirectoryPage({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { can } = usePermission();
+  const router = useRouter();
   const org = useActiveOrganization(slug);
   const canOrders = can(permissions.orders.read);
   const list = useQuery({
@@ -63,7 +69,7 @@ export function DealerDirectoryPage({ slug }: { slug: string }) {
           gridPrimary: true,
           cell: ({ row }) => (
             <span className="font-medium" data-testid="dealer-directory-row">
-              {row.original.name}
+              <EntityLink kind="organization" entity={row.original} />
             </span>
           ),
         }),
@@ -161,6 +167,9 @@ export function DealerDirectoryPage({ slug }: { slug: string }) {
         data={rows}
         getRowId={(row) => row.uuid}
         manual={CLIENT_SIDE_MANUAL}
+        onRowClick={(row) =>
+          router.push(routes.tenant.organizations.detail(slug, row.uuid))
+        }
         isLoading={list.isLoading}
         isError={list.isError}
         onRetry={() => void list.refetch()}

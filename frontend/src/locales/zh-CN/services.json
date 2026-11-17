@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "待处理、处理中、已就绪 · {{draft}} 个草稿",
   "list.stats.completed": "已完成",
   "list.stats.active_warranties": "有效质保",
-  "list.stats.warranties_hint": "共 {{total}} 份质保"
+  "list.stats.warranties_hint": "共 {{total}} 份质保",
+  "detail.created_by": "创建人",
+  "detail.performed_by": "施工人",
+  "detail.completed_by": "完成人",
+  "detail.cancelled_by": "取消人"
 }

@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Pending, processing, ready · {{draft}} drafts",
   "list.stats.completed": "Completed",
   "list.stats.active_warranties": "Active warranties",
-  "list.stats.warranties_hint": "{{total}} warranties in total"
+  "list.stats.warranties_hint": "{{total}} warranties in total",
+  "detail.created_by": "Created by",
+  "detail.performed_by": "Performed by",
+  "detail.completed_by": "Completed by",
+  "detail.cancelled_by": "Cancelled by"
 }

@@ -38,7 +38,7 @@ type ColumnCtx = { t: Translate; format: Formatter };
  */
 export type RelatedListSpec<T extends Row = Row> = {
   path: string;
-  defaultSort: string;
+  defaultSort: string | null;
   /** Column ids a caller may hide (e.g. `customer` on the customer page). */
   columns: (ctx: ColumnCtx) => ColumnDef<T, unknown>[];
   emptyKey: string;
@@ -294,6 +294,203 @@ const taskSpec: RelatedListSpec<Schemas["Task"]> = {
   ],
 };
 
+const leadSpec: RelatedListSpec<Schemas["Lead"]> = {
+  path: "/v1/leads",
+  defaultSort: "-created_at",
+  emptyKey: "entity.related.empty.lead",
+  columns: ({ t, format }) => [
+    createColumn<Schemas["Lead"], unknown>({
+      accessorKey: "created_at",
+      labelKey: "entity.related.columns.created_at",
+      enableSorting: true,
+      gridPrimary: true,
+      cell: ({ row }) => (
+        <EntityLink
+          kind="lead"
+          entity={{
+            uuid: row.original.uuid,
+            name: format.date(row.original.created_at),
+          }}
+        />
+      ),
+    }),
+    createColumn<Schemas["Lead"], unknown>({
+      accessorKey: "status",
+      labelKey: "entity.related.columns.status",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <StatusChip label={t(`leads.status.${row.original.status}`)} />
+      ),
+    }),
+    createColumn<Schemas["Lead"], unknown>({
+      accessorKey: "temperature",
+      labelKey: "entity.related.columns.temperature",
+      enableSorting: true,
+      cell: ({ row }) => t(`leads.temperature.${row.original.temperature}`),
+    }),
+    dateColumn<Schemas["Lead"]>(
+      "follow_up_date",
+      "entity.related.columns.follow_up",
+      (row) => row.follow_up_date,
+      format,
+    ),
+  ],
+};
+
+const measurementSpec: RelatedListSpec<Schemas["MeasurementSummary"]> = {
+  path: "/v1/measurements",
+  defaultSort: "-measured_at",
+  emptyKey: "entity.related.empty.measurement",
+  columns: ({ t, format }) => [
+    createColumn<Schemas["MeasurementSummary"], unknown>({
+      id: "measured_at",
+      accessorFn: (row) => row.measured_at ?? row.created_at,
+      labelKey: "entity.related.columns.measured_at",
+      enableSorting: true,
+      gridPrimary: true,
+      cell: ({ row }) => (
+        <EntityLink
+          kind="measurement"
+          entity={{
+            uuid: row.original.uuid,
+            name: format.date(
+              row.original.measured_at ?? row.original.created_at,
+            ),
+          }}
+        />
+      ),
+    }),
+    createColumn<Schemas["MeasurementSummary"], unknown>({
+      accessorKey: "status",
+      labelKey: "entity.related.columns.status",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <StatusChip
+          label={t(`measurements.status.${row.original.status}`)}
+          tone={row.original.status === "vin_pending" ? "warning" : "default"}
+        />
+      ),
+    }),
+    createColumn<Schemas["MeasurementSummary"], unknown>({
+      accessorKey: "plate",
+      labelKey: "entity.related.columns.vehicle",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs" dir="ltr">
+          {row.original.plate || row.original.vin || "—"}
+        </span>
+      ),
+    }),
+  ],
+};
+
+const appointmentSpec: RelatedListSpec<Schemas["Appointment"]> = {
+  path: "/v1/appointments",
+  // GET /v1/appointments has no sort whitelist: server order.
+  defaultSort: null,
+  emptyKey: "entity.related.empty.appointment",
+  columns: ({ t, format }) => [
+    createColumn<Schemas["Appointment"], unknown>({
+      accessorKey: "starts_at",
+      labelKey: "entity.related.columns.starts_at",
+      enableSorting: false,
+      gridPrimary: true,
+      cell: ({ row }) => format.dateTime(row.original.starts_at),
+    }),
+    createColumn<Schemas["Appointment"], unknown>({
+      accessorKey: "status",
+      labelKey: "entity.related.columns.status",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <StatusChip label={t(`appointments.status.${row.original.status}`)} />
+      ),
+    }),
+    refColumn<Schemas["Appointment"]>({
+      id: "vehicle",
+      kind: "vehicle",
+      labelKey: "entity.related.columns.vehicle",
+      getRef: (row) =>
+        row.vehicle_uuid
+          ? {
+              uuid: row.vehicle_uuid,
+              name: row.vehicle_plate || row.vehicle_label || null,
+            }
+          : null,
+    }) as ColumnDef<Schemas["Appointment"], unknown>,
+    refColumn<Schemas["Appointment"]>({
+      id: "service",
+      kind: "service",
+      labelKey: "entity.related.columns.service",
+      getRef: (row) =>
+        row.service_uuid
+          ? { uuid: row.service_uuid, name: t("entity.kinds.service") }
+          : null,
+    }) as ColumnDef<Schemas["Appointment"], unknown>,
+  ],
+};
+
+const contractSpec: RelatedListSpec<Schemas["ContractListItem"]> = {
+  path: "/v1/contracts",
+  defaultSort: "-created_at",
+  emptyKey: "entity.related.empty.contract",
+  columns: ({ t, format }) => [
+    createColumn<Schemas["ContractListItem"], unknown>({
+      accessorKey: "contract_no",
+      labelKey: "entity.related.columns.number",
+      enableSorting: true,
+      gridPrimary: true,
+      cell: ({ row }) => (
+        <EntityLink
+          kind="contract"
+          entity={{
+            uuid: row.original.uuid,
+            name: String(row.original.contract_no),
+          }}
+          className="font-mono"
+        />
+      ),
+    }),
+    createColumn<Schemas["ContractListItem"], unknown>({
+      accessorKey: "status",
+      labelKey: "entity.related.columns.status",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <StatusChip
+          label={t(`services.contract.status.${row.original.status}`)}
+        />
+      ),
+    }),
+    createColumn<Schemas["ContractListItem"], unknown>({
+      id: "subject",
+      accessorFn: (row) => row.subject?.name ?? "",
+      labelKey: "entity.related.columns.subject",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const subject = row.original.subject;
+        if (!subject) return "—";
+        return (
+          <EntityLink
+            kind={subject.kind === "subscription" ? "subscription" : "service"}
+            entity={subject}
+          />
+        );
+      },
+    }),
+    refColumn<Schemas["ContractListItem"]>({
+      id: "organization",
+      kind: "organization",
+      labelKey: "entity.related.columns.organization",
+      getRef: (row) => row.organization,
+    }) as ColumnDef<Schemas["ContractListItem"], unknown>,
+    dateColumn<Schemas["ContractListItem"]>(
+      "created_at",
+      "entity.related.columns.created_at",
+      (row) => row.created_at,
+      format,
+    ),
+  ],
+};
+
 /**
  * TEC-1217: kinds `RelatedList` can show. Add a kind here when its list
  * endpoint gains the reverse filter you need (TEC-1216).
@@ -304,6 +501,10 @@ export const RELATED_LIST_SPECS: Partial<Record<EntityKind, RelatedListSpec>> =
     warranty: warrantySpec as unknown as RelatedListSpec,
     order: orderSpec as unknown as RelatedListSpec,
     task: taskSpec as unknown as RelatedListSpec,
+    lead: leadSpec as unknown as RelatedListSpec,
+    measurement: measurementSpec as unknown as RelatedListSpec,
+    appointment: appointmentSpec as unknown as RelatedListSpec,
+    contract: contractSpec as unknown as RelatedListSpec,
   };
 
 export type RelatedListProps = {

@@ -47,5 +47,22 @@
   "related.empty.service": "Aucune prestation.",
   "related.empty.warranty": "Aucune garantie.",
   "related.empty.order": "Aucune commande.",
-  "related.empty.task": "Aucune tâche."
+  "related.empty.task": "Aucune tâche.",
+  "related.columns.temperature": "Température",
+  "related.columns.follow_up": "Relance",
+  "related.columns.measured_at": "Mesuré le",
+  "related.columns.starts_at": "Début",
+  "related.columns.service": "Prestation",
+  "related.empty.lead": "Aucun prospect.",
+  "related.empty.measurement": "Aucune mesure.",
+  "related.empty.appointment": "Aucun rendez-vous.",
+  "related.empty.contract": "Aucun contrat.",
+  "related.section_title": "Enregistrements liés",
+  "related.tabs.service": "Prestations",
+  "related.tabs.warranty": "Garanties",
+  "related.tabs.appointment": "Rendez-vous",
+  "related.tabs.lead": "Prospects",
+  "related.tabs.measurement": "Mesures",
+  "related.tabs.contract": "Contrats",
+  "related.columns.subject": "Objet"
 }

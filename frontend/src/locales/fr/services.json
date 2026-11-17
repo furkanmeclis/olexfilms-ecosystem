@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "En attente, en traitement, prêts · {{draft}} brouillons",
   "list.stats.completed": "Terminés",
   "list.stats.active_warranties": "Garanties actives",
-  "list.stats.warranties_hint": "{{total}} garanties au total"
+  "list.stats.warranties_hint": "{{total}} garanties au total",
+  "detail.created_by": "Créé par",
+  "detail.performed_by": "Réalisé par",
+  "detail.completed_by": "Terminé par",
+  "detail.cancelled_by": "Annulé par"
 }
