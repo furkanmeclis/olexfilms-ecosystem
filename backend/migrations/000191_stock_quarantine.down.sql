@@ -4,7 +4,7 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM stock_movements WHERE type IN ('quarantine', 'quarantine_release', 'found'))
        OR EXISTS (SELECT 1 FROM units WHERE status = 'quarantine') THEN
-        RAISE EXCEPTION '000184 down: quarantine/found movements exist';
+        RAISE EXCEPTION '000191 down: quarantine/found movements exist';
     END IF;
 END $$;
 
