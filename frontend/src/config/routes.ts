@@ -273,8 +273,7 @@ export const routes = {
     appointments: {
       calendar: (slug: string) => `/t/${slug}/appointments`,
       /** TEC-1218: one appointment with its customer / vehicle / service. */
-      detail: (slug: string, uuid: string) =>
-        `/t/${slug}/appointments/${uuid}`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/appointments/${uuid}`,
       /** TEC-328: network occupancy (center / distributor). */
       occupancy: (slug: string) => `/t/${slug}/appointments/occupancy`,
       /** TEC-328: read-only calendar of one organization of the network. */
