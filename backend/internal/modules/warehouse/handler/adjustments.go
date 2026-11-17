@@ -26,7 +26,6 @@ const (
 	CodeAdjustmentUnit          = "ADJUSTMENT_UNIT_NOT_ALLOWED"
 	CodeAdjustmentUnitBusy      = "ADJUSTMENT_UNIT_BUSY"
 	CodeAdjustmentStale         = "ADJUSTMENT_STALE"
-	CodeStorageUnavailable      = "STORAGE_UNAVAILABLE"
 	CodeNotQuarantined          = "UNIT_NOT_QUARANTINED"
 )
 
