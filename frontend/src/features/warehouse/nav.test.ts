@@ -34,6 +34,10 @@ describe("tenant nav: warehouse (TEC-231)", () => {
       routes.tenant.warehouse.barcodes("acme"),
       routes.tenant.warehouse.transfers("acme"),
       routes.tenant.warehouse.counts("acme"),
+      routes.tenant.warehouse.returns("acme"),
+      routes.tenant.warehouse.adjustments("acme"),
+      routes.tenant.warehouse.movements("acme"),
+      routes.tenant.warehouse.reorder("acme"),
       routes.tenant.warehouse.endOfDay("acme"),
     ]);
   });

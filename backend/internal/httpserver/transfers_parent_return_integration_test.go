@@ -189,8 +189,8 @@ func TestIntegrationParentReturnLinkedToOrder(t *testing.T) {
 		t.Fatalf("one-step receipt = %+v", v)
 	}
 	st, err := it.q.GetUnitCurrentState(ctx, c.rolls[0].ID)
-	if err != nil || st.HolderOrgID != c.dist.ID || st.Status != "available" {
-		t.Fatalf("returned roll = %+v, %v", st, err)
+	if err != nil || st.HolderOrgID != c.dist.ID || st.Status != "quarantine" {
+		t.Fatalf("returned roll = %+v, %v (want quarantine, TEC-1226)", st, err)
 	}
 	if n := returnRows(r1.UUID); n != 2 {
 		t.Fatalf("stock_return rows = %d, want 2", n)
@@ -235,6 +235,13 @@ func TestIntegrationParentReturnLinkedToOrder(t *testing.T) {
 	move(c.distTok, r3.UUID, "received")
 	if n := returnRows(r3.UUID); n != 2 {
 		t.Fatalf("stock_return rows of the shipped return = %d, want 2", n)
+	}
+	// TEC-1226: both returned rolls wait for inspection, then go back on stock.
+	if got := c.stockOf(c.distTok, c.dist); got != 0 {
+		t.Fatalf("distributor stock while quarantined = %d, want 0", got)
+	}
+	for _, u := range c.rolls {
+		it.restockReturn(c.distTok, u.Barcode)
 	}
 	if got := c.stockOf(c.distTok, c.dist); got != 2 {
 		t.Fatalf("distributor stock = %d, want 2", got)

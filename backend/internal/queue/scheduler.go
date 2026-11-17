@@ -82,6 +82,8 @@ func Schedules() []Periodic {
 		{Cron: stockForecastDailyCron, Type: TaskStockForecastDaily, Queue: QueueLow, Opts: stockForecastDailyOpts(), New: func() (*asynq.Task, error) {
 			return NewStockForecastDailyTask(0, time.Time{})
 		}},
+		// TEC-1229: hourly warehouse low stock check (reorder rules).
+		{Cron: stockReorderCheckCron, Type: TaskStockReorderCheck, Queue: QueueLow, Opts: stockReorderCheckOpts(), New: NewStockReorderCheckTask},
 		// TEC-491: hourly gate; each performance-enabled org computes once at local 03:00.
 		{Cron: performanceDailyCron, Type: TaskPerformanceDaily, Queue: QueueLow, Opts: performanceDailyOpts(), New: func() (*asynq.Task, error) {
 			return NewPerformanceDailyTask(0, time.Time{})

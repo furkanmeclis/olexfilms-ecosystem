@@ -121,6 +121,7 @@ describe("EntryLinesTable (TEC-376)", () => {
       "quantity",
       "meters",
       "lot",
+      "production_date",
       "box_no",
       "scanned",
       "location",

@@ -588,6 +588,9 @@ var eventNames = map[MovementType]string{
 	TypeVoid:                  events.StockVoid,
 	TypeExternalOutbound:      events.StockExternalOutbound,
 	TypeSplit:                 events.StockSplit,
+	TypeQuarantine:            events.StockQuarantine,
+	TypeQuarantineRelease:     events.StockQuarantineRelease,
+	TypeFound:                 events.StockFound,
 }
 
 // EventName is the outbox event of a movement type.

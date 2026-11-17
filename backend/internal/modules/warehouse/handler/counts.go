@@ -110,6 +110,9 @@ type countResolutionBody struct {
 
 type countApproveBody struct {
 	Resolutions []countResolutionBody `json:"resolutions"`
+	// Partial (TEC-1229): resolve only the given lines; the count stays
+	// pending_review while a difference is open.
+	Partial bool `json:"partial"`
 }
 
 // List (GET /v1/warehouse/stock-counts?status&method&visibility&scope_type&warehouse_uuid&created_from&created_to&q&sort&limit&offset).
@@ -245,8 +248,61 @@ func (h *Counts) Approve(w http.ResponseWriter, r *http.Request) {
 	for _, x := range b.Resolutions {
 		in = append(in, wh.CountResolution{LineUUID: x.LineUUID, Resolution: x.Resolution, Note: x.Note})
 	}
-	v, err := h.svc.Approve(r.Context(), countCaller(r), id, in)
+	approve := h.svc.Approve
+	if b.Partial {
+		approve = h.svc.ApprovePartial
+	}
+	v, err := approve(r.Context(), countCaller(r), id, in)
 	if err != nil {
+		writeCountError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+// RequestRecount (POST /v1/warehouse/stock-counts/{uuid}/recount-requests,
+// TEC-1229): sends difference lines back for a recount.
+func (h *Counts) RequestRecount(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var b struct {
+		LineUUIDs []string `json:"line_uuids"`
+	}
+	if !decode(w, r, &b) {
+		return
+	}
+	v, err := h.svc.RequestRecount(r.Context(), countCaller(r), id, b.LineUUIDs)
+	if err != nil {
+		writeCountError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+// Recount (POST /v1/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount,
+// TEC-1229): records the recounted values of a line.
+func (h *Counts) Recount(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	lineID, err := uuid.Parse(r.PathValue("line_uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "line_uuid is invalid")
+		return
+	}
+	var b wh.CountRecountInput
+	if !decode(w, r, &b) {
+		return
+	}
+	v, err := h.svc.Recount(r.Context(), countCaller(r), id, lineID, b)
+	if err != nil {
+		if errors.Is(err, wh.ErrCountLineNotFound) {
+			response.Error(w, r, http.StatusNotFound, CodeCountNotFound, "Stock count line not found")
+			return
+		}
 		writeCountError(w, r, err)
 		return
 	}

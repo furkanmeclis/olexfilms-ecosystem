@@ -15,8 +15,14 @@ export { EodReportsPage } from "./components/eod-reports-page";
 export { TransferDetailPage } from "./components/transfer-detail-page";
 export { TransfersPage } from "./components/transfers-page";
 export { WarehouseSettingsPage } from "./components/warehouse-settings-page";
+// TEC-1226
+export { AdjustmentDetailPage } from "./components/adjustment-detail-page";
+export { AdjustmentsPage } from "./components/adjustments-page";
+export { ReturnInspectionsPage } from "./components/return-inspections-page";
 export {
   WarehouseDashboard,
   WarehouseDashboardBody,
 } from "./components/warehouse-dashboard";
 export { isWarehouseHomeRole } from "./lib/home-role";
+// TEC-1229
+export { ReorderRulesPage, StockMovementsPage } from "./components/stock-view";

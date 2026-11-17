@@ -142,6 +142,15 @@ export function EntryLinesTable({
           cell: ({ row }) => row.original.lot ?? "—",
         }),
         createColumn<StockEntryLine>({
+          id: "production_date",
+          accessorFn: (l) => l.production_date ?? "",
+          labelKey: "warehouse.fields.production_date",
+          cell: ({ row }) =>
+            row.original.production_date
+              ? format.date(row.original.production_date)
+              : "—",
+        }),
+        createColumn<StockEntryLine>({
           id: "box_no",
           accessorFn: (l) => l.box_no ?? "",
           labelKey: "warehouse.fields.box_no",

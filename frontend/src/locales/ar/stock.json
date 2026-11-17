@@ -152,6 +152,7 @@
   "status.in_transit": "قيد النقل",
   "status.used": "مستخدمة",
   "status.void": "ملغاة",
+  "status.quarantine": "بانتظار الفحص",
   "unit_kind.serial": "وحدة تسلسلية",
   "unit_kind.fixed": "باركود ثابت",
   "list.loading": "جارٍ التحميل…",
@@ -310,5 +311,6 @@
   "label_templates.output_format_hint.zpl": "ملف ‎.zpl لطابعات Zebra (203 dpi). لا يُطبع شعار الصورة.",
   "label_templates.form.thermal_sizes": "أحجام شائعة:",
   "columns.remnant": "بقايا",
-  "remnant.badge": "بقايا"
+  "remnant.badge": "بقايا",
+  "bulk.reason.quarantine": "مرتجع بانتظار الفحص"
 }

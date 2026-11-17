@@ -18,6 +18,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { BackorderRows, DiscrepancySection, PartialShipButton, ReceiptCheckSheet } from '@/features/orders/discrepancy';
 
 import { resolveScan } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -95,6 +96,8 @@ export function OrderScreen() {
   const [locationsFor, setLocationsFor] = useState<string | null>(null);
   const [shipping, setShipping] = useState(false);
   const [editing, setEditing] = useState(false);
+  // TEC-1227: the buyer receives through the check sheet (missing / damaged units).
+  const [checking, setChecking] = useState(false);
   const [target, setTarget] = useState<{ uuid: string; code: string } | null>(null);
   const [splitKey] = useState(createRetryKey);
 
@@ -292,6 +295,10 @@ export function OrderScreen() {
           <Field label={t('m.received')} value={formatDate(o.received_at)} />
         </Card>
 
+        {/* TEC-1227: backorder links and the receipt records (no prices). */}
+        <BackorderRows order={o} />
+        <DiscrepancySection order={o} onUpdated={store} />
+
         {/* Seller actions */}
         {seller && canShip ? (
           <View className="gap-2">
@@ -322,6 +329,14 @@ export function OrderScreen() {
                 onPress={() => transition('ready', 'mark_ready')}
               />
             ) : null}
+            {/* TEC-1227: stock short — ship the picked part, the rest becomes a backorder. */}
+            <PartialShipButton
+              order={o}
+              onReady={(next) => {
+                store(next);
+                if (next.available_transitions.includes('shipped')) setShipping(true);
+              }}
+            />
             {/* TEC-1057: lines are fixed before the order is ready (add, change, remove). */}
             {o.can_edit_items ? (
               <Button variant="outline" title={t('orders:edit.button')} icon="edit" onPress={() => setEditing(true)} />
@@ -377,7 +392,7 @@ export function OrderScreen() {
 
         {/* Buyer actions */}
         {!seller && canReceive && can('received') ? (
-          <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => transition('received', 'receive')} />
+          <Button size="lg" title={t('orders.actions.receive.button')} loading={busy === 'receive'} onPress={() => setChecking(true)} />
         ) : null}
         {received && canPlace ? (
           <Card>
@@ -643,6 +658,16 @@ export function OrderScreen() {
         onClose={() => setShipping(false)}
         onShip={(extra) => transition('shipped', 'ship', extra)}
       />
+      {checking && o ? (
+        <ReceiptCheckSheet
+          order={o}
+          onClose={() => setChecking(false)}
+          onDone={(next) => {
+            store(next);
+            void qc.invalidateQueries({ queryKey: ['warehouse', 'orders'] });
+          }}
+        />
+      ) : null}
     </>
   );
 }

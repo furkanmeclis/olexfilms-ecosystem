@@ -20,6 +20,9 @@ const (
 	TableFixedHoldings = "fixed_barcode_holdings"
 	TableBinStocks     = "bin_product_stocks"
 	TableOrgStocks     = "organization_product_stocks"
+	// TableCreditBalances is the unit credit projection (TEC-1221,
+	// checked since TEC-1229).
+	TableCreditBalances = "unit_credit_balances"
 )
 
 const (
@@ -45,6 +48,7 @@ type scanResult struct {
 	unitMeters   []db.SetUnitRemainingMetersForRepairParams
 	binFixes     []db.UpsertBinProductStockForRepairParams
 	orgFixes     []db.UpsertOrganizationProductStockForRepairParams
+	creditFixes  []db.UpsertUnitCreditBalanceForRepairParams
 }
 
 type holdingFix struct {
@@ -83,7 +87,61 @@ func scan(ctx context.Context, q *db.Queries, orgID int64) (*scanResult, error) 
 	if err := sc.stocks(ctx, q, orgID); err != nil {
 		return nil, err
 	}
+	if err := sc.credits(ctx, q, orgID); err != nil {
+		return nil, err
+	}
 	return sc, nil
+}
+
+// credits compares the unit credit balances with the sum of their credit
+// movements (TEC-1229). A balance without any movement is reported as an
+// anomaly and left alone; a balance the movements would make invalid
+// (remaining outside 0..total) too.
+func (sc *scanResult) credits(ctx context.Context, q *db.Queries, orgID int64) error {
+	rows, err := q.ListUnitCreditDrift(ctx, orgID)
+	if err != nil {
+		return fmt.Errorf("rebuild: credit drift: %w", err)
+	}
+	for _, r := range rows {
+		key := fmt.Sprintf("unit=%d", r.UnitID)
+		if !r.HasExpected {
+			sc.anomalies = append(sc.anomalies, fmt.Sprintf("unit %d (%s): credit balance without credit movements", r.UnitID, r.Barcode))
+			continue
+		}
+		if r.ExpectedTotal < 0 || r.ExpectedRemaining < 0 || r.ExpectedRemaining > r.ExpectedTotal || r.ExpectedUsed < 0 {
+			sc.anomalies = append(sc.anomalies, fmt.Sprintf("unit %d (%s): credit movements sum to total %d, remaining %d, used %d",
+				r.UnitID, r.Barcode, r.ExpectedTotal, r.ExpectedRemaining, r.ExpectedUsed))
+			continue
+		}
+		base := Diff{Table: TableCreditBalances, Key: key, UnitID: r.UnitID, Barcode: r.Barcode}
+		if !r.HasActual {
+			d := base
+			d.Field, d.Expected, d.Actual = "row", present, absent
+			sc.diff(d)
+		} else {
+			for _, f := range []struct {
+				field     string
+				exp, have int64
+			}{
+				{"credits_total", int64(r.ExpectedTotal), int64(r.ActualTotal)},
+				{"credits_remaining", int64(r.ExpectedRemaining), int64(r.ActualRemaining)},
+				{"used_count", int64(r.ExpectedUsed), int64(r.ActualUsed)},
+				{"last_movement_id", r.ExpectedLastMovementID, r.ActualLastMovementID},
+			} {
+				if f.exp != f.have {
+					d := base
+					d.Field, d.Expected, d.Actual = f.field, strconv.FormatInt(f.exp, 10), strconv.FormatInt(f.have, 10)
+					sc.diff(d)
+				}
+			}
+		}
+		sc.creditFixes = append(sc.creditFixes, db.UpsertUnitCreditBalanceForRepairParams{
+			UnitID: r.UnitID, OrganizationID: r.OrganizationID, BrandID: r.UnitBrandID,
+			CreditsTotal: r.ExpectedTotal, CreditsRemaining: r.ExpectedRemaining, UsedCount: r.ExpectedUsed,
+			LastMovementID: i8(r.ExpectedLastMovementID),
+		})
+	}
+	return nil
 }
 
 func (sc *scanResult) batch(ctx context.Context, q *db.Queries, ids []int64) error {
@@ -336,6 +394,11 @@ func stockValues(e ledger.StockAmount) (int32, pgtype.Numeric, error) {
 // apply writes the expected rows. Order: unit rows, unit states, holdings,
 // then product stocks (Post's order).
 func (sc *scanResult) apply(ctx context.Context, q *db.Queries) error {
+	for _, p := range sc.creditFixes {
+		if err := q.UpsertUnitCreditBalanceForRepair(ctx, p); err != nil {
+			return fmt.Errorf("rebuild: unit %d credits: %w", p.UnitID, err)
+		}
+	}
 	for _, p := range sc.unitStatus {
 		if err := q.SetUnitStatusForRepair(ctx, p); err != nil {
 			return fmt.Errorf("rebuild: unit %d status: %w", p.ID, err)

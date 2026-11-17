@@ -146,7 +146,11 @@ export function approveBody(
     resolution: StockCountResolution;
   }[] = [];
   const missing: string[] = [];
-  for (const line of linesToResolve(lines)) {
+  for (const line of openLines(lines)) {
+    if (line.recount_status === "requested") {
+      missing.push(line.uuid);
+      continue;
+    }
     const choice = choices[line.uuid] ?? defaultResolution(line) ?? undefined;
     if (choice && line.allowed_resolutions.includes(choice)) {
       resolutions.push({ line_uuid: line.uuid, resolution: choice });
@@ -223,4 +227,35 @@ export function countBody(v: CountFormState) {
     ...(v.scope_type === "product" ? { product_uuid: v.product_uuid } : {}),
     note: v.note.trim() || null,
   };
+}
+
+/** TEC-1229: difference lines not resolved yet (partial approval). */
+export function openLines(lines: StockCountLine[]): StockCountLine[] {
+  return linesToResolve(lines).filter((l) => !l.resolved_at);
+}
+
+/** TEC-1229: a line waiting for its recount. */
+export function waitsForRecount(line: StockCountLine): boolean {
+  return line.recount_status === "requested" && !line.resolved_at;
+}
+
+/**
+ * TEC-1229 partial approval body: the chosen (or default) resolution of
+ * the given open lines; lines waiting for a recount are left out.
+ */
+export function partialApproveBody(
+  lines: StockCountLine[],
+  choices: Record<string, StockCountResolution | undefined>,
+  only: readonly string[],
+): { line_uuid: string; resolution: StockCountResolution }[] {
+  const want = new Set(only);
+  const out: { line_uuid: string; resolution: StockCountResolution }[] = [];
+  for (const line of openLines(lines)) {
+    if (!want.has(line.uuid) || waitsForRecount(line)) continue;
+    const choice = choices[line.uuid] ?? defaultResolution(line) ?? undefined;
+    if (choice && line.allowed_resolutions.includes(choice)) {
+      out.push({ line_uuid: line.uuid, resolution: choice });
+    }
+  }
+  return out;
 }

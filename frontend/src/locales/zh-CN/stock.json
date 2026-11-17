@@ -152,6 +152,7 @@
   "status.in_transit": "在途",
   "status.used": "已使用",
   "status.void": "已作废",
+  "status.quarantine": "待检验",
   "unit_kind.serial": "序列单位",
   "unit_kind.fixed": "固定条码",
   "list.loading": "加载中…",
@@ -310,5 +311,6 @@
   "label_templates.output_format_hint.zpl": "适用于 Zebra 打印机的 .zpl 文件（203 dpi）。不打印图片徽标。",
   "label_templates.form.thermal_sizes": "常用尺寸：",
   "columns.remnant": "余料",
-  "remnant.badge": "余料"
+  "remnant.badge": "余料",
+  "bulk.reason.quarantine": "退货待检验"
 }

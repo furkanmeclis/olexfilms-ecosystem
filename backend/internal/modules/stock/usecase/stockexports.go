@@ -209,6 +209,7 @@ func (x *StockExporter) Adapters() []ioengine.ResourceAdapter {
 		&stockExportAdapter{resource: ResourceLocationStockExport, columns: productStockColumns, build: x.locationStock, x: x},
 		&stockExportAdapter{resource: ResourceUnitHistoryExport, columns: unitHistoryColumns, build: x.unitHistory, x: x},
 		&stockExportAdapter{resource: ResourceBatchesExport, columns: batchColumns, build: x.batchList, x: x},
+		&stockExportAdapter{resource: ResourceMovementsExport, columns: movementColumns, build: x.movements, x: x},
 	}
 }
 

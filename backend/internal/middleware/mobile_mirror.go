@@ -46,6 +46,9 @@ var MobilePanelMirrorPrefixes = []string{
 	// TEC-1216: cross-record detail summaries — the organization summary
 	// (under tenant/organizations above) and the staff user summary.
 	"tenant/users",
+	// TEC-1229: stock forecasts and order drafts (stock_forecast add-on gates
+	// stay on the routes); the critical stock list is under "stock".
+	"stock-forecasts",
 	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
 

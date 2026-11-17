@@ -16,6 +16,8 @@ import { entryApi, wk } from './api';
 import { useCurrentWarehouse } from './context';
 import { alertError, replace } from './format';
 import { Chips } from './parts';
+import { isIsoDate } from './receiving';
+import { DeliveryFields, type DeliveryValue } from './receiving-ui';
 import { WarehouseField } from './warehouse-picker';
 
 /**
@@ -32,14 +34,25 @@ export function EntryNewScreen() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
+  // TEC-1225: the delivery of a container entry (optional).
+  const [delivery, setDelivery] = useState<DeliveryValue>({ supplier: null, container: '', waybill: '', arrival: '' });
   const whId = wh ?? warehouse?.uuid;
 
   const submit = async () => {
     setTried(true);
     if (!whId) return;
+    if (delivery.arrival && !isIsoDate(delivery.arrival)) return;
     setBusy(true);
     try {
-      const x = await entryApi.create({ warehouse_uuid: whId, mode: center ? mode : 'with_existing', note: note.trim() || null });
+      const x = await entryApi.create({
+        warehouse_uuid: whId,
+        mode: center ? mode : 'with_existing',
+        note: note.trim() || null,
+        supplier_uuid: delivery.supplier?.uuid ?? null,
+        container_no: delivery.container.trim() || null,
+        waybill_no: delivery.waybill.trim() || null,
+        arrival_date: delivery.arrival.trim() || null,
+      });
       qc.setQueryData(wk.entry(x.uuid), x);
       void qc.invalidateQueries({ queryKey: ['warehouse', 'entries'] });
       void qc.invalidateQueries({ queryKey: wk.summaries() });
@@ -92,6 +105,8 @@ export function EntryNewScreen() {
           onChange={(w) => setWh(w.uuid)}
           error={tried && !whId ? t('validation.warehouse') : undefined}
         />
+        <Text variant="headline">{t('arrival.title')}</Text>
+        <DeliveryFields value={delivery} onChange={setDelivery} tried={tried} />
         <Input label={t('fields.note')} placeholder={t('placeholder_note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
         <Button size="lg" icon={<Icon name="packageIn" tone="primary-foreground" size={18} />} title={t('entries.create')} loading={busy} onPress={() => void submit()} />
       </Screen>

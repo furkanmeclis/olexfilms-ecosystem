@@ -76,3 +76,59 @@ LIMIT 200;
 
 -- name: UnitCreditsBackfill :one
 SELECT unit_credits_backfill()::int AS opened;
+
+-- name: ListUnitCreditDrift :many
+-- TEC-1229: credit balances that differ from the sum of their movements
+-- (rebuild check). organization_id 0 checks every unit; otherwise the units
+-- with a movement or a balance of the organization. has_expected: the unit
+-- has movements; has_actual: it has a balance row.
+WITH scope AS (
+    SELECT unit_id FROM unit_credit_movements
+    WHERE sqlc.arg(organization_id)::bigint = 0 OR organization_id = sqlc.arg(organization_id)::bigint
+    UNION
+    SELECT unit_id FROM unit_credit_balances
+    WHERE sqlc.arg(organization_id)::bigint = 0 OR organization_id = sqlc.arg(organization_id)::bigint
+), exp AS (
+    SELECT m.unit_id,
+           SUM(m.total_delta)::int AS total, SUM(m.remaining_delta)::int AS remaining,
+           SUM(m.uses_delta)::int AS used, MAX(m.id)::bigint AS last_movement_id,
+           (ARRAY_AGG(m.organization_id ORDER BY m.id))[1]::bigint AS organization_id,
+           MAX(m.brand_id)::bigint AS brand_id
+    FROM unit_credit_movements m
+    WHERE m.unit_id IN (SELECT unit_id FROM scope)
+    GROUP BY m.unit_id
+)
+SELECT s.unit_id::bigint AS unit_id, u.barcode, u.brand_id AS unit_brand_id,
+       (e.unit_id IS NOT NULL)::bool AS has_expected,
+       (b.unit_id IS NOT NULL)::bool AS has_actual,
+       COALESCE(e.total, 0)::int AS expected_total,
+       COALESCE(e.remaining, 0)::int AS expected_remaining,
+       COALESCE(e.used, 0)::int AS expected_used,
+       COALESCE(e.last_movement_id, 0)::bigint AS expected_last_movement_id,
+       COALESCE(e.organization_id, b.organization_id, u.organization_id)::bigint AS organization_id,
+       COALESCE(b.credits_total, 0)::int AS actual_total,
+       COALESCE(b.credits_remaining, 0)::int AS actual_remaining,
+       COALESCE(b.used_count, 0)::int AS actual_used,
+       COALESCE(b.last_movement_id, 0)::bigint AS actual_last_movement_id
+FROM scope s
+JOIN units u ON u.id = s.unit_id
+LEFT JOIN exp e ON e.unit_id = s.unit_id
+LEFT JOIN unit_credit_balances b ON b.unit_id = s.unit_id
+WHERE e.unit_id IS NULL OR b.unit_id IS NULL
+   OR e.total <> b.credits_total OR e.remaining <> b.credits_remaining
+   OR e.used <> b.used_count OR e.last_movement_id IS DISTINCT FROM b.last_movement_id
+ORDER BY s.unit_id;
+
+-- name: UpsertUnitCreditBalanceForRepair :exec
+-- TEC-1229: rebuild repair sets the balance to the sum of the movements.
+INSERT INTO unit_credit_balances (
+    unit_id, organization_id, brand_id, credits_total, credits_remaining, used_count, last_movement_id
+) VALUES (
+    sqlc.arg(unit_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(credits_total),
+    sqlc.arg(credits_remaining), sqlc.arg(used_count), sqlc.arg(last_movement_id)
+)
+ON CONFLICT (unit_id) DO UPDATE
+SET credits_total = EXCLUDED.credits_total,
+    credits_remaining = EXCLUDED.credits_remaining,
+    used_count = EXCLUDED.used_count,
+    last_movement_id = EXCLUDED.last_movement_id;

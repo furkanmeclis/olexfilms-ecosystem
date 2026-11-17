@@ -142,6 +142,9 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return fmt.Errorf("orders: create: %w", err)
 		}
+		if o, err = createSchedule(ctx, q, o, in); err != nil {
+			return err
+		}
 		if err := s.insertSellerLines(ctx, q, o, buyer, lines, terms); err != nil {
 			return err
 		}

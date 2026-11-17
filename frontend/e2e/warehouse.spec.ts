@@ -212,10 +212,8 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
     "WH2-R1-B",
   );
   await page.getByTestId("transfer-complete").click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Receive" })
-    .click();
+  // TEC-1227: the receipt check dialog; every line arrived.
+  await page.getByTestId("transfer-complete-confirm").click();
   await expect(status).toHaveAttribute("data-status", "completed");
   await expect(page.getByTestId("transfer-cancel")).toHaveCount(0);
 

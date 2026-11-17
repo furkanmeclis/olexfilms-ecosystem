@@ -310,6 +310,11 @@ func (s *StockEntries) Scan(ctx context.Context, c EntryCaller, id uuid.UUID, ba
 		default:
 			return err
 		}
+		if res.Result != ScanAlready {
+			if err := audit(ctx, q, c, AuditStockEntryScanned, e, map[string]any{"barcode": code, "result": res.Result}); err != nil {
+				return err
+			}
+		}
 		return s.scanCounts(ctx, q, e.ID, &res)
 	})
 	if err != nil || lineID == 0 {
@@ -354,6 +359,9 @@ func (s *StockEntries) Unscan(ctx context.Context, c EntryCaller, id uuid.UUID, 
 				return err
 			}
 		} else {
+			return err
+		}
+		if err := audit(ctx, q, c, AuditStockEntryUnscanned, e, map[string]any{"barcode": code}); err != nil {
 			return err
 		}
 		return s.scanCounts(ctx, q, e.ID, &res)

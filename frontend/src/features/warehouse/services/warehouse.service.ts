@@ -1,7 +1,10 @@
 import { apiConfig } from "@/config/api";
 import type { CertificateClient } from "@/features/warranty/lib/certificate";
 import type { components } from "@/generated/api";
-import { platformDownloadFile } from "@/lib/api/platform-form-request";
+import {
+  platformDownloadFile,
+  platformFormRequest,
+} from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
@@ -45,6 +48,13 @@ export type StockEntryMode = Schemas["StockEntryMode"];
 export type StockEntryHeaderInput = Schemas["StockEntryHeaderInput"];
 export type StockEntryArrivalScan = Schemas["StockEntryArrivalScan"];
 export type StockEntryArrivalReport = Schemas["StockEntryArrivalReport"];
+// TEC-1225: receiving exceptions.
+export type StockEntryAttachment = Schemas["StockEntryAttachment"];
+export type StockEntryDiscrepancy = Schemas["StockEntryDiscrepancy"];
+export type StockEntryDecision = Schemas["StockEntryDiscrepancyDecisionInput"];
+export type StockEntryReceipt = Schemas["StockEntryReceipt"];
+export type StockEntryUndoCheck = Schemas["StockEntryUndoCheck"];
+export type StockEntryAttachmentKind = StockEntryAttachment["kind"];
 export type WarehouseSupplier = Schemas["WarehouseSupplier"];
 export type EntryImportMappingTemplate = Schemas["EntryImportMappingTemplate"];
 export type EntryImportMappingTemplateInput =
@@ -83,6 +93,16 @@ export type StockCountResolution =
 export type EodReport = Schemas["EodReport"];
 export type EodReportGenerateInput = Schemas["EodReportGenerateInput"];
 export type ExportJob = Schemas["ExportJob"];
+// --- TEC-1229: stock view, movements, reorder rules, recount ---
+export type StockBalance = Schemas["StockBalance"];
+export type StockWarehouseProduct = Schemas["StockWarehouseProduct"];
+export type StockMovementRow = Schemas["StockMovementRow"];
+export type StockMovementEnd = Schemas["StockMovementEnd"];
+export type StockReorderRule = Schemas["StockReorderRule"];
+export type StockReorderRuleInput = Schemas["StockReorderRuleInput"];
+export type StockCountRecountInput = Schemas["StockCountRecountInput"];
+export type EodBalance = Schemas["EodBalance"];
+export type EodPending = Schemas["EodPending"];
 // --- TEC-769 ---
 export type WarehouseMember = Schemas["WarehouseMember"];
 export type WarehouseMemberUser = Schemas["WarehouseMemberUser"];
@@ -170,6 +190,42 @@ export const warehouseService = {
       "GET",
       `/v1/stock/warehouses/${encodeURIComponent(warehouseUuid)}/units`,
       { query: params },
+    );
+  },
+
+  // --- TEC-1229: stock view -------------------------------------------------
+  /** Product totals of a warehouse with the balance split (no prices). */
+  listWarehouseProducts(warehouseUuid: string, params: WarehouseListQuery) {
+    return platformRequest<Page<StockWarehouseProduct>>(
+      "GET",
+      `/v1/stock/warehouses/${enc(warehouseUuid)}/products`,
+      { query: params },
+    );
+  },
+  /** Ledger movements of the active organization (filters, no prices). */
+  listMovements(params: WarehouseListQuery) {
+    return platformRequest<Page<StockMovementRow>>(
+      "GET",
+      "/v1/stock/movements",
+      { query: params },
+    );
+  },
+  listReorderRules(params: WarehouseListQuery, critical = false) {
+    return platformRequest<Page<StockReorderRule>>(
+      "GET",
+      critical ? "/v1/stock/critical" : "/v1/stock/reorder-rules",
+      { query: params },
+    );
+  },
+  putReorderRule(body: StockReorderRuleInput) {
+    return platformRequest<StockReorderRule>("PUT", "/v1/stock/reorder-rules", {
+      body,
+    });
+  },
+  deleteReorderRule(uuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/stock/reorder-rules/${enc(uuid)}`,
     );
   },
 
@@ -336,10 +392,68 @@ export const warehouseService = {
       { body },
     );
   },
-  confirm(uuid: string) {
+  confirm(uuid: string, decisions?: StockEntryDecision[]) {
     return platformRequest<StockEntry>(
       "POST",
       `/v1/warehouse/stock-entries/${enc(uuid)}/confirm`,
+      decisions ? { body: { decisions } } : undefined,
+    );
+  },
+  // --- Receiving exceptions (TEC-1225) -----------------------------------------
+  getEntryReceipt(uuid: string) {
+    return platformRequest<StockEntryReceipt>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/receipt`,
+    );
+  },
+  entryReceiptPdfPath(uuid: string) {
+    return `/v1/warehouse/stock-entries/${enc(uuid)}/receipt.pdf`;
+  },
+  addEntryAttachment(uuid: string, file: File, kind: StockEntryAttachmentKind) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("kind", kind);
+    return platformFormRequest<StockEntryAttachment>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/attachments`,
+      form,
+    );
+  },
+  deleteEntryAttachment(uuid: string, attachmentUuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/attachments/${enc(attachmentUuid)}`,
+    );
+  },
+  updateEntryLine(
+    uuid: string,
+    lineUuid: string,
+    body: Schemas["StockEntryLineDetailsInput"],
+  ) {
+    return platformRequest<StockEntry>(
+      "PATCH",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/lines/${enc(lineUuid)}`,
+      { body },
+    );
+  },
+  recordEntryLabelPrint(uuid: string, count = 0) {
+    return platformRequest<void>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/label-prints`,
+      { body: { count } },
+    );
+  },
+  entryUndoCheck(uuid: string) {
+    return platformRequest<StockEntryUndoCheck>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/undo-check`,
+    );
+  },
+  undoEntry(uuid: string, reason: string) {
+    return platformRequest<StockEntry>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/undo`,
+      { body: { reason } },
     );
   },
   cancel(uuid: string) {
@@ -509,6 +623,18 @@ export const warehouseService = {
       { body },
     );
   },
+  /** TEC-1227: resolve a row of a completed transfer's record. */
+  resolveTransferDiscrepancy(
+    uuid: string,
+    discrepancy: string,
+    body: Schemas["WarehouseTransferDiscrepancyResolveInput"],
+  ) {
+    return platformRequest<WarehouseTransfer>(
+      "POST",
+      `/v1/warehouse/transfers/${enc(uuid)}/discrepancies/${enc(discrepancy)}/resolve`,
+      { body },
+    );
+  },
   cancelTransfer(uuid: string) {
     return platformRequest<WarehouseTransfer>(
       "POST",
@@ -578,6 +704,26 @@ export const warehouseService = {
     return platformRequest<StockCountReport>(
       "POST",
       `/v1/warehouse/stock-counts/${enc(uuid)}/approve`,
+      { body },
+    );
+  },
+  /** TEC-1229: send difference lines back for a recount. */
+  requestCountRecount(uuid: string, lineUuids: string[]) {
+    return platformRequest<StockCountReport>(
+      "POST",
+      `/v1/warehouse/stock-counts/${enc(uuid)}/recount-requests`,
+      { body: { line_uuids: lineUuids } },
+    );
+  },
+  /** TEC-1229: the recounted values of one line. */
+  recountCountLine(
+    uuid: string,
+    lineUuid: string,
+    body: StockCountRecountInput,
+  ) {
+    return platformRequest<StockCountReport>(
+      "POST",
+      `/v1/warehouse/stock-counts/${enc(uuid)}/lines/${enc(lineUuid)}/recount`,
       { body },
     );
   },
@@ -684,6 +830,10 @@ export const warehouseKeys = {
   entries: (params: StockEntryListQuery) =>
     ["warehouse", "entries", params] as const,
   entry: (uuid: string) => ["warehouse", "entry", uuid] as const,
+  entryReceipt: (uuid: string) =>
+    ["warehouse", "entry", uuid, "receipt"] as const,
+  entryUndoCheck: (uuid: string) =>
+    ["warehouse", "entry", uuid, "undo-check"] as const,
   arrivalReport: (uuid: string) =>
     ["warehouse", "arrival-report", uuid] as const,
   suppliers: (q: string) => ["warehouse", "suppliers", q] as const,
@@ -692,6 +842,13 @@ export const warehouseKeys = {
     ["warehouse", "batches", params] as const,
   units: (warehouseUuid: string, params: WarehouseUnitListQuery) =>
     ["warehouse", "units", warehouseUuid, params] as const,
+  // TEC-1229
+  products: (warehouseUuid: string, params: WarehouseListQuery) =>
+    ["warehouse", "products", warehouseUuid, params] as const,
+  movements: (params: WarehouseListQuery) =>
+    ["warehouse", "movements", params] as const,
+  reorder: (params: WarehouseListQuery, critical: boolean) =>
+    ["warehouse", "reorder", critical, params] as const,
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,
   transfer: (uuid: string) => ["warehouse", "transfer", uuid] as const,
@@ -727,6 +884,7 @@ export const warehouseExportPaths = {
   locations: "/v1/warehouse/locations/export",
   eodReports: "/v1/warehouse/eod-reports/export",
   batches: "/v1/stock/barcodes/export",
+  movements: "/v1/stock/movements/export",
   locationStock: (uuid: string) =>
     `/v1/stock/locations/${enc(uuid)}/products/export`,
   unitHistory: (barcode: string) =>

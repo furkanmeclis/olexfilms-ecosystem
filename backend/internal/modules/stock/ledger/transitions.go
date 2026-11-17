@@ -43,6 +43,8 @@ type serialRule struct {
 var (
 	stocked     = []Status{StatusAvailable, StatusPlaced}
 	stockOwners = []OwnerType{OwnerWarehouseLocation, OwnerOrganization}
+	// stockedOrQuarantine: held by the organization, inspected or not.
+	stockedOrQuarantine = []Status{StatusAvailable, StatusPlaced, StatusQuarantine}
 )
 
 // serialRules is the transition table for serial units (pieces and rolls).
@@ -80,10 +82,22 @@ var serialRules = map[MovementType]serialRule{
 	TypeSale: {from: stocked, to: StatusUsed, target: targetTrash},
 	// Measured roll length differs from the ledger; a missing piece is a void.
 	TypeCountAdjustment: {from: stocked, target: targetKeep, rollOnly: true},
-	TypeVoid: {from: []Status{StatusReserved, StatusPrinted, StatusAvailable, StatusPlaced},
+	// TEC-1226: a quarantined unit may be scrapped as well.
+	TypeVoid: {from: []Status{StatusReserved, StatusPrinted, StatusAvailable, StatusPlaced, StatusQuarantine},
 		to: StatusVoid, target: targetTrash},
-	// Leaves the system (e.g. pushed to an external hub, K2).
-	TypeExternalOutbound: {from: stocked, to: StatusUsed, target: targetTrash},
+	// Leaves the system (e.g. pushed to an external hub, K2; TEC-1226: a
+	// quarantined return sent back to the supplier).
+	TypeExternalOutbound: {from: stockedOrQuarantine, to: StatusUsed, target: targetTrash},
+	// TEC-1226: a returned unit waits for inspection where it is; it is not
+	// counted as stock until it is released.
+	TypeQuarantine: {from: stocked, to: StatusQuarantine, target: targetKeep},
+	// Inspection passed: back into the holder's stock where it is (a
+	// placement may follow to shelve it).
+	TypeQuarantineRelease: {from: []Status{StatusQuarantine}, to: StatusAvailable, target: targetKeep},
+	// A voided unit turns up again (adjustment document "found"): back
+	// into the stock of the organization whose trash holds it.
+	TypeFound: {from: []Status{StatusVoid}, fromOwners: []OwnerType{OwnerTrash}, to: StatusAvailable,
+		target: targetGiven, owners: stockOwners, holder: holderSame},
 	// Meters cut off as a new unit (TEC-184, Ledger.Split); the roll stays
 	// where it is and is used up when nothing is left.
 	TypeSplit: {from: stocked, target: targetKeep, rollOnly: true},

@@ -152,6 +152,7 @@
   "status.in_transit": "Yolda",
   "status.used": "İstifadə olunub",
   "status.void": "Ləğv",
+  "status.quarantine": "Yoxlama gözləyir",
   "unit_kind.serial": "Seriyalı vahid",
   "unit_kind.fixed": "Sabit barkod",
   "list.loading": "Yüklənir…",
@@ -310,5 +311,6 @@
   "label_templates.output_format_hint.zpl": "Zebra printerləri üçün .zpl faylı (203 dpi). Şəkil loqosu çap olunmur.",
   "label_templates.form.thermal_sizes": "Hazır ölçülər:",
   "columns.remnant": "Qalıq",
-  "remnant.badge": "Qalıq"
+  "remnant.badge": "Qalıq",
+  "bulk.reason.quarantine": "Qaytarma yoxlama gözləyir"
 }

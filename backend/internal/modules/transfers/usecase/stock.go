@@ -269,6 +269,19 @@ func (s *Service) receive(ctx context.Context, q *db.Queries, tx pgx.Tx, c Calle
 		}); err != nil {
 			return fmt.Errorf("transfers: item movement: %w", err)
 		}
+		// TEC-1226: a returned serial unit waits for the receiver's
+		// inspection (quarantine): not counted, pickable or usable until the
+		// warehouse restocks, scraps or sends it back to the supplier. Fixed
+		// barcode quantities are not quarantined.
+		if r.Kind == KindReturn && it.UnitKind != ledger.KindFixed {
+			if _, err := s.ledger.Post(ctx, tx, ledger.Movement{
+				Type: ledger.TypeQuarantine, UnitID: it.UnitID,
+				Source: LedgerSource, RefType: LedgerRefType, RefID: it.ID, ActorUserID: c.actorPtr(),
+				Reason: "return received: waiting for inspection", Metadata: movementMeta(r),
+			}); err != nil {
+				return stockErr("quarantine", it.Barcode, err)
+			}
+		}
 	}
 	return nil
 }

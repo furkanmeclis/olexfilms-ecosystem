@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import {
+  EodBalancesTable,
   EodGroupsTable,
   EodProductsTable,
 } from "@/features/warehouse/components/eod-tables";
@@ -158,6 +159,43 @@ export function EodReportDetailPage({
               </CardHeader>
               <CardContent>
                 <EodProductsTable products={r.summary.products} />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* TEC-1229: opening / closing balance and the open work. */}
+          <Card data-testid="eod-balances">
+            <CardHeader>
+              <CardTitle>{t("warehouse.eod.balances")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EodBalancesTable balances={r.summary.balances ?? []} />
+            </CardContent>
+          </Card>
+
+          {r.summary.pending ? (
+            <Card data-testid="eod-pending">
+              <CardHeader>
+                <CardTitle>{t("warehouse.eod.pending")}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-4">
+                <Info label={t("warehouse.eod.pending_open_transfers")}>
+                  {format.number(r.summary.pending.open_transfers)}
+                </Info>
+                <Info label={t("warehouse.eod.pending_unplaced_entries")}>
+                  {format.number(r.summary.pending.unplaced_entries)}
+                </Info>
+                <Info label={t("warehouse.eod.pending_counts")}>
+                  {format.number(r.summary.pending.pending_counts)}
+                </Info>
+                <Info label={t("warehouse.eod.pending_preparing_orders")}>
+                  {format.number(r.summary.pending.preparing_orders)}
+                </Info>
+                <p className="text-muted-foreground text-xs sm:col-span-4">
+                  {t("warehouse.eod.pending_as_of", {
+                    at: format.dateTime(r.summary.pending.as_of),
+                  })}
+                </p>
               </CardContent>
             </Card>
           ) : null}

@@ -49,6 +49,8 @@ var mobileWarehouseRoutes = []struct{ method, path string }{
 	{"GET", "/v1/mobile/warehouse/stock-counts/" + someUUID + "/report"},
 	{"POST", "/v1/mobile/warehouse/stock-counts/" + someUUID + "/approve"},
 	{"POST", "/v1/mobile/warehouse/stock-counts/" + someUUID + "/cancel"},
+	{"POST", "/v1/mobile/warehouse/stock-counts/" + someUUID + "/recount-requests"},
+	{"POST", "/v1/mobile/warehouse/stock-counts/" + someUUID + "/lines/" + someUUID + "/recount"},
 	{"GET", "/v1/mobile/warehouse/transfers"},
 	{"POST", "/v1/mobile/warehouse/transfers"},
 	{"GET", "/v1/mobile/warehouse/transfers/" + someUUID},

@@ -23,7 +23,7 @@ var (
 	serviceStatuses     = []string{"draft", "pending", "processing", "ready", "completed", "cancelled"}
 	orderStatuses       = []string{"draft", "submitted", "approved", "preparing", "ready", "processing", "shipped", "delivered", "received", "cancelling", "cancelled"}
 	warrantyStatuses    = []string{"active", "expired", "void"}
-	unitStatuses        = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void"}
+	unitStatuses        = []string{"reserved", "printed", "available", "placed", "in_transit", "used", "void", "quarantine"}
 	measurementStatuses = []string{"accepted", "vin_pending"}
 	customerTypes       = []string{"individual", "corporate"}
 	// performanceColumns are the dealers.performance metric columns.
@@ -241,6 +241,8 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		return s.networkSummary(ctx, q, a, env)
 	case ReportStockMovement:
 		return s.stockMovement(ctx, q, a, env)
+	case ReportStockAging:
+		return s.stockAging(ctx, c, q, a, env)
 	case ReportDealersPerformance:
 		return s.dealersPerformance(ctx, c, f, q, env)
 	case ReportDealersTopByWarranty:

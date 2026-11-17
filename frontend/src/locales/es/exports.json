@@ -91,5 +91,6 @@
   "resources.stock.products": "Stock por producto",
   "resources.stock.location_stock": "Stock de la ubicación",
   "resources.stock.unit_history": "Historial de movimientos de la unidad",
-  "resources.stock.barcode_batches": "Lotes de códigos de barras"
+  "resources.stock.barcode_batches": "Lotes de códigos de barras",
+  "resources.stock.movements": "Movimientos de stock"
 }

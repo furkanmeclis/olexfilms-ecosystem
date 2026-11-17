@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { api, unwrap } from '@/core/api/client';
+import { api, unwrap, uploadForm } from '@/core/api/client';
 import { toApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { MOBILE_API_VERSION } from '@/core/config';
@@ -27,6 +27,12 @@ export type TransferLine = S['WarehouseTransferLine'];
 export type StockEntry = S['StockEntry'];
 export type StockEntryStatus = S['StockEntryStatus'];
 export type StockEntryLine = S['StockEntryLine'];
+// TEC-1225: receiving exceptions.
+export type StockEntryArrivalReport = S['StockEntryArrivalReport'];
+export type StockEntryAttachment = S['StockEntryAttachment'];
+export type StockEntryDecision = S['StockEntryDiscrepancyDecisionInput'];
+export type StockEntryUndoCheck = S['StockEntryUndoCheck'];
+export type WarehouseSupplier = S['WarehouseSupplier'];
 
 /** `/v1/mobile/*` routes require the contract header in their typed params. */
 export const mobile = { header: { 'X-Mobile-Api-Version': MOBILE_API_VERSION } } as const;
@@ -135,6 +141,14 @@ export const transferApi = {
     ),
   cancel: (uuid: string) =>
     unwrap(api.POST('/v1/mobile/warehouse/transfers/{uuid}/cancel', { params: { ...mobile, path: { uuid } } })),
+  /** TEC-1227: resolve a row of a completed transfer's discrepancy record. */
+  resolveDiscrepancy: (uuid: string, discrepancy: string, body: S['WarehouseTransferDiscrepancyResolveInput']) =>
+    unwrap(
+      api.POST('/v1/mobile/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve', {
+        params: { ...mobile, path: { uuid, discrepancy_uuid: discrepancy } },
+        body,
+      }),
+    ),
 };
 
 // --- counts --------------------------------------------------------------------
@@ -248,7 +262,50 @@ export const entryApi = {
     unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/place', { params: { path: { uuid } }, body })),
   confirm: (uuid: string) => unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/confirm', { params: { path: { uuid } } })),
   cancel: (uuid: string) => unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/cancel', { params: { path: { uuid } } })),
+  // TEC-1225: container receiving, discrepancy record, attachments, undo.
+  confirmWith: (uuid: string, decisions: StockEntryDecision[]) =>
+    unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/confirm', { params: { path: { uuid } }, body: { decisions } })),
+  updateHeader: (uuid: string, body: S['StockEntryHeaderInput']) =>
+    unwrap(api.PATCH('/v1/warehouse/stock-entries/{uuid}', { params: { path: { uuid } }, body })),
+  arrivalScan: (uuid: string, barcode: string) =>
+    unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/arrival-scans', { params: { path: { uuid } }, body: { barcode } })),
+  arrivalUnscan: (uuid: string, barcode: string) =>
+    unwrap(api.DELETE('/v1/warehouse/stock-entries/{uuid}/arrival-scans', { params: { path: { uuid }, query: { barcode } } })),
+  uploadPhoto: (uuid: string, uri: string) => {
+    const form = new FormData();
+    // React Native's FormData takes a { uri, name, type } file part (uploadForm sends it with XMLHttpRequest).
+    form.append('file', { uri, name: 'hasar.jpg', type: 'image/jpeg' } as unknown as Blob);
+    form.append('kind', 'photo');
+    return uploadForm<StockEntryAttachment>(`/v1/warehouse/stock-entries/${encodeURIComponent(uuid)}/attachments`, form);
+  },
+  undo: (uuid: string, reason: string) =>
+    unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/undo', { params: { path: { uuid } }, body: { reason } })),
+  receiptPdfPath: (uuid: string) => `/v1/warehouse/stock-entries/${encodeURIComponent(uuid)}/receipt.pdf`,
 };
+
+export function useArrivalReport(uuid: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...wk.entry(uuid), 'arrival'] as const,
+    queryFn: () => unwrap(api.GET('/v1/warehouse/stock-entries/{uuid}/arrival-report', { params: { path: { uuid } } })),
+    enabled,
+  });
+}
+
+export function useUndoCheck(uuid: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...wk.entry(uuid), 'undo-check'] as const,
+    queryFn: () => unwrap(api.GET('/v1/warehouse/stock-entries/{uuid}/undo-check', { params: { path: { uuid } } })),
+    enabled,
+  });
+}
+
+export function useSuppliers(enabled: boolean) {
+  return useQuery({
+    queryKey: ['warehouse', 'suppliers'] as const,
+    queryFn: () => unwrap(api.GET('/v1/warehouse/suppliers', { params: { query: { limit: 100 } } })),
+    enabled,
+  });
+}
 
 // --- home summary ---------------------------------------------------------------
 

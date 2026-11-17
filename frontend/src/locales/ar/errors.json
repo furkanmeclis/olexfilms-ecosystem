@@ -182,5 +182,8 @@
   "codes.ORDER_INVOICED": "لا يمكن إلغاء طلب مفوتر؛ احذف سجل الفاتورة أولاً.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "لا يمكن إضافة شحنة تكميلية إلا إلى طلب مشحون أو مُسلَّم أو مُستلَم.",
   "codes.UNIT_CREDITS_EXHAUSTED": "لم يتبقَّ لهذا الرمز الشريطي أي رصيد استخدام؛ لا يمكن اختياره في خدمة أخرى.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة استخدام."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة استخدام.",
+  "codes.ORDER_ALREADY_CLAIMED": "تولّى شخص آخر هذا العمل.",
+  "codes.ORDER_NOT_CLAIMABLE": "العمل المستودعي هو فقط طلب معتمد لم يُشحن بعد.",
+  "codes.ORDER_SCHEDULE_LOCKED": "لا يمكن تغيير الأولوية والموعد في هذه الحالة."
 }

@@ -61,6 +61,11 @@ type TimelineEntry struct {
 	RelatedOrderNo *string `json:"related_order_no,omitempty"`
 	Kind           *string `json:"kind,omitempty"`
 	Resolution     *string `json:"resolution,omitempty"`
+	// TEC-1228: the new schedule (schedule_updated) and the user whose job
+	// was taken over or released (claim_taken_over, claim_released).
+	Priority       *string `json:"priority,omitempty"`
+	DueDate        *string `json:"due_date,omitempty"`
+	PreviousPicker *string `json:"previous_picker,omitempty"`
 }
 
 // activityPayload is the payload of the order activity events.
@@ -83,6 +88,11 @@ type activityPayload struct {
 	Kind           string `json:"kind,omitempty"`
 	Reason         string `json:"reason,omitempty"`
 	Resolution     string `json:"resolution,omitempty"`
+	// TEC-1228: the schedule of a schedule_updated step and the user
+	// whose job was taken over or released.
+	Priority       *string `json:"priority,omitempty"`
+	DueDate        *string `json:"due_date,omitempty"`
+	PreviousPicker *string `json:"previous_picker,omitempty"`
 }
 
 func (p activityPayload) mapped() map[string]any {
@@ -285,7 +295,8 @@ func (s *Service) timeline(ctx context.Context, q *db.Queries, o db.Order, hist 
 			Product: strRef(p.Product), Barcode: strRef(p.Barcode), Quantity: p.Quantity, Meters: p.Meters, Lines: p.Lines,
 			Changes: p.Changes, PlotterCut: p.PlotterCut, PlotterCredits: p.PlotterCredits,
 			RelatedOrderNo: strRef(p.RelatedOrderNo), Kind: strRef(p.Kind), Resolution: strRef(p.Resolution),
-			Reason: strRef(p.Reason),
+			Reason:   strRef(p.Reason),
+			Priority: p.Priority, DueDate: p.DueDate, PreviousPicker: p.PreviousPicker,
 		}
 		if ev.Action == ActionUnitAssigned {
 			recorded[p.ItemUUID+"/"+p.UnitUUID] = struct{}{}

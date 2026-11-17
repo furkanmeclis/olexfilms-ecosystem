@@ -141,3 +141,135 @@ WHERE o.type IN ('center', 'distributor')
   AND o.deleted_at IS NULL
   AND EXISTS (SELECT 1 FROM warehouses w WHERE w.organization_id = o.id AND w.active)
 ORDER BY o.id;
+
+-- name: EODCurrentStock :many
+-- TEC-1229: current on-hand stock per product of the organization
+-- (warehouse_id NULL: organization_product_stocks, the whole organization)
+-- or of one warehouse (bin_product_stocks of its locations).
+SELECT s.product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       s.quantity::bigint AS quantity, s.meters::numeric(14,2)::text AS meters
+FROM (
+    SELECT ops.product_id, ops.quantity::bigint AS quantity, ops.meters::numeric(14,2) AS meters
+    FROM organization_product_stocks ops
+    WHERE sqlc.narg(warehouse_id)::bigint IS NULL
+      AND ops.organization_id = sqlc.arg(organization_id)::bigint
+    UNION ALL
+    SELECT b.product_id, SUM(b.quantity)::bigint, SUM(b.meters)::numeric(14,2)
+    FROM bin_product_stocks b
+    JOIN warehouse_locations wl ON wl.id = b.location_id
+    WHERE sqlc.narg(warehouse_id)::bigint IS NOT NULL
+      AND wl.warehouse_id = sqlc.narg(warehouse_id)::bigint
+      AND b.organization_id = sqlc.arg(organization_id)::bigint
+    GROUP BY b.product_id
+) s
+JOIN products p ON p.id = s.product_id;
+
+-- name: EODStockDeltas :many
+-- TEC-1229: the on-hand change per product caused by the movements since
+-- period_start, split at period_end (period: [start, end), after: [end,
+-- now)). A movement adds its "after" side when the unit is counted in the
+-- scope after it and removes its "before" side when it was counted there
+-- before it (reclassification moves the stock from metadata
+-- from_product_id to product_id). Rolls carry their remaining meters (the
+-- unit's initial meters plus every meters_delta up to the movement, as the
+-- rebuild replay does). Fixed barcodes change one owner per movement: a
+-- negative quantity_delta debits from_owner, a positive one credits
+-- to_owner. Opening and closing = current - after - period / current -
+-- after (EODBalances).
+WITH mv AS (
+    SELECT m.id, m.unit_id, m.created_at, m.product_id, m.quantity_delta, m.meters_delta,
+           COALESCE(CASE WHEN m.type = 'reclassification' THEN (m.metadata->>'from_product_id')::bigint END,
+                    m.product_id) AS before_product_id,
+           u.unit_kind,
+           (u.unit_kind = 'serial' AND u.initial_meters IS NOT NULL) AS is_roll,
+           CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NOT NULL THEN
+               u.initial_meters + (SELECT COALESCE(SUM(k.meters_delta), 0) FROM stock_movements k
+                                   WHERE k.unit_id = m.unit_id AND k.id <= m.id)
+           END AS remaining_after,
+           (m.from_status IN ('available', 'placed')) AS from_counted,
+           (m.to_status IN ('available', 'placed')) AS to_counted,
+           CASE
+               WHEN m.from_owner_type = 'warehouse_location' THEN
+                   fl.organization_id = sqlc.arg(organization_id)::bigint
+                   AND (sqlc.narg(warehouse_id)::bigint IS NULL OR fl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
+               WHEN m.from_owner_type = 'organization' THEN
+                   sqlc.narg(warehouse_id)::bigint IS NULL AND m.from_owner_id = sqlc.arg(organization_id)::bigint
+               ELSE false
+           END AS from_in,
+           CASE
+               WHEN m.to_owner_type = 'warehouse_location' THEN
+                   tl.organization_id = sqlc.arg(organization_id)::bigint
+                   AND (sqlc.narg(warehouse_id)::bigint IS NULL OR tl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
+               WHEN m.to_owner_type = 'organization' THEN
+                   sqlc.narg(warehouse_id)::bigint IS NULL AND m.to_owner_id = sqlc.arg(organization_id)::bigint
+               ELSE false
+           END AS to_in
+    FROM stock_movements m
+    JOIN units u ON u.id = m.unit_id
+    LEFT JOIN warehouse_locations fl ON m.from_owner_type = 'warehouse_location' AND fl.id = m.from_owner_id
+    LEFT JOIN warehouse_locations tl ON m.to_owner_type = 'warehouse_location' AND tl.id = m.to_owner_id
+    WHERE m.created_at >= sqlc.arg(period_start)::timestamptz
+      AND (fl.organization_id = sqlc.arg(organization_id)::bigint
+           OR tl.organization_id = sqlc.arg(organization_id)::bigint
+           OR (m.from_owner_type = 'organization' AND m.from_owner_id = sqlc.arg(organization_id)::bigint)
+           OR (m.to_owner_type = 'organization' AND m.to_owner_id = sqlc.arg(organization_id)::bigint))
+), parts AS (
+    SELECT mv.product_id AS pid, mv.created_at,
+           CASE
+               WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta > 0 AND mv.to_in THEN mv.quantity_delta ELSE 0 END
+               WHEN mv.to_in AND mv.to_counted THEN 1 ELSE 0
+           END::bigint AS qty,
+           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN mv.remaining_after ELSE 0 END::numeric(14,2) AS meters
+    FROM mv
+    UNION ALL
+    SELECT mv.before_product_id AS pid, mv.created_at,
+           CASE
+               WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta < 0 AND mv.from_in THEN mv.quantity_delta ELSE 0 END
+               WHEN mv.from_in AND mv.from_counted THEN -1 ELSE 0
+           END::bigint AS qty,
+           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -(mv.remaining_after - mv.meters_delta) ELSE 0 END::numeric(14,2) AS meters
+    FROM mv
+)
+SELECT parts.pid AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at < sqlc.arg(period_end)::timestamptz), 0)::bigint AS period_quantity,
+       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at < sqlc.arg(period_end)::timestamptz), 0)::numeric(14,2)::text AS period_meters,
+       COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::bigint AS after_quantity,
+       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::numeric(14,2)::text AS after_meters
+FROM parts
+JOIN products p ON p.id = parts.pid
+GROUP BY parts.pid, p.uuid, p.sku, p.name;
+
+-- name: EODPendingWork :one
+-- TEC-1229: open work of the organization (or one warehouse) at report
+-- time: open warehouse transfers (draft / in transit, from or to the
+-- warehouse), draft stock entries and confirmed entries with lines still
+-- waiting for a location, unfinished stock counts and sale orders being
+-- prepared (approved / preparing / ready).
+SELECT
+    (SELECT COUNT(*) FROM warehouse_transfers t
+     WHERE t.organization_id = sqlc.arg(organization_id)::bigint
+       AND t.status IN ('draft', 'in_transit')
+       AND (sqlc.narg(warehouse_id)::bigint IS NULL
+            OR t.from_warehouse_id = sqlc.narg(warehouse_id)::bigint
+            OR t.to_warehouse_id = sqlc.narg(warehouse_id)::bigint))::bigint AS open_transfers,
+    (SELECT COUNT(*) FROM stock_entries e
+     WHERE e.organization_id = sqlc.arg(organization_id)::bigint
+       AND (sqlc.narg(warehouse_id)::bigint IS NULL OR e.warehouse_id = sqlc.narg(warehouse_id)::bigint)
+       AND (e.status = 'draft'
+            OR (e.status = 'confirmed' AND EXISTS (
+                SELECT 1 FROM stock_entry_lines l
+                JOIN unit_current_state st ON st.unit_id = l.unit_id
+                WHERE l.entry_id = e.id
+                  AND l.placement_movement_id IS NULL
+                  AND l.undo_movement_id IS NULL
+                  AND st.owner_type = 'organization'
+                  AND st.holder_org_id = e.organization_id
+                  AND st.status = 'available'))))::bigint AS unplaced_entries,
+    (SELECT COUNT(*) FROM stock_counts c
+     WHERE c.organization_id = sqlc.arg(organization_id)::bigint
+       AND c.status IN ('draft', 'in_progress', 'pending_review')
+       AND (sqlc.narg(warehouse_id)::bigint IS NULL OR c.warehouse_id = sqlc.narg(warehouse_id)::bigint))::bigint AS pending_counts,
+    (SELECT COUNT(*) FROM orders o
+     WHERE o.seller_org_id = sqlc.arg(organization_id)::bigint
+       AND o.status IN ('approved', 'preparing', 'ready')
+       AND (sqlc.narg(warehouse_id)::bigint IS NULL OR o.seller_warehouse_id = sqlc.narg(warehouse_id)::bigint))::bigint AS preparing_orders;

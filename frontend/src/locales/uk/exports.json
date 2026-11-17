@@ -91,5 +91,6 @@
   "resources.stock.products": "Залишки за товарами",
   "resources.stock.location_stock": "Залишки місця",
   "resources.stock.unit_history": "Історія руху одиниці",
-  "resources.stock.barcode_batches": "Партії штрихкодів"
+  "resources.stock.barcode_batches": "Партії штрихкодів",
+  "resources.stock.movements": "Рух запасів"
 }

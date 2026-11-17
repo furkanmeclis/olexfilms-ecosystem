@@ -209,6 +209,10 @@ const (
 	StockVoid                  = "stock.void"
 	StockExternalOutbound      = "stock.external_outbound"
 	StockSplit                 = "stock.split"
+	// TEC-1226: return inspection (quarantine) and a found unit back in stock.
+	StockQuarantine        = "stock.quarantine"
+	StockQuarantineRelease = "stock.quarantine_release"
+	StockFound             = "stock.found"
 )
 
 // Order domain events (TEC-165): one per status transition, written to the
@@ -626,6 +630,9 @@ func catalogConstants() []string {
 		StockVoid,
 		StockExternalOutbound,
 		StockSplit,
+		StockQuarantine,
+		StockQuarantineRelease,
+		StockFound,
 		OrdersCreated,
 		OrdersUpdated,
 		OrdersSubmitted,
@@ -735,6 +742,7 @@ func catalogConstants() []string {
 		ShowcaseRejected,
 		StockForecastComputed,
 		StockForecastLow,
+		StockReorderLow,
 		PerformanceComputed,
 		PerformanceBonusCalculated,
 		PerformanceBonusApproved,
@@ -849,6 +857,12 @@ const (
 	StockForecastComputed = "stock.forecast_computed"
 	StockForecastLow      = "stock.forecast_low"
 )
+
+// StockReorderLow (TEC-1229): a product's available quantity in one
+// warehouse fell to its reorder point / below its minimum (ok -> low edge of
+// the hourly stock_reorder_rules check). Reaches organization owners and
+// warehouse roles.
+const StockReorderLow = "stock.reorder_low"
 
 // Recommended prices (TEC-506, F5-09b). recommended_published is written in
 // the transaction that publishes a batch (API or import); tenant is the

@@ -18,7 +18,18 @@ const STATUSES = [
 ] as const;
 
 /** Timeline actions that are not a status (OrderTimelineEntry.action, TEC-1060). */
-const STEP_ACTIONS = ['created', 'unit_assigned', 'unit_unassigned', 'updated', 'plotter_marked'] as const;
+const STEP_ACTIONS = [
+  'created',
+  'unit_assigned',
+  'unit_unassigned',
+  'updated',
+  'plotter_marked',
+  // TEC-1227: partial shipment and receipt discrepancies.
+  'backorder_created',
+  'backorder_opened',
+  'discrepancy_reported',
+  'discrepancy_resolved',
+] as const;
 
 /**
  * TEC-1059: the seller's sales or warehouse staff (orders.write or

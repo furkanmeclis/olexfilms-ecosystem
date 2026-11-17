@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { Info } from "@/features/warehouse/components/list-controls";
+import { WarehouseProductsTab } from "@/features/warehouse/components/stock-view";
 import { enumFilterOptions } from "@/features/warehouse/components/table-options";
 import {
   useWarehouseAccess,
@@ -540,6 +541,14 @@ export function WarehouseDetailPage({
           <Tabs defaultValue={canReadUnits ? "units" : "entries"}>
             <TabsList className="flex-wrap">
               {canReadUnits ? (
+                <TabsTrigger
+                  value="products"
+                  data-testid="warehouse-detail-products-tab"
+                >
+                  {t("warehouse.stock.products_tab")}
+                </TabsTrigger>
+              ) : null}
+              {canReadUnits ? (
                 <TabsTrigger value="units">
                   {t("warehouse.units.title")}
                 </TabsTrigger>
@@ -554,6 +563,11 @@ export function WarehouseDetailPage({
                 {t("warehouse.detail.transfers_in")}
               </TabsTrigger>
             </TabsList>
+            {canReadUnits ? (
+              <TabsContent value="products">
+                <WarehouseProductsTab uuid={w.uuid} />
+              </TabsContent>
+            ) : null}
             {canReadUnits ? (
               <TabsContent value="units">
                 <UnitsTab slug={slug} uuid={w.uuid} />

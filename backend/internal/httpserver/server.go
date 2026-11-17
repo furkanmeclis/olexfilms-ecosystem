@@ -1106,8 +1106,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warehousemodule.RegisterScanRoutes(mux, warehousehandler.NewScan(warehouseusecase.NewScanner(deps.Queries, sysSvc)),
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-204: stock entry documents (confirm posts entry + placement via the ledger).
+	// TEC-1225: attachments (object storage) and the discrepancy record PDF.
 	warehousemodule.RegisterEntryRoutes(mux, warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
-		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
+		outbox.NewStore(deps.DB, deps.Queries)).WithFiles(deps.Storage, pdfClient)), featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 	entryImportEntries := warehouseusecase.NewStockEntries(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
 	warehousemodule.RegisterEntryImportRoutes(mux, warehousehandler.NewEntryImport(entryImportEntries,
 		warehouseusecase.NewEntryBarcodeImporter(entryImportEntries), importSvc), featureSvc, tokens, loader, deps.Queries)
@@ -1120,6 +1121,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-769: user <-> warehouse membership and the caller's warehouse context.
 	warehousemodule.RegisterMemberRoutes(mux, warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-1226: stock adjustment documents and the return inspection queue.
+	warehousemodule.RegisterAdjustmentRoutes(mux, warehousehandler.NewAdjustments(warehouseusecase.NewAdjustments(deps.DB,
+		deps.Queries, outbox.NewStore(deps.DB, deps.Queries), deps.Storage)), featureSvc, tokens, loader, deps.Queries)
 	// TEC-235: mobile mirrors (/v1/mobile/warehouse/*) of the scan, count and
 	// transfer routes for distributor staff; same use cases and scope.
 	warehousemodule.RegisterMobileRoutes(mux, warehousemodule.MobileHandlers{
@@ -1130,8 +1134,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Transfers: warehousehandler.NewTransfers(warehouseusecase.NewWarehouseTransfers(deps.DB, deps.Queries,
 			outbox.NewStore(deps.DB, deps.Queries))),
 		Entries: warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
-			outbox.NewStore(deps.DB, deps.Queries))),
+			outbox.NewStore(deps.DB, deps.Queries)).WithFiles(deps.Storage, pdfClient)),
 		Members: warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
+		StepUp:  stepUpSvc,
 	}, featureSvc, tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)

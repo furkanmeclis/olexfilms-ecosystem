@@ -91,5 +91,6 @@
   "resources.stock.products": "Giacenza per prodotto",
   "resources.stock.location_stock": "Giacenza dell'ubicazione",
   "resources.stock.unit_history": "Storico movimenti dell'unità",
-  "resources.stock.barcode_batches": "Lotti di codici a barre"
+  "resources.stock.barcode_batches": "Lotti di codici a barre",
+  "resources.stock.movements": "Movimenti di magazzino"
 }

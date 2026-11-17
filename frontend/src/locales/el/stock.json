@@ -152,6 +152,7 @@
   "status.in_transit": "Σε μεταφορά",
   "status.used": "Χρησιμοποιημένη",
   "status.void": "Άκυρη",
+  "status.quarantine": "Αναμένει έλεγχο",
   "unit_kind.serial": "Σειριακή μονάδα",
   "unit_kind.fixed": "Σταθερό barcode",
   "list.loading": "Φόρτωση…",
@@ -310,5 +311,6 @@
   "label_templates.output_format_hint.zpl": "Αρχείο .zpl για εκτυπωτές Zebra (203 dpi). Το λογότυπο εικόνας δεν εκτυπώνεται.",
   "label_templates.form.thermal_sizes": "Συνήθη μεγέθη:",
   "columns.remnant": "Υπόλειμμα",
-  "remnant.badge": "Υπόλειμμα"
+  "remnant.badge": "Υπόλειμμα",
+  "bulk.reason.quarantine": "Επιστροφή σε αναμονή ελέγχου"
 }

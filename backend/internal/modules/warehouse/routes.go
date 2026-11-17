@@ -99,6 +99,7 @@ func RegisterEntryRoutes(
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
 	q *db.Queries,
+	stepUp middleware.StepUpChecker,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
@@ -128,6 +129,19 @@ func RegisterEntryRoutes(
 	mux.Handle("GET /v1/warehouse/entry-import-templates", write(h.MappingTemplates))
 	mux.Handle("POST /v1/warehouse/entry-import-templates", write(h.SaveMappingTemplate))
 	mux.Handle("DELETE /v1/warehouse/entry-import-templates/{uuid}", write(h.DeleteMappingTemplate))
+	// TEC-1225: receiving exceptions. Undo also needs stock.adjust (use
+	// case) and a recent step-up.
+	mux.Handle("PATCH /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}", write(h.UpdateLine))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/receipt", read(h.Receipt))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/receipt.pdf", read(h.ReceiptPDF))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/attachments", write(h.AddAttachment))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}", read(h.Attachment))
+	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}", write(h.DeleteAttachment))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/label-prints", write(h.LabelPrint))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/undo-check", read(h.UndoCheck))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/undo",
+		middleware.Chain(http.HandlerFunc(h.Undo), authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(stepUp)))
 }
 
 // RegisterEntryImportRoutes mounts the record-scoped barcode import upload and template.
