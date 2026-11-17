@@ -920,5 +920,9 @@
   "eod.pending_unplaced_entries": "未上架入库",
   "eod.pending_counts": "待处理盘点",
   "eod.pending_preparing_orders": "备货中的订单",
-  "eod.pending_as_of": "报告生成时：{{at}}"
+  "eod.pending_as_of": "报告生成时：{{at}}",
+  "movement_type.measure_conversion": "计量转换",
+  "movement_type.quarantine": "已隔离",
+  "movement_type.quarantine_release": "解除隔离",
+  "movement_type.found": "已找到"
 }

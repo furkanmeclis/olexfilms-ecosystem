@@ -920,5 +920,9 @@
   "eod.pending_unplaced_entries": "إدخالات غير موضوعة",
   "eod.pending_counts": "جرد معلّق",
   "eod.pending_preparing_orders": "طلبات قيد التحضير",
-  "eod.pending_as_of": "وقت إنشاء التقرير: {{at}}"
+  "eod.pending_as_of": "وقت إنشاء التقرير: {{at}}",
+  "movement_type.measure_conversion": "تحويل الوحدة",
+  "movement_type.quarantine": "وُضع في الحجر",
+  "movement_type.quarantine_release": "أُفرج عنه من الحجر",
+  "movement_type.found": "تم العثور عليه"
 }

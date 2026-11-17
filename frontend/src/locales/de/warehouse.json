@@ -950,5 +950,9 @@
   "eod.pending_unplaced_entries": "Nicht eingelagerte Eingänge",
   "eod.pending_counts": "Offene Inventuren",
   "eod.pending_preparing_orders": "Bestellungen in Vorbereitung",
-  "eod.pending_as_of": "Stand bei Berichterstellung: {{at}}"
+  "eod.pending_as_of": "Stand bei Berichterstellung: {{at}}",
+  "movement_type.measure_conversion": "Maßumrechnung",
+  "movement_type.quarantine": "In Quarantäne",
+  "movement_type.quarantine_release": "Aus Quarantäne freigegeben",
+  "movement_type.found": "Gefunden"
 }

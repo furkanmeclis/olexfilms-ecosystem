@@ -19,6 +19,10 @@ export const MOVEMENT_TYPES = [
   "void",
   "external_outbound",
   "split",
+  "measure_conversion",
+  "quarantine",
+  "quarantine_release",
+  "found",
 ] as const;
 
 /** TEC-1229: reorder rule levels, most urgent first. */

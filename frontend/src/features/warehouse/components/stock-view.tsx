@@ -78,9 +78,10 @@ const ALL = "__all__";
 
 /**
  * Product totals of a warehouse (TEC-1229): on hand, reserved for orders,
- * available (on hand - reserved - quarantine), incoming (in-transit
- * transfers and shipped purchase orders) and quarantine; pieces and roll
- * meters apart. No prices.
+ * available (on hand - reserved), incoming (in-transit transfers and
+ * shipped purchase orders) and quarantine (returned units waiting for
+ * inspection, TEC-1226; not on hand); pieces and roll meters apart. No
+ * prices.
  */
 export function WarehouseProductsTab({ uuid }: { uuid: string }) {
   const { t, format } = useLocale();
@@ -148,7 +149,6 @@ export function WarehouseProductsTab({ uuid }: { uuid: string }) {
           accessorFn: (p) => p.balance?.quarantine_quantity ?? 0,
           labelKey: "warehouse.stock.quarantine",
           enableSorting: false,
-          defaultHidden: true,
           cell: ({ row }) =>
             format.number(row.original.balance?.quarantine_quantity ?? 0),
         }),

@@ -920,5 +920,9 @@
   "eod.pending_unplaced_entries": "Yerləşdirilməmiş girişlər",
   "eod.pending_counts": "Gözləyən sayımlar",
   "eod.pending_preparing_orders": "Hazırlanan sifarişlər",
-  "eod.pending_as_of": "Hesabat anı: {{at}}"
+  "eod.pending_as_of": "Hesabat anı: {{at}}",
+  "movement_type.measure_conversion": "Ölçü çevrilməsi",
+  "movement_type.quarantine": "Karantinə alındı",
+  "movement_type.quarantine_release": "Karantindən çıxdı",
+  "movement_type.found": "Tapıldı"
 }

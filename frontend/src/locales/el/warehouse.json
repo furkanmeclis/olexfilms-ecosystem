@@ -920,5 +920,9 @@
   "eod.pending_unplaced_entries": "Μη τοποθετημένες εισαγωγές",
   "eod.pending_counts": "Εκκρεμείς απογραφές",
   "eod.pending_preparing_orders": "Παραγγελίες σε προετοιμασία",
-  "eod.pending_as_of": "Κατά τη δημιουργία της αναφοράς: {{at}}"
+  "eod.pending_as_of": "Κατά τη δημιουργία της αναφοράς: {{at}}",
+  "movement_type.measure_conversion": "Μετατροπή μονάδας",
+  "movement_type.quarantine": "Σε καραντίνα",
+  "movement_type.quarantine_release": "Αποδέσμευση από καραντίνα",
+  "movement_type.found": "Βρέθηκε"
 }

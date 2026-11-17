@@ -950,5 +950,9 @@
   "eod.pending_unplaced_entries": "Entradas sin ubicar",
   "eod.pending_counts": "Recuentos pendientes",
   "eod.pending_preparing_orders": "Pedidos en preparación",
-  "eod.pending_as_of": "Al generar el informe: {{at}}"
+  "eod.pending_as_of": "Al generar el informe: {{at}}",
+  "movement_type.measure_conversion": "Conversión de medida",
+  "movement_type.quarantine": "En cuarentena",
+  "movement_type.quarantine_release": "Liberado de cuarentena",
+  "movement_type.found": "Encontrado"
 }

@@ -950,5 +950,9 @@
   "eod.pending_unplaced_entries": "Неразмещённые поступления",
   "eod.pending_counts": "Незавершённые инвентаризации",
   "eod.pending_preparing_orders": "Заказы в подготовке",
-  "eod.pending_as_of": "На момент отчёта: {{at}}"
+  "eod.pending_as_of": "На момент отчёта: {{at}}",
+  "movement_type.measure_conversion": "Преобразование единицы",
+  "movement_type.quarantine": "На карантине",
+  "movement_type.quarantine_release": "Снят с карантина",
+  "movement_type.found": "Найден"
 }
