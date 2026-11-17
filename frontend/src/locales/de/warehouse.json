@@ -756,5 +756,13 @@
   "detail.updated_at": "Zuletzt aktualisiert",
   "detail.transfers_out": "Ausgehende Umlagerungen",
   "detail.transfers_in": "Eingehende Umlagerungen",
-  "detail.open": "Details"
+  "detail.open": "Details",
+  "entry.arrival_missing_title": "Nicht gescannte Positionen",
+  "entry.arrival_missing_description": "{{count}} Positionen wurden beim Wareneingang nicht gescannt. Fehlende Ware darf nicht in den Bestand. Sie können diese Positionen entfernen und den Rest bestätigen.",
+  "entry.drop_missing_confirm": "Fehlende entfernen und bestätigen",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Einige Positionen wurden beim Eingang nicht gescannt. Scannen Sie sie oder entfernen Sie die fehlenden und bestätigen Sie.",
+  "labels.printed_title": "Wurden die Etiketten gedruckt?",
+  "labels.printed_description": "Dann werden {{count}} Einheiten als gedruckt markiert. Ein Eingang mit gedruckten Etiketten kann nicht storniert werden.",
+  "labels.printed_confirm": "Ja, gedruckt",
+  "labels.mark_failed": "Die Etiketten konnten nicht als gedruckt markiert werden."
 }

@@ -19,6 +19,9 @@ type MobileHandlers struct {
 	Transfers *whhandler.Transfers
 	Entries   *whhandler.Entries
 	Members   *whhandler.Members
+	// StepUp guards the count approval like the panel route (TEC-1224);
+	// nil fails closed (STEP_UP_REQUIRED).
+	StepUp middleware.StepUpChecker
 }
 
 // RegisterMobileRoutes mounts the TEC-235 mobile warehouse routes under
@@ -78,7 +81,10 @@ func RegisterMobileRoutes(
 	mux.Handle("DELETE "+p+"/stock-counts/{uuid}/scans/{scan_uuid}", write(h.Counts.DeleteScan))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/complete", write(h.Counts.Complete))
 	mux.Handle("GET "+p+"/stock-counts/{uuid}/report", read(h.Counts.Report))
-	mux.Handle("POST "+p+"/stock-counts/{uuid}/approve", write(h.Counts.Approve))
+	// TEC-1224: same step-up as POST /v1/warehouse/stock-counts/{uuid}/approve.
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/approve",
+		middleware.Chain(http.HandlerFunc(h.Counts.Approve), version, authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(h.StepUp)))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/cancel", write(h.Counts.Cancel))
 
 	mux.Handle("GET "+p+"/transfers", read(h.Transfers.List))

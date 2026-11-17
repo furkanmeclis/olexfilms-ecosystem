@@ -756,5 +756,13 @@
   "detail.updated_at": "Останнє оновлення",
   "detail.transfers_out": "Вихідні переміщення",
   "detail.transfers_in": "Вхідні переміщення",
-  "detail.open": "Деталі"
+  "detail.open": "Деталі",
+  "entry.arrival_missing_title": "Є невідскановані рядки",
+  "entry.arrival_missing_description": "{{count}} рядків не відскановано під час приймання. Відсутній товар не може надійти на склад. Можна прибрати ці рядки й підтвердити решту.",
+  "entry.drop_missing_confirm": "Прибрати відсутні й підтвердити",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Деякі рядки не відскановано під час приймання. Відскануйте їх або приберіть відсутні й підтвердьте.",
+  "labels.printed_title": "Етикетки надруковано?",
+  "labels.printed_description": "Якщо так, {{count}} одиниць буде позначено як надруковані. Прихід із надрукованими етикетками не можна скасувати.",
+  "labels.printed_confirm": "Так, надруковано",
+  "labels.mark_failed": "Не вдалося позначити етикетки як надруковані."
 }

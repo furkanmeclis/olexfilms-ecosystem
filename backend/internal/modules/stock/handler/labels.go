@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -297,6 +298,28 @@ func (h *Labels) PrintUnits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writePDF(w, "unit-labels.pdf", pdf)
+}
+
+// markPrintedRequest is the body of POST /v1/stock/labels/units/mark-printed.
+type markPrintedRequest struct {
+	Barcodes []string `json:"barcodes"`
+}
+
+// MarkUnitsPrinted serves POST /v1/stock/labels/units/mark-printed (TEC-1224):
+// the client calls it after the user confirms the label sheet was printed;
+// reserved units become printed. GET units.pdf no longer changes state.
+func (h *Labels) MarkUnitsPrinted(w http.ResponseWriter, r *http.Request) {
+	var req markPrintedRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
+		return
+	}
+	marked, err := h.printer.MarkUnitsPrinted(r.Context(), reclassCaller(r), req.Barcodes)
+	if err != nil {
+		writeLabelError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]int64{"marked": marked})
 }
 
 // PrintLocations serves GET /v1/warehouse/labels/locations.pdf?location=...&room=...

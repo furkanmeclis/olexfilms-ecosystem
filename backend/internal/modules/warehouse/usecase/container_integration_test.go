@@ -1,6 +1,8 @@
 package usecase_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -178,5 +180,41 @@ func TestContainerEntryImportScanAndUndo(t *testing.T) {
 	}
 	if err := e.entries.DeleteMappingTemplate(e.ctx, c, tpl.UUID); err != nil {
 		t.Fatal(err)
+	}
+
+	// TEC-1224: a container entry with lines not scanned on arrival cannot
+	// be confirmed; drop_missing removes them and confirms the rest.
+	entry3, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: w.UUID.String(), Mode: wh.EntryModeWithExisting, Header: wh.EntryHeaderInput{
+		SupplierUUID: &supUUID, DefaultLocationUUID: &binUUID,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job3 := importJob(t, e, adapter, entry3.UUID, "none")
+	if _, err := adapter.Stage(e.ctx, job3, []map[string]any{
+		{"product_sku": e.piece.Sku, "barcode": code("9")},
+		{"product_sku": e.piece.Sku, "barcode": code("10")},
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if applied, err := adapter.Apply(e.ctx, job3); err != nil || applied.Counts["applied"] != 2 {
+		t.Fatalf("apply 3 %+v %v", applied.Counts, err)
+	}
+	if _, err := e.entries.Confirm(e.ctx, c, entry3.UUID); !errors.Is(err, wh.ErrEntryArrivalMissing) {
+		t.Fatalf("confirm without arrival scan: %v", err)
+	}
+	if _, err := e.entries.Scan(e.ctx, c, entry3.UUID, strings.ToLower(code("9"))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.entries.Confirm(e.ctx, c, entry3.UUID); !errors.Is(err, wh.ErrEntryArrivalMissing) {
+		t.Fatalf("confirm with a missing line: %v", err)
+	}
+	done, err := e.entries.ConfirmWith(e.ctx, c, entry3.UUID, wh.ConfirmOptions{DropMissing: true})
+	if err != nil || done.Status != "confirmed" || len(done.Lines) != 1 || !strings.EqualFold(done.Lines[0].Barcode, code("9")) {
+		t.Fatalf("confirm drop_missing %+v %v", done, err)
+	}
+	var missingState int
+	if err := e.pool.QueryRow(e.ctx, `SELECT count(*) FROM unit_current_state s JOIN units u ON u.id = s.unit_id WHERE u.barcode = $1`, code("10")).Scan(&missingState); err != nil || missingState != 0 {
+		t.Fatalf("dropped unit entered stock: %d %v", missingState, err)
 	}
 }

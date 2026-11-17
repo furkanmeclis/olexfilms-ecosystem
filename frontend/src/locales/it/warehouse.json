@@ -756,5 +756,13 @@
   "detail.updated_at": "Ultimo aggiornamento",
   "detail.transfers_out": "Trasferimenti in uscita",
   "detail.transfers_in": "Trasferimenti in entrata",
-  "detail.open": "Dettagli"
+  "detail.open": "Dettagli",
+  "entry.arrival_missing_title": "Righe non scansionate",
+  "entry.arrival_missing_description": "{{count}} righe non sono state scansionate all'arrivo. La merce mancante non può entrare in magazzino. Puoi rimuovere queste righe e confermare il resto.",
+  "entry.drop_missing_confirm": "Rimuovi mancanti e conferma",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Alcune righe non sono state scansionate all'arrivo. Scansionale o rimuovi le mancanti e conferma.",
+  "labels.printed_title": "Le etichette sono state stampate?",
+  "labels.printed_description": "Se sì, {{count}} unità vengono segnate come stampate. Un carico con etichette stampate non può essere annullato.",
+  "labels.printed_confirm": "Sì, stampate",
+  "labels.mark_failed": "Impossibile segnare le etichette come stampate."
 }

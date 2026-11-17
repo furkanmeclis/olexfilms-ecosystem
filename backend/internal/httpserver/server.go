@@ -1132,6 +1132,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Entries: warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
 			outbox.NewStore(deps.DB, deps.Queries))),
 		Members: warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
+		StepUp:  stepUpSvc,
 	}, featureSvc, tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)

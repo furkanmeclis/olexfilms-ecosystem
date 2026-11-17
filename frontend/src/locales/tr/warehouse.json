@@ -756,5 +756,13 @@
   "detail.updated_at": "Son güncelleme",
   "detail.transfers_out": "Giden transferler",
   "detail.transfers_in": "Gelen transferler",
-  "detail.open": "Detay"
+  "detail.open": "Detay",
+  "entry.arrival_missing_title": "Okutulmamış satırlar var",
+  "entry.arrival_missing_description": "{{count}} satır varışta okutulmadı. Eksik gelen mal stoğa giremez. Bu satırları fişten çıkarıp kalanları onaylayabilirsiniz.",
+  "entry.drop_missing_confirm": "Eksikleri fişten çıkar ve onayla",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bazı satırlar varışta okutulmadı. Okutun ya da eksikleri fişten çıkarıp onaylayın.",
+  "labels.printed_title": "Etiketler basıldı mı?",
+  "labels.printed_description": "Basıldıysa {{count}} birim \"basıldı\" olarak işaretlenir. Basılmış etiketli fiş iptal edilemez.",
+  "labels.printed_confirm": "Evet, basıldı",
+  "labels.mark_failed": "Etiketler basıldı olarak işaretlenemedi."
 }

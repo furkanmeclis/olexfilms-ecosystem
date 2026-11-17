@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
@@ -14,14 +16,17 @@ import (
 
 // Error codes of the stock entry endpoints (TEC-204).
 const (
-	CodeStockEntryNotDraft      = "STOCK_ENTRY_NOT_DRAFT"
-	CodeStockEntryEmpty         = "STOCK_ENTRY_EMPTY"
-	CodeStockEntryUnplaced      = "STOCK_ENTRY_UNPLACED"
-	CodeStockEntryCenterOnly    = "STOCK_ENTRY_CENTER_ONLY"
-	CodeStockEntryUnitNotLabel  = "STOCK_ENTRY_UNIT_NOT_PRINTED"
-	CodeStockEntryUnitTaken     = "STOCK_ENTRY_UNIT_TAKEN"
-	CodeStockEntryLedgerRefused = "STOCK_ENTRY_LEDGER_REFUSED"
-	CodeStockEntryPrintedLabels = "STOCK_ENTRY_PRINTED_LABELS"
+	CodeStockEntryNotDraft = "STOCK_ENTRY_NOT_DRAFT"
+	CodeStockEntryEmpty    = "STOCK_ENTRY_EMPTY"
+	CodeStockEntryUnplaced = "STOCK_ENTRY_UNPLACED"
+	// CodeStockEntryArrivalMissing (TEC-1224): confirm of a container entry
+	// with lines not scanned on arrival; details.missing is their count.
+	CodeStockEntryArrivalMissing = "STOCK_ENTRY_ARRIVAL_MISSING"
+	CodeStockEntryCenterOnly     = "STOCK_ENTRY_CENTER_ONLY"
+	CodeStockEntryUnitNotLabel   = "STOCK_ENTRY_UNIT_NOT_PRINTED"
+	CodeStockEntryUnitTaken      = "STOCK_ENTRY_UNIT_TAKEN"
+	CodeStockEntryLedgerRefused  = "STOCK_ENTRY_LEDGER_REFUSED"
+	CodeStockEntryPrintedLabels  = "STOCK_ENTRY_PRINTED_LABELS"
 )
 
 // Entries serves /v1/warehouse/stock-entries.
@@ -48,6 +53,8 @@ func writeEntryError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeStockEntryPrintedLabels, "Printed barcode labels prevent cancelling this stock entry")
 	case errors.Is(err, wh.ErrEntryEmpty):
 		response.Conflict(w, r, CodeStockEntryEmpty, "The stock entry has no lines")
+	case errors.Is(err, wh.ErrEntryArrivalMissing):
+		response.Conflict(w, r, CodeStockEntryArrivalMissing, "Some lines were not scanned on arrival; scan them or confirm with drop_missing to remove them")
 	case errors.Is(err, wh.ErrEntryUnplaced):
 		response.Conflict(w, r, CodeStockEntryUnplaced, "Place every line on a location before confirming")
 	case errors.Is(err, wh.ErrEntryCenterOnly):
@@ -237,7 +244,14 @@ func (h *Entries) Confirm(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	out, err := h.svc.Confirm(r.Context(), entryCaller(r), id)
+	// TEC-1224: optional body {"drop_missing": true}.
+	var body struct {
+		DropMissing bool `json:"drop_missing"`
+	}
+	if !decodeOptionalBody(w, r, &body) {
+		return
+	}
+	out, err := h.svc.ConfirmWith(r.Context(), entryCaller(r), id, wh.ConfirmOptions{DropMissing: body.DropMissing})
 	if err != nil {
 		writeEntryError(w, r, err)
 		return
@@ -257,4 +271,16 @@ func (h *Entries) Cancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, out)
+}
+
+// decodeOptionalBody decodes a JSON body that may be empty (TEC-1224).
+func decodeOptionalBody(w http.ResponseWriter, r *http.Request, dst any) bool {
+	if r.Body == nil {
+		return true
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(dst); err != nil && !errors.Is(err, io.EOF) {
+		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
+		return false
+	}
+	return true
 }

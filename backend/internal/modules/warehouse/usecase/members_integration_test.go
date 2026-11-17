@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	wh "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -126,6 +127,30 @@ func TestWarehouseMembershipLimitsWrites(t *testing.T) {
 		if !errors.Is(err, wh.ErrNotWarehouseMember) {
 			t.Fatalf("%s = %v, want ErrNotWarehouseMember", name, err)
 		}
+	}
+
+	// TEC-1224: the Excel barcode import binds, stages and applies only for
+	// a member of the entry's warehouse.
+	importer := wh.NewEntryBarcodeImporter(e.entries)
+	newJob := func(actor int64) db.ImportJob {
+		t.Helper()
+		row, err := e.q.CreateImportJob(e.ctx, db.CreateImportJobParams{Resource: wh.EntryBarcodeImportResource, ActorID: actor, Format: "csv", Locale: "en", OrganizationID: pgtype.Int8{Int64: e.dist.ID, Valid: true}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return row
+	}
+	notMember("import bind w2", importer.Bind(e.ctx, newJob(user.ID).Uuid, w2Entry.UUID, e.dist.ID, "none"))
+	free := e.orgUser(t, e.dist, "free")
+	bound := newJob(free.ID)
+	if err := importer.Bind(e.ctx, bound.Uuid, w2Entry.UUID, e.dist.ID, "none"); err != nil {
+		t.Fatalf("unrestricted import bind: %v", err)
+	}
+	_, err = importer.Stage(e.ctx, ioengine.ImportJob{ID: bound.ID, UUID: bound.Uuid, OrganizationID: e.dist.ID, ActorID: user.ID, Locale: "en"}, []map[string]any{{"barcode": "X"}}, nil)
+	notMember("import stage w2", err)
+	_, err = importer.Apply(e.ctx, ioengine.ImportJob{ID: bound.ID, UUID: bound.Uuid, OrganizationID: e.dist.ID, ActorID: user.ID, Locale: "en"})
+	if err == nil {
+		t.Fatal("import apply by a non member accepted")
 	}
 	_, err = e.entries.Create(e.ctx, uc, wh.EntryInput{WarehouseUUID: w2.UUID.String(), Mode: wh.EntryModeWithExisting})
 	notMember("entry create w2", err)

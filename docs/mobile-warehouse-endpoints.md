@@ -63,7 +63,7 @@ Sütunlar:
 | `POST /stock-entries/{id}/reserve-barcodes` | `POST .../{uuid}/lines` (`product_uuid`, `quantity`; yalnız merkez, K14) | `.../lines` |
 | `POST /stock-entries/{id}/assign-location` | `POST .../{uuid}/place` | `.../place` |
 | `POST /stock-entries/{id}/confirm`, `/cancel` | `POST .../{uuid}/confirm`, `/cancel` | `.../confirm`, `.../cancel` |
-| `POST /stock-entries/{id}/mark-printed` | Uç yok; etiket PDF'i `label_url` / `labels_url` | Eşleşmez. "Basıldı" durumu yeni modelde ayrı tutulmuyor |
+| `POST /stock-entries/{id}/mark-printed` | `POST /v1/stock/labels/units/mark-printed` (`barcodes`; TEC-1224). Etiket PDF'i (`label_url` / `labels_url`) durumu değiştirmez | `/v1/mobile/panel/stock/labels/units/mark-printed` |
 
 ### 2.3 Transfer (TEC-205)
 
@@ -131,7 +131,7 @@ Backend'e dokunulmadı. Aşağıdakiler ayrı bir iş olarak açılmalı:
 6. **Transfer / sayım notu düzenleme** (PATCH). Düşük öncelik. Not, yalnız
    oluşturmada veriliyor.
 
-Bilerek eşleşmeyenler: `mark-printed` (yeni modelde basım durumu yok),
+Bilerek eşleşmeyenler (TEC-1224'ten sonra `mark-printed` artık eşleşiyor, bkz. §4):
 `reports/layout` (istemci tercihi).
 
 ## 4. Durum güncellemesi (TEC-235)
@@ -152,3 +152,31 @@ Madde 1'de hâlâ eksik olanlar: oda/konum ağacı (`rooms`, `locations`),
 stok girişi, `moves`, `orders/{uuid}/place`, gün sonu, etiket PDF'leri,
 sayım CSV'si (`stock-counts/{uuid}/export`) ve `/v1/mobile/stock/*`
 (by-barcode, etiketler). Madde 2–6 değişmedi.
+
+### 4.1 TEC-1224 (depo hızlı hatalar, 17.11)
+
+- **Etiket basıldı işareti:** `GET /v1/stock/labels/units.pdf` yalnız PDF
+  üretir, birimin durumunu değiştirmez. Önizleme ya da indirme fişi iptal
+  edilemez hale getirmez. Kullanıcı baskıyı onaylayınca istemci
+  `POST /v1/stock/labels/units/mark-printed` (`{"barcodes": [...]}`) çağırır;
+  reserved birimler printed olur, çağrı tekrarlanabilir. Mobil bu uca panel
+  aynasından ulaşır (`/v1/mobile/panel/stock/labels/units/mark-printed`).
+  Parti etiketi (`/v1/stock/barcodes/{uuid}/labels.pdf`) eskisi gibi basım
+  sayar.
+- **Rulo etiketi:** yeniden basımda ilk boy değil kalan metre yazar.
+- **Konteyner fişi onayı:** tedarikçi, konteyner ya da irsaliye taşıyan veya
+  varış okutması başlamış fiş, okutulmamış satır varken onaylanmaz (409
+  `STOCK_ENTRY_ARRIVAL_MISSING`). `confirm` gövdesinde `drop_missing: true`
+  bu satırları fişten çıkarır ve kalanı onaylar. Panel ve mobil
+  (`/v1/mobile/warehouse/stock-entries/{uuid}/confirm`) aynı kuralı izler.
+- **Mobil sayım onayı:** `POST /v1/mobile/warehouse/stock-counts/{uuid}/approve`
+  paneldeki gibi step-up ister (403 `STEP_UP_REQUIRED`). Uygulama izni
+  `/v1/mobile/panel/auth/step-up/password` veya `/totp` ile alır.
+- **Excel barkod içe aktarma:** bağlama, önizleme ve uygulama, içe aktaran
+  kullanıcının fişin deposuna üye olmasını ister (TEC-769).
+- **Okuma uçları:** `GET /v1/warehouse/suppliers` ve
+  `GET /v1/warehouse/entry-import-templates` `warehouse.read` ile açılır.
+- **Sevk belgesi:** sevk belgesi satırları fiyat taşımaz; fiyatlar yalnız
+  sipariş fişinde (fiyat görme yetkisiyle) kalır. Sipariş onay geçmişi
+  metadata'sı ve outbox payload'ındaki `total` / `rate_snapshot` depo
+  rollerine açılmaz (testle korunur).

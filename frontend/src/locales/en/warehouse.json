@@ -756,5 +756,13 @@
   "detail.updated_at": "Last updated",
   "detail.transfers_out": "Outgoing transfers",
   "detail.transfers_in": "Incoming transfers",
-  "detail.open": "Details"
+  "detail.open": "Details",
+  "entry.arrival_missing_title": "Some lines were not scanned",
+  "entry.arrival_missing_description": "{{count}} lines were not scanned on arrival. Missing goods cannot enter stock. You can remove these lines from the entry and confirm the rest.",
+  "entry.drop_missing_confirm": "Remove missing lines and confirm",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Some lines were not scanned on arrival. Scan them, or remove the missing lines and confirm.",
+  "labels.printed_title": "Were the labels printed?",
+  "labels.printed_description": "If so, {{count}} units are marked as printed. An entry with printed labels cannot be cancelled.",
+  "labels.printed_confirm": "Yes, printed",
+  "labels.mark_failed": "The labels could not be marked as printed."
 }

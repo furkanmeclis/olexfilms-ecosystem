@@ -21,8 +21,36 @@ import (
 // OrderSlipDoc contains only the authorized order and its two parties.
 type OrderSlipDoc struct {
 	ShippingDoc
+	// Lines shadows ShippingDoc.Lines: the slip's lines carry prices.
+	Lines                                              []OrderSlipLine
 	CreatedAt                                          time.Time
 	Status, Currency, Subtotal, TaxTotal, Total, Notes string
+}
+
+// OrderSlipLine is a shipping line with the stored prices of its item.
+type OrderSlipLine struct {
+	ShippingLine
+	UnitPrice, LineTotal string
+}
+
+// slipLines adds the stored item prices to the shipping lines.
+func (s *Service) slipLines(ctx context.Context, orderID int64, lines []ShippingLine) ([]OrderSlipLine, error) {
+	items, err := s.q.ListOrderItems(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("orders: slip lines: %w", err)
+	}
+	byID := make(map[int64]db.OrderItem, len(items))
+	for _, it := range items {
+		byID[it.ID] = it
+	}
+	out := make([]OrderSlipLine, len(lines))
+	for i, l := range lines {
+		out[i] = OrderSlipLine{ShippingLine: l}
+		if it, ok := byID[l.itemID]; ok {
+			out[i].UnitPrice, out[i].LineTotal = numericText(it.UnitPrice, 2), numericText(it.LineTotal, 2)
+		}
+	}
+	return out, nil
 }
 
 // OrderSlip renders a fresh PDF synchronously, without an export job or cache.
@@ -51,7 +79,11 @@ func (s *Service) OrderSlip(ctx context.Context, c Caller, id uuid.UUID, lang, t
 		return nil, "", err
 	}
 	shipping.Zone = pdfrender.Zone(timezone, shipping.Zone.String())
-	d := OrderSlipDoc{ShippingDoc: shipping, CreatedAt: o.CreatedAt.Time,
+	lines, err := s.slipLines(ctx, o.ID, shipping.Lines)
+	if err != nil {
+		return nil, "", err
+	}
+	d := OrderSlipDoc{ShippingDoc: shipping, Lines: lines, CreatedAt: o.CreatedAt.Time,
 		Status: i18n.Translate(loc, "orders.status."+o.Status), Currency: o.Currency,
 		Subtotal: numericText(o.Subtotal, 2), TaxTotal: numericText(o.TaxTotal, 2), Total: numericText(o.Total, 2), Notes: o.Note.String}
 	if !c.SeesPrices() {
@@ -84,7 +116,7 @@ func (s *Service) OrderSlip(ctx context.Context, c Caller, id uuid.UUID, lang, t
 // prices (TEC-1050); the cells render as "—".
 func (d *OrderSlipDoc) hidePrices() {
 	d.Subtotal, d.TaxTotal, d.Total = "", "", ""
-	lines := make([]ShippingLine, len(d.Lines))
+	lines := make([]OrderSlipLine, len(d.Lines))
 	for i, l := range d.Lines {
 		l.UnitPrice, l.LineTotal = "", ""
 		lines[i] = l

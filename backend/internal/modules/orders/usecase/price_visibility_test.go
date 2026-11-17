@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -30,6 +31,13 @@ func asRole(c Caller, role string) Caller {
 // single money field; accounting and the center owner see them.
 func TestOrderPricesHiddenFromWarehouse(t *testing.T) {
 	f := newInvoicingFixture(t)
+	// TEC-1224: the approval history keeps the total and the rate snapshot
+	// in its metadata; neither may surface in the detail of a warehouse role.
+	if _, err := f.tx.Exec(f.ctx, `INSERT INTO order_status_history (order_id, organization_id, brand_id, from_status, to_status, metadata)
+		SELECT id, organization_id, brand_id, 'submitted', 'approved', '{"total":"987654.32","rate_snapshot":{"EUR":"41.123456"},"currency":"EUR"}'::jsonb
+		FROM orders WHERE uuid = $1`, f.order); err != nil {
+		t.Fatalf("history row: %v", err)
+	}
 
 	for _, role := range []string{rbac.RoleCenterWarehouse, rbac.RoleCenterService} {
 		c := asRole(f.center, role)
@@ -67,6 +75,9 @@ func TestOrderPricesHiddenFromWarehouse(t *testing.T) {
 		}
 		// The JSON has the keys with null values.
 		raw, _ := json.Marshal(v)
+		if strings.Contains(string(raw), "987654.32") || strings.Contains(string(raw), "41.123456") {
+			t.Fatalf("%s detail leaks the approval history money: %s", role, raw)
+		}
 		var m map[string]any
 		_ = json.Unmarshal(raw, &m)
 		if val, ok := m["total"]; !ok || val != nil {

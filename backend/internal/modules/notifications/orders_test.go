@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
+	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 )
 
@@ -62,6 +63,38 @@ func TestOrderStatusDispatch(t *testing.T) {
 		}
 		if _, ok := orderStatusDispatcher(code)(events.New(name).WithPayload(map[string]any{"order_uuid": "o-1"})); ok {
 			t.Fatalf("%s: an event without recipients must be skipped", name)
+		}
+	}
+}
+
+// TEC-1224: the order outbox payload carries the total (and the approval
+// carries the rate snapshot); the notifications built from it, which reach
+// warehouse staff, carry neither.
+func TestOrderDispatchesDropMoney(t *testing.T) {
+	payload := map[string]any{
+		"order_uuid": "o-1", "order_no": "ORD-1", "status": "approved", "brand_id": int64(3),
+		"currency": "EUR", "total": "987654.32", "rate_snapshot": map[string]any{"EUR": "41.12"},
+		"notify_user_ids": []any{float64(5)},
+	}
+	dispatchers := map[string]func(events.Event) (notifmodel.DispatchInput, bool){
+		events.OrdersWarehouseNew: orderWarehouseNewDispatch,
+		"created_by_seller":       orderCreatedBySellerDispatch,
+	}
+	for name, code := range OrderStatusEventCodes {
+		dispatchers[name] = orderStatusDispatcher(code)
+	}
+	for name, fn := range dispatchers {
+		in, ok := fn(events.New(name).WithPayload(payload))
+		if !ok {
+			t.Fatalf("%s: dispatch skipped", name)
+		}
+		for _, k := range []string{"total", "rate_snapshot", "currency"} {
+			if _, leak := in.Payload[k]; leak {
+				t.Fatalf("%s: payload carries %s: %v", name, k, in.Payload)
+			}
+			if _, leak := in.Vars[k]; leak {
+				t.Fatalf("%s: vars carry %s: %v", name, k, in.Vars)
+			}
 		}
 	}
 }

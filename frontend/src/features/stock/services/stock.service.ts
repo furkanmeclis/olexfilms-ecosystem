@@ -80,6 +80,23 @@ const enc = encodeURIComponent;
  * subtree (stock.read at scope subtree, TEC-216) and reads it as is.
  */
 export const stockService = {
+  /**
+   * POST /v1/stock/labels/units/mark-printed (TEC-1224): after the user
+   * confirms the sheet was printed, reserved units become printed. The
+   * GET units.pdf no longer changes state. Sent in MAX_UNIT_LABELS chunks.
+   */
+  async markUnitsPrinted(barcodes: readonly string[]): Promise<number> {
+    let marked = 0;
+    for (let i = 0; i < barcodes.length; i += MAX_UNIT_LABELS) {
+      const res = await platformRequest<{ marked: number }>(
+        "POST",
+        "/v1/stock/labels/units/mark-printed",
+        { body: { barcodes: barcodes.slice(i, i + MAX_UNIT_LABELS) } },
+      );
+      marked += res.marked;
+    }
+    return marked;
+  },
   /** GET /v1/stock/warehouse-summary (TEC-1066): totals per warehouse. */
   warehouseSummary() {
     return platformRequest<{ items: StockWarehouseSummary[] }>(

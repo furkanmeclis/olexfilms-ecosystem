@@ -756,5 +756,13 @@
   "detail.updated_at": "Dernière mise à jour",
   "detail.transfers_out": "Transferts sortants",
   "detail.transfers_in": "Transferts entrants",
-  "detail.open": "Détails"
+  "detail.open": "Détails",
+  "entry.arrival_missing_title": "Lignes non scannées",
+  "entry.arrival_missing_description": "{{count}} lignes n'ont pas été scannées à l'arrivée. Une marchandise manquante ne peut pas entrer en stock. Vous pouvez retirer ces lignes et confirmer le reste.",
+  "entry.drop_missing_confirm": "Retirer les manquants et confirmer",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Certaines lignes n'ont pas été scannées à l'arrivée. Scannez-les ou retirez les manquants puis confirmez.",
+  "labels.printed_title": "Les étiquettes ont-elles été imprimées ?",
+  "labels.printed_description": "Si oui, {{count}} unités sont marquées comme imprimées. Une entrée aux étiquettes imprimées ne peut pas être annulée.",
+  "labels.printed_confirm": "Oui, imprimées",
+  "labels.mark_failed": "Les étiquettes n'ont pas pu être marquées comme imprimées."
 }

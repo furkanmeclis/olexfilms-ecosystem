@@ -72,6 +72,10 @@ var (
 	// ErrEntryLedger: the ledger refused a movement at confirm.
 	ErrEntryLedger        = errors.New("warehouse: ledger refused the stock entry")
 	ErrEntryPrintedLabels = errors.New("warehouse: printed labels prevent draft cancellation")
+	// ErrEntryArrivalMissing (TEC-1224): a container entry (delivery header
+	// or arrival scan) still has lines that were not scanned on arrival.
+	// Confirm with DropMissing removes them first.
+	ErrEntryArrivalMissing = errors.New("warehouse: stock entry has lines not scanned on arrival")
 )
 
 // Stock entry modes and statuses (stock_entries).
@@ -678,10 +682,26 @@ func pickLines(ctx context.Context, q *db.Queries, lines []db.StockEntryLine, uu
 	return ids, nil
 }
 
+// ConfirmOptions tune Confirm (TEC-1224).
+type ConfirmOptions struct {
+	// DropMissing removes the lines of a container entry that were not
+	// scanned on arrival before the entry is posted.
+	DropMissing bool
+}
+
 // Confirm posts the entry and placement movements of every line in one
 // transaction and closes the entry. A confirmed entry is refused
 // (ErrEntryNotDraft); nothing is written twice.
 func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID) (StockEntry, error) {
+	return s.ConfirmWith(ctx, c, id, ConfirmOptions{})
+}
+
+// ConfirmWith is Confirm with options. TEC-1224: a container entry (it names
+// a supplier, container or waybill, or its arrival scan has started) whose
+// lines were not all scanned on arrival is refused (ErrEntryArrivalMissing)
+// so missing goods never enter stock; DropMissing removes those lines (like
+// DeleteLine) and confirms the rest.
+func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.UUID, opt ConfirmOptions) (StockEntry, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return StockEntry{}, err
@@ -693,6 +713,10 @@ func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID)
 		}
 		lines, err := q.ListStockEntryLines(ctx, e.ID)
 		if err != nil {
+			return err
+		}
+		dropped := 0
+		if lines, dropped, err = s.arrivalCheck(ctx, q, e, lines, opt.DropMissing); err != nil {
 			return err
 		}
 		if len(lines) == 0 {
@@ -717,12 +741,63 @@ func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID)
 		if e, err = q.ConfirmStockEntry(ctx, db.ConfirmStockEntryParams{UserID: c.actor(), ID: e.ID}); err != nil {
 			return notFound(err, ErrEntryNotDraft)
 		}
-		return audit(ctx, q, c, AuditStockEntryConfirm, e, map[string]any{"lines": len(lines)})
+		meta := map[string]any{"lines": len(lines)}
+		if dropped > 0 {
+			meta["dropped_missing"] = dropped
+		}
+		return audit(ctx, q, c, AuditStockEntryConfirm, e, meta)
 	})
 	if err != nil {
 		return StockEntry{}, err
 	}
 	return s.view(ctx, s.q, e, true)
+}
+
+// isContainerEntry: the entry names its delivery or its arrival scan has
+// started (a scanned line or an extra).
+func isContainerEntry(e db.StockEntry, lines []db.StockEntryLine, extras int) bool {
+	if e.SupplierID.Valid || strings.TrimSpace(e.ContainerNo.String) != "" || strings.TrimSpace(e.WaybillNo.String) != "" || extras > 0 {
+		return true
+	}
+	for _, l := range lines {
+		if l.ScannedAt.Valid {
+			return true
+		}
+	}
+	return false
+}
+
+// arrivalCheck refuses a container entry with unscanned lines, or with drop
+// removes those lines and returns the rest.
+func (s *StockEntries) arrivalCheck(ctx context.Context, q *db.Queries, e db.StockEntry, lines []db.StockEntryLine, drop bool) ([]db.StockEntryLine, int, error) {
+	extras, err := q.ListStockEntryScans(ctx, e.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+	if !isContainerEntry(e, lines, len(extras)) {
+		return lines, 0, nil
+	}
+	kept := make([]db.StockEntryLine, 0, len(lines))
+	var missing []db.StockEntryLine
+	for _, l := range lines {
+		if l.ScannedAt.Valid {
+			kept = append(kept, l)
+		} else {
+			missing = append(missing, l)
+		}
+	}
+	if len(missing) == 0 {
+		return lines, 0, nil
+	}
+	if !drop {
+		return nil, 0, fmt.Errorf("%w: %d of %d", ErrEntryArrivalMissing, len(missing), len(lines))
+	}
+	for _, l := range missing {
+		if _, err := q.DeleteStockEntryLine(ctx, db.DeleteStockEntryLineParams{Uuid: l.Uuid, EntryID: e.ID}); err != nil {
+			return nil, 0, err
+		}
+	}
+	return kept, len(missing), nil
 }
 
 // postLine writes the movements of one line.

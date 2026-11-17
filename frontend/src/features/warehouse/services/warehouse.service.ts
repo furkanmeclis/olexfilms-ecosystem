@@ -325,10 +325,12 @@ export const warehouseService = {
       { body },
     );
   },
-  confirm(uuid: string) {
+  /** TEC-1224: `drop_missing` removes the lines not scanned on arrival. */
+  confirm(uuid: string, opts?: { drop_missing?: boolean }) {
     return platformRequest<StockEntry>(
       "POST",
       `/v1/warehouse/stock-entries/${enc(uuid)}/confirm`,
+      opts?.drop_missing ? { body: { drop_missing: true } } : undefined,
     );
   },
   cancel(uuid: string) {

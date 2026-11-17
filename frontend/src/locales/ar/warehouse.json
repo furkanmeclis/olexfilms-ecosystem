@@ -726,5 +726,13 @@
   "detail.updated_at": "آخر تحديث",
   "detail.transfers_out": "التحويلات الصادرة",
   "detail.transfers_in": "التحويلات الواردة",
-  "detail.open": "التفاصيل"
+  "detail.open": "التفاصيل",
+  "entry.arrival_missing_title": "توجد بنود لم تُمسح",
+  "entry.arrival_missing_description": "لم يتم مسح {{count}} بنود عند الوصول. لا يمكن إدخال البضاعة الناقصة إلى المخزون. يمكنك إزالة هذه البنود وتأكيد الباقي.",
+  "entry.drop_missing_confirm": "إزالة الناقص والتأكيد",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "بعض البنود لم تُمسح عند الوصول. امسحها أو أزل الناقص ثم أكّد.",
+  "labels.printed_title": "هل طُبعت الملصقات؟",
+  "labels.printed_description": "إذا طُبعت، تُعلَّم {{count}} وحدات كمطبوعة. لا يمكن إلغاء إدخال ذي ملصقات مطبوعة.",
+  "labels.printed_confirm": "نعم، طُبعت",
+  "labels.mark_failed": "تعذّر تعليم الملصقات كمطبوعة."
 }
