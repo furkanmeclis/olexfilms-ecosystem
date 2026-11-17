@@ -91,5 +91,6 @@
   "resources.stock.products": "Απόθεμα ανά προϊόν",
   "resources.stock.location_stock": "Απόθεμα θέσης",
   "resources.stock.unit_history": "Ιστορικό κινήσεων μονάδας",
-  "resources.stock.barcode_batches": "Παρτίδες γραμμωτών κωδικών"
+  "resources.stock.barcode_batches": "Παρτίδες γραμμωτών κωδικών",
+  "resources.stock.movements": "Κινήσεις αποθέματος"
 }

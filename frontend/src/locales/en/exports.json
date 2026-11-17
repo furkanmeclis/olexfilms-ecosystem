@@ -91,5 +91,6 @@
   "resources.stock.products": "Stock by product",
   "resources.stock.location_stock": "Location stock",
   "resources.stock.unit_history": "Unit movement history",
-  "resources.stock.barcode_batches": "Barcode batches"
+  "resources.stock.barcode_batches": "Barcode batches",
+  "resources.stock.movements": "Stock movements"
 }

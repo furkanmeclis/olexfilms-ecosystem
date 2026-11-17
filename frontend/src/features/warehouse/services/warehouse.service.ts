@@ -89,6 +89,16 @@ export type StockCountResolution =
 export type EodReport = Schemas["EodReport"];
 export type EodReportGenerateInput = Schemas["EodReportGenerateInput"];
 export type ExportJob = Schemas["ExportJob"];
+// --- TEC-1229: stock view, movements, reorder rules, recount ---
+export type StockBalance = Schemas["StockBalance"];
+export type StockWarehouseProduct = Schemas["StockWarehouseProduct"];
+export type StockMovementRow = Schemas["StockMovementRow"];
+export type StockMovementEnd = Schemas["StockMovementEnd"];
+export type StockReorderRule = Schemas["StockReorderRule"];
+export type StockReorderRuleInput = Schemas["StockReorderRuleInput"];
+export type StockCountRecountInput = Schemas["StockCountRecountInput"];
+export type EodBalance = Schemas["EodBalance"];
+export type EodPending = Schemas["EodPending"];
 // --- TEC-769 ---
 export type WarehouseMember = Schemas["WarehouseMember"];
 export type WarehouseMemberUser = Schemas["WarehouseMemberUser"];
@@ -176,6 +186,42 @@ export const warehouseService = {
       "GET",
       `/v1/stock/warehouses/${encodeURIComponent(warehouseUuid)}/units`,
       { query: params },
+    );
+  },
+
+  // --- TEC-1229: stock view -------------------------------------------------
+  /** Product totals of a warehouse with the balance split (no prices). */
+  listWarehouseProducts(warehouseUuid: string, params: WarehouseListQuery) {
+    return platformRequest<Page<StockWarehouseProduct>>(
+      "GET",
+      `/v1/stock/warehouses/${enc(warehouseUuid)}/products`,
+      { query: params },
+    );
+  },
+  /** Ledger movements of the active organization (filters, no prices). */
+  listMovements(params: WarehouseListQuery) {
+    return platformRequest<Page<StockMovementRow>>(
+      "GET",
+      "/v1/stock/movements",
+      { query: params },
+    );
+  },
+  listReorderRules(params: WarehouseListQuery, critical = false) {
+    return platformRequest<Page<StockReorderRule>>(
+      "GET",
+      critical ? "/v1/stock/critical" : "/v1/stock/reorder-rules",
+      { query: params },
+    );
+  },
+  putReorderRule(body: StockReorderRuleInput) {
+    return platformRequest<StockReorderRule>("PUT", "/v1/stock/reorder-rules", {
+      body,
+    });
+  },
+  deleteReorderRule(uuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/stock/reorder-rules/${enc(uuid)}`,
     );
   },
 
@@ -650,6 +696,26 @@ export const warehouseService = {
       { body },
     );
   },
+  /** TEC-1229: send difference lines back for a recount. */
+  requestCountRecount(uuid: string, lineUuids: string[]) {
+    return platformRequest<StockCountReport>(
+      "POST",
+      `/v1/warehouse/stock-counts/${enc(uuid)}/recount-requests`,
+      { body: { line_uuids: lineUuids } },
+    );
+  },
+  /** TEC-1229: the recounted values of one line. */
+  recountCountLine(
+    uuid: string,
+    lineUuid: string,
+    body: StockCountRecountInput,
+  ) {
+    return platformRequest<StockCountReport>(
+      "POST",
+      `/v1/warehouse/stock-counts/${enc(uuid)}/lines/${enc(lineUuid)}/recount`,
+      { body },
+    );
+  },
 
   // --- End-of-day reports (TEC-207) ------------------------------------------
   listEodReports(params: EodListQuery) {
@@ -765,6 +831,13 @@ export const warehouseKeys = {
     ["warehouse", "batches", params] as const,
   units: (warehouseUuid: string, params: WarehouseUnitListQuery) =>
     ["warehouse", "units", warehouseUuid, params] as const,
+  // TEC-1229
+  products: (warehouseUuid: string, params: WarehouseListQuery) =>
+    ["warehouse", "products", warehouseUuid, params] as const,
+  movements: (params: WarehouseListQuery) =>
+    ["warehouse", "movements", params] as const,
+  reorder: (params: WarehouseListQuery, critical: boolean) =>
+    ["warehouse", "reorder", critical, params] as const,
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,
   transfer: (uuid: string) => ["warehouse", "transfer", uuid] as const,
@@ -800,6 +873,7 @@ export const warehouseExportPaths = {
   locations: "/v1/warehouse/locations/export",
   eodReports: "/v1/warehouse/eod-reports/export",
   batches: "/v1/stock/barcodes/export",
+  movements: "/v1/stock/movements/export",
   locationStock: (uuid: string) =>
     `/v1/stock/locations/${enc(uuid)}/products/export`,
   unitHistory: (barcode: string) =>
