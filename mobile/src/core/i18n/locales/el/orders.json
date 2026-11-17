@@ -168,5 +168,14 @@
   "step.backorder_opened": "Άνοιξε ως εκκρεμής παραγγελία",
   "step.discrepancy_reported": "Αναφέρθηκε απόκλιση παραλαβής",
   "step.discrepancy_resolved": "Η απόκλιση επιλύθηκε",
-  "receipt.reason_placeholder": "π.χ. δεν είναι στο κιβώτιο, χτυπημένο"
+  "receipt.reason_placeholder": "π.χ. δεν είναι στο κιβώτιο, χτυπημένο",
+  "step.schedule_updated": "Άλλαξε προτεραιότητα / προθεσμία",
+  "step.claimed": "Ανέλαβε την εργασία",
+  "step.claim_taken_over": "Ανέλαβε την εργασία από άλλον",
+  "step.claim_released": "Αποδέσμευσε την εργασία",
+  "queue.priority_normal": "Κανονική",
+  "queue.priority_urgent": "Επείγουσα",
+  "queue.due": "Προθεσμία: {{date}}",
+  "queue.no_due_date": "Χωρίς προθεσμία",
+  "queue.previous_picker": "Πριν: {{name}}"
 }

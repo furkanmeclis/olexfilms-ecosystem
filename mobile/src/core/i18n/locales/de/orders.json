@@ -168,5 +168,14 @@
   "step.backorder_opened": "Als Rückstandsauftrag eröffnet",
   "step.discrepancy_reported": "Abweichung beim Empfang gemeldet",
   "step.discrepancy_resolved": "Abweichung geklärt",
-  "receipt.reason_placeholder": "z. B. nicht im Karton, eingedrückt"
+  "receipt.reason_placeholder": "z. B. nicht im Karton, eingedrückt",
+  "step.schedule_updated": "Priorität / Termin geändert",
+  "step.claimed": "Auftrag übernommen",
+  "step.claim_taken_over": "Auftrag übernommen (von anderem)",
+  "step.claim_released": "Auftrag freigegeben",
+  "queue.priority_normal": "Normal",
+  "queue.priority_urgent": "Dringend",
+  "queue.due": "Fällig: {{date}}",
+  "queue.no_due_date": "Kein Termin",
+  "queue.previous_picker": "Vorher: {{name}}"
 }

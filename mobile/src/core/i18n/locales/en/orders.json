@@ -168,5 +168,14 @@
   "step.backorder_opened": "Opened as a backorder",
   "step.discrepancy_reported": "Receipt discrepancy reported",
   "step.discrepancy_resolved": "Discrepancy resolved",
-  "receipt.reason_placeholder": "e.g. not in the box, dented"
+  "receipt.reason_placeholder": "e.g. not in the box, dented",
+  "step.schedule_updated": "Priority / due date changed",
+  "step.claimed": "Took the job",
+  "step.claim_taken_over": "Took over the job",
+  "step.claim_released": "Released the job",
+  "queue.priority_normal": "Normal",
+  "queue.priority_urgent": "Urgent",
+  "queue.due": "Due: {{date}}",
+  "queue.no_due_date": "No due date",
+  "queue.previous_picker": "Previously: {{name}}"
 }

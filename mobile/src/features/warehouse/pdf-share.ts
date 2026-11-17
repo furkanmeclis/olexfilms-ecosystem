@@ -6,6 +6,7 @@ import { ApiError } from '@/core/api/errors';
 import { getTokens } from '@/core/auth/tokens';
 import { API_URL, APP_VERSION, MOBILE_API_VERSION } from '@/core/config';
 import { i18n } from '@/core/i18n';
+import { loadSharing } from '@/features/feedback/native';
 
 type Query = Record<string, string | string[] | undefined>;
 
@@ -70,6 +71,52 @@ export async function sharePanelPdf(path: string, query: Query, filename: string
     await Share.share({ url: file.uri, title: safe });
   } finally {
     // iOS hands the file over before resolving; Android keeps it until the next download clears the folder.
+    if (Platform.OS === 'ios' && file.exists) file.delete();
+  }
+}
+
+/** Whether a panel document (PDF or photo) can go to the share sheet: expo-sharing, or iOS Share with a file URL. */
+export function canShareDocument() {
+  return Platform.OS === 'ios' || !!loadSharing();
+}
+
+/**
+ * TEC-1228: downloads an order document (shipping note, order slip, delivery
+ * receipt photo) with the session token and opens the share sheet. Unlike
+ * sharePanelPdf it also shares on Android through expo-sharing, and the
+ * receipt may be an image: the extension comes from the response.
+ */
+export async function sharePanelDocument(path: string, title: string) {
+  const t0 = getTokens();
+  if (!t0 || t0.accessExpiresAt - Date.now() < 30_000) await refreshTokens();
+  const token = getTokens()?.access;
+  const dir = new Directory(Paths.cache, 'order-documents');
+  if (dir.exists) dir.delete();
+  dir.create({ intermediates: true });
+  let file: File;
+  try {
+    // A folder destination keeps the server's file name and extension (receipt: pdf or image).
+    file = await File.downloadFileAsync(panelUrl(path), dir, {
+      headers: {
+        'X-Mobile-Api-Version': MOBILE_API_VERSION,
+        'X-App-Version': APP_VERSION,
+        'Accept-Language': i18n.language,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      idempotent: true,
+    });
+  } catch {
+    throw new ApiError(0, { code: 'PDF_DOWNLOAD_FAILED', message: 'Document download failed' });
+  }
+  const type = file.type || 'application/pdf';
+  const sharing = loadSharing();
+  try {
+    if (sharing) {
+      await sharing.shareAsync(file.uri, { mimeType: type, dialogTitle: title });
+    } else {
+      await Share.share({ url: file.uri, title });
+    }
+  } finally {
     if (Platform.OS === 'ios' && file.exists) file.delete();
   }
 }

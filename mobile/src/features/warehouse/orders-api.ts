@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { api, unwrap } from '@/core/api/client';
+import { api, unwrap, uploadForm } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
 import { sellerWarehouseFilter } from '@/features/orders/order-summary';
 
@@ -19,14 +19,15 @@ export type DeliveryMethod = S['DeliveryMethod'];
 /** Warehouse view of orders: what to prepare (seller) and what to receive and shelve (buyer). */
 export type OrderScope = 'prepare' | 'receive' | 'all';
 
-const SCOPES: Record<OrderScope, { side?: 'seller' | 'buyer'; status?: string }> = {
-  prepare: { side: 'seller', status: 'approved,processing,preparing,ready' },
+const SCOPES: Record<OrderScope, { side?: 'seller' | 'buyer'; status?: string; sort?: string }> = {
+  // TEC-1228: the work queue — urgent first, then by due date, then the oldest.
+  prepare: { side: 'seller', status: 'approved,processing,preparing,ready', sort: 'queue' },
   receive: { side: 'buyer', status: 'shipped,received' },
   all: {},
 };
 
 export const orderKeys = {
-  orders: (scope: OrderScope, warehouse = '') => ['warehouse', 'orders', scope, warehouse] as const,
+  orders: (scope: OrderScope, warehouse = '', mine = false) => ['warehouse', 'orders', scope, warehouse, mine] as const,
   counts: (warehouse = '') => ['warehouse', 'orders', 'counts', warehouse] as const,
   order: (uuid: string) => ['warehouse', 'order', uuid] as const,
   pickList: (uuid: string) => ['warehouse', 'order', uuid, 'pick-list'] as const,
@@ -42,16 +43,18 @@ export const orderKeys = {
  * picked warehouse's (`seller_warehouse`); the receive side has no warehouse
  * filter in the API, so it lists the organization's.
  */
-export function useOrders(scope: OrderScope, enabled = true, warehouse?: { uuid: string | undefined; ready: boolean }) {
+export function useOrders(scope: OrderScope, enabled = true, warehouse?: { uuid: string | undefined; ready: boolean }, mine = false) {
   const wh = scope === 'prepare' ? (warehouse?.uuid ?? '') : '';
+  // TEC-1228: "my jobs" — the orders the user took (seller side only).
+  const picker = mine && scope === 'prepare' ? { picker: 'me' } : {};
   return useInfiniteQuery({
-    queryKey: orderKeys.orders(scope, wh),
+    queryKey: orderKeys.orders(scope, wh, mine && scope === 'prepare'),
     enabled: enabled && (warehouse?.ready ?? true),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/orders', {
-          params: { query: { ...SCOPES[scope], ...sellerWarehouseFilter(wh || undefined), limit: PAGE, offset: pageParam } },
+          params: { query: { ...SCOPES[scope], ...picker, ...sellerWarehouseFilter(wh || undefined), limit: PAGE, offset: pageParam } },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
@@ -193,6 +196,18 @@ export const orderApi = {
         body,
       }),
     ),
+  /** TEC-1228: take the warehouse job; takeover lets a manager take someone else's. */
+  claim: (uuid: string, takeover = false) => unwrap(api.POST('/v1/orders/{uuid}/claim', { params: { path: { uuid } }, body: { takeover } })),
+  release: (uuid: string) => unwrap(api.DELETE('/v1/orders/{uuid}/claim', { params: { path: { uuid } } })),
+  /** TEC-1228: render the shipping note again (seller, after shipping). */
+  regenerateShippingDocument: (uuid: string) => unwrap(api.POST('/v1/orders/{uuid}/shipping-document', { params: { path: { uuid } } })),
+  /** TEC-1228: the buyer's signed delivery receipt photo (JPEG from the camera). */
+  attachReceipt: (uuid: string, photoUri: string) => {
+    const form = new FormData();
+    // React Native's FormData takes a { uri, name, type } file part; uploadForm sends it with XMLHttpRequest.
+    form.append('file', { uri: photoUri, name: 'receipt.jpg', type: 'image/jpeg' } as unknown as Blob);
+    return uploadForm<Order>(`/v1/orders/${encodeURIComponent(uuid)}/receipt-document`, form);
+  },
   place: (uuid: string, body: S['WarehouseOrderPlaceInput']) =>
     unwrap(api.POST('/v1/warehouse/orders/{uuid}/place', { params: { path: { uuid } }, body })),
 };

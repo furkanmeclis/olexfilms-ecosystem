@@ -12,6 +12,7 @@ import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type StockCount, type StockEntry, type Transfer, useCounts, useEntries, useTransfers } from './api';
 import { countTone, entryTone, formatDate, go, transferTone } from './format';
+import { useQueueFacts } from './order-extras';
 import { orderTone } from './order-screen';
 import { type Order, type OrderScope, useOrders } from './orders-api';
 import { useWarehouseScope } from './context';
@@ -45,6 +46,8 @@ export function JobsScreen() {
   }
   const [scope, setScope] = useState<Scope>('open');
   const [direction, setDirection] = useState<TransferDirection>('out');
+  // TEC-1228: "my jobs" — the orders this user took.
+  const [mine, setMine] = useState(false);
   const write = useCan('warehouse.write');
 
   const newPath =
@@ -76,6 +79,7 @@ export function JobsScreen() {
         tab={tab}
         status={tab === 'orders' ? '' : STATUS[tab][scope]}
         orderScope={ORDER_SCOPE[scope]}
+        mine={mine}
         direction={direction}
         header={
           <View className="gap-3 pb-2">
@@ -106,6 +110,16 @@ export function JobsScreen() {
                     ]
               }
             />
+            {tab === 'orders' && scope === 'open' ? (
+              <Chips
+                value={mine ? 'mine' : 'all'}
+                onChange={(v) => setMine(v === 'mine')}
+                options={[
+                  { value: 'all', label: t('queue.all_jobs') },
+                  { value: 'mine', label: t('queue.my_jobs') },
+                ]}
+              />
+            ) : null}
             {tab === 'transfers' ? (
               // The API filters one side at a time: leaving this warehouse or arriving at it.
               <Chips
@@ -129,6 +143,7 @@ function JobsList({
   tab,
   status,
   orderScope,
+  mine,
   direction,
   header,
   onCreate,
@@ -136,6 +151,7 @@ function JobsList({
   tab: JobsTab;
   status: string;
   orderScope: OrderScope;
+  mine: boolean;
   direction: TransferDirection;
   header: React.ReactElement;
   onCreate?: () => void;
@@ -147,7 +163,7 @@ function JobsList({
   const transfers = useTransfers(status, scope, direction, tab === 'transfers');
   const counts = useCounts(status, scope, tab === 'counts');
   const entries = useEntries(status, scope, tab === 'entries');
-  const orders = useOrders(orderScope, tab === 'orders', scope);
+  const orders = useOrders(orderScope, tab === 'orders', scope, mine);
   const q = tab === 'transfers' ? transfers : tab === 'counts' ? counts : tab === 'entries' ? entries : orders;
 
   const items: (Transfer | StockCount | StockEntry | Order)[] =
@@ -258,12 +274,16 @@ export function OrderCard({ order: x }: { order: Order }) {
   const { t } = useTranslation('warehouse');
   const amountText = useAmountText();
   const activityText = useActivityText();
+  const queueFacts = useQueueFacts();
   const other = x.role === 'buyer' ? x.seller : x.buyer;
+  // TEC-1228: urgent / overdue first on the card, then the rest.
+  const facts = queueFacts(x);
   return (
     <DocCard
-      title={other.name}
+      title={facts.length ? `${other.name} · ${facts[0]}` : other.name}
       subtitle={[amountText(x), activityText(x.last_activity)].filter(Boolean).join(' · ') || t(`orders.role.${x.role}`)}
       meta={[
+        ...facts.slice(1),
         x.order_no,
         // TEC-1220 (revize 7.3): the staff member who placed the order, next to the latest step.
         x.created_by ? t('orders:card.created_by', { name: x.created_by.name }) : null,

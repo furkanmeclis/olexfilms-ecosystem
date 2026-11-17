@@ -168,5 +168,14 @@
   "step.backorder_opened": "فُتح كطلب متأخر",
   "step.discrepancy_reported": "تم الإبلاغ عن فرق في الاستلام",
   "step.discrepancy_resolved": "تمت تسوية الفرق",
-  "receipt.reason_placeholder": "مثلًا: غير موجود في الصندوق، مخدوش"
+  "receipt.reason_placeholder": "مثلًا: غير موجود في الصندوق، مخدوش",
+  "step.schedule_updated": "تغيّرت الأولوية / الموعد",
+  "step.claimed": "تولّى العمل",
+  "step.claim_taken_over": "استلم العمل من غيره",
+  "step.claim_released": "حرّر العمل",
+  "queue.priority_normal": "عادية",
+  "queue.priority_urgent": "عاجلة",
+  "queue.due": "الموعد: {{date}}",
+  "queue.no_due_date": "بلا موعد",
+  "queue.previous_picker": "سابقًا: {{name}}"
 }

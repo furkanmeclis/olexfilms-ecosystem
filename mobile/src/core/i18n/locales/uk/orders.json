@@ -168,5 +168,14 @@
   "step.backorder_opened": "Відкрито як дозамовлення",
   "step.discrepancy_reported": "Повідомлено про розбіжність при прийманні",
   "step.discrepancy_resolved": "Розбіжність закрито",
-  "receipt.reason_placeholder": "напр., немає в коробці, вм'ятина"
+  "receipt.reason_placeholder": "напр., немає в коробці, вм'ятина",
+  "step.schedule_updated": "Змінено пріоритет / строк",
+  "step.claimed": "Узяв(ла) роботу",
+  "step.claim_taken_over": "Забрав(ла) роботу",
+  "step.claim_released": "Звільнив(ла) роботу",
+  "queue.priority_normal": "Звичайний",
+  "queue.priority_urgent": "Терміновий",
+  "queue.due": "Строк: {{date}}",
+  "queue.no_due_date": "Без строку",
+  "queue.previous_picker": "Раніше: {{name}}"
 }

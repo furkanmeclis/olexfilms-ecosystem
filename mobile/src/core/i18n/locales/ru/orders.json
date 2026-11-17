@@ -168,5 +168,14 @@
   "step.backorder_opened": "Открыт как дозаказ",
   "step.discrepancy_reported": "Сообщено о расхождении при приёмке",
   "step.discrepancy_resolved": "Расхождение закрыто",
-  "receipt.reason_placeholder": "напр., нет в коробке, вмятина"
+  "receipt.reason_placeholder": "напр., нет в коробке, вмятина",
+  "step.schedule_updated": "Изменены приоритет / срок",
+  "step.claimed": "Взял(а) работу",
+  "step.claim_taken_over": "Забрал(а) работу",
+  "step.claim_released": "Освободил(а) работу",
+  "queue.priority_normal": "Обычный",
+  "queue.priority_urgent": "Срочный",
+  "queue.due": "Срок: {{date}}",
+  "queue.no_due_date": "Без срока",
+  "queue.previous_picker": "Ранее: {{name}}"
 }

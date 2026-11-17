@@ -168,5 +168,14 @@
   "step.backorder_opened": "Отворена като допълнителна поръчка",
   "step.discrepancy_reported": "Отчетено несъответствие при приемане",
   "step.discrepancy_resolved": "Несъответствието е затворено",
-  "receipt.reason_placeholder": "напр. няма го в кашона, смачкано"
+  "receipt.reason_placeholder": "напр. няма го в кашона, смачкано",
+  "step.schedule_updated": "Променени приоритет / срок",
+  "step.claimed": "Пое задачата",
+  "step.claim_taken_over": "Пое задачата от друг",
+  "step.claim_released": "Освободи задачата",
+  "queue.priority_normal": "Нормален",
+  "queue.priority_urgent": "Спешен",
+  "queue.due": "Срок: {{date}}",
+  "queue.no_due_date": "Без срок",
+  "queue.previous_picker": "Преди: {{name}}"
 }

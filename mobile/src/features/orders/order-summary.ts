@@ -29,6 +29,11 @@ const STEP_ACTIONS = [
   'backorder_opened',
   'discrepancy_reported',
   'discrepancy_resolved',
+  // TEC-1228: the warehouse work queue.
+  'schedule_updated',
+  'claimed',
+  'claim_taken_over',
+  'claim_released',
 ] as const;
 
 /**
@@ -54,8 +59,21 @@ export type StepPart = { key: string; params?: Record<string, string> };
  * plotter mark of a plotter_marked step, then each line an edit added,
  * removed or changed and its plotter mark when that changed.
  */
-export function stepParts(step: { action: string; plotter_cut?: boolean; changes?: readonly LineChange[] }): StepPart[] {
+export function stepParts(step: {
+  action: string;
+  plotter_cut?: boolean;
+  changes?: readonly LineChange[];
+  priority?: string;
+  due_date?: string;
+  previous_picker?: string;
+}): StepPart[] {
   const parts: StepPart[] = [];
+  // TEC-1228: the new schedule, and whose job was taken over or released.
+  if (step.action === 'schedule_updated') {
+    if (step.priority) parts.push({ key: `queue.priority_${step.priority}` });
+    parts.push(step.due_date ? { key: 'queue.due', params: { date: step.due_date } } : { key: 'queue.no_due_date' });
+  }
+  if (step.previous_picker) parts.push({ key: 'queue.previous_picker', params: { name: step.previous_picker } });
   if (step.action === 'plotter_marked' && step.plotter_cut != null) {
     parts.push({ key: step.plotter_cut ? 'plotter.marked_on' : 'plotter.marked_off' });
   }
