@@ -33,6 +33,7 @@ const EXPORT_ONLY_RESOURCES = new Set<string>([
   "warehouse.transfer_summary",
   "warehouse.locations",
   "warehouse.eod_reports",
+  "warehouse.stock_adjustments", // TEC-1226
   "stock.products",
   "stock.location_stock",
   "stock.unit_history",
