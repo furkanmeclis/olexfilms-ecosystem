@@ -196,3 +196,19 @@ Migration'lar artan sırayla girdi: 000169 → 000170 → 000171 → 000172 → 
 5. Bu doküman: #507
 
 Yığın PR'lar her merge'den sonra main üstüne yeniden uygulandı; çakışmalar iki tarafın değişikliği korunarak çözüldü ve CI yeşilken merge edildi.
+
+## 17.11 doğrulama
+
+17.11'de revize 09.11 maddeleri kod üzerinden yeniden doğrulandı; eksik ya da gerileyen maddeler [TEC-1220](https://linear.app/technowide-furkan/issue/TEC-1220) ile kapatıldı. Kapsam dışı (karar bekliyor): 5.9 sevkten sonra siparişe kalem ekleme, center_owner / center_staff satış profili ve Ölçüm sekmesi, kredili kod (TEC-1084).
+
+| Madde | Açık | Durum | PR |
+| --- | --- | --- | --- |
+| 1 Web genel bakış | "En çok hizmet verilen marka-model" ve "en çok kullanılan ürün" grafikleri #552 ile kalkmıştı | ✅ İki sıralama paneli (analitik kit, ilk 10) merkez genel bakışında; dönem çubuğuna (Bugün / 7 / 30 / 90 gün / 12 ay) bağlı | [#557](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/557) |
+| 1 KPI toplam garanti | Yalnız aktif garanti vardı | ✅ `warranties_total` KPI'ı (aktif + süresi dolan + geçersiz) overview ve garanti özetinde; aktif KPI yerinde | [#557](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/557) |
+| 6 Mobil stok depo filtresi | Birim sayıyordu (sabit barkodlu çok adetli ürün 1), en fazla 1000 birim | ✅ `GET /v1/stock/warehouses/{uuid}/products` ucundan; adetler backend depo toplamlarıyla aynı | [#554](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/554) |
+| 5.4.1 Mobil hareket geçmişi | Yalnız siparişte vardı | ✅ Transfer ve stok girişi detayında zaman çizelgesi | [#554](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/554) |
+| 7.3 Mobil depo kartı | Yalnız son işlemi yapan görünüyordu | ✅ Siparişi geçen görevli (oluşturan) da görünür | [#554](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/554) |
+| İade (TEC-1085) mobil | Yalnız düz iade talebi | ✅ İade siparişe bağlanır, merkez bayi adına iade açar, sipariş detayında İadeler bölümü (web ile aynı kurallar) | [#555](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/555) |
+| Mobil çeviriler | tr/en dışındaki 11 dilde eksik anahtarlar | ✅ 26 namespace, dil başına ~1300 anahtar (aynı gün main'e gelen admin/catalog/common/dealer anahtarları dahil); `i18n:check` 0 hata, 0 eksik | [#564](https://github.com/furkanmeclis/olexfilms-ecosystem/pull/564) |
+
+Mobil değişiklikler yalnız JS; native değişiklik yok, OTA ile çıkar. Cihazda elle deneme yapılmadı (bulut ortamında geliştirme derlemesi yok).
