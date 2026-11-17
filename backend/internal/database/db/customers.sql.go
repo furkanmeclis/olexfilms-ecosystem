@@ -698,6 +698,7 @@ func (q *Queries) GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UU
 
 const getVehicleViewByUUID = `-- name: GetVehicleViewByUUID :one
 SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, u.uuid AS customer_uuid,
+       u.name AS customer_name, u.surname AS customer_surname, u.status AS customer_status,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid
@@ -712,6 +713,9 @@ WHERE v.uuid = $1 AND v.deleted_at IS NULL
 type GetVehicleViewByUUIDRow struct {
 	Vehicle          Vehicle     `json:"vehicle"`
 	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CustomerName     string      `json:"customer_name"`
+	CustomerSurname  string      `json:"customer_surname"`
+	CustomerStatus   string      `json:"customer_status"`
 	CarBrandUuid     pgtype.UUID `json:"car_brand_uuid"`
 	CarBrandName     pgtype.Text `json:"car_brand_name"`
 	CarModelUuid     pgtype.UUID `json:"car_model_uuid"`
@@ -741,6 +745,9 @@ func (q *Queries) GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (
 		&i.Vehicle.DeletedAt,
 		&i.Vehicle.FleetOrgID,
 		&i.CustomerUuid,
+		&i.CustomerName,
+		&i.CustomerSurname,
+		&i.CustomerStatus,
 		&i.CarBrandUuid,
 		&i.CarBrandName,
 		&i.CarModelUuid,
@@ -1213,6 +1220,7 @@ func (q *Queries) ListOrganizationsWithRawPhone(ctx context.Context) ([]ListOrga
 
 const listScopedVehicles = `-- name: ListScopedVehicles :many
 SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, u.uuid AS customer_uuid,
+       u.name AS customer_name, u.surname AS customer_surname, u.status AS customer_status,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid
@@ -1288,6 +1296,9 @@ type ListScopedVehiclesParams struct {
 type ListScopedVehiclesRow struct {
 	Vehicle          Vehicle     `json:"vehicle"`
 	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CustomerName     string      `json:"customer_name"`
+	CustomerSurname  string      `json:"customer_surname"`
+	CustomerStatus   string      `json:"customer_status"`
 	CarBrandUuid     pgtype.UUID `json:"car_brand_uuid"`
 	CarBrandName     pgtype.Text `json:"car_brand_name"`
 	CarModelUuid     pgtype.UUID `json:"car_model_uuid"`
@@ -1343,6 +1354,9 @@ func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehicles
 			&i.Vehicle.DeletedAt,
 			&i.Vehicle.FleetOrgID,
 			&i.CustomerUuid,
+			&i.CustomerName,
+			&i.CustomerSurname,
+			&i.CustomerStatus,
 			&i.CarBrandUuid,
 			&i.CarBrandName,
 			&i.CarModelUuid,

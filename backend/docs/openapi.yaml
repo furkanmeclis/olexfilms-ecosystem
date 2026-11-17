@@ -27249,7 +27249,16 @@ paths:
           schema: { type: string }
         - name: assignee_user_id
           in: query
-          description: CSV of assignee user ids; `none` matches unassigned leads.
+          deprecated: true
+          description: >-
+            Deprecated (TEC-1216): CSV of internal assignee user ids; `none`
+            matches unassigned leads. Use assignee_uuid.
+          schema: { type: string }
+        - name: assignee_uuid
+          in: query
+          description: >-
+            TEC-1216: CSV of assignee user uuids; `none` matches unassigned
+            leads. An unknown uuid matches nothing.
           schema: { type: string }
         - $ref: "#/components/parameters/CreatedFrom"
         - $ref: "#/components/parameters/CreatedTo"
@@ -35856,6 +35865,8 @@ components:
         audiences:
           type: array
           items: { $ref: "#/components/schemas/AnnouncementAudience" }
+        author: { $ref: "#/components/schemas/Ref", description: "TEC-1216 author (detail only)." }
+        author_organization: { $ref: "#/components/schemas/Ref", description: "TEC-1216 author organization (detail only)." }
 
     AnnouncementUnreadCount:
       type: object
@@ -36242,6 +36253,7 @@ components:
           type: array
           description: After a write, vin_duplicate / plate_duplicate when another vehicle of the brand has the same value.
           items: { type: string, enum: [vin_duplicate, plate_duplicate] }
+        customer: { $ref: "#/components/schemas/Ref", description: "TEC-1216 owner ref (kind customer; empty name when anonymized)." }
 
     VehicleCreateInput:
       type: object
@@ -39159,7 +39171,7 @@ components:
       required: [uuid, action, resource, payload, created_at]
       properties:
         uuid: { type: string, format: uuid }
-        actor_user_id: { type: integer, format: int64 }
+        actor_user_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         action: { type: string }
         resource: { type: string }
         resource_uuid: { type: string, format: uuid }
@@ -39167,6 +39179,7 @@ components:
           type: object
           additionalProperties: true
         created_at: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Ref", description: "TEC-1216 acting user." }
 
     EnvelopeActivityEventPage:
       type: object
@@ -40268,7 +40281,7 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         role: { $ref: "#/components/schemas/ContractSignerRole" }
-        user_id: { type: [integer, "null"], format: int64 }
+        user_id: { type: [integer, "null"], format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         name: { type: string }
         phone_e164: { type: [string, "null"] }
         otp_verified_at: { type: [string, "null"], format: date-time }
@@ -40276,6 +40289,11 @@ components:
         signature:
           oneOf:
             - $ref: "#/components/schemas/ContractSignature"
+            - type: "null"
+        user:
+          description: "TEC-1216 signer account: kind customer for the customer signer, user for staff."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
             - type: "null"
 
     ContractMedia:
@@ -40313,7 +40331,7 @@ components:
         uuid: { type: string, format: uuid }
         contract_no: { type: integer, format: int64 }
         subject_type: { type: string, enum: [service, service_subscription] }
-        subject_id: { type: integer, format: int64 }
+        subject_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         kind: { $ref: "#/components/schemas/ContractTemplateKind" }
         locale: { type: string, example: tr }
         template_version: { type: integer }
@@ -40334,6 +40352,7 @@ components:
           items: { $ref: "#/components/schemas/ContractMedia" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        subject: { $ref: "#/components/schemas/Ref", description: "TEC-1216 service or subscription the contract belongs to." }
 
     CreateServiceContractRequest:
       type: object
@@ -42568,6 +42587,7 @@ components:
               type: object
               additionalProperties: { type: integer }
             unresolved: { type: integer }
+        created_by: { $ref: "#/components/schemas/Ref", description: "TEC-1216 creator ref (detail only)." }
 
     StockCountScanInput:
       type: object
@@ -45314,7 +45334,6 @@ components:
         uuid: { type: string, format: uuid }
         organization_uuid: { type: string, format: uuid }
         item_uuid: { type: string, format: uuid }
-        assigned_by_org_id: { type: integer, format: int64 }
         starts_on: { type: string, format: date }
         ends_on: { type: string, format: date }
         recurrence: { $ref: "#/components/schemas/ServiceCatalogRecurrence" }
@@ -45330,6 +45349,12 @@ components:
         organization_name: { type: string }
         item_name: { type: string }
         item_category: { $ref: "#/components/schemas/ServiceCatalogCategory" }
+        organization: { $ref: "#/components/schemas/Ref", description: "TEC-1216 subscribed organization." }
+        assigned_by_org:
+          description: "TEC-1216 organization that assigned the subscription."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
 
     ServiceSubscriptionCancelInput:
       type: object
@@ -46994,6 +47019,27 @@ components:
         warranties:
           type: array
           items: { $ref: "#/components/schemas/ServiceWarranty" }
+        created_by:
+          description: "TEC-1216 user who opened the service."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        performed_by:
+          description: "TEC-1216 user who performed it (performed_by, else created_by)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        completed_by:
+          description: "TEC-1216 user who completed it."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        cancelled_by:
+          description: "TEC-1216 user who cancelled it."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        vehicle: { $ref: "#/components/schemas/Ref", description: "TEC-1216 vehicle ref (plate, else VIN)." }
 
     ServiceCreateInput:
       type: object
@@ -49515,9 +49561,9 @@ components:
         uuid: { type: string, format: uuid }
         organization_uuid: { type: string, format: uuid }
         target_type: { $ref: "#/components/schemas/LeadTargetType" }
-        customer_user_id: { type: integer, format: int64 }
+        customer_user_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         customer_uuid: { type: string, format: uuid }
-        vehicle_id: { type: integer, format: int64 }
+        vehicle_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         vehicle_uuid: { type: string, format: uuid }
         candidate_company_name: { type: string }
         candidate_contact_name: { type: string }
@@ -49531,14 +49577,37 @@ components:
         status: { $ref: "#/components/schemas/LeadStatus" }
         lost_reason: { type: string }
         follow_up_date: { type: string, format: date-time }
-        assignee_user_id: { type: integer, format: int64 }
+        assignee_user_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         assignee_user_uuid: { type: string, format: uuid }
         notes: { type: string }
         won_ref_type: { type: string, enum: [service, appointment, organization] }
-        won_ref_id: { type: integer, format: int64 }
-        created_by_user_id: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        customer:
+          description: "TEC-1216 customer ref (kind customer)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        vehicle:
+          description: "TEC-1216 vehicle ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        assignee:
+          description: "TEC-1216 assignee ref (kind user)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        created_by:
+          description: "TEC-1216 creator ref (kind user)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        won_ref:
+          description: "TEC-1216 record the lead was won with (kind service, appointment or organization)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
 
     LeadCreateInput:
       type: object
@@ -49671,8 +49740,8 @@ components:
         payload:
           type: object
           additionalProperties: true
-        actor_user_id: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Ref", description: "TEC-1216 acting user." }
 
     LeadFollowUpCount:
       type: object
@@ -49972,19 +50041,17 @@ components:
       required: [uuid, organization_id, customer_user_id, starts_at, ends_at, estimated_minutes, source, status, note]
       properties:
         uuid: { type: string, format: uuid }
-        organization_id: { type: integer, format: int64 }
-        customer_user_id: { type: integer, format: int64 }
-        vehicle_id: { type: [integer, "null"], format: int64 }
+        organization_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
+        customer_user_id: { type: integer, format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
+        vehicle_id: { type: [integer, "null"], format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         starts_at: { type: string, format: date-time }
         ends_at: { type: string, format: date-time }
         estimated_minutes: { type: integer }
         source: { $ref: "#/components/schemas/AppointmentSource" }
         status: { $ref: "#/components/schemas/AppointmentStatus" }
         cancel_reason: { type: [string, "null"] }
-        lead_id: { type: [integer, "null"], format: int64 }
-        service_id: { type: [integer, "null"], format: int64 }
+        service_id: { type: [integer, "null"], format: int64, deprecated: true, description: "Deprecated (TEC-1216): internal id; use the ref." }
         note: { type: string }
-        created_by_user_id: { type: [integer, "null"], format: int64 }
         created_at: { type: [string, "null"], format: date-time }
         updated_at: { type: [string, "null"], format: date-time }
         customer_uuid:
@@ -49996,6 +50063,36 @@ components:
         vehicle_plate: { type: [string, "null"] }
         vehicle_label: { type: [string, "null"], description: Car brand and model }
         service_uuid: { type: [string, "null"], format: uuid, description: Draft service opened by start-intake }
+        organization:
+          description: "TEC-1216 organization ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        customer:
+          description: "TEC-1216 customer ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        vehicle:
+          description: "TEC-1216 vehicle ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        service:
+          description: "TEC-1216 linked service ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        lead:
+          description: "TEC-1216 linked lead ref."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        created_by:
+          description: "TEC-1216 creator ref (kind user)."
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
 
     AppointmentStatusInput:
       type: object
@@ -50196,6 +50293,7 @@ components:
         comment_count: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        subject: { $ref: "#/components/schemas/Ref", description: "TEC-1216 subject organization as a ref." }
 
     TaskCreateInput:
       type: object

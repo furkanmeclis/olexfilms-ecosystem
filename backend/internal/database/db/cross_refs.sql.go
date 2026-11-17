@@ -12,6 +12,61 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const appointmentRefByID = `-- name: AppointmentRefByID :one
+SELECT a.uuid, to_char(a.starts_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI')::text AS name
+FROM appointments a WHERE a.id = $1
+`
+
+type AppointmentRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) AppointmentRefByID(ctx context.Context, id int64) (AppointmentRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, appointmentRefByID, id)
+	var i AppointmentRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name)
+	return i, err
+}
+
+const leadRefByID = `-- name: LeadRefByID :one
+SELECT l.uuid,
+       COALESCE(NULLIF(l.candidate_company_name, ''), NULLIF(l.candidate_contact_name, ''),
+                NULLIF(btrim(COALESCE(u.name, '') || ' ' || COALESCE(u.surname, '')), ''), '')::text AS name
+FROM leads l
+LEFT JOIN users u ON u.id = l.customer_user_id AND u.status <> 'anonymized'
+WHERE l.id = $1
+`
+
+type LeadRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) LeadRefByID(ctx context.Context, id int64) (LeadRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, leadRefByID, id)
+	var i LeadRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name)
+	return i, err
+}
+
+const organizationRefByID = `-- name: OrganizationRefByID :one
+SELECT o.uuid, o.name, o.type FROM organizations o WHERE o.id = $1
+`
+
+type OrganizationRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
+}
+
+func (q *Queries) OrganizationRefByID(ctx context.Context, id int64) (OrganizationRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, organizationRefByID, id)
+	var i OrganizationRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name, &i.Type)
+	return i, err
+}
+
 const organizationSummaryCounts = `-- name: OrganizationSummaryCounts :one
 
 SELECT
@@ -61,6 +116,41 @@ func (q *Queries) OrganizationSummaryCounts(ctx context.Context, organizationID 
 		&i.Leads,
 		&i.Warehouses,
 	)
+	return i, err
+}
+
+const serviceRefByID = `-- name: ServiceRefByID :one
+SELECT s.uuid, s.service_no::text AS name FROM services s WHERE s.id = $1
+`
+
+type ServiceRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) ServiceRefByID(ctx context.Context, id int64) (ServiceRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, serviceRefByID, id)
+	var i ServiceRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name)
+	return i, err
+}
+
+const subscriptionRefByID = `-- name: SubscriptionRefByID :one
+SELECT ss.uuid, sci.name::text AS name
+FROM service_subscriptions ss
+JOIN service_catalog_items sci ON sci.id = ss.item_id
+WHERE ss.id = $1
+`
+
+type SubscriptionRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) SubscriptionRefByID(ctx context.Context, id int64) (SubscriptionRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, subscriptionRefByID, id)
+	var i SubscriptionRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name)
 	return i, err
 }
 
@@ -225,5 +315,48 @@ func (q *Queries) TenantMemberUser(ctx context.Context, arg TenantMemberUserPara
 		&i.LastLoginAt,
 		&i.CreatedAt,
 	)
+	return i, err
+}
+
+const userRefByID = `-- name: UserRefByID :one
+
+SELECT u.uuid, u.name, u.surname, u.status FROM users u WHERE u.id = $1
+`
+
+type UserRefByIDRow struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+	Status  string    `json:"status"`
+}
+
+// Ref lookups by internal id (TEC-1216): the uuid and display name of a
+// foreign key, so responses carry refs instead of internal ids. Callers
+// read only foreign keys of rows already inside the caller's scope.
+func (q *Queries) UserRefByID(ctx context.Context, id int64) (UserRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, userRefByID, id)
+	var i UserRefByIDRow
+	err := row.Scan(
+		&i.Uuid,
+		&i.Name,
+		&i.Surname,
+		&i.Status,
+	)
+	return i, err
+}
+
+const vehicleRefByID = `-- name: VehicleRefByID :one
+SELECT v.uuid, COALESCE(NULLIF(v.plate, ''), v.vin, '')::text AS name FROM vehicles v WHERE v.id = $1
+`
+
+type VehicleRefByIDRow struct {
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) VehicleRefByID(ctx context.Context, id int64) (VehicleRefByIDRow, error) {
+	row := q.db.QueryRow(ctx, vehicleRefByID, id)
+	var i VehicleRefByIDRow
+	err := row.Scan(&i.Uuid, &i.Name)
 	return i, err
 }

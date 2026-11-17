@@ -3,6 +3,7 @@ package model
 
 import (
 	"encoding/json"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,10 +74,14 @@ const (
 
 // Contract is an executed or in-flight contract instance with evidence.
 type Contract struct {
-	UUID              uuid.UUID  `json:"uuid"`
-	ContractNo        int64      `json:"contract_no"`
-	SubjectType       string     `json:"subject_type"`
-	SubjectID         int64      `json:"subject_id"`
+	UUID        uuid.UUID `json:"uuid"`
+	ContractNo  int64     `json:"contract_no"`
+	SubjectType string    `json:"subject_type"`
+	// SubjectID is deprecated (TEC-1216, internal id); use Subject.
+	SubjectID int64 `json:"subject_id"`
+	// Subject is the service (kind service) or subscription (kind
+	// subscription) the contract belongs to.
+	Subject           *refs.Ref  `json:"subject,omitempty"`
 	Kind              string     `json:"kind"`
 	Locale            string     `json:"locale"`
 	TemplateVersion   int32      `json:"template_version"`
@@ -98,9 +103,13 @@ type Contract struct {
 
 // Signer is one fixed signing slot.
 type Signer struct {
-	UUID          uuid.UUID  `json:"uuid"`
-	Role          string     `json:"role"`
-	UserID        *int64     `json:"user_id,omitempty"`
+	UUID uuid.UUID `json:"uuid"`
+	Role string    `json:"role"`
+	// UserID is deprecated (TEC-1216, internal id); use User.
+	UserID *int64 `json:"user_id,omitempty"`
+	// User is the signer account: a customer ref for the customer signer,
+	// a user ref for staff.
+	User          *refs.Ref  `json:"user,omitempty"`
 	Name          string     `json:"name"`
 	PhoneE164     string     `json:"phone_e164,omitempty"`
 	OTPVerifiedAt *time.Time `json:"otp_verified_at,omitempty"`

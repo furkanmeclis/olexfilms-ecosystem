@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"regexp"
 	"strings"
 	"time"
@@ -159,10 +160,19 @@ type Lead struct {
 	AssigneeUserUUID     *uuid.UUID `json:"assignee_user_uuid,omitempty"`
 	Notes                string     `json:"notes"`
 	WonRefType           *string    `json:"won_ref_type,omitempty"`
-	WonRefID             *int64     `json:"won_ref_id,omitempty"`
-	CreatedByUserID      *int64     `json:"created_by_user_id,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
+	WonRefID             *int64     `json:"-"`
+	CreatedByUserID      *int64     `json:"-"`
+	// TEC-1216 refs. customer_user_id, vehicle_id and assignee_user_id
+	// above are deprecated (internal ids); clients move to these refs.
+	Customer  *refs.Ref `json:"customer"`
+	Vehicle   *refs.Ref `json:"vehicle"`
+	Assignee  *refs.Ref `json:"assignee"`
+	CreatedBy *refs.Ref `json:"created_by"`
+	// WonRef is the record the lead was won with (kind service,
+	// appointment or organization).
+	WonRef    *refs.Ref `json:"won_ref"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Event is one timeline entry.
@@ -170,8 +180,10 @@ type Event struct {
 	UUID        uuid.UUID      `json:"uuid"`
 	EventType   string         `json:"event_type"`
 	Payload     map[string]any `json:"payload"`
-	ActorUserID *int64         `json:"actor_user_id,omitempty"`
-	CreatedAt   time.Time      `json:"created_at"`
+	ActorUserID *int64         `json:"-"`
+	// Actor is the user who caused the event (TEC-1216).
+	Actor     *refs.Ref `json:"actor,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // ListFilter narrows List (TEC-371: ParseListFilter). Multi-value
@@ -182,6 +194,7 @@ type ListFilter struct {
 	AssigneeIDs           []int64
 	Unassigned            bool
 	CustomerUUID          pgtype.UUID
+	AssigneeUUIDs         []uuid.UUID
 	Created               apiquery.TimeRange
 	FollowUp              string
 	Q                     string
@@ -447,6 +460,19 @@ func countParams(p db.ListLeadsInScopeParams) db.CountLeadsInScopeParams {
 
 // List returns leads in the caller's resolved scope.
 func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Lead, int64, error) {
+	// TEC-1216: assignee_uuid resolves to internal ids; an unknown uuid
+	// matches nothing (id 0 is never a user).
+	for _, id := range f.AssigneeUUIDs {
+		u, err := s.q.GetUserByUUID(ctx, id)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			f.AssigneeIDs = append(f.AssigneeIDs, 0)
+		case err != nil:
+			return nil, 0, fmt.Errorf("leads: assignee: %w", err)
+		default:
+			f.AssigneeIDs = append(f.AssigneeIDs, u.ID)
+		}
+	}
 	p, err := s.params(c, f)
 	if err != nil {
 		return nil, 0, err
@@ -874,8 +900,21 @@ func (s *Service) Events(ctx context.Context, c Caller, id uuid.UUID) ([]Event, 
 		return nil, fmt.Errorf("leads: events: %w", err)
 	}
 	out := make([]Event, 0, len(rows))
+	res := refs.NewResolver(s.q)
+	actors := map[int64]*refs.Ref{}
 	for _, r := range rows {
-		out = append(out, eventOf(r))
+		ev := eventOf(r)
+		if ev.ActorUserID != nil {
+			ref, ok := actors[*ev.ActorUserID]
+			if !ok {
+				if ref, err = res.User(ctx, ev.ActorUserID); err != nil {
+					return nil, err
+				}
+				actors[*ev.ActorUserID] = ref
+			}
+			ev.Actor = ref
+		}
+		out = append(out, ev)
 	}
 	return out, nil
 }

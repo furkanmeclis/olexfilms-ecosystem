@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"io"
 	"net/http"
 	"net/netip"
@@ -971,9 +972,30 @@ func (s *Service) viewContract(ctx context.Context, row db.ContractInstance) (mo
 	if row.VoidReason.Valid {
 		v.VoidReason = row.VoidReason.String
 	}
+	res := refs.NewResolver(s.repo.Queries())
+	subjectID := row.SubjectID
+	switch row.SubjectType {
+	case "service":
+		v.Subject, err = res.Service(ctx, &subjectID)
+	case "service_subscription":
+		v.Subject, err = res.Subscription(ctx, &subjectID)
+	}
+	if err != nil {
+		return model.Contract{}, err
+	}
 	v.Signers = make([]model.Signer, 0, len(signers))
 	for _, sg := range signers {
 		item := signerView(sg)
+		if item.UserID != nil {
+			if sg.Role == model.SignerCustomer {
+				item.User, err = res.Customer(ctx, item.UserID)
+			} else {
+				item.User, err = res.User(ctx, item.UserID)
+			}
+			if err != nil {
+				return model.Contract{}, err
+			}
+		}
 		if sig, err := s.repo.Queries().GetLatestContractSignature(ctx, sg.ID); err == nil {
 			item.Signature = ptrSignature(signatureView(sig))
 		} else if !errors.Is(err, pgx.ErrNoRows) {

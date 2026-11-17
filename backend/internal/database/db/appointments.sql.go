@@ -985,26 +985,46 @@ SELECT a.id,
        v.plate AS vehicle_plate,
        cb.name AS car_brand,
        cm.name AS car_model,
-       s.uuid AS service_uuid
+       s.uuid AS service_uuid,
+       -- TEC-1216 refs.
+       u.status AS customer_status, v.vin AS vehicle_vin, s.service_no AS service_no,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       l.uuid AS lead_uuid,
+       COALESCE(NULLIF(l.candidate_company_name, ''), NULLIF(l.candidate_contact_name, ''), '')::text AS lead_name,
+       cbu.uuid AS created_by_uuid, cbu.name AS created_by_name, cbu.surname AS created_by_surname
 FROM appointments a
 JOIN users u ON u.id = a.customer_user_id
+JOIN organizations o ON o.id = a.organization_id
 LEFT JOIN vehicles v ON v.id = a.vehicle_id
 LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
 LEFT JOIN car_models cm ON cm.id = v.car_model_id
 LEFT JOIN services s ON s.id = a.service_id
+LEFT JOIN leads l ON l.id = a.lead_id
+LEFT JOIN users cbu ON cbu.id = a.created_by_user_id
 WHERE a.id = ANY($1::bigint[])
 `
 
 type ListAppointmentRefsRow struct {
-	ID              int64       `json:"id"`
-	CustomerUuid    uuid.UUID   `json:"customer_uuid"`
-	CustomerName    string      `json:"customer_name"`
-	CustomerSurname string      `json:"customer_surname"`
-	VehicleUuid     pgtype.UUID `json:"vehicle_uuid"`
-	VehiclePlate    pgtype.Text `json:"vehicle_plate"`
-	CarBrand        pgtype.Text `json:"car_brand"`
-	CarModel        pgtype.Text `json:"car_model"`
-	ServiceUuid     pgtype.UUID `json:"service_uuid"`
+	ID               int64       `json:"id"`
+	CustomerUuid     uuid.UUID   `json:"customer_uuid"`
+	CustomerName     string      `json:"customer_name"`
+	CustomerSurname  string      `json:"customer_surname"`
+	VehicleUuid      pgtype.UUID `json:"vehicle_uuid"`
+	VehiclePlate     pgtype.Text `json:"vehicle_plate"`
+	CarBrand         pgtype.Text `json:"car_brand"`
+	CarModel         pgtype.Text `json:"car_model"`
+	ServiceUuid      pgtype.UUID `json:"service_uuid"`
+	CustomerStatus   string      `json:"customer_status"`
+	VehicleVin       pgtype.Text `json:"vehicle_vin"`
+	ServiceNo        pgtype.Text `json:"service_no"`
+	OrganizationUuid uuid.UUID   `json:"organization_uuid"`
+	OrganizationName string      `json:"organization_name"`
+	OrganizationType string      `json:"organization_type"`
+	LeadUuid         pgtype.UUID `json:"lead_uuid"`
+	LeadName         string      `json:"lead_name"`
+	CreatedByUuid    pgtype.UUID `json:"created_by_uuid"`
+	CreatedByName    pgtype.Text `json:"created_by_name"`
+	CreatedBySurname pgtype.Text `json:"created_by_surname"`
 }
 
 // Panel calendar references (TEC-326): customer, vehicle and linked service
@@ -1028,6 +1048,17 @@ func (q *Queries) ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListA
 			&i.CarBrand,
 			&i.CarModel,
 			&i.ServiceUuid,
+			&i.CustomerStatus,
+			&i.VehicleVin,
+			&i.ServiceNo,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.OrganizationType,
+			&i.LeadUuid,
+			&i.LeadName,
+			&i.CreatedByUuid,
+			&i.CreatedByName,
+			&i.CreatedBySurname,
 		); err != nil {
 			return nil, err
 		}

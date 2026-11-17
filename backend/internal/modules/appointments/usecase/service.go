@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 	"time"
 
@@ -126,7 +127,9 @@ func (e *ValidationError) Error() string {
 func invalid(field, msg string) error { return &ValidationError{Field: field, Message: msg} }
 
 type Appointment struct {
-	UUID             uuid.UUID  `json:"uuid"`
+	UUID uuid.UUID `json:"uuid"`
+	// Deprecated (TEC-1216): internal ids; use organization / customer /
+	// vehicle refs. Kept until the web and mobile clients move.
 	OrganizationID   int64      `json:"organization_id"`
 	CustomerUserID   int64      `json:"customer_user_id"`
 	VehicleID        *int64     `json:"vehicle_id,omitempty"`
@@ -135,12 +138,12 @@ type Appointment struct {
 	EstimatedMinutes int32      `json:"estimated_minutes"`
 	Source           string     `json:"source"`
 	Status           string     `json:"status"`
-	PlanID           *int64     `json:"plan_id,omitempty"`
+	PlanID           *int64     `json:"-"`
 	CancelReason     *string    `json:"cancel_reason,omitempty"`
-	LeadID           *int64     `json:"lead_id,omitempty"`
+	LeadID           *int64     `json:"-"`
 	ServiceID        *int64     `json:"service_id,omitempty"`
 	Note             string     `json:"note"`
-	CreatedByUserID  *int64     `json:"created_by_user_id,omitempty"`
+	CreatedByUserID  *int64     `json:"-"`
 	CreatedAt        *time.Time `json:"created_at,omitempty"`
 	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 	// Panel references (TEC-326): the panel works with UUIDs and labels.
@@ -150,6 +153,13 @@ type Appointment struct {
 	VehiclePlate *string    `json:"vehicle_plate,omitempty"`
 	VehicleLabel *string    `json:"vehicle_label,omitempty"`
 	ServiceUUID  *uuid.UUID `json:"service_uuid,omitempty"`
+	// TEC-1216 refs (null when the appointment has no such link).
+	Organization *refs.Ref `json:"organization"`
+	Customer     *refs.Ref `json:"customer"`
+	Vehicle      *refs.Ref `json:"vehicle"`
+	Service      *refs.Ref `json:"service"`
+	Lead         *refs.Ref `json:"lead"`
+	CreatedBy    *refs.Ref `json:"created_by"`
 }
 
 // PortalAppointment is one row of the portal "my appointments" list
@@ -1223,12 +1233,12 @@ func (s *Service) withRefs(ctx context.Context, rows ...db.Appointment) ([]Appoi
 	for _, r := range rows {
 		ids = append(ids, r.ID)
 	}
-	refs, err := s.q.ListAppointmentRefs(ctx, ids)
+	rows2, err := s.q.ListAppointmentRefs(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("appointments: refs: %w", err)
 	}
-	byID := make(map[int64]db.ListAppointmentRefsRow, len(refs))
-	for _, ref := range refs {
+	byID := make(map[int64]db.ListAppointmentRefsRow, len(rows2))
+	for _, ref := range rows2 {
 		byID[ref.ID] = ref
 	}
 	for _, r := range rows {
@@ -1243,6 +1253,7 @@ func (s *Service) withRefs(ctx context.Context, rows ...db.Appointment) ([]Appoi
 				view.VehicleLabel = &label
 			}
 			view.ServiceUUID = uuidPtr(ref.ServiceUuid)
+			appointmentRefs(&view, ref)
 		}
 		out = append(out, view)
 	}
@@ -1255,6 +1266,38 @@ func (s *Service) oneWithRefs(ctx context.Context, row db.Appointment) (Appointm
 		return Appointment{}, err
 	}
 	return out[0], nil
+}
+
+// appointmentRefs fills the TEC-1216 refs of an appointment view.
+func appointmentRefs(view *Appointment, ref db.ListAppointmentRefsRow) {
+	org := refs.OrgRef(ref.OrganizationUuid, ref.OrganizationName, ref.OrganizationType)
+	view.Organization = &org
+	name := refs.FullName(ref.CustomerName, ref.CustomerSurname)
+	if ref.CustomerStatus == "anonymized" {
+		name = ""
+	}
+	customer := refs.CustomerRef(ref.CustomerUuid, name)
+	view.Customer = &customer
+	if ref.VehicleUuid.Valid {
+		label := ref.VehiclePlate.String
+		if label == "" {
+			label = ref.VehicleVin.String
+		}
+		v := refs.New(refs.KindVehicle, ref.VehicleUuid.Bytes, label)
+		view.Vehicle = &v
+	}
+	if ref.ServiceUuid.Valid {
+		v := refs.New(refs.KindService, ref.ServiceUuid.Bytes, ref.ServiceNo.String)
+		view.Service = &v
+	}
+	if ref.LeadUuid.Valid {
+		v := refs.New(refs.KindLead, ref.LeadUuid.Bytes, ref.LeadName)
+		view.Lead = &v
+	}
+	if ref.CreatedByUuid.Valid {
+		v := refs.UserRef(ref.CreatedByUuid.Bytes, refs.FullName(ref.CreatedByName.String, ref.CreatedBySurname.String))
+		view.CreatedBy = &v
+	}
 }
 
 func uuidPtr(v pgtype.UUID) *uuid.UUID {

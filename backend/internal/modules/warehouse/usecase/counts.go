@@ -37,6 +37,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	refkit "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"io"
 	"slices"
 	"strconv"
@@ -219,8 +220,10 @@ type CountSummary struct {
 
 // StockCount is the API view of a count.
 type StockCount struct {
-	UUID                  uuid.UUID      `json:"uuid"`
-	CreatedByUserUUID     *uuid.UUID     `json:"created_by_user_uuid"`
+	UUID              uuid.UUID  `json:"uuid"`
+	CreatedByUserUUID *uuid.UUID `json:"created_by_user_uuid"`
+	// CreatedBy is the creator ref (TEC-1216, detail only).
+	CreatedBy             *refkit.Ref    `json:"created_by,omitempty"`
 	Status                string         `json:"status"`
 	Method                string         `json:"method"`
 	Visibility            string         `json:"visibility"`
@@ -730,6 +733,8 @@ func (s *Counts) detail(ctx context.Context, q *db.Queries, cnt db.StockCount) (
 			return StockCount{}, fmt.Errorf("warehouse: count creator: %w", err)
 		}
 		out.CreatedByUserUUID = &creator.Uuid
+		ref := refkit.UserRef(creator.Uuid, refkit.FullName(creator.Name, creator.Surname))
+		out.CreatedBy = &ref
 	}
 	scans, err := q.ListStockCountScans(ctx, cnt.ID)
 	if err != nil {

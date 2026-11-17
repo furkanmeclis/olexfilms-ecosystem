@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -37,8 +38,11 @@ type CatalogRef struct {
 
 // VehicleView is a vehicle of a customer in scope.
 type VehicleView struct {
-	UUID             uuid.UUID   `json:"uuid"`
-	CustomerUUID     uuid.UUID   `json:"customer_uuid"`
+	UUID         uuid.UUID `json:"uuid"`
+	CustomerUUID uuid.UUID `json:"customer_uuid"`
+	// Customer is the owner ref (TEC-1216); the name is empty for an
+	// anonymized customer (K19).
+	Customer         refs.Ref    `json:"customer"`
 	OrganizationUUID *uuid.UUID  `json:"organization_uuid"`
 	Plate            *string     `json:"plate"`
 	PlateNormalized  *string     `json:"plate_normalized"`
@@ -163,8 +167,10 @@ func (s *Service) ListVehicles(ctx context.Context, c Caller, f VehicleFilter) (
 	}
 	out := make([]VehicleView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, vehicleView(r.Vehicle, r.CustomerUuid, r.OrganizationUuid,
-			r.CarBrandUuid, r.CarBrandName, r.CarModelUuid, r.CarModelName))
+		v := vehicleView(r.Vehicle, r.CustomerUuid, r.OrganizationUuid,
+			r.CarBrandUuid, r.CarBrandName, r.CarModelUuid, r.CarModelName)
+		v.Customer = vehicleCustomerRef(r.CustomerUuid, r.CustomerName, r.CustomerSurname, r.CustomerStatus)
+		out = append(out, v)
 	}
 	return out, total, nil
 }
@@ -561,15 +567,25 @@ func (s *Service) vehicleByUUID(ctx context.Context, q *db.Queries, id uuid.UUID
 	if err != nil {
 		return VehicleView{}, fmt.Errorf("customers: vehicle view: %w", err)
 	}
-	return vehicleView(r.Vehicle, r.CustomerUuid, r.OrganizationUuid,
-		r.CarBrandUuid, r.CarBrandName, r.CarModelUuid, r.CarModelName), nil
+	v := vehicleView(r.Vehicle, r.CustomerUuid, r.OrganizationUuid,
+		r.CarBrandUuid, r.CarBrandName, r.CarModelUuid, r.CarModelName)
+	v.Customer = vehicleCustomerRef(r.CustomerUuid, r.CustomerName, r.CustomerSurname, r.CustomerStatus)
+	return v, nil
+}
+
+// vehicleCustomerRef is the owner ref of a vehicle (TEC-1216).
+func vehicleCustomerRef(id uuid.UUID, name, surname, status string) refs.Ref {
+	if status == "anonymized" {
+		return refs.CustomerRef(id, "")
+	}
+	return refs.CustomerRef(id, refs.FullName(name, surname))
 }
 
 func vehicleView(v db.Vehicle, customer uuid.UUID, org pgtype.UUID,
 	brandUUID pgtype.UUID, brandName pgtype.Text, modelUUID pgtype.UUID, modelName pgtype.Text,
 ) VehicleView {
 	out := VehicleView{
-		UUID: v.Uuid, CustomerUUID: customer, Plate: strOrNil(v.Plate), PlateNormalized: strOrNil(v.PlateNormalized),
+		UUID: v.Uuid, CustomerUUID: customer, Customer: refs.CustomerRef(customer, ""), Plate: strOrNil(v.Plate), PlateNormalized: strOrNil(v.PlateNormalized),
 		PlateCountry: strOrNil(v.PlateCountry), VIN: strOrNil(v.Vin),
 		CreatedAt: v.CreatedAt.Time, UpdatedAt: v.UpdatedAt.Time, Warnings: []string{},
 	}

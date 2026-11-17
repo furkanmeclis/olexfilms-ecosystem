@@ -60,6 +60,7 @@ type Querier interface {
 	// (sent → delivered → read); read is final.
 	ApplyMessageReceipt(ctx context.Context, arg ApplyMessageReceiptParams) ([]Message, error)
 	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
+	AppointmentRefByID(ctx context.Context, id int64) (AppointmentRefByIDRow, error)
 	ApproveBonusAccrual(ctx context.Context, arg ApproveBonusAccrualParams) (BonusAccrual, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
@@ -1687,6 +1688,7 @@ type Querier interface {
 	LastSucceededIntegrationSyncRun(ctx context.Context, arg LastSucceededIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	LatestCertificateForUserType(ctx context.Context, arg LatestCertificateForUserTypeParams) (Certificate, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
+	LeadRefByID(ctx context.Context, id int64) (LeadRefByIDRow, error)
 	LinkAppointmentLead(ctx context.Context, arg LinkAppointmentLeadParams) (Appointment, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
 	// only when it was empty.
@@ -3519,6 +3521,7 @@ type Querier interface {
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
+	OrganizationRefByID(ctx context.Context, id int64) (OrganizationRefByIDRow, error)
 	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
 	// TEC-1216 (cross-record refs): detail summaries of records that had no
 	// tenant detail endpoint. Callers authorize first (organizations.read /
@@ -3780,6 +3783,7 @@ type Querier interface {
 	// public page /warranty/{no} resolves all three). except_service_id 0
 	// checks a new service.
 	ServiceNoTaken(ctx context.Context, arg ServiceNoTakenParams) (bool, error)
+	ServiceRefByID(ctx context.Context, id int64) (ServiceRefByIDRow, error)
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
@@ -3998,6 +4002,7 @@ type Querier interface {
 	// CAS from_status → pending_review (approval on). No row when the status
 	// moved meanwhile.
 	SubmitDealerShowcase(ctx context.Context, arg SubmitDealerShowcaseParams) (DealerShowcase, error)
+	SubscriptionRefByID(ctx context.Context, id int64) (SubscriptionRefByIDRow, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
 	// organization, checked against what that organization holds by the use
 	// case (sum <= on hand, under the unit row lock).
@@ -4328,8 +4333,13 @@ type Querier interface {
 	// Every organization membership of a user across brands, with its
 	// organization roles and warehouse memberships.
 	UserOverviewMemberships(ctx context.Context, userID int64) ([]UserOverviewMembershipsRow, error)
+	// Ref lookups by internal id (TEC-1216): the uuid and display name of a
+	// foreign key, so responses carry refs instead of internal ids. Callers
+	// read only foreign keys of rows already inside the caller's scope.
+	UserRefByID(ctx context.Context, id int64) (UserRefByIDRow, error)
 	VehicleHasActiveAppointmentOnDay(ctx context.Context, arg VehicleHasActiveAppointmentOnDayParams) (bool, error)
 	VehicleHasServices(ctx context.Context, vehicleID int64) (bool, error)
+	VehicleRefByID(ctx context.Context, id int64) (VehicleRefByIDRow, error)
 	VerifyCertificate(ctx context.Context, arg VerifyCertificateParams) (Certificate, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
 	VoidEinvoice(ctx context.Context, arg VoidEinvoiceParams) (Einvoice, error)

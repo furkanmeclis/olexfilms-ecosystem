@@ -74,3 +74,37 @@ SELECT
       AND t.status IN ('open', 'in_progress'))::bigint AS open_tasks,
   (SELECT COUNT(*) FROM leads l WHERE l.assignee_user_id = sqlc.arg(user_id)::bigint AND l.brand_id = sqlc.arg(brand_id)
       AND (sqlc.narg(org_ids)::bigint[] IS NULL OR l.organization_id = ANY (sqlc.narg(org_ids)::bigint[])))::bigint AS leads_assigned;
+
+-- Ref lookups by internal id (TEC-1216): the uuid and display name of a
+-- foreign key, so responses carry refs instead of internal ids. Callers
+-- read only foreign keys of rows already inside the caller's scope.
+
+-- name: UserRefByID :one
+SELECT u.uuid, u.name, u.surname, u.status FROM users u WHERE u.id = sqlc.arg(id);
+
+-- name: VehicleRefByID :one
+SELECT v.uuid, COALESCE(NULLIF(v.plate, ''), v.vin, '')::text AS name FROM vehicles v WHERE v.id = sqlc.arg(id);
+
+-- name: ServiceRefByID :one
+SELECT s.uuid, s.service_no::text AS name FROM services s WHERE s.id = sqlc.arg(id);
+
+-- name: LeadRefByID :one
+SELECT l.uuid,
+       COALESCE(NULLIF(l.candidate_company_name, ''), NULLIF(l.candidate_contact_name, ''),
+                NULLIF(btrim(COALESCE(u.name, '') || ' ' || COALESCE(u.surname, '')), ''), '')::text AS name
+FROM leads l
+LEFT JOIN users u ON u.id = l.customer_user_id AND u.status <> 'anonymized'
+WHERE l.id = sqlc.arg(id);
+
+-- name: AppointmentRefByID :one
+SELECT a.uuid, to_char(a.starts_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI')::text AS name
+FROM appointments a WHERE a.id = sqlc.arg(id);
+
+-- name: OrganizationRefByID :one
+SELECT o.uuid, o.name, o.type FROM organizations o WHERE o.id = sqlc.arg(id);
+
+-- name: SubscriptionRefByID :one
+SELECT ss.uuid, sci.name::text AS name
+FROM service_subscriptions ss
+JOIN service_catalog_items sci ON sci.id = ss.item_id
+WHERE ss.id = sqlc.arg(id);

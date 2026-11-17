@@ -354,6 +354,7 @@ SELECT COUNT(*)::bigint FROM organization_members WHERE user_id = sqlc.arg(user_
 -- Vehicle with its customer and car brand/model, for API responses.
 -- name: GetVehicleViewByUUID :one
 SELECT sqlc.embed(v), u.uuid AS customer_uuid,
+       u.name AS customer_name, u.surname AS customer_surname, u.status AS customer_status,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid
@@ -371,6 +372,7 @@ WHERE v.uuid = sqlc.arg(uuid) AND v.deleted_at IS NULL;
 -- scope). Sort: docs/list-contract.md, keys from vehiclesSortSpec.
 -- name: ListScopedVehicles :many
 SELECT sqlc.embed(v), u.uuid AS customer_uuid,
+       u.name AS customer_name, u.surname AS customer_surname, u.status AS customer_status,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid

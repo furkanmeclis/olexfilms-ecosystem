@@ -45,7 +45,7 @@ const AssigneeNone = "none"
 
 // listKeys are the list parameters an export or a query bulk run carries.
 var listKeys = []string{"q", "status", "target_type", "source", "temperature", "assignee_user_id",
-	"created_from", "created_to", "follow_up", "sort", "customer_uuid"}
+	"created_from", "created_to", "follow_up", "sort", "customer_uuid", "assignee_uuid"}
 
 // ParseListFilter reads the GET /v1/leads filters: q, status /
 // target_type / source / temperature CSV, assignee_user_id CSV (user ids or
@@ -78,6 +78,21 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 			}}}
 		}
 		f.AssigneeIDs = append(f.AssigneeIDs, id)
+	}
+	// TEC-1216: assignee_uuid is the uuid form of assignee_user_id (which
+	// is deprecated): user uuids or "none", CSV.
+	for _, v := range apiquery.CSVValues(values, "assignee_uuid") {
+		if v == AssigneeNone {
+			f.Unassigned = true
+			continue
+		}
+		id, perr := uuid.Parse(v)
+		if perr != nil {
+			return f, &apiquery.ValidationError{Details: []apiquery.Detail{{
+				Field: "assignee_uuid", Message: `must be user uuids or "none"`, Code: "invalid",
+			}}}
+		}
+		f.AssigneeUUIDs = append(f.AssigneeUUIDs, id)
 	}
 	// TEC-1216: one customer's leads (RelatedList).
 	if raw := strings.TrimSpace(values.Get("customer_uuid")); raw != "" {
