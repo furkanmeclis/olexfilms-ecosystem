@@ -331,6 +331,14 @@ export class WarehouseMock {
         extras: [],
       });
     }
+    // TEC-1230: placement suggestions (none in the mock warehouse).
+    if (
+      /^\/v1\/warehouse\/stock-entries\/[^/]+\/placement-suggestions$/.test(
+        path,
+      ) &&
+      method === "GET"
+    )
+      return ok({ products: [], empty_locations: [] });
     const entryPath = path.match(
       /^\/v1\/warehouse\/stock-entries\/([^/]+)(?:\/(lines|place|confirm|cancel))?$/,
     );
