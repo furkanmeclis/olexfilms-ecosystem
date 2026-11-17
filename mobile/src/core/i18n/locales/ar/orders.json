@@ -111,5 +111,16 @@
   "quote.pick_buyer": "اختر الموزّع أولًا لرؤية الأسعار.",
   "quote.default_first_order": "تم تطبيق خصم الطلب الأول: {{pct}}%",
   "quote.default_standard": "تم تطبيق خصم الموزّع القياسي: {{pct}}%",
-  "errors.discount_invalid": "يجب أن يكون الخصم بين 0 و100، بحد أقصى منزلتين عشريتين."
+  "errors.discount_invalid": "يجب أن يكون الخصم بين 0 و100، بحد أقصى منزلتين عشريتين.",
+  "supplement.add": "إضافة شحنة تكميلية",
+  "supplement.badge": "شحنة تكميلية",
+  "supplement.parent": "الطلب الرئيسي",
+  "supplement.list": "الشحنات التكميلية",
+  "supplement.title": "شحنة تكميلية",
+  "supplement.create": "إنشاء الشحنة التكميلية",
+  "supplement.banner": "شحنة تكميلية للطلب {{no}}",
+  "supplement.hint": "يأتي الوكيل والمستودع من الطلب الرئيسي. أضف المنتجات من الكتالوج؛ يُسمح ببنود الهدايا.",
+  "supplement.leave": "مغادرة الشحنة التكميلية",
+  "supplement.replace_cart_title": "هل تريد إفراغ السلة؟",
+  "supplement.replace_cart_body": "تحتوي السلة على {{n}} منتجات. تبدأ الشحنة التكميلية بسلة فارغة."
 }

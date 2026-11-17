@@ -111,5 +111,16 @@
   "quote.pick_buyer": "Choisissez d'abord le revendeur pour voir les prix.",
   "quote.default_first_order": "Remise première commande appliquée : {{pct}} %",
   "quote.default_standard": "Remise revendeur standard appliquée : {{pct}} %",
-  "errors.discount_invalid": "La remise doit être comprise entre 0 et 100, avec 2 décimales au plus."
+  "errors.discount_invalid": "La remise doit être comprise entre 0 et 100, avec 2 décimales au plus.",
+  "supplement.add": "Ajouter un envoi complémentaire",
+  "supplement.badge": "Envoi complémentaire",
+  "supplement.parent": "Commande principale",
+  "supplement.list": "Envois complémentaires",
+  "supplement.title": "Envoi complémentaire",
+  "supplement.create": "Créer l'envoi complémentaire",
+  "supplement.banner": "Envoi complémentaire pour {{no}}",
+  "supplement.hint": "Le revendeur et l'entrepôt viennent de la commande principale. Ajoutez des produits depuis le catalogue ; les lignes cadeau sont possibles.",
+  "supplement.leave": "Quitter l'envoi complémentaire",
+  "supplement.replace_cart_title": "Vider le panier ?",
+  "supplement.replace_cart_body": "Le panier contient {{n}} produits. Un envoi complémentaire commence avec un panier vide."
 }

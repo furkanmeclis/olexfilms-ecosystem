@@ -327,14 +327,18 @@ function DealerSheet({
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
-  const { lines, note, setAmount, setPrice, setPlotter, setDiscount, setGift, remove, setNote, clear } = useCart();
+  const { lines, note, parent, setAmount, setPrice, setPlotter, setDiscount, setGift, remove, setNote, clear, leaveSupplement } = useCart();
   const me = useSession((s) => s.me);
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
   const warehouse = kindsOf(me).includes('depo');
   // TEC-1051: a warehouse role without pricing permissions neither sees nor sets prices.
   const prices = usePricesVisible();
-  const [buyer, setBuyer] = useState<Dealer | null>(null);
+  const [picked, setBuyer] = useState<Dealer | null>(null);
+  // TEC-1222: a supplementary order keeps the main order's dealer; the seller
+  // side (center or distributor) opens it like the center's order for a dealer.
+  const buyer: Dealer | null = parent ? parent.buyer : picked;
+  const seller = center || !!parent;
   // TEC-1065: list price, discount, gift and totals only with pricing.sale.read.
   const saleRead = useCan('pricing.sale.read');
   const quoting = center && prices && saleRead;
@@ -346,11 +350,15 @@ export function OrderNewScreen() {
   // TEC-1053 (TEC-1028 API): the center picks the warehouse that prepares the
   // order (seller_warehouse_uuid), the primary one until changed. Without
   // access to the warehouse list the field is hidden and the API uses the primary.
-  const warehouses = useWarehouses(center);
+  const warehouses = useWarehouses(seller);
   const activeWarehouses = warehouses.data ?? [];
   const [pickedWarehouse, setPickedWarehouse] = useState<string | null>(null);
+  const parentWarehouse = activeWarehouses.find((w) => w.uuid === parent?.warehouse_uuid)?.uuid;
   const sellerWarehouse =
-    pickedWarehouse ?? activeWarehouses.find((w) => w.is_primary)?.uuid ?? activeWarehouses[0]?.uuid ?? '';
+    pickedWarehouse ??
+    parentWarehouse ??
+    (parent ? undefined : (activeWarehouses.find((w) => w.is_primary)?.uuid ?? activeWarehouses[0]?.uuid)) ??
+    '';
   // TEC-1053 (TEC-1052 API): a center user who ships orders may prepare this one
   // himself; then no warehouse staff is notified. Only offered with orders.ship.
   const canShip = useCan('orders.ship');
@@ -371,17 +379,18 @@ export function OrderNewScreen() {
     inFlight.current = true;
     setBusy('submit');
     try {
+      const body = {
+        ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
+        ...(canShip && selfPrepare ? { self_prepare: true } : {}),
+        items: toItemInputs(lines, prices, quoting),
+        ...(note.trim() ? { note: note.trim() } : {}),
+      };
       const order = await unwrap(
-        api.POST('/v1/orders', {
-          body: {
-            buyer_org_uuid: buyer.uuid,
-            ...(sellerWarehouse ? { seller_warehouse_uuid: sellerWarehouse } : {}),
-            ...(canShip && selfPrepare ? { self_prepare: true } : {}),
-            items: toItemInputs(lines, prices, quoting),
-            ...(note.trim() ? { note: note.trim() } : {}),
-          },
-        }),
+        parent
+          ? api.POST('/v1/orders/{uuid}/supplements', { params: { path: { uuid: parent.uuid } }, body })
+          : api.POST('/v1/orders', { body: { buyer_org_uuid: buyer.uuid, ...body } }),
       );
+      if (parent) void qc.invalidateQueries({ queryKey: ['orders', 'detail', parent.uuid] });
       void qc.invalidateQueries({ queryKey: ['orders', 'list'] });
       void qc.invalidateQueries({ queryKey: ['warehouse', 'orders'] });
       clear();
@@ -462,7 +471,7 @@ export function OrderNewScreen() {
     <>
       <Stack.Screen
         options={{
-          title: t('new_title'),
+          title: parent ? t('supplement.title') : t('new_title'),
           headerLargeTitle: false,
           headerRight: lines.length
             ? () => (
@@ -474,6 +483,20 @@ export function OrderNewScreen() {
         }}
       />
       <Screen keyboardShouldPersistTaps="handled">
+        {parent ? (
+          <View className="gap-2 rounded-lg border border-border bg-card px-4 py-3" testID="supplement-banner">
+            <Text variant="headline">{t('supplement.banner', { no: parent.order_no })}</Text>
+            <Text variant="callout" tone="muted">
+              {t('buyer_label')}: {parent.buyer.name}
+            </Text>
+            <Text variant="footnote" tone="muted">
+              {t('supplement.hint')}
+            </Text>
+            <View className="self-start">
+              <Button title={t('supplement.leave')} variant="ghost" onPress={leaveSupplement} />
+            </View>
+          </View>
+        ) : null}
         {!lines.length ? (
           <EmptyState
             icon="cart"
@@ -483,8 +506,8 @@ export function OrderNewScreen() {
           />
         ) : (
           <>
-            {center ? <DealerPicker value={buyer} onChange={setBuyer} error={touched && !buyer ? t('buyer_required') : undefined} /> : null}
-            {center && activeWarehouses.length > 0 ? (
+            {center && !parent ? <DealerPicker value={buyer} onChange={setBuyer} error={touched && !buyer ? t('buyer_required') : undefined} /> : null}
+            {seller && activeWarehouses.length > 0 ? (
               <View className="gap-1.5">
                 <WarehouseField
                   label={t('seller_warehouse')}
@@ -496,7 +519,7 @@ export function OrderNewScreen() {
                 </Text>
               </View>
             ) : null}
-            {center && canShip ? (
+            {seller && canShip ? (
               <View className="gap-1.5">
                 <View className="min-h-12 flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4">
                   <Text variant="body" className="flex-1">
@@ -549,7 +572,7 @@ export function OrderNewScreen() {
                         className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
                       />
                     </View>
-                    {center && prices && !(quoting && l.is_gift) ? (
+                    {seller && prices && !(quoting && l.is_gift) ? (
                       <View className="flex-row items-center gap-3">
                         <Text variant="callout" tone="muted" className="flex-1">
                           {t('unit_price')}
@@ -575,7 +598,7 @@ export function OrderNewScreen() {
                       />
                     ) : null}
                     {/* TEC-1059: the center tells the line went out plotter cut (information only). */}
-                    {center ? (
+                    {seller ? (
                       <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => setPlotter(l.product_uuid, v)} />
                     ) : null}
                     {err ? (
@@ -614,12 +637,12 @@ export function OrderNewScreen() {
             ) : null}
             {prices ? (
               <Text variant="footnote" tone="muted">
-                {t(center ? 'price_rule_center' : 'price_rule')}
+                {t(seller ? 'price_rule_center' : 'price_rule')}
               </Text>
             ) : null}
-            {center ? (
+            {seller ? (
               <Button
-                title={t('create_for_dealer')}
+                title={parent ? t('supplement.create') : t('create_for_dealer')}
                 size="lg"
                 loading={busy === 'submit'}
                 disabled={!!busy}

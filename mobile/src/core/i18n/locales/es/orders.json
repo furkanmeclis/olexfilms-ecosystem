@@ -111,5 +111,16 @@
   "quote.pick_buyer": "Elige primero el distribuidor para ver los precios.",
   "quote.default_first_order": "Descuento de primer pedido aplicado: {{pct}} %",
   "quote.default_standard": "Descuento estándar de distribuidor aplicado: {{pct}} %",
-  "errors.discount_invalid": "El descuento debe estar entre 0 y 100, con 2 decimales como máximo."
+  "errors.discount_invalid": "El descuento debe estar entre 0 y 100, con 2 decimales como máximo.",
+  "supplement.add": "Añadir envío complementario",
+  "supplement.badge": "Envío complementario",
+  "supplement.parent": "Pedido principal",
+  "supplement.list": "Envíos complementarios",
+  "supplement.title": "Envío complementario",
+  "supplement.create": "Crear envío complementario",
+  "supplement.banner": "Envío complementario de {{no}}",
+  "supplement.hint": "El distribuidor y el almacén vienen del pedido principal. Añada productos desde el catálogo; se admiten líneas de regalo.",
+  "supplement.leave": "Salir del envío complementario",
+  "supplement.replace_cart_title": "¿Vaciar el carrito?",
+  "supplement.replace_cart_body": "El carrito tiene {{n}} productos. Un envío complementario empieza con el carrito vacío."
 }

@@ -111,5 +111,16 @@
   "quote.pick_buyer": "Wähle zuerst den Händler, um Preise zu sehen.",
   "quote.default_first_order": "Erstbestellungsrabatt angewendet: {{pct}} %",
   "quote.default_standard": "Standard-Händlerrabatt angewendet: {{pct}} %",
-  "errors.discount_invalid": "Der Rabatt muss zwischen 0 und 100 liegen, höchstens 2 Nachkommastellen."
+  "errors.discount_invalid": "Der Rabatt muss zwischen 0 und 100 liegen, höchstens 2 Nachkommastellen.",
+  "supplement.add": "Zusatzlieferung hinzufügen",
+  "supplement.badge": "Zusatzlieferung",
+  "supplement.parent": "Hauptauftrag",
+  "supplement.list": "Zusatzlieferungen",
+  "supplement.title": "Zusatzlieferung",
+  "supplement.create": "Zusatzlieferung anlegen",
+  "supplement.banner": "Zusatzlieferung zu {{no}}",
+  "supplement.hint": "Händler und Lager kommen aus dem Hauptauftrag. Fügen Sie Produkte aus dem Katalog hinzu; Geschenkpositionen sind möglich.",
+  "supplement.leave": "Zusatzlieferung verlassen",
+  "supplement.replace_cart_title": "Warenkorb leeren?",
+  "supplement.replace_cart_body": "Im Warenkorb sind {{n}} Produkte. Eine Zusatzlieferung beginnt mit leerem Warenkorb."
 }

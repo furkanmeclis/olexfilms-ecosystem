@@ -5,6 +5,7 @@ import { useSession } from '@/core/auth/session';
 import { readJSON, storage, writeJSON } from '@/core/storage';
 
 import { addLine, type CartLine } from './order-lines';
+import type { SupplementParent } from './supplement';
 
 /** First cart key: one cart for the whole device (shared between users). Removed on load. */
 const LEGACY_KEY = 'orders.cart.v1';
@@ -18,11 +19,12 @@ function cartKey(me: MobileMe | null): string | null {
   return me?.user.uuid && me.active_organization_uuid ? `orders.cart.v2.${me.user.uuid}.${me.active_organization_uuid}` : null;
 }
 
-type Saved = { lines: CartLine[]; note: string };
-const EMPTY: Saved = { lines: [], note: '' };
+/** `parent`: the cart is a supplementary order of that shipped order (TEC-1222). */
+type Saved = { lines: CartLine[]; note: string; parent?: SupplementParent | null };
+const EMPTY: Saved = { lines: [], note: '', parent: null };
 
 function load(key: string | null): Saved {
-  return (key && readJSON<Saved>(key)) || EMPTY;
+  return { ...EMPTY, ...((key && readJSON<Saved>(key)) || {}) };
 }
 
 type Cart = Saved & {
@@ -36,6 +38,9 @@ type Cart = Saved & {
   setGift: (productUuid: string, gift: boolean) => void;
   remove: (productUuid: string) => void;
   setNote: (note: string) => void;
+  /** TEC-1222: start (empty cart) or leave a supplementary order. */
+  startSupplement: (parent: SupplementParent) => void;
+  leaveSupplement: () => void;
   clear: () => void;
 };
 
@@ -44,8 +49,8 @@ const initialKey = cartKey(useSession.getState().me);
 export const useCart = create<Cart>((set, get) => {
   const update = (next: Partial<Saved>) => {
     set(next);
-    const { key, lines, note } = get();
-    if (key) writeJSON(key, { lines, note });
+    const { key, lines, note, parent } = get();
+    if (key) writeJSON(key, { lines, note, parent });
   };
   return {
     key: initialKey,
@@ -63,6 +68,8 @@ export const useCart = create<Cart>((set, get) => {
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, is_gift } : l)) }),
     remove: (productUuid) => update({ lines: get().lines.filter((l) => l.product_uuid !== productUuid) }),
     setNote: (note) => update({ note }),
+    startSupplement: (parent) => update({ ...EMPTY, parent }),
+    leaveSupplement: () => update({ parent: null }),
     clear: () => update(EMPTY),
   };
 });
