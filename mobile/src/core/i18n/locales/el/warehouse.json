@@ -739,5 +739,15 @@
   "stock.credits.short": "Πιστώσεις {{value}}",
   "stock.credits.taken": "{{value}} πιστώσεις",
   "stock.credits.title": "Πιστώσεις χρήσης",
-  "stock.credits.used": "Χρησιμοποιήθηκε σε υπηρεσίες"
+  "stock.credits.used": "Χρησιμοποιήθηκε σε υπηρεσίες",
+  "entry.arrival_missing_title": "Υπάρχουν μη σαρωμένες γραμμές",
+  "entry.arrival_missing_description": "{{count}} γραμμές δεν σαρώθηκαν κατά την άφιξη. Τα ελλείποντα δεν μπορούν να μπουν στο απόθεμα. Μπορείτε να τις αφαιρέσετε και να επιβεβαιώσετε τις υπόλοιπες.",
+  "entry.drop_missing_confirm": "Αφαίρεση ελλειπόντων και επιβεβαίωση",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Ορισμένες γραμμές δεν σαρώθηκαν κατά την άφιξη. Σαρώστε τες ή αφαιρέστε τα ελλείποντα και επιβεβαιώστε.",
+  "labels.printed_title": "Τυπώθηκαν οι ετικέτες;",
+  "labels.printed_description": "Αν ναι, {{count}} μονάδες σημειώνονται ως τυπωμένες. Μια εισαγωγή με τυπωμένες ετικέτες δεν ακυρώνεται.",
+  "labels.printed_confirm": "Ναι, τυπώθηκαν",
+  "labels.mark_failed": "Οι ετικέτες δεν σημειώθηκαν ως τυπωμένες.",
+  "m.added_not_placed": "Το {{barcode}} προστέθηκε αλλά δεν τοποθετήθηκε",
+  "m.warehouse_totals_partial_products": "Διαβάστηκαν μόνο οι πρώτες {{count}} γραμμές προϊόντων αυτής της αποθήκης· η λίστα μπορεί να είναι ελλιπής."
 }

@@ -739,5 +739,15 @@
   "stock.credits.short": "Kredit {{value}}",
   "stock.credits.taken": "{{value}} kredit",
   "stock.credits.title": "İstifadə krediti",
-  "stock.credits.used": "İstifadə olunduğu xidmət sayı"
+  "stock.credits.used": "İstifadə olunduğu xidmət sayı",
+  "entry.arrival_missing_title": "Oxudulmamış sətirlər var",
+  "entry.arrival_missing_description": "{{count}} sətir qəbulda oxudulmayıb. Çatışmayan mal anbara girə bilməz. Bu sətirləri sənəddən çıxarıb qalanını təsdiqləyə bilərsiniz.",
+  "entry.drop_missing_confirm": "Çatışmayanları çıxar və təsdiqlə",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bəzi sətirlər qəbulda oxudulmayıb. Onları oxudun və ya çatışmayanları çıxarıb təsdiqləyin.",
+  "labels.printed_title": "Etiketlər çap olundu?",
+  "labels.printed_description": "Əgər çap olunubsa, {{count}} vahid \"çap olunub\" kimi qeyd edilir. Çap olunmuş etiketli sənəd ləğv edilə bilməz.",
+  "labels.printed_confirm": "Bəli, çap olundu",
+  "labels.mark_failed": "Etiketlər çap olunmuş kimi qeyd edilə bilmədi.",
+  "m.added_not_placed": "{{barcode}} əlavə olundu, amma yerləşdirilmədi",
+  "m.warehouse_totals_partial_products": "Bu anbarın yalnız ilk {{count}} məhsul sətri oxundu; siyahı natamam ola bilər."
 }

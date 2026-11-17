@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { filterTotals, inStockTotals, warehouseProductTotals } from './warehouse-totals.ts';
+import { filterTotals, inStockTotals, totalsTruncated, WAREHOUSE_TOTALS_MAX_PAGES, WAREHOUSE_TOTALS_PAGE, warehouseProductTotals } from './warehouse-totals.ts';
 
 const row = (uuid: string, name: string, quantity: number, meters = '0.00', unitType = 'piece', sku = `SKU-${uuid}`) => ({
   product: { uuid, sku, name, unit_type: unitType, category: { name: 'Kat' } },
@@ -47,5 +47,18 @@ describe('filterTotals', () => {
   });
   it('keeps every row without a search', () => {
     assert.equal(filterTotals(rows, '  ').length, 2);
+  });
+});
+
+describe('totalsTruncated (TEC-1224)', () => {
+  const cap = WAREHOUSE_TOTALS_PAGE * WAREHOUSE_TOTALS_MAX_PAGES;
+  it('flags a warehouse with more rows than were read', () => {
+    assert.equal(cap, 5000);
+    assert.equal(totalsTruncated(cap, cap + 1), true);
+  });
+  it('is quiet when every row was read or the total is unknown', () => {
+    assert.equal(totalsTruncated(cap, cap), false);
+    assert.equal(totalsTruncated(12, 12), false);
+    assert.equal(totalsTruncated(0, undefined), false);
   });
 });

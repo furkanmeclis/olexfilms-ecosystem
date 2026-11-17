@@ -739,5 +739,15 @@
   "entry.activity.created": "Created",
   "entry.activity.header_updated": "Edited the delivery details",
   "entry.activity.confirmed": "Confirmed",
-  "entry.activity.cancelled": "Cancelled"
+  "entry.activity.cancelled": "Cancelled",
+  "entry.arrival_missing_title": "Some lines were not scanned",
+  "entry.arrival_missing_description": "{{count}} lines were not scanned on arrival. Missing goods cannot enter stock. You can remove these lines from the entry and confirm the rest.",
+  "entry.drop_missing_confirm": "Remove missing lines and confirm",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Some lines were not scanned on arrival. Scan them, or remove the missing lines and confirm.",
+  "labels.printed_title": "Were the labels printed?",
+  "labels.printed_description": "If so, {{count}} units are marked as printed. An entry with printed labels cannot be cancelled.",
+  "labels.printed_confirm": "Yes, printed",
+  "labels.mark_failed": "The labels could not be marked as printed.",
+  "m.added_not_placed": "{{barcode}} was added but could not be placed",
+  "m.warehouse_totals_partial_products": "Only the first {{count}} product rows of this warehouse were read; the list may be incomplete."
 }

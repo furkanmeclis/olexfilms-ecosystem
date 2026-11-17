@@ -16,6 +16,7 @@ import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
 import { entryApi, resolveScan, type StockEntry, useEntry, wk } from './api';
+import { entryLineBarcode } from './entry-scan';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, entryTone, formatDate, formatNumber, isCode, whError } from './format';
 import { Card, ErrorState, Field, IconButton, ListSkeleton } from './parts';
@@ -59,17 +60,27 @@ export function EntryScreen() {
         return { ok: false, title: t('scan_status.warehouse_mismatch', { warehouse: r.location?.path[0]?.name ?? '' }) };
       }
       if (r?.status === 'ok' && r.type === 'product') return { ok: false, title: t('m.scan_unit_not_product') };
-      const barcode = r?.unit?.barcode ?? code;
-      const onEntry = lines.some((l) => l.barcode === barcode);
+      const scanned = r?.unit?.barcode ?? code;
+      // TEC-1224: the backend upper-cases codes; match the line case-insensitively.
+      const onEntry = entryLineBarcode(lines, scanned);
+      const barcode = onEntry ?? scanned;
       if (onEntry) {
         // Already a line (reserved or scanned before): only its shelf changes.
         if (!bin) return { ok: false, title: t('order_place.scan_location_first') };
         store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
       } else {
         if (x.mode === 'generate_new') return { ok: false, title: t('m.not_on_entry', { barcode }) };
-        let next = await entryApi.addLines(uuid, { barcodes: [barcode] });
-        if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
-        store(next);
+        // The line is kept even when placing it fails: store it first, then
+        // place; on a placing error refresh the entry and say so (TEC-1224).
+        store(await entryApi.addLines(uuid, { barcodes: [barcode] }));
+        if (bin) {
+          try {
+            store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
+          } catch (e) {
+            void qc.invalidateQueries({ queryKey: wk.entry(uuid) });
+            return { ok: false, title: t('m.added_not_placed', { barcode }), detail: whError(e) };
+          }
+        }
       }
       return { ok: true, title: r?.product?.name ?? barcode, detail: bin ? `→ ${bin.code}` : t('entry.unplaced') };
     } catch (e) {
@@ -133,7 +144,23 @@ export function EntryScreen() {
                       ? `${t('entry.confirm_description')}\n\n${t('entry.confirm_blocked')}`
                       : t('entry.confirm_description'),
                     action: t('entry.confirm'),
-                    onConfirm: () => void run('confirm', () => entryApi.confirm(uuid)),
+                    onConfirm: () =>
+                      void run('confirm', () => entryApi.confirm(uuid), {
+                        // TEC-1224: lines not scanned on arrival block a container entry.
+                        onError: (e) => {
+                          if (!isCode(e, 'STOCK_ENTRY_ARRIVAL_MISSING')) return false;
+                          void q.refetch();
+                          confirmAction({
+                            title: t('entry.arrival_missing_title'),
+                            body: t('entry.arrival_missing_description', { count: lines.filter((l) => !l.scanned_at).length }),
+                            action: t('entry.drop_missing_confirm'),
+                            destructive: true,
+                            onConfirm: () =>
+                              void run('confirm', () => entryApi.confirm(uuid, { drop_missing: true })),
+                          });
+                          return true;
+                        },
+                      }),
                   })
                 }
               />

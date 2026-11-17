@@ -739,5 +739,15 @@
   "entry.activity.created": "Oluşturdu",
   "entry.activity.header_updated": "Teslimat bilgisini düzenledi",
   "entry.activity.confirmed": "Onayladı",
-  "entry.activity.cancelled": "İptal etti"
+  "entry.activity.cancelled": "İptal etti",
+  "entry.arrival_missing_title": "Okutulmamış satırlar var",
+  "entry.arrival_missing_description": "{{count}} satır varışta okutulmadı. Eksik gelen mal stoğa giremez. Bu satırları fişten çıkarıp kalanları onaylayabilirsiniz.",
+  "entry.drop_missing_confirm": "Eksikleri fişten çıkar ve onayla",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bazı satırlar varışta okutulmadı. Okutun ya da eksikleri fişten çıkarıp onaylayın.",
+  "labels.printed_title": "Etiketler basıldı mı?",
+  "labels.printed_description": "Basıldıysa {{count}} birim \"basıldı\" olarak işaretlenir. Basılmış etiketli fiş iptal edilemez.",
+  "labels.printed_confirm": "Evet, basıldı",
+  "labels.mark_failed": "Etiketler basıldı olarak işaretlenemedi.",
+  "m.added_not_placed": "{{barcode}} fişe eklendi ama yerleştirilemedi",
+  "m.warehouse_totals_partial_products": "Bu depodaki ilk {{count}} ürün satırı okundu; liste eksik olabilir."
 }

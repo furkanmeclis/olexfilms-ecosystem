@@ -739,5 +739,15 @@
   "stock.credits.short": "Кредити {{value}}",
   "stock.credits.taken": "{{value}} кредита",
   "stock.credits.title": "Кредити за използване",
-  "stock.credits.used": "Използван в услуги"
+  "stock.credits.used": "Използван в услуги",
+  "entry.arrival_missing_title": "Има несканирани редове",
+  "entry.arrival_missing_description": "{{count}} реда не са сканирани при пристигане. Липсваща стока не може да влезе в наличност. Можете да премахнете тези редове и да потвърдите останалите.",
+  "entry.drop_missing_confirm": "Премахни липсващите и потвърди",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Някои редове не са сканирани при пристигане. Сканирайте ги или премахнете липсващите и потвърдете.",
+  "labels.printed_title": "Отпечатани ли са етикетите?",
+  "labels.printed_description": "Ако да, {{count}} единици се отбелязват като отпечатани. Запис с отпечатани етикети не може да се отмени.",
+  "labels.printed_confirm": "Да, отпечатани",
+  "labels.mark_failed": "Етикетите не можаха да се отбележат като отпечатани.",
+  "m.added_not_placed": "{{barcode}} е добавен, но не е разположен",
+  "m.warehouse_totals_partial_products": "Прочетени са само първите {{count}} реда продукти на този склад; списъкът може да е непълен."
 }

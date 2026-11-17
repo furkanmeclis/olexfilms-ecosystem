@@ -2,9 +2,9 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
-import { sellerWarehouseFilter } from '@/features/orders/order-summary';
 
 import { PAGE } from './api';
+import { type OrderScope, orderScopeQuery } from './order-scopes';
 
 type S = components['schemas'];
 export type Order = S['Order'];
@@ -16,14 +16,7 @@ export type OrderPickList = S['OrderPickList'];
 export type OrderPlacement = S['WarehouseOrderPlacement'];
 export type DeliveryMethod = S['DeliveryMethod'];
 
-/** Warehouse view of orders: what to prepare (seller) and what to receive and shelve (buyer). */
-export type OrderScope = 'prepare' | 'receive' | 'all';
-
-const SCOPES: Record<OrderScope, { side?: 'seller' | 'buyer'; status?: string }> = {
-  prepare: { side: 'seller', status: 'approved,processing,preparing,ready' },
-  receive: { side: 'buyer', status: 'shipped,received' },
-  all: {},
-};
+export type { OrderScope } from './order-scopes';
 
 export const orderKeys = {
   orders: (scope: OrderScope, warehouse = '') => ['warehouse', 'orders', scope, warehouse] as const,
@@ -51,7 +44,7 @@ export function useOrders(scope: OrderScope, enabled = true, warehouse?: { uuid:
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/v1/orders', {
-          params: { query: { ...SCOPES[scope], ...sellerWarehouseFilter(wh || undefined), limit: PAGE, offset: pageParam } },
+          params: { query: { ...orderScopeQuery(scope, wh || undefined), limit: PAGE, offset: pageParam } },
         }),
       ),
     getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
@@ -64,14 +57,15 @@ export function useOrders(scope: OrderScope, enabled = true, warehouse?: { uuid:
  * Orders waiting for this organization's warehouse (seller side, approved up to
  * ready): the count shown on the warehouse and center home shortcuts (TEC-1025).
  */
-export function usePendingOrderCount(enabled = true) {
+export function usePendingOrderCount(enabled = true, warehouse?: string) {
   return useQuery({
-    queryKey: ['warehouse', 'orders', 'pending-count'],
+    queryKey: ['warehouse', 'orders', 'pending-count', warehouse ?? ''],
     enabled,
     staleTime: 60_000,
     refetchInterval: 120_000,
     queryFn: async () => {
-      const page = await unwrap(api.GET('/v1/orders', { params: { query: { ...SCOPES.prepare, limit: 1, offset: 0 } } }));
+      // TEC-1224: the same filter as the warehouse home counters (orderScopeQuery).
+      const page = await unwrap(api.GET('/v1/orders', { params: { query: { ...orderScopeQuery('prepare', warehouse), limit: 1, offset: 0 } } }));
       return page.total;
     },
   });
@@ -92,10 +86,10 @@ export function useWarehouseOrderCounts(enabled: boolean, warehouse: { uuid: str
       const count = (status: string) =>
         unwrap(
           api.GET('/v1/orders', {
-            params: { query: { side: 'seller', status, ...sellerWarehouseFilter(warehouse.uuid), limit: 1, offset: 0 } },
+            params: { query: { ...orderScopeQuery('prepare', warehouse.uuid, status), limit: 1, offset: 0 } },
           }),
         ).then((p) => p.total);
-      const [open, fresh] = await Promise.all([count(SCOPES.prepare.status ?? ''), count('approved')]);
+      const [open, fresh] = await Promise.all([count(orderScopeQuery('prepare').status ?? ''), count('approved')]);
       return { open, new: fresh };
     },
   });

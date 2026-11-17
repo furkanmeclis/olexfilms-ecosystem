@@ -739,5 +739,15 @@
   "stock.credits.short": "Guthaben {{value}}",
   "stock.credits.taken": "{{value}} Guthaben",
   "stock.credits.title": "Nutzungsguthaben",
-  "stock.credits.used": "Verwendet in Aufträgen"
+  "stock.credits.used": "Verwendet in Aufträgen",
+  "entry.arrival_missing_title": "Nicht gescannte Positionen",
+  "entry.arrival_missing_description": "{{count}} Positionen wurden beim Wareneingang nicht gescannt. Fehlende Ware darf nicht in den Bestand. Sie können diese Positionen entfernen und den Rest bestätigen.",
+  "entry.drop_missing_confirm": "Fehlende entfernen und bestätigen",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Einige Positionen wurden beim Eingang nicht gescannt. Scannen Sie sie oder entfernen Sie die fehlenden und bestätigen Sie.",
+  "labels.printed_title": "Wurden die Etiketten gedruckt?",
+  "labels.printed_description": "Dann werden {{count}} Einheiten als gedruckt markiert. Ein Eingang mit gedruckten Etiketten kann nicht storniert werden.",
+  "labels.printed_confirm": "Ja, gedruckt",
+  "labels.mark_failed": "Die Etiketten konnten nicht als gedruckt markiert werden.",
+  "m.added_not_placed": "{{barcode}} wurde hinzugefügt, aber nicht eingelagert",
+  "m.warehouse_totals_partial_products": "Nur die ersten {{count}} Produktzeilen dieses Lagers wurden gelesen; die Liste kann unvollständig sein."
 }

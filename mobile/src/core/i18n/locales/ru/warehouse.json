@@ -739,5 +739,15 @@
   "stock.credits.short": "Кредиты {{value}}",
   "stock.credits.taken": "{{value}} кредитов",
   "stock.credits.title": "Кредиты использования",
-  "stock.credits.used": "Использован в услугах"
+  "stock.credits.used": "Использован в услугах",
+  "entry.arrival_missing_title": "Есть неотсканированные строки",
+  "entry.arrival_missing_description": "{{count}} строк не отсканированы при приёмке. Недостающий товар не может поступить на склад. Можно убрать эти строки и подтвердить остальные.",
+  "entry.drop_missing_confirm": "Убрать недостающие и подтвердить",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Некоторые строки не отсканированы при приёмке. Отсканируйте их или уберите недостающие и подтвердите.",
+  "labels.printed_title": "Этикетки напечатаны?",
+  "labels.printed_description": "Если да, {{count}} единиц будут отмечены как напечатанные. Приход с напечатанными этикетками нельзя отменить.",
+  "labels.printed_confirm": "Да, напечатаны",
+  "labels.mark_failed": "Не удалось отметить этикетки как напечатанные.",
+  "m.added_not_placed": "{{barcode}} добавлен, но не размещён",
+  "m.warehouse_totals_partial_products": "Прочитаны только первые {{count}} строк товаров этого склада; список может быть неполным."
 }

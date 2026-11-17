@@ -739,5 +739,15 @@
   "stock.credits.short": "次数 {{value}}",
   "stock.credits.taken": "{{value}} 次",
   "stock.credits.title": "使用次数",
-  "stock.credits.used": "使用过的服务数"
+  "stock.credits.used": "使用过的服务数",
+  "entry.arrival_missing_title": "有未扫描的行",
+  "entry.arrival_missing_description": "{{count}} 行在到货时未扫描。缺少的货物不能入库。您可以从单据中移除这些行并确认其余部分。",
+  "entry.drop_missing_confirm": "移除缺失项并确认",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "部分行在到货时未扫描。请扫描，或移除缺失项后确认。",
+  "labels.printed_title": "标签已打印吗？",
+  "labels.printed_description": "如已打印，{{count}} 个单元将标记为已打印。已打印标签的入库单无法取消。",
+  "labels.printed_confirm": "是，已打印",
+  "labels.mark_failed": "无法将标签标记为已打印。",
+  "m.added_not_placed": "{{barcode}} 已添加但未能上架",
+  "m.warehouse_totals_partial_products": "仅读取了该仓库的前 {{count}} 行产品；列表可能不完整。"
 }

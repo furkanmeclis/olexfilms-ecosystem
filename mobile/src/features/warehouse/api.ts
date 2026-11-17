@@ -246,7 +246,9 @@ export const entryApi = {
     ),
   place: (uuid: string, body: S['StockEntryPlaceInput']) =>
     unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/place', { params: { path: { uuid } }, body })),
-  confirm: (uuid: string) => unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/confirm', { params: { path: { uuid } } })),
+  /** TEC-1224: `drop_missing` removes the lines of a container entry not scanned on arrival. */
+  confirm: (uuid: string, body?: { drop_missing?: boolean }) =>
+    unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/confirm', { params: { path: { uuid } }, ...(body ? { body } : {}) })),
   cancel: (uuid: string) => unwrap(api.POST('/v1/warehouse/stock-entries/{uuid}/cancel', { params: { path: { uuid } } })),
 };
 
