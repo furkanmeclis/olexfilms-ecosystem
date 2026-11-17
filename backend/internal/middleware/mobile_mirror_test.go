@@ -430,6 +430,32 @@ func TestMobilePanelMirrorReportExport(t *testing.T) {
 	}
 }
 
+// TEC-1220 (TEC-1085): the mobile return form and the order page's returns
+// ride the "stock-transfers" prefix: return sources, return orders, an
+// order's units and the list filtered by order_uuid.
+func TestMobilePanelMirrorTEC1220Returns(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"stock-transfers",
+		"stock-transfers/return-sources",
+		"stock-transfers/return-orders",
+		"stock-transfers/return-orders/" + id + "/units",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+"?from_org_uuid="+id, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path || r.URL.Query().Get("from_org_uuid") != id {
+				t.Errorf("rewrite = %s?%s", r.URL.Path, r.URL.RawQuery)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
 // TEC-1220: the mobile stock screen reads the warehouse product totals, the
 // transfer and stock entry details carry their timelines.
 func TestMobilePanelMirrorTEC1220Allowed(t *testing.T) {

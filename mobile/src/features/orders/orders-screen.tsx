@@ -28,6 +28,7 @@ import {
 } from '@/features/admin/kit';
 import { RefRow, RefText } from '@/features/entity/ref-row';
 import { CartButton, CATALOG_PRODUCTS, useCanOrder } from '@/features/catalog/catalog-screen';
+import { OrderReturnsSection } from '@/features/transfers/order-returns';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -336,6 +337,9 @@ export function OrderDetailScreen() {
                 {t('warehouse:orders.detail.items_empty')}
               </Text>
             )}
+
+            {/* TEC-1220 (web TEC-1085): the returns linked to this order and "Create return". */}
+            <OrderReturnsSection order={o} />
 
             {/* TEC-1059 (revize 5.4.1): who did what and when; the status history stays for orders without one. */}
             {o.timeline?.length ? (
