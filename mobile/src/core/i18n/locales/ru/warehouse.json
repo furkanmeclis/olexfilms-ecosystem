@@ -907,5 +907,9 @@
   "documents.use_photo": "Загрузить фото",
   "documents.take_photo": "Сделать фото",
   "shipment.invalid": "Места — целое число от 1 до 9999; деси и вес — не более двух знаков после запятой.",
-  "shipment.on_note": "Места, деси и вес печатаются в накладной. После отправки поделитесь ею в разделе «Документы»."
+  "shipment.on_note": "Места, деси и вес печатаются в накладной. После отправки поделитесь ею в разделе «Документы».",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Краткое пояснение"
 }

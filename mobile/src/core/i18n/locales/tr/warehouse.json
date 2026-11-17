@@ -907,5 +907,9 @@
   "documents.use_photo": "Fotoğrafı yükle",
   "documents.take_photo": "Fotoğraf çek",
   "shipment.invalid": "Koli 1–9999 arası tam sayı; desi ve ağırlık en fazla iki ondalık olmalı.",
-  "shipment.on_note": "Koli, desi ve ağırlık irsaliyeye basılır. İrsaliye sevkten sonra aşağıdaki Belgeler bölümünden paylaşılabilir."
+  "shipment.on_note": "Koli, desi ve ağırlık irsaliyeye basılır. İrsaliye sevkten sonra aşağıdaki Belgeler bölümünden paylaşılabilir.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Kısa açıklama"
 }

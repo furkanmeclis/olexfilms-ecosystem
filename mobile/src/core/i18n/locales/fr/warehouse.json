@@ -907,5 +907,9 @@
   "documents.use_photo": "Envoyer la photo",
   "documents.take_photo": "Prendre une photo",
   "shipment.invalid": "Colis : entier de 1 à 9999 ; desi et poids avec au plus deux décimales.",
-  "shipment.on_note": "Colis, desi et poids figurent sur le bon de livraison. Après l'expédition, partagez-le depuis Documents."
+  "shipment.on_note": "Colis, desi et poids figurent sur le bon de livraison. Après l'expédition, partagez-le depuis Documents.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Brève explication"
 }

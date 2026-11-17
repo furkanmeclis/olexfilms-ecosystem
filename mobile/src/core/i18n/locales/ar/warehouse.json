@@ -907,5 +907,9 @@
   "documents.use_photo": "رفع الصورة",
   "documents.take_photo": "التقاط صورة",
   "shipment.invalid": "عدد الطرود عدد صحيح من 1 إلى 9999، والديسي والوزن بخانتين عشريتين كحد أقصى.",
-  "shipment.on_note": "تُطبع الطرود والديسي والوزن على إذن التسليم. بعد الشحن شاركه من قسم المستندات."
+  "shipment.on_note": "تُطبع الطرود والديسي والوزن على إذن التسليم. بعد الشحن شاركه من قسم المستندات.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "شرح موجز"
 }

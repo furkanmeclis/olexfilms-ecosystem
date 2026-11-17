@@ -907,5 +907,9 @@
   "documents.use_photo": "Subir foto",
   "documents.take_photo": "Tomar foto",
   "shipment.invalid": "Bultos: entero de 1 a 9999; desi y peso con dos decimales como máximo.",
-  "shipment.on_note": "Bultos, desi y peso se imprimen en el albarán. Tras el envío, compártelo desde Documentos."
+  "shipment.on_note": "Bultos, desi y peso se imprimen en el albarán. Tras el envío, compártelo desde Documentos.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Breve explicación"
 }

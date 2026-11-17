@@ -907,5 +907,9 @@
   "documents.use_photo": "Μεταφόρτωση φωτογραφίας",
   "documents.take_photo": "Λήψη φωτογραφίας",
   "shipment.invalid": "Δέματα: ακέραιος 1–9999· desi και βάρος έως δύο δεκαδικά.",
-  "shipment.on_note": "Δέματα, desi και βάρος τυπώνονται στο δελτίο αποστολής. Μετά την αποστολή, κοινοποιήστε το από τα Έγγραφα."
+  "shipment.on_note": "Δέματα, desi και βάρος τυπώνονται στο δελτίο αποστολής. Μετά την αποστολή, κοινοποιήστε το από τα Έγγραφα.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Σύντομη εξήγηση"
 }

@@ -903,13 +903,13 @@ function ShipSheet({
           />
           <View className="flex-row gap-2">
             <View className="flex-1">
-              <Input label={t('shipment.package_count')} value={packages} onChangeText={setPackages} keyboardType="number-pad" />
+              <Input label={t('shipment.package_count')} placeholder={t('shipment.package_count_placeholder')} value={packages} onChangeText={setPackages} keyboardType="number-pad" />
             </View>
             <View className="flex-1">
-              <Input label={t('shipment.desi')} value={desi} onChangeText={setDesi} keyboardType="decimal-pad" />
+              <Input label={t('shipment.desi')} placeholder={t('shipment.desi_placeholder')} value={desi} onChangeText={setDesi} keyboardType="decimal-pad" />
             </View>
             <View className="flex-1">
-              <Input label={t('shipment.weight_kg')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
+              <Input label={t('shipment.weight_kg')} placeholder={t('shipment.weight_kg_placeholder')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
             </View>
           </View>
           {details ? null : (

@@ -907,5 +907,9 @@
   "documents.use_photo": "Upload photo",
   "documents.take_photo": "Take photo",
   "shipment.invalid": "Packages must be a whole number from 1 to 9999; desi and weight at most two decimals.",
-  "shipment.on_note": "Packages, desi and weight are printed on the shipping note. After shipping, share it from Documents below."
+  "shipment.on_note": "Packages, desi and weight are printed on the shipping note. After shipping, share it from Documents below.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Short explanation"
 }

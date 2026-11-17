@@ -907,5 +907,9 @@
   "documents.use_photo": "Завантажити фото",
   "documents.take_photo": "Зробити фото",
   "shipment.invalid": "Місця — ціле число від 1 до 9999; деси й вага — не більше двох знаків після коми.",
-  "shipment.on_note": "Місця, деси й вага друкуються в накладній. Після відправлення поділіться нею в розділі «Документи»."
+  "shipment.on_note": "Місця, деси й вага друкуються в накладній. Після відправлення поділіться нею в розділі «Документи».",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Коротке пояснення"
 }

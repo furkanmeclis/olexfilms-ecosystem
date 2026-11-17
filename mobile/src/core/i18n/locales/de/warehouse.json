@@ -907,5 +907,9 @@
   "documents.use_photo": "Foto hochladen",
   "documents.take_photo": "Foto aufnehmen",
   "shipment.invalid": "Packstücke: ganze Zahl 1–9999; Desi und Gewicht höchstens zwei Nachkommastellen.",
-  "shipment.on_note": "Packstücke, Desi und Gewicht stehen auf dem Lieferschein. Nach dem Versand unter Dokumente teilen."
+  "shipment.on_note": "Packstücke, Desi und Gewicht stehen auf dem Lieferschein. Nach dem Versand unter Dokumente teilen.",
+  "shipment.package_count_placeholder": "1",
+  "shipment.desi_placeholder": "0,00",
+  "shipment.weight_kg_placeholder": "0,00",
+  "cancel_reason_placeholder": "Kurze Erklärung"
 }

@@ -387,6 +387,7 @@ export function CancelSheet({
           </Text>
           <Input
             label={kind.reasonRequired ? t('orders.actions.reason_required') : t('orders.actions.reason_optional')}
+            placeholder={t('cancel_reason_placeholder')}
             value={reason}
             onChangeText={setReason}
             multiline
