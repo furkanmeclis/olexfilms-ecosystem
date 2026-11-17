@@ -152,3 +152,21 @@ Madde 1'de hâlâ eksik olanlar: oda/konum ağacı (`rooms`, `locations`),
 stok girişi, `moves`, `orders/{uuid}/place`, gün sonu, etiket PDF'leri,
 sayım CSV'si (`stock-counts/{uuid}/export`) ve `/v1/mobile/stock/*`
 (by-barcode, etiketler). Madde 2–6 değişmedi.
+
+## 5. Mal kabul istisnaları (TEC-1225)
+
+Aynı handler ve usecase'ler, aynı izinler ve `RequireFeature(warehouse)`:
+
+- `PATCH /v1/mobile/warehouse/stock-entries/{uuid}` (fiş başlığı: tedarikçi,
+  konteyner no, irsaliye no, varış tarihi, varsayılan göz); oluşturma
+  (`POST .../stock-entries`) başlık alanlarını da kabul eder.
+- `POST`/`DELETE .../stock-entries/{uuid}/arrival-scans`,
+  `GET .../arrival-report` (varış okutması, beklenen/okutulan/eksik/fazla).
+- `POST .../stock-entries/{uuid}/confirm` gövdesinde tutanak kararları
+  (`decisions`); eksik karar 409 `STOCK_ENTRY_DISCREPANCY_REQUIRED`.
+- `GET .../receipt`, `GET .../receipt.pdf` (kabul tutanağı).
+- `POST .../attachments` (multipart), `GET`/`DELETE .../attachments/{attachment_uuid}`.
+- `PATCH .../lines/{line_uuid}` (lot, üretim tarihi, koli no).
+- `POST .../label-prints` (zaman çizelgesi adımı).
+- `GET .../undo-check`, `POST .../undo` (`stock.adjust` + step-up).
+- `GET /v1/mobile/warehouse/suppliers` (`warehouse.read`).

@@ -125,7 +125,7 @@ func (q *Queries) DeleteStockEntryScan(ctx context.Context, arg DeleteStockEntry
 }
 
 const findStockEntryLineByBarcode = `-- name: FindStockEntryLineByBarcode :one
-SELECT l.id, l.uuid, l.entry_id, l.unit_id, l.quantity, l.location_id, l.entry_movement_id, l.placement_movement_id, l.undo_movement_id, l.created_at, l.box_no, l.scanned_at, l.scanned_by FROM stock_entry_lines l
+SELECT l.id, l.uuid, l.entry_id, l.unit_id, l.quantity, l.location_id, l.entry_movement_id, l.placement_movement_id, l.undo_movement_id, l.created_at, l.box_no, l.scanned_at, l.scanned_by, l.production_date FROM stock_entry_lines l
 JOIN units u ON u.id = l.unit_id
 WHERE l.entry_id = $1 AND upper(u.barcode) = upper($2::text)
 `
@@ -152,6 +152,7 @@ func (q *Queries) FindStockEntryLineByBarcode(ctx context.Context, arg FindStock
 		&i.BoxNo,
 		&i.ScannedAt,
 		&i.ScannedBy,
+		&i.ProductionDate,
 	)
 	return i, err
 }
@@ -337,7 +338,7 @@ SET supplier_id = $1,
     default_location_id = $5,
     note = $6
 WHERE id = $7 AND status = 'draft'
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id, undone_at, undone_by_user_id, undo_reason
 `
 
 type SetStockEntryHeaderParams struct {
@@ -385,6 +386,9 @@ func (q *Queries) SetStockEntryHeader(ctx context.Context, arg SetStockEntryHead
 		&i.WaybillNo,
 		&i.ArrivalDate,
 		&i.DefaultLocationID,
+		&i.UndoneAt,
+		&i.UndoneByUserID,
+		&i.UndoReason,
 	)
 	return i, err
 }
@@ -393,7 +397,7 @@ const setStockEntryLineScanned = `-- name: SetStockEntryLineScanned :one
 UPDATE stock_entry_lines
 SET scanned_at = NOW(), scanned_by = $1
 WHERE id = $2 AND scanned_at IS NULL
-RETURNING id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at, box_no, scanned_at, scanned_by
+RETURNING id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at, box_no, scanned_at, scanned_by, production_date
 `
 
 type SetStockEntryLineScannedParams struct {
@@ -418,6 +422,7 @@ func (q *Queries) SetStockEntryLineScanned(ctx context.Context, arg SetStockEntr
 		&i.BoxNo,
 		&i.ScannedAt,
 		&i.ScannedBy,
+		&i.ProductionDate,
 	)
 	return i, err
 }

@@ -356,6 +356,8 @@ type Querier interface {
 	CountStockCountScans(ctx context.Context, countID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
+	// Discrepancies that name the attachment as damage evidence.
+	CountStockEntryAttachmentRefs(ctx context.Context, arg CountStockEntryAttachmentRefsParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
 	CountStockEntryScanned(ctx context.Context, entryID int64) (CountStockEntryScannedRow, error)
 	CountStockForecastSubtreeSummary(ctx context.Context, arg CountStockForecastSubtreeSummaryParams) (int64, error)
@@ -785,6 +787,7 @@ type Querier interface {
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
 	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
+	DeleteStockEntryLineByID(ctx context.Context, arg DeleteStockEntryLineByIDParams) (int64, error)
 	DeleteStockEntryScan(ctx context.Context, arg DeleteStockEntryScanParams) (int64, error)
 	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
@@ -1405,10 +1408,13 @@ type Querier interface {
 	GetStockBulkJobByID(ctx context.Context, id int64) (StockBulkJob, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
+	GetStockEntryAttachment(ctx context.Context, arg GetStockEntryAttachmentParams) (StockEntryAttachment, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
 	// TEC-759: the import batch of an import entry with its job and file.
 	GetStockEntryImportSource(ctx context.Context, id int64) (GetStockEntryImportSourceRow, error)
+	GetStockEntrySupplierDetails(ctx context.Context, id int64) (GetStockEntrySupplierDetailsRow, error)
+	GetStockEntryUserRef(ctx context.Context, id int64) (GetStockEntryUserRefRow, error)
 	GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error)
 	GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error)
 	GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error)
@@ -1664,6 +1670,8 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Scans.
 	InsertStockCountScan(ctx context.Context, arg InsertStockCountScanParams) (StockCountScan, error)
+	InsertStockEntryAttachment(ctx context.Context, arg InsertStockEntryAttachmentParams) (StockEntryAttachment, error)
+	InsertStockEntryDiscrepancy(ctx context.Context, arg InsertStockEntryDiscrepancyParams) (StockEntryDiscrepancy, error)
 	InsertStockEntryLine(ctx context.Context, arg InsertStockEntryLineParams) (StockEntryLine, error)
 	InsertStockEntryScan(ctx context.Context, arg InsertStockEntryScanParams) (StockEntryScan, error)
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
@@ -2861,6 +2869,8 @@ type Querier interface {
 	// usecase EntrySort. status sorts by flow rank; warehouse by name (import
 	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
+	ListStockEntryAttachments(ctx context.Context, entryID int64) ([]ListStockEntryAttachmentsRow, error)
+	ListStockEntryDiscrepancies(ctx context.Context, entryID int64) ([]ListStockEntryDiscrepanciesRow, error)
 	// TEC-761: warehouse exports (I/O engine). Read only; every query is bound
 	// to one organization (the export job organization).
 	// The lines of the given entries with their unit, product and location.
@@ -2956,6 +2966,8 @@ type Querier interface {
 	ListUnitCreditServices(ctx context.Context, unitID int64) ([]ListUnitCreditServicesRow, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
+	// Movements of a unit after the given one (the undo check of an entry).
+	ListUnitMovementsAfter(ctx context.Context, arg ListUnitMovementsAfterParams) ([]ListUnitMovementsAfterRow, error)
 	// TEC-1078: the split family of a roll — the roll (depth 0) and every unit
 	// cut from it, recursively through stock_splits (a part may be cut again).
 	// Each row carries the unit, its product, its current holder and owner (no
@@ -3269,6 +3281,7 @@ type Querier interface {
 	MarkImportJobFailed(ctx context.Context, arg MarkImportJobFailedParams) (ImportJob, error)
 	MarkImportJobRolledBack(ctx context.Context, id int64) (ImportJob, error)
 	MarkLogPurgeRuleRun(ctx context.Context, arg MarkLogPurgeRuleRunParams) (LogPurgeRule, error)
+	MarkManualStockEntryUndone(ctx context.Context, arg MarkManualStockEntryUndoneParams) (StockEntry, error)
 	// Marks a result normalized and fills the fields parsed from raw.
 	MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasurementResultParsedParams) error
 	// A failed provider call: failed = final (no retry left or a permanent
@@ -4029,10 +4042,15 @@ type Querier interface {
 	// header, the arrival scan (expected vs received), remembered supplier
 	// product codes and saved import column mappings.
 	SetStockEntryHeader(ctx context.Context, arg SetStockEntryHeaderParams) (StockEntry, error)
+	// TEC-1225: receiving exceptions (discrepancy record, attachments, line
+	// production date / lot, undo of a confirmed manual entry).
+	SetStockEntryLineDetails(ctx context.Context, arg SetStockEntryLineDetailsParams) (StockEntryLine, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
 	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
 	SetStockEntryLineScanned(ctx context.Context, arg SetStockEntryLineScannedParams) (StockEntryLine, error)
+	SetStockEntryLineUndoMovement(ctx context.Context, arg SetStockEntryLineUndoMovementParams) error
 	SetStockEntryLineUndone(ctx context.Context, arg SetStockEntryLineUndoneParams) error
+	SetStockEntryLinesProductionDate(ctx context.Context, arg SetStockEntryLinesProductionDateParams) error
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
 	// TEC-212: bulk engine adapter (assign one task, logged + undoable).
@@ -4089,6 +4107,7 @@ type Querier interface {
 	SoftDeleteLibraryFolder(ctx context.Context, arg SoftDeleteLibraryFolderParams) (int64, error)
 	SoftDeleteLibraryItem(ctx context.Context, arg SoftDeleteLibraryItemParams) (int64, error)
 	SoftDeleteQuote(ctx context.Context, arg SoftDeleteQuoteParams) (int64, error)
+	SoftDeleteStockEntryAttachment(ctx context.Context, id int64) (int64, error)
 	SoftDeleteVehicle(ctx context.Context, id int64) (int64, error)
 	StartIntegrationSyncRun(ctx context.Context, arg StartIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)

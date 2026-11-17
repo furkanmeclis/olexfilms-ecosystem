@@ -63,7 +63,7 @@ func writeEntryError(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		response.Conflict(w, r, CodeStockEntryLedgerRefused, msg)
 	default:
-		writeError(w, r, err)
+		writeExceptionError(w, r, err)
 	}
 }
 
@@ -103,6 +103,9 @@ type entryLinesBody struct {
 	Prefix        string   `json:"prefix"`
 	TemplateUUID  string   `json:"template_uuid"`
 	FixedQuantity *int32   `json:"fixed_quantity"`
+	// TEC-1225: lot and production date (YYYY-MM-DD) of the added lines.
+	Lot            string `json:"lot"`
+	ProductionDate string `json:"production_date"`
 }
 
 type placeBody struct {
@@ -150,9 +153,10 @@ func (h *Entries) CreateMobile(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := h.svc.Create(r.Context(), entryCaller(r), wh.EntryInput{
 		WarehouseUUID: b.WarehouseUUID, Mode: b.Mode, Note: b.Note, DefaultWarehouse: true,
+		Header: b.header(),
 	})
 	if err != nil {
-		writeEntryError(w, r, err)
+		writeContainerError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, out)
@@ -199,6 +203,7 @@ func (h *Entries) AddLines(w http.ResponseWriter, r *http.Request) {
 	out, err := h.svc.AddLines(r.Context(), entryCaller(r), id, wh.EntryLinesInput{
 		Barcodes: b.Barcodes, ProductUUID: b.ProductUUID, Count: b.Quantity, Meters: b.Meters,
 		Prefix: b.Prefix, TemplateUUID: b.TemplateUUID, FixedQuantity: b.FixedQuantity,
+		Lot: b.Lot, ProductionDate: b.ProductionDate,
 	})
 	if err != nil {
 		writeEntryError(w, r, err)
@@ -251,7 +256,12 @@ func (h *Entries) Confirm(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	out, err := h.svc.Confirm(r.Context(), entryCaller(r), id)
+	// TEC-1225: the body (optional) carries the discrepancy decisions.
+	in, ok := decodeConfirm(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.ConfirmWith(r.Context(), entryCaller(r), id, in)
 	if err != nil {
 		writeEntryError(w, r, err)
 		return

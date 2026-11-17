@@ -13794,6 +13794,251 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/warehouse/stock-entries/{uuid}/receipt:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryReceipt
+      summary: "Discrepancy record ('kabul tutanağı') of an entry (TEC-1225)"
+      description: >-
+        Needs `warehouse.read`. Supplier, delivery, warehouse, the decisions taken at confirm (missing left out, extras added or rejected, damaged accepted or excluded with reason and photos) and their counts. Never carries a price.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryReceipt"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}/receipt.pdf:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryReceiptPdf
+      summary: "Discrepancy record PDF (TEC-1225)"
+      description: >-
+        Needs `warehouse.read`. Rendered synchronously in `locale` (default: the request locale). 503 STORAGE_UNAVAILABLE when PDF rendering is not configured.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: locale
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/warehouse/stock-entries/{uuid}/attachments:
+    post:
+      tags: [Warehouse]
+      operationId: addStockEntryAttachment
+      summary: "Attach a waybill, invoice, photo or other file (TEC-1225)"
+      description: >-
+        Needs `warehouse.write` and warehouse membership. Any entry that is not cancelled (409 STOCK_ENTRY_CANCELLED). JPEG, PNG, WebP or PDF, at most 15 MB, at most 50 per entry. A `photo` must be an image; damage decisions name photos by uuid.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                kind: { type: string, enum: [waybill, invoice, photo, other], default: other }
+      responses:
+        "201":
+          description: Attachment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryAttachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryAttachment
+      summary: "Download an attachment (TEC-1225)"
+      description: >-
+        Needs `warehouse.read`. Streams the stored file inline.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: attachment_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Warehouse]
+      operationId: deleteStockEntryAttachment
+      summary: "Remove an attachment (TEC-1225)"
+      description: >-
+        Needs `warehouse.write`. 409 STOCK_ENTRY_ATTACHMENT_IN_USE when the file is damage evidence of the discrepancy record.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: attachment_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/label-prints:
+    post:
+      tags: [Warehouse]
+      operationId: recordStockEntryLabelPrint
+      summary: "Record a label print on the entry timeline (TEC-1225)"
+      description: >-
+        Needs `warehouse.write`. Adds a `labels_printed` step (count of labels; 0 = every line). Does not change any unit status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLabelPrintInput" }
+      responses:
+        "204":
+          description: Recorded
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/undo-check:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryUndoCheck
+      summary: "Can a confirmed entry be undone? (TEC-1225)"
+      description: >-
+        Needs `warehouse.read`. `allowed` false with `reason` not_confirmed, import (undo through the import job) or moved; `blockers` lists the units that moved after the entry (shipment, service, transfer, placement...).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Check
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryUndoCheck"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}/undo:
+    post:
+      tags: [Warehouse]
+      operationId: undoStockEntry
+      summary: "Undo a confirmed manual entry (TEC-1225)"
+      description: >-
+        Needs `warehouse.write`, `stock.adjust` (403 STOCK_ADJUST_REQUIRED) and a recent step-up (403 STEP_UP_REQUIRED). Every line gets a `void` movement through the ledger (idempotency key `stock_entry_undo:stock_entry_line:<line id>:void:<barcode>`); the entry becomes `undone` with the reason. 409 STOCK_ENTRY_UNDO_BLOCKED (error data `blockers`) when a unit moved after the entry; STOCK_ENTRY_NOT_CONFIRMED; STOCK_ENTRY_UNDO_IMPORT for import entries.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryUndoInput" }
+      responses:
+        "200":
+          description: Undone entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/warehouse/suppliers:
     get:
       tags: [Warehouse]
@@ -14031,6 +14276,42 @@ paths:
           $ref: "#/components/responses/Conflict"
 
   /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}:
+    patch:
+      tags: [Warehouse]
+      operationId: updateStockEntryLine
+      summary: "Change the lot, production date or box number of a draft line (TEC-1225)"
+      description: >-
+        Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse. A null field keeps the value, an empty string clears it. The lot is written on the unit while it is still a printed label; `production_date` (YYYY-MM-DD, not in the future) stays on the line. 409 STOCK_ENTRY_NOT_DRAFT after confirm or cancel.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLineDetailsInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       tags: [Warehouse]
       operationId: deleteStockEntryLine
@@ -14116,11 +14397,22 @@ paths:
         entry is already confirmed (a second confirm writes nothing),
         STOCK_ENTRY_EMPTY without lines, STOCK_ENTRY_UNPLACED while a line
         has no location, STOCK_ENTRY_LEDGER_REFUSED when the ledger refuses a
-        movement (nothing is written).
+        movement (nothing is written). TEC-1225: the optional body carries
+        the discrepancy decisions. When the arrival check applies (container
+        entry or arrival scan used) every unscanned line needs a `missing`
+        decision and every extra scan an `extra` decision, else 409
+        STOCK_ENTRY_DISCREPANCY_REQUIRED with error data `missing` and
+        `extras` (barcodes). Damaged lines need a reason and a photo
+        attachment.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryConfirmInput" }
       responses:
         "200":
           description: Confirmed entry
@@ -20176,6 +20468,41 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   /v1/mobile/warehouse/stock-entries/{uuid}:
+    patch:
+      tags: [Mobile]
+      operationId: mobileUpdateStockEntryHeader
+      summary: "Mobile: Change the delivery of a draft entry (TEC-1007)"
+      description: >-
+        Mobile mirror (TEC-1225) of `PATCH /v1/warehouse/stock-entries/{uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Supplier, container / waybill number, arrival date, default bin and note of a draft.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryHeaderInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
     get:
       tags: [Mobile]
       operationId: mobileGetStockEntry
@@ -20247,6 +20574,45 @@ paths:
           $ref: "#/components/responses/MobileApiVersionUnsupported"
 
   /v1/mobile/warehouse/stock-entries/{uuid}/lines/{line_uuid}:
+    patch:
+      tags: [Mobile]
+      operationId: mobileUpdateStockEntryLine
+      summary: "Mobile: Change the lot, production date or box number of a draft line (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `PATCH /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse. A null field keeps the value, an empty string clears it. The lot is written on the unit while it is still a printed label; `production_date` (YYYY-MM-DD, not in the future) stays on the line. 409 STOCK_ENTRY_NOT_DRAFT after confirm or cancel.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLineDetailsInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
     delete:
       tags: [Mobile]
       operationId: mobileDeleteStockEntryLine
@@ -20335,12 +20701,17 @@ paths:
       operationId: mobileConfirmStockEntry
       summary: "Mobile: Confirm a stock entry (TEC-769)"
       description: >-
-        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14).
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14). TEC-1225: optional discrepancy decisions (see the panel endpoint).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/MobileApiVersion"
         - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryConfirmInput" }
       responses:
         "200":
           description: Confirmed entry
@@ -20398,6 +20769,406 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/receipt:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryReceipt
+      summary: "Mobile: Discrepancy record ('kabul tutanağı') of an entry (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/receipt`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Supplier, delivery, warehouse, the decisions taken at confirm (missing left out, extras added or rejected, damaged accepted or excluded with reason and photos) and their counts. Never carries a price.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryReceipt"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/receipt.pdf:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryReceiptPdf
+      summary: "Mobile: Discrepancy record PDF (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/receipt.pdf`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Rendered synchronously in `locale` (default: the request locale). 503 STORAGE_UNAVAILABLE when PDF rendering is not configured.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: locale
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/attachments:
+    post:
+      tags: [Mobile]
+      operationId: mobileAddStockEntryAttachment
+      summary: "Mobile: Attach a waybill, invoice, photo or other file (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/attachments`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and warehouse membership. Any entry that is not cancelled (409 STOCK_ENTRY_CANCELLED). JPEG, PNG, WebP or PDF, at most 15 MB, at most 50 per entry. A `photo` must be an image; damage decisions name photos by uuid.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                kind: { type: string, enum: [waybill, invoice, photo, other], default: other }
+      responses:
+        "201":
+          description: Attachment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryAttachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryAttachment
+      summary: "Mobile: Download an attachment (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Streams the stored file inline.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: attachment_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+    delete:
+      tags: [Mobile]
+      operationId: mobileDeleteStockEntryAttachment
+      summary: "Mobile: Remove an attachment (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `DELETE /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. 409 STOCK_ENTRY_ATTACHMENT_IN_USE when the file is damage evidence of the discrepancy record.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: attachment_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/label-prints:
+    post:
+      tags: [Mobile]
+      operationId: mobileRecordStockEntryLabelPrint
+      summary: "Mobile: Record a label print on the entry timeline (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/label-prints`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Adds a `labels_printed` step (count of labels; 0 = every line). Does not change any unit status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLabelPrintInput" }
+      responses:
+        "204":
+          description: Recorded
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/undo-check:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryUndoCheck
+      summary: "Mobile: Can a confirmed entry be undone? (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/undo-check`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. `allowed` false with `reason` not_confirmed, import (undo through the import job) or moved; `blockers` lists the units that moved after the entry (shipment, service, transfer, placement...).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Check
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryUndoCheck"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/undo:
+    post:
+      tags: [Mobile]
+      operationId: mobileUndoStockEntry
+      summary: "Mobile: Undo a confirmed manual entry (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/undo`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`, `stock.adjust` (403 STOCK_ADJUST_REQUIRED) and a recent step-up (403 STEP_UP_REQUIRED). Every line gets a `void` movement through the ledger (idempotency key `stock_entry_undo:stock_entry_line:<line id>:void:<barcode>`); the entry becomes `undone` with the reason. 409 STOCK_ENTRY_UNDO_BLOCKED (error data `blockers`) when a unit moved after the entry; STOCK_ENTRY_NOT_CONFIRMED; STOCK_ENTRY_UNDO_IMPORT for import entries.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryUndoInput" }
+      responses:
+        "200":
+          description: Undone entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/arrival-scans:
+    post:
+      tags: [Mobile]
+      operationId: mobileScanStockEntryArrival
+      summary: "Mobile: Check one arrived barcode against a draft entry (TEC-1007)"
+      description: >-
+        Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/arrival-scans`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. matched / already / extra with running counts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryArrivalScanInput" }
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalScan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+    delete:
+      tags: [Mobile]
+      operationId: mobileUnscanStockEntryArrival
+      summary: "Mobile: Take back one arrival scan (TEC-1007)"
+      description: >-
+        Mobile mirror (TEC-1225) of `DELETE /v1/warehouse/stock-entries/{uuid}/arrival-scans`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: barcode
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        "200":
+          description: Running counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalScan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/arrival-report:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntryArrivalReport
+      summary: "Mobile: Expected vs received of the arrival scan (TEC-1007)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/arrival-report`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalReport"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/suppliers:
+    get:
+      tags: [Mobile]
+      operationId: mobileListWarehouseSuppliers
+      summary: "Mobile: Active suppliers for stock entries (TEC-1225)"
+      description: >-
+        Mobile mirror (TEC-1225) of `GET /v1/warehouse/suppliers`. Needs `warehouse.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/Q"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Suppliers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseSupplierPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
 
@@ -43878,6 +44649,8 @@ components:
         prefix: { type: string, pattern: "^[A-Z0-9]{2,8}$" }
         template_uuid: { type: string, format: uuid }
         fixed_quantity: { type: [integer, "null"], minimum: 1, description: "Stock quantity of each fixed barcode (default 1)." }
+        lot: { type: string, maxLength: 64, description: "TEC-1225: lot of every added label." }
+        production_date: { type: string, format: date, description: "TEC-1225: production date of every added line (not in the future)." }
 
     StockEntryPlaceInput:
       type: object
@@ -43947,6 +44720,7 @@ components:
         lot: { type: [string, "null"], description: Lot of the unit. }
         meters: { type: [string, "null"], description: Initial length of a roll unit. }
         scanned_at: { type: [string, "null"], format: date-time, description: TEC-1007 arrival scan. }
+        production_date: { type: [string, "null"], format: date, description: TEC-1225 production date of the goods. }
 
     StockEntry:
       type: object
@@ -44005,17 +44779,226 @@ components:
         created_at: { type: string, format: date-time }
         confirmed_at: { type: [string, "null"], format: date-time }
         cancelled_at: { type: [string, "null"], format: date-time }
+        attachments:
+          type: array
+          description: TEC-1225. Waybill, invoice, photo and other files. Detail responses only.
+          items: { $ref: "#/components/schemas/StockEntryAttachment" }
+        discrepancies:
+          type: array
+          description: TEC-1225. The discrepancy record decisions. Detail responses only.
+          items: { $ref: "#/components/schemas/StockEntryDiscrepancy" }
+        undone_at: { type: [string, "null"], format: date-time, description: TEC-1225 undo of a manual entry. }
+        undo_reason: { type: [string, "null"] }
 
     StockEntryTimelineStep:
       type: object
       required: [action, at, user]
       properties:
-        action: { type: string, example: confirmed }
+        action:
+          type: string
+          example: confirmed
+          description: >-
+            created, header_updated, confirmed, cancelled; TEC-1225:
+            lines_added, line_deleted, line_updated, placed, scanned,
+            unscanned, labels_printed, discrepancies_recorded,
+            attachment_added, attachment_removed, undone. Consecutive scans
+            of one user are one step (details.count).
         at: { type: string, format: date-time }
         user:
           oneOf:
             - $ref: "#/components/schemas/OrderUserRef"
             - type: "null"
+        details:
+          type: object
+          description: "TEC-1225: barcode, count, location, result, kind, filename, reason, lines (when recorded)."
+          properties:
+            barcode: { type: string }
+            count: { type: number }
+            location: { type: string }
+            result: { type: string }
+            kind: { type: string }
+            filename: { type: string }
+            reason: { type: string }
+            lines: { type: number }
+
+    StockEntryLineDetailsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        lot: { type: [string, "null"], maxLength: 64 }
+        production_date: { type: [string, "null"], description: "YYYY-MM-DD; empty string clears." }
+        box_no: { type: [string, "null"], maxLength: 64 }
+
+    StockEntryDiscrepancyDecisionInput:
+      type: object
+      additionalProperties: false
+      required: [barcode, kind, decision]
+      properties:
+        barcode: { type: string, minLength: 1, maxLength: 128 }
+        kind: { type: string, enum: [missing, extra, damaged] }
+        decision:
+          type: string
+          enum: [left_out, added, rejected, accepted, excluded]
+          description: "missing: left_out; extra: added | rejected; damaged: accepted | excluded."
+        reason: { type: string, maxLength: 500, description: Required for damaged. }
+        attachment_uuids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Damaged - at least one photo attachment of the entry.
+        location_uuid: { type: [string, "null"], format: uuid, description: "Added extra: bin (default: the entry's default bin)." }
+
+    StockEntryConfirmInput:
+      type: object
+      additionalProperties: false
+      properties:
+        decisions:
+          type: array
+          maxItems: 2000
+          items: { $ref: "#/components/schemas/StockEntryDiscrepancyDecisionInput" }
+
+    StockEntryAttachment:
+      type: object
+      required: [uuid, kind, filename, mime_type, size_bytes, url, uploaded_by, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [waybill, invoice, photo, other] }
+        filename: { type: string }
+        mime_type: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        url: { type: string, description: "Download path of the file." }
+        uploaded_by:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+
+    StockEntryDiscrepancy:
+      type: object
+      required: [uuid, kind, decision, barcode, product, quantity, reason, attachments, user, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [missing, extra, damaged] }
+        decision: { type: string, enum: [left_out, added, rejected, accepted, excluded] }
+        barcode: { type: string }
+        product:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryProduct"
+        quantity: { type: integer }
+        reason: { type: [string, "null"] }
+        attachments:
+          type: array
+          items: { $ref: "#/components/schemas/StockEntryAttachment" }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+
+    StockEntryReceiptSupplier:
+      type: object
+      required: [uuid, name, tax_no, phone, email]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        tax_no: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+
+    StockEntryReceipt:
+      type: object
+      required: [entry_uuid, status, warehouse, supplier, container_no, waybill_no, arrival_date, confirmed_at, confirmed_by, summary, items, pdf_url]
+      properties:
+        entry_uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/StockEntryStatus" }
+        warehouse:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryWarehouse"
+        supplier:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryReceiptSupplier"
+        container_no: { type: [string, "null"] }
+        waybill_no: { type: [string, "null"] }
+        arrival_date: { type: [string, "null"], format: date }
+        confirmed_at: { type: [string, "null"], format: date-time }
+        confirmed_by:
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        summary:
+          type: object
+          required: [entered, missing, extras_added, extras_rejected, damaged_accepted, damaged_excluded]
+          properties:
+            entered: { type: integer, format: int64 }
+            missing: { type: integer, format: int64 }
+            extras_added: { type: integer, format: int64 }
+            extras_rejected: { type: integer, format: int64 }
+            damaged_accepted: { type: integer, format: int64 }
+            damaged_excluded: { type: integer, format: int64 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/StockEntryDiscrepancy" }
+        pdf_url: { type: string }
+
+    EnvelopeStockEntryReceipt:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntryReceipt" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockEntryAttachment:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntryAttachment" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockEntryUndoBlocker:
+      type: object
+      required: [barcode, product, movement_type, movement_uuid, at]
+      properties:
+        barcode: { type: string }
+        product: { $ref: "#/components/schemas/StockEntryProduct" }
+        movement_type: { type: string, description: "The first stock movement after the entry (order_out, consumption, transfer_out, placement...)." }
+        movement_uuid: { type: string, format: uuid }
+        at: { type: string, format: date-time }
+
+    StockEntryUndoCheck:
+      type: object
+      required: [allowed, reason, lines, blockers]
+      properties:
+        allowed: { type: boolean }
+        reason: { type: [string, "null"], enum: [not_confirmed, import, moved, null] }
+        lines: { type: integer }
+        blockers:
+          type: array
+          items: { $ref: "#/components/schemas/StockEntryUndoBlocker" }
+
+    EnvelopeStockEntryUndoCheck:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntryUndoCheck" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockEntryUndoInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+
+    StockEntryLabelPrintInput:
+      type: object
+      additionalProperties: false
+      properties:
+        count: { type: integer, minimum: 0, maximum: 2000, description: Labels printed (0 = every line). }
 
     StockEntrySuggestedLocation:
       type: object
