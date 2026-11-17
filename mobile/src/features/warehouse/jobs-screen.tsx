@@ -251,7 +251,8 @@ export function EntryCard({ entry: x }: { entry: StockEntry }) {
 /**
  * Warehouse order card (TEC-1067, revize 7.3): the other party (the dealer)
  * first, then how much is ordered and who took the latest step (the creator
- * while nothing else happened), the order number second. Nothing about prices.
+ * while nothing else happened), the order number second with the user who
+ * placed the order (TEC-1220). Nothing about prices.
  */
 export function OrderCard({ order: x }: { order: Order }) {
   const { t } = useTranslation('warehouse');
@@ -262,7 +263,16 @@ export function OrderCard({ order: x }: { order: Order }) {
     <DocCard
       title={other.name}
       subtitle={[amountText(x), activityText(x.last_activity)].filter(Boolean).join(' · ') || t(`orders.role.${x.role}`)}
-      meta={[x.order_no, formatDate(x.created_at), x.delivery_method?.name, x.note].filter(Boolean).join(' · ')}
+      meta={[
+        x.order_no,
+        // TEC-1220 (revize 7.3): the staff member who placed the order, next to the latest step.
+        x.created_by ? t('orders:card.created_by', { name: x.created_by.name }) : null,
+        formatDate(x.created_at),
+        x.delivery_method?.name,
+        x.note,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
       status={<StatusPill tone={orderTone(x.status)} label={t(`orders.status.${x.status}`)} />}
       onPress={() => go(`/depo/jobs/order/${x.uuid}`)}
     />

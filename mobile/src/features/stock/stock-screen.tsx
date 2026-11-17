@@ -17,10 +17,10 @@ import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { PullRefresh } from '@/ui/pull-refresh';
 
-import { type StockProduct, type StockWarehouseUnit, useOrgProducts, useWarehouseUnits } from './api';
+import { type StockProduct, type StockWarehouseProduct, type StockWarehouseUnit, useOrgProducts, useWarehouseUnits } from './api';
 import {
   filterTotals,
-  totalsTruncated,
+  inStockTotals,
   WAREHOUSE_TOTALS_MAX_PAGES,
   WAREHOUSE_TOTALS_PAGE,
   type WarehouseProductTotal,
@@ -82,7 +82,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
   }, [input]);
 
   // All warehouses: the organization totals with the API's stock filter.
-  // One warehouse, "in stock": its totals summed from its units. One
+  // One warehouse, "in stock": its product totals from the API (TEC-1220). One
   // warehouse, "out of stock" / "all": the product list with that
   // warehouse's amounts, so products missing there are listed too.
   const fromTotals = !!warehouse && filter === 'in_stock';
@@ -94,11 +94,11 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
   const rows = useMemo<Row[]>(() => {
     const orgItems = pages?.flatMap((p) => p.items) ?? [];
     if (!warehouse) return orgItems.map((p) => ({ kind: 'org', p }));
-    if (filter === 'in_stock') return filterTotals(totalsData?.rows ?? [], q).map((w) => ({ kind: 'wh', w }));
+    if (filter === 'in_stock') return filterTotals(inStockTotals(totalsData?.rows ?? []), q).map((w) => ({ kind: 'wh', w, category: w.category }));
     const byProduct = new Map((totalsData?.rows ?? []).map((r) => [r.product.uuid, r]));
     const all = orgItems.map<Row>((p) => {
       const w = byProduct.get(p.product.uuid);
-      return w ? { kind: 'wh', w, category: p.product.category?.name } : { kind: 'zero', p };
+      return w && (w.units > 0 || (w.meters ?? 0) > 0) ? { kind: 'wh', w, category: p.product.category?.name } : { kind: 'zero', p };
     });
     return filter === 'out_of_stock' ? all.filter((r) => r.kind === 'zero') : all;
   }, [warehouse, filter, pages, totalsData, q]);
@@ -171,11 +171,6 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
-              {warehouse && totalsData?.truncated ? (
-                <Text variant="footnote" tone="danger">
-                  {t('m.warehouse_totals_partial', { count: WAREHOUSE_TOTALS_PAGE * WAREHOUSE_TOTALS_MAX_PAGES })}
-                </Text>
-              ) : null}
             </View>
           }
           ListEmptyComponent={
@@ -262,32 +257,31 @@ function ProductRow(p: {
 }
 
 /**
- * Product totals of one warehouse, summed from its units (TEC-1069: the API
- * has no per-warehouse product list). Reads at most
- * WAREHOUSE_TOTALS_MAX_PAGES pages of 100 units; `truncated` says when the
- * warehouse holds more than that.
+ * Product totals of one warehouse from GET /v1/stock/warehouses/{uuid}/products
+ * (TEC-1090, TEC-1220): the same sums as the backend, fixed barcode
+ * quantities included. Every row of the warehouse is read (one row per
+ * product, pages of 100) so the "all" / "out of stock" filters can merge them
+ * with the product list.
  */
 function useWarehouseTotals(warehouse: string) {
   return useQuery({
-    queryKey: ['stock', 'warehouse-totals', warehouse],
+    queryKey: ['stock', 'warehouse-products', warehouse],
     enabled: !!warehouse,
     queryFn: async () => {
-      const units: StockWarehouseUnit[] = [];
-      let total = 0;
+      const items: StockWarehouseProduct[] = [];
       for (let page = 0; page < WAREHOUSE_TOTALS_MAX_PAGES; page++) {
         const r = await unwrap(
-          api.GET('/v1/stock/warehouses/{uuid}/units', {
+          api.GET('/v1/stock/warehouses/{uuid}/products', {
             params: {
               path: { uuid: warehouse },
-              query: { state: 'in', sort: 'product', limit: WAREHOUSE_TOTALS_PAGE, offset: page * WAREHOUSE_TOTALS_PAGE },
+              query: { sort: 'product', limit: WAREHOUSE_TOTALS_PAGE, offset: page * WAREHOUSE_TOTALS_PAGE },
             },
           }),
         );
-        units.push(...r.items);
-        total = r.total;
-        if (units.length >= r.total || r.items.length === 0) break;
+        items.push(...r.items);
+        if (items.length >= r.total || r.items.length === 0) break;
       }
-      return { rows: warehouseProductTotals(units), truncated: totalsTruncated(units.length, total) };
+      return { rows: warehouseProductTotals(items) };
     },
   });
 }

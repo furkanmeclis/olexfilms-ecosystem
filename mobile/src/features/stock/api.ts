@@ -9,6 +9,7 @@ export type StockProduct = S['StockProduct'];
 export type StockUnitRow = S['StockUnitRow'];
 export type StockUnitHistory = S['StockUnitHistory'];
 export type StockWarehouseUnit = S['StockWarehouseUnit'];
+export type StockWarehouseProduct = S['StockWarehouseProduct'];
 
 const PAGE = 30;
 

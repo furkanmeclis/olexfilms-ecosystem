@@ -718,5 +718,10 @@
   "stock.unit.cut_meters": "Length cut",
   "m.split_new_code": "New part code: {{barcode}} · {{meters}} m",
   "orders.assign.cuts_title": "Parts cut",
-  "orders.assign.cut_from": "{{meters}} m · {{source}} ({{remaining}} m left)"
+  "orders.assign.cut_from": "{{meters}} m · {{source}} ({{remaining}} m left)",
+  "entry.timeline": "Activity",
+  "entry.activity.created": "Created",
+  "entry.activity.header_updated": "Edited the delivery details",
+  "entry.activity.confirmed": "Confirmed",
+  "entry.activity.cancelled": "Cancelled"
 }

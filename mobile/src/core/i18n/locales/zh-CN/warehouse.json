@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "切割长度",
   "m.split_new_code": "新分段编码：{{barcode}} · {{meters}} 米",
   "orders.assign.cuts_title": "已切分段",
-  "orders.assign.cut_from": "{{meters}} 米 · {{source}}（剩余 {{remaining}} 米）"
+  "orders.assign.cut_from": "{{meters}} 米 · {{source}}（剩余 {{remaining}} 米）",
+  "entry.timeline": "操作记录",
+  "entry.activity.created": "已创建",
+  "entry.activity.header_updated": "编辑了到货信息",
+  "entry.activity.confirmed": "已确认",
+  "entry.activity.cancelled": "已取消"
 }

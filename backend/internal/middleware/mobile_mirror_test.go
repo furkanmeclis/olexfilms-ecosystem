@@ -429,3 +429,27 @@ func TestMobilePanelMirrorReportExport(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1220: the mobile stock screen reads the warehouse product totals, the
+// transfer and stock entry details carry their timelines.
+func TestMobilePanelMirrorTEC1220Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"stock/warehouses/" + id + "/products",
+		"stock-transfers/" + id,
+		"warehouse/stock-entries/" + id,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+"?limit=100", nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}

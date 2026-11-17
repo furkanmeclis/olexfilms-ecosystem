@@ -64,5 +64,6 @@
   "validation.units": "En az bir birim ekle.",
   "reason": "Gerekçe",
   "reason_placeholder": "Neden? (isteğe bağlı)",
-  "validation.quantity": "Tam sayı gir ya da birimin tamamı için boş bırak."
+  "validation.quantity": "Tam sayı gir ya da birimin tamamı için boş bırak.",
+  "timeline": "Hareket geçmişi"
 }

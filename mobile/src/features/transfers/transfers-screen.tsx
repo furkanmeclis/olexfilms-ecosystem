@@ -23,6 +23,7 @@ import {
 } from '@/features/admin/kit';
 import { RefRow } from '@/features/entity/ref-row';
 import { PickerField, PickerSheet } from '@/features/picker-sheet';
+import { newestFirst } from '@/features/orders/order-summary';
 import { ContinuousScanner, type ScanOutcome } from '@/features/warehouse/continuous-scanner';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -30,6 +31,7 @@ import { Input } from '@/ui/input';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
+import { StepTimeline } from '@/ui/step-timeline';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
@@ -304,6 +306,17 @@ export function TransferDetailScreen() {
                 ))}
               </List>
             ) : null}
+
+            {/* TEC-1220 (revize 5.4.1): who took each step of the transfer. */}
+            <StepTimeline
+              title={t('timeline')}
+              steps={newestFirst(tr.timeline).map((s, i) => ({
+                key: `${s.action}-${s.at}-${i}`,
+                user: s.user?.name ?? t('orders:timeline.system'),
+                label: t(`status.${s.action}`),
+                when: f.dateTime(s.at),
+              }))}
+            />
           </>
         )}
       </Screen>
