@@ -311,5 +311,8 @@
   "roll.save": "Enregistrer",
   "roll.saved": "Enregistré.",
   "roll.failed": "Échec de l'enregistrement.",
-  "roll.invalid": "Saisissez un nombre."
+  "roll.invalid": "Saisissez un nombre.",
+  "fields.usage_credits": "Crédits d'utilisation",
+  "products.usage_credits_hint": "Nombre de prestations dans lesquelles un code-barres (unité à la pièce) peut être utilisé. Chaque sélection dans une prestation consomme 1 crédit ; les rouleaux et codes-barres fixes n'ont pas de crédits.",
+  "validation.usage_credits": "Saisissez un nombre entier de 1 à {{max}}"
 }

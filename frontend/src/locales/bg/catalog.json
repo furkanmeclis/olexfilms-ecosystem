@@ -301,5 +301,8 @@
   "discipline.fields.avg_sale_price": "Реализирана средна (30 дни)",
   "discipline.fields.sales_quantity": "Продадено количество (30 дни)",
   "discipline.org_types.dealer": "Дилър",
-  "discipline.org_types.distributor": "Дистрибутор"
+  "discipline.org_types.distributor": "Дистрибутор",
+  "fields.usage_credits": "Кредити за употреба",
+  "products.usage_credits_hint": "В колко услуги може да се използва един баркод (единична бройка). Всеки избор в услуга отнема 1 кредит; ролките и фиксираните баркодове нямат кредити.",
+  "validation.usage_credits": "Въведете цяло число от 1 до {{max}}"
 }

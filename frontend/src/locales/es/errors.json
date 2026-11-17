@@ -181,5 +181,7 @@
   "codes.ORDER_INVOICE_NO_TAKEN": "Este número de factura ya está registrado en el pedido.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "La nueva cantidad es inferior a los códigos de barras asignados; quite primero la asignación.",
   "codes.ORDER_INVOICED": "Un pedido facturado no se puede cancelar; elimine primero el registro de factura.",
-  "codes.ORDER_NOT_SUPPLEMENTABLE": "Solo se puede añadir un envío complementario a un pedido enviado, entregado o recibido."
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Solo se puede añadir un envío complementario a un pedido enviado, entregado o recibido.",
+  "codes.UNIT_CREDITS_EXHAUSTED": "Este código de barras no tiene créditos de uso restantes; no se puede seleccionar en otro servicio.",
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Los rollos y los códigos de barras fijos no tienen créditos de uso."
 }

@@ -392,5 +392,11 @@
   "detail.created_by": "Створив",
   "detail.performed_by": "Виконав",
   "detail.completed_by": "Завершив",
-  "detail.cancelled_by": "Скасував"
+  "detail.cancelled_by": "Скасував",
+  "stock.credits": "Залишок кредитів: {{remaining}} / {{total}}",
+  "stock.credit_take": "Цей вибір використовує 1 кредит.",
+  "stock.finish_product": "Продукт використано повністю",
+  "stock.finish_product_hint": "Усі залишкові кредити штрихкоду ({{count}}) списуються на цю послугу; штрихкод не можна вибрати в іншій послузі.",
+  "stock.finished_product": "Продукт використано",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "У цього штрихкоду не залишилося кредитів використання; його не можна вибрати в іншій послузі."
 }

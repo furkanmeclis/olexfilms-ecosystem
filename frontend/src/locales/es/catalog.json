@@ -311,5 +311,8 @@
   "roll.save": "Guardar",
   "roll.saved": "Guardado.",
   "roll.failed": "No se pudo guardar.",
-  "roll.invalid": "Introduzca un número."
+  "roll.invalid": "Introduzca un número.",
+  "fields.usage_credits": "Créditos de uso",
+  "products.usage_credits_hint": "En cuántos servicios se puede usar un código de barras (unidad individual). Cada selección en un servicio consume 1 crédito; los rollos y los códigos de barras fijos no tienen créditos.",
+  "validation.usage_credits": "Introduzca un número entero de 1 a {{max}}"
 }

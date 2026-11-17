@@ -275,6 +275,18 @@ export function OrderForm({
                           ),
                         )
                       }
+                      credits={{
+                        value: line.plotter_credits ?? "",
+                        invalid: touched && err === "credits_invalid",
+                        onChange: (v) =>
+                          setLines((ls) =>
+                            ls.map((l) =>
+                              l.product_uuid === line.product_uuid
+                                ? { ...l, plotter_credits: v }
+                                : l,
+                            ),
+                          ),
+                      }}
                     />
                     <div className="text-xs">
                       <span className="text-muted-foreground me-1">
@@ -315,7 +327,12 @@ export function OrderForm({
                       inputMode={isRoll(line.unit_type) ? "decimal" : "numeric"}
                       dir="ltr"
                       value={line.amount}
-                      aria-invalid={(touched && Boolean(err)) || undefined}
+                      aria-invalid={
+                        (touched &&
+                          Boolean(err) &&
+                          err !== "credits_invalid") ||
+                        undefined
+                      }
                       onChange={(e) =>
                         update(line.product_uuid, e.target.value)
                       }

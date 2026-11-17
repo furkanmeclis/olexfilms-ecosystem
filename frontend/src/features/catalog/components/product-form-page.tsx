@@ -190,6 +190,12 @@ export function ProductFormPage({
                 label={t("catalog.fields.micron_thickness")}
                 readOnly={locked.has("micron_thickness")}
               />
+              <AppInput
+                name="usage_credits"
+                inputMode="numeric"
+                label={t("catalog.fields.usage_credits")}
+                description={t("catalog.products.usage_credits_hint")}
+              />
               <AppSwitch
                 name="uses_fixed_barcode"
                 label={t("catalog.fields.uses_fixed_barcode")}

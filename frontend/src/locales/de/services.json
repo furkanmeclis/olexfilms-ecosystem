@@ -392,5 +392,11 @@
   "detail.created_by": "Erstellt von",
   "detail.performed_by": "Ausgeführt von",
   "detail.completed_by": "Abgeschlossen von",
-  "detail.cancelled_by": "Storniert von"
+  "detail.cancelled_by": "Storniert von",
+  "stock.credits": "Restguthaben: {{remaining}} / {{total}}",
+  "stock.credit_take": "Diese Auswahl verbraucht 1 Guthaben.",
+  "stock.finish_product": "Produkt aufgebraucht",
+  "stock.finish_product_hint": "Das gesamte Restguthaben des Barcodes ({{count}}) wird diesem Service zugerechnet; der Barcode kann in keinem anderen Service ausgewählt werden.",
+  "stock.finished_product": "Produkt aufgebraucht",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Für diesen Barcode ist kein Nutzungsguthaben mehr übrig; er kann in keinem weiteren Service ausgewählt werden."
 }

@@ -130,6 +130,11 @@ export function ServiceItemsTable({ items }: { items: ServiceItem[] }) {
             return (
               <span className="whitespace-nowrap">
                 {t(amount.key, amount.params)}
+                {row.original.finished_product ? (
+                  <Badge variant="secondary" className="ms-2 text-xs">
+                    {t("services.stock.finished_product")}
+                  </Badge>
+                ) : null}
               </span>
             );
           },

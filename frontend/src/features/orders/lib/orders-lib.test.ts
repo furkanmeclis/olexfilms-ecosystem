@@ -13,6 +13,8 @@ import {
   addLine,
   formIsValid,
   linesBelowAssigned,
+  linesFromOrder,
+  plotterCreditsValid,
   toItemInputs,
   unitPriceValid,
   validateOrderForm,
@@ -549,8 +551,81 @@ describe("plotter mark (TEC-1058)", () => {
     };
     expect(toItemInputs([base])).toEqual([{ product_uuid: "p1", quantity: 2 }]);
     expect(toItemInputs([{ ...base, plotter_cut: true }])).toEqual([
-      { product_uuid: "p1", quantity: 2, plotter_cut: true },
+      {
+        product_uuid: "p1",
+        quantity: 2,
+        plotter_cut: true,
+        plotter_credits: 0,
+      },
     ]);
+  });
+
+  it("sends plotter credits only on a plotter cut line (TEC-1221)", () => {
+    const base: OrderFormLine = {
+      product_uuid: "p1",
+      sku: "S",
+      name: "N",
+      unit_type: "piece",
+      amount: "2",
+    };
+    expect(
+      toItemInputs([{ ...base, plotter_cut: true, plotter_credits: " 7 " }]),
+    ).toEqual([
+      {
+        product_uuid: "p1",
+        quantity: 2,
+        plotter_cut: true,
+        plotter_credits: 7,
+      },
+    ]);
+    // Switched off: the typed credits are not sent (the API clears them).
+    expect(
+      toItemInputs([{ ...base, plotter_cut: false, plotter_credits: "7" }]),
+    ).toEqual([{ product_uuid: "p1", quantity: 2, plotter_cut: false }]);
+    expect(toItemInputs([{ ...base, plotter_credits: "7" }])).toEqual([
+      { product_uuid: "p1", quantity: 2 },
+    ]);
+  });
+
+  it("validates plotter credits 1..1000 on a plotter cut line", () => {
+    expect(plotterCreditsValid("")).toBe(true);
+    expect(plotterCreditsValid("1")).toBe(true);
+    expect(plotterCreditsValid("1000")).toBe(true);
+    expect(plotterCreditsValid("0")).toBe(false);
+    expect(plotterCreditsValid("1001")).toBe(false);
+    expect(plotterCreditsValid("2.5")).toBe(false);
+    const line: OrderFormLine = {
+      product_uuid: "p1",
+      sku: "S",
+      name: "N",
+      unit_type: "piece",
+      amount: "1",
+      plotter_credits: "abc",
+    };
+    expect(validateOrderForm([line]).lines).toEqual({});
+    expect(validateOrderForm([{ ...line, plotter_cut: true }]).lines).toEqual({
+      p1: "credits_invalid",
+    });
+  });
+
+  it("loads the stored plotter credits into the form", () => {
+    type Item = NonNullable<Order["items"]>[number];
+    const line = {
+      uuid: "i1",
+      product: { uuid: "p1", sku: "S", name: "N", unit_type: "piece" },
+      quantity: 2,
+      meters: null,
+      plotter_cut: true,
+      plotter_credits: 3,
+    } as Item;
+    expect(linesFromOrder(order({ items: [line] }))[0]).toMatchObject({
+      plotter_cut: true,
+      plotter_credits: "3",
+    });
+    expect(
+      linesFromOrder(order({ items: [{ ...line, plotter_credits: null }] }))[0]
+        .plotter_credits,
+    ).toBe("");
   });
 
   it("shows the plotter steps and edit marks on the timeline", () => {
@@ -563,6 +638,15 @@ describe("plotter mark (TEC-1058)", () => {
             user: null,
             product: "Film",
             plotter_cut: true,
+          },
+          {
+            action: "plotter_marked",
+            at: "2026-11-09T08:30:00Z",
+            user: null,
+            product: "Film",
+            plotter_cut: true,
+            // TEC-1221: not in the typed timeline entry yet.
+            ...({ plotter_credits: 4 } as object),
           },
           {
             action: "updated",
@@ -581,7 +665,10 @@ describe("plotter mark (TEC-1058)", () => {
       label: "orders.activity.plotter_marked",
       detail: "Film · orders.plotter.marked_on",
     });
-    expect(steps[1].detail).toBe('orders.plotter.change_off:{"product":"Kit"}');
+    expect(steps[1].detail).toBe(
+      'Film · orders.plotter.marked_on · orders.plotter.credits_value:{"credits":"4"}',
+    );
+    expect(steps[2].detail).toBe('orders.plotter.change_off:{"product":"Kit"}');
   });
 });
 

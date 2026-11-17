@@ -350,10 +350,21 @@ describe("OrderDetailPage: buttons by role and status", () => {
     await type($("#edit-line-p1"), "5");
     // TEC-1058: the new sign set is marked plotter cut.
     await click($("#edit-line-p2-plotter"));
+    // TEC-1221: only the plotter cut line offers the credits field.
+    expect($("#edit-line-p1-plotter-credits")).toBeNull();
+    await type($("#edit-line-p2-plotter-credits"), "0");
+    await click($("[data-testid=edit-lines-save]"));
+    expect(api.replaceItems).not.toHaveBeenCalled();
+    await type($("#edit-line-p2-plotter-credits"), "3");
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).toHaveBeenCalledWith("o1", [
       { product_uuid: "p1", quantity: 5, plotter_cut: false },
-      { product_uuid: "p2", quantity: 1, plotter_cut: true },
+      {
+        product_uuid: "p2",
+        quantity: 1,
+        plotter_cut: true,
+        plotter_credits: 3,
+      },
     ]);
     expect($("[data-testid=order-lines-editor]")).toBeNull();
   });
@@ -392,8 +403,33 @@ describe("OrderDetailPage: buttons by role and status", () => {
     );
     await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
     await click($("#plotter-i1"));
-    expect(api.setPlotterCut).toHaveBeenCalledWith("o1", "i1", true);
+    expect(api.setPlotterCut).toHaveBeenCalledWith("o1", "i1", true, undefined);
     expect($("#plotter-i1")?.getAttribute("data-state")).toBe("checked");
+  });
+
+  it("seller: saves the credits of a plotter cut line on blur (TEC-1221)", async () => {
+    const marked = { ...order().items![0], plotter_cut: true };
+    api.get.mockResolvedValue(
+      order({ role: "seller", status: "shipped", items: [marked] }),
+    );
+    api.setPlotterCut.mockResolvedValue(
+      order({
+        role: "seller",
+        status: "shipped",
+        items: [{ ...marked, plotter_credits: 4 }],
+      }),
+    );
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    const input = $("#plotter-i1-credits");
+    await type(input, "4");
+    await act(async () => {
+      input?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    await flush();
+    expect(api.setPlotterCut).toHaveBeenCalledWith("o1", "i1", true, 4);
+    expect(($("#plotter-i1-credits") as HTMLInputElement | null)?.value).toBe(
+      "4",
+    );
   });
 
   it("buyer sees the plotter mark as a badge", async () => {
@@ -406,6 +442,7 @@ describe("OrderDetailPage: buttons by role and status", () => {
     await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
     expect($("[data-testid=line-plotter-badge]")).not.toBeNull();
     expect($("#plotter-i1")).toBeNull();
+    expect($("[data-testid=line-plotter-credits-value]")).toBeNull();
   });
 
   it("observer sees no action bar", async () => {

@@ -181,12 +181,27 @@ export const ordersService = {
       )
       .map((o) => ({ uuid: o.uuid, name: o.name }));
   },
-  /** TEC-1058: the plotter mark of one line (also after shipping). */
-  setPlotterCut(uuid: string, itemUuid: string, plotterCut: boolean) {
+  /**
+   * TEC-1058: the plotter mark of one line (also after shipping). TEC-1221:
+   * plotterCredits sets the line's usage credits (0 clears, absent keeps).
+   */
+  setPlotterCut(
+    uuid: string,
+    itemUuid: string,
+    plotterCut: boolean,
+    plotterCredits?: number,
+  ) {
     return platformRequest<Order>(
       "PATCH",
       `/v1/orders/${enc(uuid)}/items/${enc(itemUuid)}`,
-      { body: { plotter_cut: plotterCut } },
+      {
+        body: {
+          plotter_cut: plotterCut,
+          ...(plotterCredits !== undefined
+            ? { plotter_credits: plotterCredits }
+            : {}),
+        },
+      },
     );
   },
   replaceItems(uuid: string, items: OrderItemInput[]) {

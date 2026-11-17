@@ -134,6 +134,18 @@ export function OrderLinesEditor({
                           ),
                         )
                       }
+                      credits={{
+                        value: line.plotter_credits ?? "",
+                        invalid: touched && err === "credits_invalid",
+                        onChange: (v) =>
+                          setLines((ls) =>
+                            ls.map((l) =>
+                              l.product_uuid === line.product_uuid
+                                ? { ...l, plotter_credits: v }
+                                : l,
+                            ),
+                          ),
+                      }}
                     />
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
@@ -164,7 +176,11 @@ export function OrderLinesEditor({
                       dir="ltr"
                       value={line.amount}
                       aria-invalid={
-                        (touched && Boolean(err)) || isBelow || undefined
+                        (touched &&
+                          Boolean(err) &&
+                          err !== "credits_invalid") ||
+                        isBelow ||
+                        undefined
                       }
                       onChange={(e) =>
                         update(line.product_uuid, e.target.value)

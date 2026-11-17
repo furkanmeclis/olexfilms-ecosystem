@@ -311,5 +311,8 @@
   "roll.save": "Kaydet",
   "roll.saved": "Rulo ayarları kaydedildi.",
   "roll.failed": "Kaydedilemedi.",
-  "roll.invalid": "Sayısal bir değer girin."
+  "roll.invalid": "Sayısal bir değer girin.",
+  "fields.usage_credits": "Kullanım kredisi",
+  "products.usage_credits_hint": "Bir barkodun (tekil birim) kaç hizmette kullanılabileceği. Her hizmet seçimi 1 kredi düşer; rulo ve sabit barkodlu birimler kredi taşımaz.",
+  "validation.usage_credits": "1 ile {{max}} arasında tam sayı girin"
 }

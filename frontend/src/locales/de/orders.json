@@ -374,5 +374,10 @@
   "supplements.create": "Zusatzlieferung anlegen",
   "supplements.created": "Zusatzlieferung {{no}} angelegt.",
   "supplements.forbidden": "Eine Zusatzlieferung kann nur zu einem versendeten oder zugestellten Auftrag hinzugefügt werden, von einem Benutzer, der Aufträge bearbeiten oder versenden darf.",
-  "detail.created_by": "Erstellt von"
+  "detail.created_by": "Erstellt von",
+  "plotter.credits_label": "Guthaben",
+  "plotter.credits_placeholder": "Produktstandard",
+  "plotter.credits_hint": "Nutzungsguthaben der mit dieser Position gelieferten Barcodes (1–1000); leer gilt der Produktstandard.",
+  "plotter.credits_value": "Guthaben: {{credits}}",
+  "form.errors.credits_invalid": "Das Guthaben muss eine ganze Zahl von 1 bis 1000 sein (leer: Produktstandard)."
 }

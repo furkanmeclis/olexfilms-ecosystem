@@ -392,5 +392,11 @@
   "detail.created_by": "Yaradan",
   "detail.performed_by": "İcra edən",
   "detail.completed_by": "Tamamlayan",
-  "detail.cancelled_by": "Ləğv edən"
+  "detail.cancelled_by": "Ləğv edən",
+  "stock.credits": "Qalan kredit: {{remaining}} / {{total}}",
+  "stock.credit_take": "Bu seçim 1 kredit istifadə edir.",
+  "stock.finish_product": "Məhsulu bitirdim",
+  "stock.finish_product_hint": "Barkodun qalan bütün krediti ({{count}}) bu xidmətə çıxılır; barkod başqa xidmətdə seçilə bilməz.",
+  "stock.finished_product": "Məhsul bitirildi",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Bu barkodun istifadə krediti bitib; başqa xidmətdə seçilə bilməz."
 }

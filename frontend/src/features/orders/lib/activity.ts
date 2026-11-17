@@ -74,6 +74,15 @@ export function orderTimelineSteps(
             : "orders.plotter.marked_off",
         ),
       );
+      // TEC-1221: the credits set with the mark.
+      const credits = e.plotter_credits;
+      if (e.plotter_cut && credits != null) {
+        parts.push(
+          t("orders.plotter.credits_value", {
+            credits: format.number(credits),
+          }),
+        );
+      }
     }
     // TEC-1056: the lines an edit added, changed or removed.
     for (const c of e.changes ?? []) {
