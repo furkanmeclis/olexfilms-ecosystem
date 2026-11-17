@@ -122,5 +122,9 @@
   "guide.points_count": "Punti: {{count}}",
   "body_change_title": "Cambiare il tipo di carrozzeria?",
   "body_change_body": "Le letture dei punti prese per questa carrozzeria verranno eliminate.",
-  "body_change_confirm": "Cambia ed elimina"
+  "body_change_confirm": "Cambia ed elimina",
+  "leave_draft_title": "Salvare come bozza?",
+  "leave_draft_body": "Questa misurazione non è stata inviata. Salva la conserva come bozza su questo telefono; Elimina scarta i dati inseriti.",
+  "leave_draft_save": "Salva",
+  "leave_draft_discard": "Elimina"
 }

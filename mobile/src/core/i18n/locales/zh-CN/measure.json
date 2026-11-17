@@ -122,5 +122,9 @@
   "guide.points_count": "点数：{{count}}",
   "body_change_title": "更改车身类型？",
   "body_change_body": "将删除按此车身测得的点读数。",
-  "body_change_confirm": "更改并删除"
+  "body_change_confirm": "更改并删除",
+  "leave_draft_title": "保存为草稿？",
+  "leave_draft_body": "此测量尚未发送。保存会将其作为草稿保留在此手机上；删除将丢弃已输入的内容。",
+  "leave_draft_save": "保存",
+  "leave_draft_discard": "删除"
 }

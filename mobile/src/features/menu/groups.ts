@@ -58,7 +58,7 @@ export const ITEMS: MenuItem[] = [
     built: [],
     orgTypes: ['center'],
   },
-  // TEC-1068: center sales staff measure from the menu (their tab bar has Orders instead).
+  // TEC-1068: center sales staff measured from the menu; since TEC-1222 the tab bar has Measure for every service writer, so this row is only a fallback.
   { key: 'measure', icon: 'gauge', group: 'operations', permission: 'services.write', spaces: [], built: [], orgTypes: ['center'], when: 'measureInMenu' },
   { key: 'appointments', icon: 'appointment', group: 'operations', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
   { key: 'occupancy', icon: 'calendar', group: 'operations', permission: 'appointments.read', spaces: ['admin'], built: ['admin'] },

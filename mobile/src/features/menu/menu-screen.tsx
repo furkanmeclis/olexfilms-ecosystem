@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { useModule, useModuleFilter } from '@/core/modules';
+import { workplaceTabs } from '@/core/sales-profile';
 import { switchSpace } from '@/core/space-memory';
 import { activeMembership, isCenterWorkplace, isSalesWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
 import { List, ListRow } from '@/ui/list';
@@ -29,7 +30,9 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
     // Warehouse screens open over this space; swiping back returns here (no space switcher).
     warehouse: space !== 'depo' && kindsOf(me).includes('depo') && warehouseOn,
     multiOrg: (me?.organizations?.length ?? 0) > 1,
-    measureInMenu: space === 'bayi' && isSalesWorkplace(me),
+    // TEC-1222: every service writer measures from the tab bar; the menu row is
+    // only a fallback when the tab is not there (the row itself needs services.write).
+    measureInMenu: space === 'bayi' && isSalesWorkplace(me) && !workplaceTabs({ sales: true, can: (p) => !!me && (me.user.is_super_admin || me.permissions.includes(p)) }).measure,
   };
   const groups = menuGroups(viewer);
 

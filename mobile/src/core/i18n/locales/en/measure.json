@@ -220,5 +220,9 @@
   "guide.points_count": "Points: {{count}}",
   "body_change_title": "Change the body type?",
   "body_change_body": "Point readings taken for this body are removed.",
-  "body_change_confirm": "Change and remove"
+  "body_change_confirm": "Change and remove",
+  "leave_draft_title": "Save as a draft?",
+  "leave_draft_body": "This measurement has not been sent. Save keeps it as a draft on this phone; Delete discards what you entered.",
+  "leave_draft_save": "Save",
+  "leave_draft_discard": "Delete"
 }

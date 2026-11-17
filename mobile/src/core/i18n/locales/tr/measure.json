@@ -220,5 +220,9 @@
   "guide.points_count": "Nokta: {{count}}",
   "body_change_title": "Gövde tipi değişsin mi?",
   "body_change_body": "Bu gövdeye göre alınan nokta okumaları silinir.",
-  "body_change_confirm": "Değiştir ve sil"
+  "body_change_confirm": "Değiştir ve sil",
+  "leave_draft_title": "Taslak olarak kaydedilsin mi?",
+  "leave_draft_body": "Bu ölçüm henüz gönderilmedi. Kaydederseniz bu telefonda taslak olarak kalır; silerseniz girdiğiniz değerler kaybolur.",
+  "leave_draft_save": "Kaydet",
+  "leave_draft_discard": "Sil"
 }

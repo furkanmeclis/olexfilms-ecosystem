@@ -122,5 +122,9 @@
   "guide.points_count": "Точок: {{count}}",
   "body_change_title": "Змінити тип кузова?",
   "body_change_body": "Показання точок для цього кузова буде видалено.",
-  "body_change_confirm": "Змінити й видалити"
+  "body_change_confirm": "Змінити й видалити",
+  "leave_draft_title": "Зберегти як чернетку?",
+  "leave_draft_body": "Це вимірювання ще не надіслано. «Зберегти» залишить його чернеткою на цьому телефоні; «Видалити» скасує введене.",
+  "leave_draft_save": "Зберегти",
+  "leave_draft_discard": "Видалити"
 }

@@ -45,10 +45,10 @@ type Action = { key: string; icon: IconName; href: Href; permission?: string | s
  */
 function actionsFor(workplace: boolean, sales = false): Action[] {
   if (workplace) {
-    // TEC-1068: sales staff have Orders in the tab bar and measure from the menu.
+    // TEC-1068: sales staff have Orders in the tab bar; Measure is a tab for every service writer (TEC-1222).
     return [
       { key: 'new_service', icon: 'add', href: '/bayi/services/new' as Href, permission: 'services.write' },
-      { key: 'measure', icon: 'gauge', href: (sales ? '/bayi/menu/measure' : '/bayi/measure') as Href, permission: 'services.write' },
+      { key: 'measure', icon: 'gauge', href: '/bayi/measure' as Href, permission: 'services.write' },
       { key: 'approvals', icon: 'warrantyClaim', href: '/bayi/menu/approvals' as Href, permission: APPROVAL_PERMISSIONS },
       { key: 'network', icon: 'network', href: '/bayi/menu/network' as Href, permission: 'organizations.read' },
       { key: 'orders', icon: 'cart', href: (sales ? '/bayi/orders' : '/bayi/menu/orders') as Href, permission: 'orders.read' },

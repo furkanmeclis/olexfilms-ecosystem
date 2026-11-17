@@ -122,5 +122,9 @@
   "guide.points_count": "Nöqtə: {{count}}",
   "body_change_title": "Kuzov tipi dəyişdirilsin?",
   "body_change_body": "Bu kuzova görə alınan nöqtə oxunuşları silinəcək.",
-  "body_change_confirm": "Dəyiş və sil"
+  "body_change_confirm": "Dəyiş və sil",
+  "leave_draft_title": "Qaralama kimi saxlanılsın?",
+  "leave_draft_body": "Bu ölçmə hələ göndərilməyib. Saxla onu bu telefonda qaralama kimi saxlayır; Sil daxil etdiklərinizi ləğv edir.",
+  "leave_draft_save": "Saxla",
+  "leave_draft_discard": "Sil"
 }

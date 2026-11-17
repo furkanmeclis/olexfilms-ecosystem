@@ -122,5 +122,9 @@
   "guide.points_count": "Точки: {{count}}",
   "body_change_title": "Да се смени ли типът каросерия?",
   "body_change_body": "Измерените точки за тази каросерия ще бъдат изтрити.",
-  "body_change_confirm": "Смени и изтрий"
+  "body_change_confirm": "Смени и изтрий",
+  "leave_draft_title": "Да се запази ли като чернова?",
+  "leave_draft_body": "Това измерване още не е изпратено. „Запази“ го пази като чернова на този телефон; „Изтрий“ отхвърля въведеното.",
+  "leave_draft_save": "Запази",
+  "leave_draft_discard": "Изтрий"
 }

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Image, Pressable, View } from 'react-native';
+import { Alert, type AlertButton, Image, Pressable, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import { api, unwrap } from '@/core/api/client';
@@ -43,6 +43,7 @@ import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 
 import { bodyTypeOf, useBodyTypes } from './body-types';
 import { draftReadingCount, useDrafts } from './drafts';
+import { hasUnsavedMeasurement, leaveChoices } from './leave-guard';
 import {
   buildTargets,
   type GuideTarget,
@@ -724,7 +725,7 @@ export function NewMeasurementScreen() {
     ]);
   };
 
-  const keepDraft = () => {
+  const storeDraft = () =>
     saveDraft({
       id: clientId,
       plate: plateClean,
@@ -739,7 +740,30 @@ export function NewMeasurementScreen() {
       history,
       updatedAt: new Date().toISOString(),
     });
+
+  // TEC-1222: leaving with unsaved input asks "Save as draft?" (Save / Delete / Cancel).
+  const dirty = hasUnsavedMeasurement({ plate, vin, bodyType, values, points }, initial);
+  const releaseLeave = usePreventRemove(dirty, ({ repeat }) => {
+    const buttons: AlertButton[] = leaveChoices({ plateOk: !!plateClean, vinOk: !vinError }).map((c) =>
+      c === 'cancel'
+        ? { text: t('common:cancel'), style: 'cancel' }
+        : c === 'save'
+          ? {
+              text: t('leave_draft_save'),
+              onPress: () => {
+                storeDraft();
+                repeat();
+              },
+            }
+          : { text: t('leave_draft_discard'), style: 'destructive', onPress: repeat },
+    );
+    Alert.alert(t('leave_draft_title'), t('leave_draft_body'), buttons);
+  });
+
+  const keepDraft = () => {
+    storeDraft();
     Alert.alert(t('draft_saved'));
+    releaseLeave();
     router.back();
   };
 
@@ -785,6 +809,7 @@ export function NewMeasurementScreen() {
       removeDraft(clientId);
       void qc.invalidateQueries({ queryKey: ['measurements', 'list'] });
       Alert.alert(t('saved'));
+      releaseLeave();
       router.back();
     },
     onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),

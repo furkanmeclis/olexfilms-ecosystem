@@ -122,5 +122,9 @@
   "guide.points_count": "Punkte: {{count}}",
   "body_change_title": "Karosserieform ändern?",
   "body_change_body": "Für diese Karosserie gemessene Punktwerte werden gelöscht.",
-  "body_change_confirm": "Ändern und löschen"
+  "body_change_confirm": "Ändern und löschen",
+  "leave_draft_title": "Als Entwurf speichern?",
+  "leave_draft_body": "Diese Messung wurde noch nicht gesendet. Speichern behält sie als Entwurf auf diesem Telefon; Löschen verwirft Ihre Eingaben.",
+  "leave_draft_save": "Speichern",
+  "leave_draft_discard": "Löschen"
 }
