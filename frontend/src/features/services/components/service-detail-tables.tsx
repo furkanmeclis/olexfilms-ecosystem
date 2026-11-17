@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
+import { EntityLink } from "@/components/entity";
 import { StatusChip } from "@/components/common/status-chip";
 import {
   CLIENT_SIDE_MANUAL,
@@ -93,7 +94,9 @@ export function ServiceItemsTable({ items }: { items: ServiceItem[] }) {
           enableColumnFilter: productOptions.length > 1,
           cell: ({ row }) => (
             <div className="min-w-0" data-testid="detail-item">
-              <p className="font-medium">{row.original.product.name}</p>
+              <p className="font-medium">
+                <EntityLink kind="product" entity={row.original.product} />
+              </p>
               <p className="text-muted-foreground font-mono text-xs" dir="ltr">
                 {row.original.product.sku}
               </p>
@@ -106,7 +109,13 @@ export function ServiceItemsTable({ items }: { items: ServiceItem[] }) {
           enableSorting: true,
           cell: ({ row }) => (
             <span className="font-mono text-xs" dir="ltr">
-              {row.original.barcode}
+              <EntityLink
+                kind="stock_unit"
+                entity={{
+                  barcode: row.original.barcode,
+                  name: row.original.barcode,
+                }}
+              />
             </span>
           ),
         }),

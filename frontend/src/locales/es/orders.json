@@ -373,5 +373,6 @@
   "supplements.parent": "Pedido principal",
   "supplements.create": "Crear envío complementario",
   "supplements.created": "Envío complementario {{no}} creado.",
-  "supplements.forbidden": "Solo se puede añadir un envío complementario a un pedido enviado o entregado, por un usuario que pueda editar o enviar pedidos."
+  "supplements.forbidden": "Solo se puede añadir un envío complementario a un pedido enviado o entregado, por un usuario que pueda editar o enviar pedidos.",
+  "detail.created_by": "Creado por"
 }

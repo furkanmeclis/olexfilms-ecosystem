@@ -270,5 +270,6 @@
   "billing.fields.tax_no": "ΑΦΜ",
   "billing.fields.address": "Διεύθυνση τιμολόγησης",
   "billing.fields.email": "Email τιμολογίων",
-  "billing.fields.iban": "IBAN"
+  "billing.fields.iban": "IBAN",
+  "cari.counterparty": "Αντισυμβαλλόμενος"
 }

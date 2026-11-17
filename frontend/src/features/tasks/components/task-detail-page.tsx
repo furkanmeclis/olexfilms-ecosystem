@@ -5,6 +5,7 @@ import { ListTodo, MessageSquare } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
@@ -356,11 +357,15 @@ export function TaskDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label={t("tasks.columns.subject")}>
-              {r.subject_organization.name} ·{" "}
-              {t(`tasks.org_type.${r.subject_organization.type}`)}
+              <EntityLink kind="organization" entity={r.subject_organization} />{" "}
+              · {t(`tasks.org_type.${r.subject_organization.type}`)}
             </Field>
             <Field label={t("tasks.columns.assignee")}>
-              {r.assignee?.name ?? t("tasks.form.unassigned")}
+              <EntityLink
+                kind="user"
+                entity={r.assignee}
+                fallback={t("tasks.form.unassigned")}
+              />
             </Field>
             <Field label={t("tasks.columns.due")}>
               <span
@@ -372,7 +377,7 @@ export function TaskDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
               </span>
             </Field>
             <Field label={t("tasks.detail.created_by")}>
-              {r.created_by?.name ?? "—"}
+              <EntityLink kind="user" entity={r.created_by} />
             </Field>
             <Field label={t("tasks.detail.created_at")}>
               {when(r.created_at)}

@@ -5,6 +5,7 @@ import { ArrowDownLeft, ArrowUpRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Loading } from "@/components/common/loading";
@@ -139,6 +140,19 @@ export function CariDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
       ) : (
         <div className="space-y-6">
           {access.readOnlyDealer ? <ReadOnlyNotice /> : null}
+          <p className="text-sm" data-testid="cari-counterparty">
+            <span className="text-muted-foreground">
+              {t("accounting.cari.counterparty")}:{" "}
+            </span>
+            {/* TEC-1217: organization counterparties open their page; a
+                customer (user) counterparty stays text until the API says
+                which id it carries (TEC-1216). */}
+            {c.counterparty.type === "organization" ? (
+              <EntityLink kind="organization" entity={c.counterparty} />
+            ) : (
+              c.counterparty.name
+            )}
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
               <CardHeader>

@@ -270,5 +270,6 @@
   "billing.fields.tax_no": "税号",
   "billing.fields.address": "开票地址",
   "billing.fields.email": "开票邮箱",
-  "billing.fields.iban": "IBAN"
+  "billing.fields.iban": "IBAN",
+  "cari.counterparty": "往来方"
 }

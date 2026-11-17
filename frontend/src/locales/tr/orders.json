@@ -373,5 +373,6 @@
   "supplements.parent": "Ana sipariş",
   "supplements.create": "Ek gönderimi oluştur",
   "supplements.created": "{{no}} ek gönderimi oluşturuldu.",
-  "supplements.forbidden": "Ek gönderim yalnızca sevk edilmiş veya teslim edilmiş siparişe, sipariş düzenleme veya sevk yetkisiyle eklenebilir."
+  "supplements.forbidden": "Ek gönderim yalnızca sevk edilmiş veya teslim edilmiş siparişe, sipariş düzenleme veya sevk yetkisiyle eklenebilir.",
+  "detail.created_by": "Oluşturan"
 }

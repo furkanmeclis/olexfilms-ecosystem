@@ -334,5 +334,6 @@
   "supplements.parent": "Əsas sifariş",
   "supplements.create": "Əlavə göndərişi yarat",
   "supplements.created": "{{no}} əlavə göndərişi yaradıldı.",
-  "supplements.forbidden": "Əlavə göndəriş yalnız göndərilmiş və ya çatdırılmış sifarişə, sifarişləri redaktə və ya göndərmə səlahiyyəti olan istifadəçi tərəfindən əlavə edilə bilər."
+  "supplements.forbidden": "Əlavə göndəriş yalnız göndərilmiş və ya çatdırılmış sifarişə, sifarişləri redaktə və ya göndərmə səlahiyyəti olan istifadəçi tərəfindən əlavə edilə bilər.",
+  "detail.created_by": "Yaradan"
 }

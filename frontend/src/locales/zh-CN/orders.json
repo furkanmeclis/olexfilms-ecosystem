@@ -334,5 +334,6 @@
   "supplements.parent": "主订单",
   "supplements.create": "创建补充发货",
   "supplements.created": "补充发货 {{no}} 已创建。",
-  "supplements.forbidden": "只有可编辑或发货订单的用户才能为已发货或已送达的订单添加补充发货。"
+  "supplements.forbidden": "只有可编辑或发货订单的用户才能为已发货或已送达的订单添加补充发货。",
+  "detail.created_by": "创建人"
 }

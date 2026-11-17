@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
@@ -305,7 +306,7 @@ export function WarrantyDetailPage({
               </a>
             </Field>
             <Field label={t("warranty.detail.product")}>
-              {w.product.name}{" "}
+              <EntityLink kind="product" entity={w.product} />{" "}
               <span
                 className="text-muted-foreground font-mono text-xs"
                 dir="ltr"
@@ -314,7 +315,10 @@ export function WarrantyDetailPage({
               </span>
             </Field>
             <Field label={t("warranty.detail.vehicle")}>
-              {warrantyVehicleTitle(w)}
+              <EntityLink
+                kind="vehicle"
+                entity={{ uuid: w.vehicle.uuid, name: warrantyVehicleTitle(w) }}
+              />
               {w.vehicle.plate ? (
                 <span
                   className="text-muted-foreground ms-2 font-mono text-xs"
@@ -325,10 +329,17 @@ export function WarrantyDetailPage({
               ) : null}
             </Field>
             <Field label={t("warranty.detail.holder")}>
-              {warrantyHolderName(w) || "—"}
+              <EntityLink
+                kind="customer"
+                entity={
+                  w.holder
+                    ? { uuid: w.holder.uuid, name: warrantyHolderName(w) }
+                    : null
+                }
+              />
             </Field>
             <Field label={t("warranty.detail.organization")}>
-              {w.organization.name}
+              <EntityLink kind="organization" entity={w.organization} />
             </Field>
             <Field label={t("warranty.detail.service")}>
               {can(Permission.ServicesRead) ? (

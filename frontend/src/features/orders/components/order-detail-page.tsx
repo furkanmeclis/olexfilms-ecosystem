@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { ActivityTimeline } from "@/components/common/activity-timeline";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
@@ -412,7 +413,9 @@ function Items({
             data-testid="order-item"
             data-sku={row.original.product.sku}
           >
-            <div className="font-medium">{row.original.product.name}</div>
+            <div className="font-medium">
+              <EntityLink kind="product" entity={row.original.product} />
+            </div>
             <div className="text-muted-foreground text-xs" dir="ltr">
               {row.original.product.sku}
             </div>
@@ -548,7 +551,10 @@ function Items({
                         dir="ltr"
                         data-testid="assigned-unit"
                       >
-                        {u.barcode}
+                        <EntityLink
+                          kind="stock_unit"
+                          entity={{ barcode: u.barcode, name: u.barcode }}
+                        />
                         {u.quantity && u.quantity > 1 ? ` ×${u.quantity}` : ""}
                         {u.meters ? ` ${u.meters} m` : ""}
                         {assign ? (
@@ -770,8 +776,22 @@ function Parties({ order }: { order: Order }) {
       testId="order-parties"
     >
       <dl className="grid gap-3 sm:grid-cols-2">
-        <Field label={t("orders.detail.seller")}>{order.seller.name}</Field>
-        <Field label={t("orders.detail.buyer")}>{order.buyer.name}</Field>
+        <Field label={t("orders.detail.seller")}>
+          <EntityLink kind="organization" entity={order.seller} />
+        </Field>
+        <Field label={t("orders.detail.buyer")}>
+          <EntityLink kind="organization" entity={order.buyer} />
+        </Field>
+        {order.created_by ? (
+          <Field label={t("orders.detail.created_by")}>
+            <EntityLink kind="user" entity={order.created_by} />
+          </Field>
+        ) : null}
+        {order.last_activity?.user ? (
+          <Field label={t("orders.list.columns.handled_by")}>
+            <EntityLink kind="user" entity={order.last_activity.user} />
+          </Field>
+        ) : null}
         {order.seller_warehouse ? (
           <Field label={t("orders.detail.seller_warehouse")}>
             <span data-testid="order-seller-warehouse">

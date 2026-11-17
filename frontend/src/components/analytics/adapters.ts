@@ -3,6 +3,8 @@
  * The contract types are declared here on purpose: the generated API types
  * may land later; once they do these structurally match them.
  */
+import { entityHref } from "@/config/routes";
+
 import type { KpiTileProps } from "./kpi-tile";
 import {
   type Granularity,
@@ -125,30 +127,15 @@ export function envelopeGranularity(
     : undefined;
 }
 
-/** Detail page of a row / KPI link (`null` when the kind has no page). */
+/**
+ * Detail page of a row / KPI link (`null` when the kind has no page).
+ * TEC-1217: resolves through the shared `entityHref` registry.
+ */
 export function reportLinkHref(
   link: ReportLink | null | undefined,
   slug: string,
 ): string | null {
-  if (!link?.uuid || !slug) return null;
-  const id = encodeURIComponent(link.uuid);
-  switch (link.kind) {
-    case "service":
-      return `/t/${slug}/services/${id}`;
-    case "order":
-      return `/t/${slug}/orders/${id}`;
-    case "customer":
-      return `/t/${slug}/customers/${id}`;
-    case "warranty":
-      return `/t/${slug}/warranties/${id}`;
-    case "measurement":
-      return `/t/${slug}/measurements/${id}`;
-    case "product":
-      return `/t/${slug}/catalog/products/${id}`;
-    default:
-      // organization: there is no tenant detail page yet (TEC-1212 decides).
-      return null;
-  }
+  return entityHref(link?.kind, link?.uuid, slug);
 }
 
 /** KPI tiles from `kpis[]`. */

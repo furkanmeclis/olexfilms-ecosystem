@@ -373,5 +373,6 @@
   "supplements.parent": "Commande principale",
   "supplements.create": "Créer l'envoi complémentaire",
   "supplements.created": "Envoi complémentaire {{no}} créé.",
-  "supplements.forbidden": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée ou livrée, par un utilisateur pouvant modifier ou expédier les commandes."
+  "supplements.forbidden": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée ou livrée, par un utilisateur pouvant modifier ou expédier les commandes.",
+  "detail.created_by": "Créé par"
 }

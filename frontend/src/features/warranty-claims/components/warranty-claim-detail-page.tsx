@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
@@ -463,7 +464,13 @@ export function WarrantyClaimDetailPage({
               {c.product_name || "—"}
             </Field>
             <Field label={t("warranty.claims.columns.organization")}>
-              {c.organization_name || "—"}
+              <EntityLink
+                kind="organization"
+                entity={{
+                  uuid: c.organization_uuid,
+                  name: c.organization_name,
+                }}
+              />
             </Field>
             <Field label={t("warranty.claims.columns.service_no")}>
               {c.service_uuid && can(Permission.ServicesRead) ? (

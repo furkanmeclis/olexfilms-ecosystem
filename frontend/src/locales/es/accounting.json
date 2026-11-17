@@ -270,5 +270,6 @@
   "billing.fields.tax_no": "Número fiscal",
   "billing.fields.address": "Dirección de facturación",
   "billing.fields.email": "Correo de facturación",
-  "billing.fields.iban": "IBAN"
+  "billing.fields.iban": "IBAN",
+  "cari.counterparty": "Contraparte"
 }

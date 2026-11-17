@@ -270,5 +270,6 @@
   "billing.fields.tax_no": "Tax number",
   "billing.fields.address": "Invoice address",
   "billing.fields.email": "Invoice e-mail",
-  "billing.fields.iban": "IBAN"
+  "billing.fields.iban": "IBAN",
+  "cari.counterparty": "Counterparty"
 }
