@@ -12,6 +12,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { StepTimeline } from '@/ui/step-timeline';
+import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
@@ -20,6 +21,8 @@ import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, entryTone, formatDate, formatNumber, isCode, whError } from './format';
 import { Card, ErrorState, Field, IconButton, ListSkeleton } from './parts';
 import { ReserveSheet } from './reserve-sheet';
+import { arrivalChecked, isIsoDate, timelineDetail } from './receiving';
+import { ArrivalCard, DeliveryCard, ReceiptCard, ReceivingSheet, UndoCard } from './receiving-ui';
 import { useDocAction } from './use-action';
 
 /**
@@ -37,6 +40,14 @@ export function EntryScreen() {
   const [scanning, setScanning] = useState(false);
   const [bin, setBin] = useState<{ uuid: string; code: string } | null>(null);
   const [reserving, setReserving] = useState(false);
+  // TEC-1225: discrepancy record sheet; lot and production date of new lines.
+  const [receiving, setReceiving] = useState(false);
+  const [lot, setLot] = useState('');
+  const [prodDate, setProdDate] = useState('');
+  const lineDetails = {
+    ...(lot.trim() ? { lot: lot.trim() } : {}),
+    ...(isIsoDate(prodDate.trim()) ? { production_date: prodDate.trim() } : {}),
+  };
 
   const x = q.data;
   const lines = (x?.lines ?? []).filter((l) => !l.undone);
@@ -67,7 +78,7 @@ export function EntryScreen() {
         store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
       } else {
         if (x.mode === 'generate_new') return { ok: false, title: t('m.not_on_entry', { barcode }) };
-        let next = await entryApi.addLines(uuid, { barcodes: [barcode] });
+        let next = await entryApi.addLines(uuid, { barcodes: [barcode], ...lineDetails });
         if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
         store(next);
       }
@@ -106,12 +117,34 @@ export function EntryScreen() {
           <Field label={t('m.created')} value={formatDate(x.created_at)} />
           <Field label={t('entry_status.confirmed')} value={formatDate(x.confirmed_at)} />
           <Field label={t('entry_status.cancelled')} value={formatDate(x.cancelled_at)} />
+          <Field label={t('entry_status.undone')} value={formatDate(x.undone_at)} />
+          <Field label={t('receiving.undo_reason')} value={x.undo_reason} />
         </Card>
+
+        {x.mode !== 'import' ? <DeliveryCard entry={x} editable={write && draft} onSaved={store} /> : null}
+        {write && draft && lines.length > 0 ? <ArrivalCard entry={x} onChanged={() => void q.refetch()} /> : null}
 
         {write && draft ? (
           <View className="gap-2">
             {x.mode === 'generate_new' ? (
               <Button size="lg" variant="secondary" title={t('entry.generate')} onPress={() => setReserving(true)} />
+            ) : null}
+            {x.mode === 'with_existing' ? (
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Input label={t('fields.lot')} placeholder={t('fields.lot')} value={lot} maxLength={64} onChangeText={setLot} />
+                </View>
+                <View className="flex-1">
+                  <Input
+                    label={t('fields.production_date')}
+                    placeholder="2026-11-17"
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                    value={prodDate}
+                    onChangeText={setProdDate}
+                  />
+                </View>
+              </View>
             ) : null}
             <Button
               size="lg"
@@ -127,14 +160,23 @@ export function EntryScreen() {
                 loading={busy === 'confirm'}
                 disabled={lines.length === 0}
                 onPress={() =>
-                  confirmAction({
-                    title: t('entry.confirm_title'),
-                    body: unplaced.length
-                      ? `${t('entry.confirm_description')}\n\n${t('entry.confirm_blocked')}`
-                      : t('entry.confirm_description'),
-                    action: t('entry.confirm'),
-                    onConfirm: () => void run('confirm', () => entryApi.confirm(uuid)),
-                  })
+                  arrivalChecked(x)
+                    ? setReceiving(true)
+                    : confirmAction({
+                        title: t('entry.confirm_title'),
+                        body: unplaced.length
+                          ? `${t('entry.confirm_description')}\n\n${t('entry.confirm_blocked')}`
+                          : t('entry.confirm_description'),
+                        action: t('entry.confirm'),
+                        onConfirm: () =>
+                          void run('confirm', () =>
+                            entryApi.confirm(uuid).catch((e: unknown) => {
+                              if (!isCode(e, 'STOCK_ENTRY_DISCREPANCY_REQUIRED')) throw e;
+                              setReceiving(true);
+                              return x;
+                            }),
+                          ),
+                      })
                 }
               />
               <Button
@@ -153,6 +195,7 @@ export function EntryScreen() {
                 }
               />
             </View>
+            <Button variant="ghost" title={t('m.receiving.report_damage')} disabled={lines.length === 0} onPress={() => setReceiving(true)} />
             <Text variant="footnote" tone="muted">
               {t('m.entry_flow_hint')}
             </Text>
@@ -178,6 +221,8 @@ export function EntryScreen() {
                     </Text>
                     {l.unit_kind === 'fixed' ? ` × ${formatNumber(l.quantity)}` : ''}
                     {` · ${l.location?.full_code ?? l.location?.code ?? t('entry.unplaced')}`}
+                    {l.lot ? ` · ${t('fields.lot')} ${l.lot}` : ''}
+                    {l.production_date ? ` · ${l.production_date}` : ''}
                   </Text>
                 </View>
                 {write && draft ? (
@@ -201,18 +246,28 @@ export function EntryScreen() {
           </View>
         )}
 
+        {/* TEC-1225: discrepancy record and undo of a confirmed entry. */}
+        <ReceiptCard entry={x} />
+        <UndoCard entry={x} onUndone={store} />
+
         {/* TEC-1220 (revize 5.4.1): who took each step of the entry. */}
         <StepTimeline
           title={t('entry.timeline')}
           steps={newestFirst(x.timeline).map((s, i) => ({
             key: `${s.action}-${s.at}-${i}`,
             user: s.user?.name ?? t('orders:timeline.system'),
-            label: t(`entry.activity.${s.action}`, { defaultValue: s.action }),
+            label: [
+              t(`entry.activity.${s.action}`, { defaultValue: s.action }),
+              timelineDetail(s.details, (k) => t(`receiving.attachment_kind.${k}`, { defaultValue: k })),
+            ]
+              .filter(Boolean)
+              .join(' · '),
             when: formatDate(s.at),
           }))}
         />
       </Screen>
 
+      {receiving ? <ReceivingSheet entry={x} onClose={() => setReceiving(false)} onConfirmed={store} /> : null}
       {reserving ? (
         <ReserveSheet
           onClose={() => setReserving(false)}
