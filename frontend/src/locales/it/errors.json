@@ -179,5 +179,6 @@
   "codes.ORDER_NOTHING_TO_INVOICE": "Tutte le righe dell'ordine sono già fatturate.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "La nuova quantità è inferiore ai codici a barre assegnati; rimuovi prima l'assegnazione.",
-  "codes.ORDER_INVOICED": "Un ordine fatturato non può essere annullato; elimina prima la registrazione della fattura."
+  "codes.ORDER_INVOICED": "Un ordine fatturato non può essere annullato; elimina prima la registrazione della fattura.",
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Una spedizione integrativa si può aggiungere solo a un ordine spedito, consegnato o ricevuto."
 }

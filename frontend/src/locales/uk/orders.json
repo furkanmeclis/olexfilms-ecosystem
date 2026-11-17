@@ -365,5 +365,13 @@
   "plotter.marked_off": "Позначку плотерного різання знято",
   "plotter.change_on": "{{product}}: плотерне різання",
   "plotter.change_off": "{{product}}: плотерне різання знято",
-  "activity.plotter_marked": "Змінив позначку плотера"
+  "activity.plotter_marked": "Змінив позначку плотера",
+  "supplements.add": "Додати додаткове відправлення",
+  "supplements.badge": "Додаткове відправлення",
+  "supplements.title": "Нове додаткове відправлення",
+  "supplements.title_list": "Додаткові відправлення",
+  "supplements.parent": "Основне замовлення",
+  "supplements.create": "Створити додаткове відправлення",
+  "supplements.created": "Додаткове відправлення {{no}} створено.",
+  "supplements.forbidden": "Додаткове відправлення можна додати лише до відправленого або доставленого замовлення користувачем, який може редагувати або відправляти замовлення."
 }

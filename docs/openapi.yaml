@@ -25844,6 +25844,58 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/orders/{uuid}/supplements:
+    post:
+      tags: [Orders]
+      operationId: createOrderSupplement
+      summary: Open a supplementary order of a shipped or delivered order
+      description: >-
+        TEC-1222 (revize 5.9). The seller's sales (orders.write) or
+        warehouse (orders.ship) staff open a follow-up order of a shipped,
+        delivered or received order, e.g. plexi and sign sets sent after the
+        goods. Seller, buyer, brand, currency and seller warehouse come from
+        the main order; the lines start empty in the client and are sent
+        here (gift lines too). Like an order the center opens for a dealer
+        (createOrder with buyer_org_uuid) it starts `approved` (rate frozen,
+        `created_by_seller` true) and runs its own flow (preparing, shipping,
+        delivery, books, invoice); the dealer is notified
+        (ORDER_CREATED_BY_SELLER) and the warehouse staff unless
+        `self_prepare`. A supplement of a supplement hangs on the same main
+        order. The buyer and callers without orders.write / orders.ship get
+        403; another status answers 409 ORDER_NOT_SUPPLEMENTABLE.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderSupplementInput"
+      responses:
+        "201":
+          description: Supplementary order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /v1/orders/{uuid}/items:
     put:
       tags: [Orders]
@@ -47811,6 +47863,7 @@ components:
         - updated_at
         - available_transitions
         - can_edit_items
+        - is_supplement
         - received_at
         - delivery_method
         - delivery_mode
@@ -47928,6 +47981,30 @@ components:
             TEC-1056: the caller may edit the lines now (PUT items) — the
             buyer its draft (orders.write), the seller before ready
             (orders.write or orders.ship)
+        is_supplement:
+          type: boolean
+          description: >-
+            TEC-1222: a supplementary order of a shipped or delivered main
+            order (list rows carry it too).
+        parent_order:
+          description: >-
+            TEC-1222 (detail responses only): the main order of a
+            supplementary order; omitted otherwise.
+          allOf:
+            - $ref: "#/components/schemas/OrderLink"
+        supplements:
+          type: array
+          description: >-
+            TEC-1222 (detail responses only): the supplementary orders of a
+            main order, oldest first; omitted when there is none.
+          items: { $ref: "#/components/schemas/OrderLink" }
+        can_add_supplement:
+          type: boolean
+          description: >-
+            TEC-1222 (detail responses only): the caller may open a
+            supplementary order now — the seller with orders.write or
+            orders.ship on a shipped, delivered or received order; omitted
+            when false.
         items:
           type: array
           description: Lines (detail responses only)
@@ -48308,6 +48385,42 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         name: { type: string, example: Ayşe Yılmaz }
+
+    OrderLink:
+      type: object
+      description: TEC-1222. A linked order (main order or supplementary order).
+      required: [uuid, order_no, status, status_label]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        status_label: { type: string }
+
+    OrderSupplementInput:
+      type: object
+      required: [items]
+      properties:
+        note: { type: string }
+        seller_warehouse_uuid:
+          type: string
+          format: uuid
+          description: >-
+            An active warehouse of the seller (else 400). Omitted: the main
+            order's warehouse while it is active, otherwise the primary one.
+        self_prepare:
+          type: boolean
+          description: >-
+            The creator prepares the order himself (needs orders.ship, else
+            400): no warehouse staff is notified.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: >-
+            Lines; `is_gift` charges a line 0. `unit_price` and
+            `discount_pct` are ignored for a caller who may not see prices
+            (warehouse staff).
+          items: { $ref: "#/components/schemas/OrderItemInput" }
 
     OrderCreateInput:
       type: object

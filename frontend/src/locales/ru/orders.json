@@ -365,5 +365,13 @@
   "plotter.marked_off": "Отметка плоттерной резки снята",
   "plotter.change_on": "{{product}}: плоттерная резка",
   "plotter.change_off": "{{product}}: плоттерная резка снята",
-  "activity.plotter_marked": "Изменил отметку плоттера"
+  "activity.plotter_marked": "Изменил отметку плоттера",
+  "supplements.add": "Добавить дополнительную отправку",
+  "supplements.badge": "Дополнительная отправка",
+  "supplements.title": "Новая дополнительная отправка",
+  "supplements.title_list": "Дополнительные отправки",
+  "supplements.parent": "Основной заказ",
+  "supplements.create": "Создать дополнительную отправку",
+  "supplements.created": "Дополнительная отправка {{no}} создана.",
+  "supplements.forbidden": "Дополнительную отправку можно добавить только к отправленному или доставленному заказу пользователем, который может редактировать или отправлять заказы."
 }

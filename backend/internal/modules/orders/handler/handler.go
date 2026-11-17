@@ -34,6 +34,7 @@ const (
 	CodeStockUnavailable          = "ORDER_STOCK_UNAVAILABLE"
 	CodePriceNotFound             = ord.CodePriceNotFound
 	CodeNotInvoiceable            = "ORDER_NOT_INVOICEABLE"
+	CodeNotSupplementable         = "ORDER_NOT_SUPPLEMENTABLE"
 	CodeOrderInvoiced             = "ORDER_INVOICED"
 	CodeItemAlreadyInvoiced       = "ORDER_ITEM_ALREADY_INVOICED"
 	CodeNothingToInvoice          = "ORDER_NOTHING_TO_INVOICE"
@@ -107,6 +108,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeBelowAssigned, "Unassign units first: the new amount is below the assigned units")
 	case errors.Is(err, ord.ErrInvoiceNotFound):
 		response.NotFound(w, r, "Invoice record not found")
+	case errors.Is(err, ord.ErrNotSupplementable):
+		response.Conflict(w, r, CodeNotSupplementable, "Only a shipped, delivered or received order gets a supplementary order")
 	case errors.Is(err, ord.ErrNotInvoiceable):
 		response.Conflict(w, r, CodeNotInvoiceable, "Only a shipped, delivered or received order can be marked invoiced")
 	case errors.Is(err, ord.ErrOrderInvoiced):
@@ -235,6 +238,37 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	o, err := h.svc.Create(r.Context(), caller(r), ord.CreateInput{
 		Note: body.Note, Items: toItems(body.Items), BuyerOrgUUID: body.BuyerOrgUUID,
+		SellerWarehouseUUID: body.SellerWarehouseUUID, SelfPrepare: body.SelfPrepare,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, o)
+}
+
+type supplementBody struct {
+	Note  *string    `json:"note"`
+	Items []itemBody `json:"items"`
+	// SellerWarehouseUUID: another warehouse than the main order's.
+	SellerWarehouseUUID *string `json:"seller_warehouse_uuid"`
+	SelfPrepare         bool    `json:"self_prepare"`
+}
+
+// CreateSupplement (POST /v1/orders/{uuid}/supplements): a supplementary
+// order of a shipped or delivered order, seller, buyer and warehouse copied
+// from it (TEC-1222).
+func (h *Handler) CreateSupplement(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var body supplementBody
+	if !decode(w, r, &body) {
+		return
+	}
+	o, err := h.svc.CreateSupplement(r.Context(), caller(r), id, ord.CreateInput{
+		Note: body.Note, Items: toItems(body.Items),
 		SellerWarehouseUUID: body.SellerWarehouseUUID, SelfPrepare: body.SelfPrepare,
 	})
 	if err != nil {

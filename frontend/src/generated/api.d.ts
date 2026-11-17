@@ -13443,6 +13443,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/supplements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a supplementary order of a shipped or delivered order
+         * @description TEC-1222 (revize 5.9). The seller's sales (orders.write) or warehouse (orders.ship) staff open a follow-up order of a shipped, delivered or received order, e.g. plexi and sign sets sent after the goods. Seller, buyer, brand, currency and seller warehouse come from the main order; the lines start empty in the client and are sent here (gift lines too). Like an order the center opens for a dealer (createOrder with buyer_org_uuid) it starts `approved` (rate frozen, `created_by_seller` true) and runs its own flow (preparing, shipping, delivery, books, invoice); the dealer is notified (ORDER_CREATED_BY_SELLER) and the warehouse staff unless `self_prepare`. A supplement of a supplement hangs on the same main order. The buyer and callers without orders.write / orders.ship get 403; another status answers 409 ORDER_NOT_SUPPLEMENTABLE.
+         */
+        post: operations["createOrderSupplement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders/{uuid}/items": {
         parameters: {
             query?: never;
@@ -28092,6 +28112,14 @@ export interface components {
             receive_on_behalf?: boolean;
             /** @description TEC-1056: the caller may edit the lines now (PUT items) — the buyer its draft (orders.write), the seller before ready (orders.write or orders.ship) */
             can_edit_items: boolean;
+            /** @description TEC-1222: a supplementary order of a shipped or delivered main order (list rows carry it too). */
+            is_supplement: boolean;
+            /** @description TEC-1222 (detail responses only): the main order of a supplementary order; omitted otherwise. */
+            parent_order?: components["schemas"]["OrderLink"];
+            /** @description TEC-1222 (detail responses only): the supplementary orders of a main order, oldest first; omitted when there is none. */
+            supplements?: components["schemas"]["OrderLink"][];
+            /** @description TEC-1222 (detail responses only): the caller may open a supplementary order now — the seller with orders.write or orders.ship on a shipped, delivered or received order; omitted when false. */
+            can_add_supplement?: boolean;
             /** @description Lines (detail responses only) */
             items?: components["schemas"]["OrderItem"][];
             /** @description Status history (detail responses only) */
@@ -28381,6 +28409,26 @@ export interface components {
             uuid: string;
             /** @example Ayşe Yılmaz */
             name: string;
+        };
+        /** @description TEC-1222. A linked order (main order or supplementary order). */
+        OrderLink: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            status_label: string;
+        };
+        OrderSupplementInput: {
+            note?: string;
+            /**
+             * Format: uuid
+             * @description An active warehouse of the seller (else 400). Omitted: the main order's warehouse while it is active, otherwise the primary one.
+             */
+            seller_warehouse_uuid?: string;
+            /** @description The creator prepares the order himself (needs orders.ship, else 400): no warehouse staff is notified. */
+            self_prepare?: boolean;
+            /** @description Lines; `is_gift` charges a line 0. `unit_price` and `discount_pct` are ignored for a caller who may not see prices (warehouse staff). */
+            items: components["schemas"]["OrderItemInput"][];
         };
         OrderCreateInput: {
             note?: string;
@@ -57037,6 +57085,38 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createOrderSupplement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderSupplementInput"];
+            };
+        };
+        responses: {
+            /** @description Supplementary order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     replaceOrderItems: {

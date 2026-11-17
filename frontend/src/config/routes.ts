@@ -160,6 +160,9 @@ export const routes = {
     orders: {
       list: (slug: string) => `/t/${slug}/orders`,
       create: (slug: string) => `/t/${slug}/orders/new`,
+      /** TEC-1222: new supplementary order of a shipped or delivered order. */
+      supplement: (slug: string, parentUuid: string) =>
+        `/t/${slug}/orders/new?supplement_of=${encodeURIComponent(parentUuid)}`,
       detail: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}`,
       edit: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}/edit`,
       /**

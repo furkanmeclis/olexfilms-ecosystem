@@ -2346,6 +2346,8 @@ type Querier interface {
 	// TEC-1028: with warehouse_id, placed units only in that warehouse (legacy
 	// locations outside any warehouse stay in).
 	ListOrderSuggestSerialCandidates(ctx context.Context, arg ListOrderSuggestSerialCandidatesParams) ([]ListOrderSuggestSerialCandidatesRow, error)
+	// TEC-1222: the supplementary orders of a main order, oldest first.
+	ListOrderSupplements(ctx context.Context, arg ListOrderSupplementsParams) ([]Order, error)
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
 	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)

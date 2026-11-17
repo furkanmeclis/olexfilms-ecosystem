@@ -365,5 +365,13 @@
   "plotter.marked_off": "Plotter cut mark removed",
   "plotter.change_on": "{{product}}: plotter cut",
   "plotter.change_off": "{{product}}: plotter cut removed",
-  "activity.plotter_marked": "Changed the plotter mark"
+  "activity.plotter_marked": "Changed the plotter mark",
+  "supplements.add": "Add supplementary shipment",
+  "supplements.badge": "Supplement",
+  "supplements.title": "New supplementary shipment",
+  "supplements.title_list": "Supplementary shipments",
+  "supplements.parent": "Main order",
+  "supplements.create": "Create supplementary shipment",
+  "supplements.created": "Supplementary shipment {{no}} created.",
+  "supplements.forbidden": "A supplementary shipment can only be added to a shipped or delivered order, by a user who can edit or ship orders."
 }

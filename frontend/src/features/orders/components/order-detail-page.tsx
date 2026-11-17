@@ -47,6 +47,11 @@ import {
 import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import {
+  AddSupplementButton,
+  OrderSupplementsCard,
+  SupplementBadge,
+} from "@/features/orders/components/order-supplements";
+import {
   canAssignUnits,
   canEditDraft,
   canEditSellerLines,
@@ -901,6 +906,7 @@ export function OrderDetailPage({
       actions={
         order ? (
           <div className="flex flex-wrap items-center gap-2">
+            <SupplementBadge order={order} />
             {order.created_by_seller ? (
               <Badge variant="secondary" data-testid="created-by-seller">
                 {t("orders.detail.created_by_seller")}
@@ -963,7 +969,8 @@ export function OrderDetailPage({
       {actions.length > 0 ||
       canEditDraft(can, order) ||
       pickList ||
-      editLines ? (
+      editLines ||
+      order.can_add_supplement ? (
         <div className="flex flex-wrap gap-2" data-testid="order-actions">
           {canEditDraft(can, order) ? (
             <Button asChild variant="outline">
@@ -998,6 +1005,7 @@ export function OrderDetailPage({
               </Link>
             </Button>
           ) : null}
+          <AddSupplementButton slug={slug} order={order} />
           {actions.map((a) => (
             <Button
               key={a.kind}
@@ -1054,6 +1062,7 @@ export function OrderDetailPage({
           }
         >
           <Parties order={order} />
+          <OrderSupplementsCard slug={slug} order={order} />
           {orderInvoiceable(order) ? (
             <InvoicesCard
               order={order}

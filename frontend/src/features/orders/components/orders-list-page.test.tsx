@@ -180,6 +180,7 @@ function order(over: Partial<Order> = {}): Order {
     created_by_seller: false,
     invoice_status: "pending",
     can_edit_items: false,
+    is_supplement: false,
     status: "draft",
     status_label: "Draft",
     role: "buyer",

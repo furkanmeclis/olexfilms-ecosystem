@@ -179,5 +179,6 @@
   "codes.ORDER_NOTHING_TO_INVOICE": "Alle Positionen der Bestellung sind bereits fakturiert.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Diese Rechnungsnummer ist für die Bestellung bereits erfasst.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "Die neue Menge liegt unter den zugewiesenen Barcodes; zuerst die Zuweisung entfernen.",
-  "codes.ORDER_INVOICED": "Eine fakturierte Bestellung kann nicht storniert werden; löschen Sie zuerst den Rechnungseintrag."
+  "codes.ORDER_INVOICED": "Eine fakturierte Bestellung kann nicht storniert werden; löschen Sie zuerst den Rechnungseintrag.",
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Eine Zusatzlieferung kann nur zu einem versendeten, zugestellten oder empfangenen Auftrag hinzugefügt werden."
 }

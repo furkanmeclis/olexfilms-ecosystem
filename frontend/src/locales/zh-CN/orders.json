@@ -326,5 +326,13 @@
   "plotter.marked_off": "已取消绘图机切割标记",
   "plotter.change_on": "{{product}}:绘图机切割",
   "plotter.change_off": "{{product}}:已取消绘图机切割",
-  "activity.plotter_marked": "更改了绘图机标记"
+  "activity.plotter_marked": "更改了绘图机标记",
+  "supplements.add": "添加补充发货",
+  "supplements.badge": "补充发货",
+  "supplements.title": "新建补充发货",
+  "supplements.title_list": "补充发货",
+  "supplements.parent": "主订单",
+  "supplements.create": "创建补充发货",
+  "supplements.created": "补充发货 {{no}} 已创建。",
+  "supplements.forbidden": "只有可编辑或发货订单的用户才能为已发货或已送达的订单添加补充发货。"
 }

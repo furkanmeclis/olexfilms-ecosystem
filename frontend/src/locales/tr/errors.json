@@ -179,5 +179,6 @@
   "codes.ORDER_NOTHING_TO_INVOICE": "Siparişin tüm kalemleri zaten faturalandırılmış.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Bu fatura numarası bu siparişte zaten kayıtlı.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "Yeni miktar atanmış barkodların altında; önce barkodu çıkarın.",
-  "codes.ORDER_INVOICED": "Faturalanmış sipariş iptal edilemez; önce fatura kaydını silin."
+  "codes.ORDER_INVOICED": "Faturalanmış sipariş iptal edilemez; önce fatura kaydını silin.",
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Ek gönderim yalnızca sevk edilmiş, teslim edilmiş veya teslim alınmış siparişe eklenebilir."
 }

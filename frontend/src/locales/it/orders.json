@@ -365,5 +365,13 @@
   "plotter.marked_off": "Contrassegno taglio plotter rimosso",
   "plotter.change_on": "{{product}}: taglio plotter",
   "plotter.change_off": "{{product}}: taglio plotter rimosso",
-  "activity.plotter_marked": "Ha modificato il contrassegno plotter"
+  "activity.plotter_marked": "Ha modificato il contrassegno plotter",
+  "supplements.add": "Aggiungi spedizione integrativa",
+  "supplements.badge": "Spedizione integrativa",
+  "supplements.title": "Nuova spedizione integrativa",
+  "supplements.title_list": "Spedizioni integrative",
+  "supplements.parent": "Ordine principale",
+  "supplements.create": "Crea spedizione integrativa",
+  "supplements.created": "Spedizione integrativa {{no}} creata.",
+  "supplements.forbidden": "Una spedizione integrativa si può aggiungere solo a un ordine spedito o consegnato, da un utente che può modificare o spedire ordini."
 }

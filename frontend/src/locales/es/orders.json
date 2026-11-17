@@ -365,5 +365,13 @@
   "plotter.marked_off": "Marca de corte plotter quitada",
   "plotter.change_on": "{{product}}: corte plotter",
   "plotter.change_off": "{{product}}: corte plotter quitado",
-  "activity.plotter_marked": "Cambió la marca de plotter"
+  "activity.plotter_marked": "Cambió la marca de plotter",
+  "supplements.add": "Añadir envío complementario",
+  "supplements.badge": "Envío complementario",
+  "supplements.title": "Nuevo envío complementario",
+  "supplements.title_list": "Envíos complementarios",
+  "supplements.parent": "Pedido principal",
+  "supplements.create": "Crear envío complementario",
+  "supplements.created": "Envío complementario {{no}} creado.",
+  "supplements.forbidden": "Solo se puede añadir un envío complementario a un pedido enviado o entregado, por un usuario que pueda editar o enviar pedidos."
 }

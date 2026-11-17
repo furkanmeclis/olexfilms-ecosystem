@@ -367,7 +367,16 @@ export function OrderForm({
  * of the brand catalog and amounts; prices are resolved by the server
  * (K8) and shown once the draft is saved, then frozen at approval (K7).
  */
-export function OrderFormPage({ slug, uuid }: { slug: string; uuid?: string }) {
+export function OrderFormPage({
+  slug,
+  uuid,
+  supplementOf,
+}: {
+  slug: string;
+  uuid?: string;
+  /** TEC-1222: open a supplementary order of this shipped order. */
+  supplementOf?: string;
+}) {
   const { t } = useLocale();
   const { can } = usePermission();
   const org = useActiveOrganization(slug);
@@ -380,11 +389,22 @@ export function OrderFormPage({ slug, uuid }: { slug: string; uuid?: string }) {
     enabled: Boolean(uuid) && access.canCreate,
   });
 
-  const title = uuid
-    ? t("orders.form.edit_title")
-    : access.canCreateForDealer
-      ? t("orders.center_form.title")
-      : t("orders.form.title");
+  // TEC-1222: the main order of a new supplementary order; its detail
+  // tells whether the caller may open one (can_add_supplement).
+  const parent = useQuery({
+    queryKey: orderKeys.detail(supplementOf ?? ""),
+    queryFn: () => ordersService.get(supplementOf ?? ""),
+    enabled: !uuid && Boolean(supplementOf) && access.canRead,
+  });
+
+  const title =
+    supplementOf && !uuid
+      ? t("orders.supplements.title")
+      : uuid
+        ? t("orders.form.edit_title")
+        : access.canCreateForDealer
+          ? t("orders.center_form.title")
+          : t("orders.form.title");
   const header = (
     <PageHeader
       title={title}
@@ -408,6 +428,31 @@ export function OrderFormPage({ slug, uuid }: { slug: string; uuid?: string }) {
     />
   );
 
+  if (supplementOf && !uuid) {
+    if (parent.isLoading) return <Loading />;
+    const main = parent.data;
+    return (
+      <div className="space-y-6">
+        {header}
+        {main?.can_add_supplement ? (
+          <CenterOrderForm
+            slug={slug}
+            centerUuid={org?.uuid ?? ""}
+            parent={main}
+          />
+        ) : (
+          <ErrorState
+            title={
+              parent.isError
+                ? t("common.error_generic")
+                : t("common.error_forbidden")
+            }
+            description={t("orders.supplements.forbidden")}
+          />
+        )}
+      </div>
+    );
+  }
   if (forDealer && org) {
     return (
       <div className="space-y-6">
