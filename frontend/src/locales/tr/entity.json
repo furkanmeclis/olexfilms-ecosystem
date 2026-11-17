@@ -47,5 +47,21 @@
   "related.empty.service": "Hizmet kaydı yok.",
   "related.empty.warranty": "Garanti kaydı yok.",
   "related.empty.order": "Sipariş yok.",
-  "related.empty.task": "Görev yok."
+  "related.empty.task": "Görev yok.",
+  "related.columns.temperature": "Sıcaklık",
+  "related.columns.follow_up": "Takip",
+  "related.columns.measured_at": "Ölçüm tarihi",
+  "related.columns.starts_at": "Başlangıç",
+  "related.columns.service": "Hizmet",
+  "related.empty.lead": "Lead yok.",
+  "related.empty.measurement": "Ölçüm yok.",
+  "related.empty.appointment": "Randevu yok.",
+  "related.empty.contract": "Sözleşme yok.",
+  "related.section_title": "İlişkili kayıtlar",
+  "related.tabs.service": "Hizmetler",
+  "related.tabs.warranty": "Garantiler",
+  "related.tabs.appointment": "Randevular",
+  "related.tabs.lead": "Lead'ler",
+  "related.tabs.measurement": "Ölçümler",
+  "related.tabs.contract": "Sözleşmeler"
 }

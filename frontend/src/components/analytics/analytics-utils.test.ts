@@ -249,8 +249,12 @@ describe("adapters", () => {
       format: { kind: "money", currency: "EUR" },
       href: "/t/olex/orders/u1",
     });
+    // TEC-1217: organizations open their tenant detail page.
+    expect(reportLinkHref({ kind: "organization", uuid: "x" }, "olex")).toBe(
+      "/t/olex/organizations/x",
+    );
     expect(
-      reportLinkHref({ kind: "organization", uuid: "x" }, "olex"),
+      reportLinkHref({ kind: "announcement", uuid: "x" }, "olex"),
     ).toBeNull();
     expect(
       gridColumnsFromReport([

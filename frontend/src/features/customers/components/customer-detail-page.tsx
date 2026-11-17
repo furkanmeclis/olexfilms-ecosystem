@@ -28,6 +28,7 @@ import {
   type CustomerActionKind,
 } from "@/features/customers/components/customer-actions";
 import { customerStatusTone } from "@/features/customers/components/customers-list-page";
+import { CustomerRelatedTabs } from "@/features/customers/components/customer-related-tabs";
 import { CustomerVehiclesTable } from "@/features/customers/components/customer-vehicles-table";
 import { VehicleFormDialog } from "@/features/customers/components/vehicle-form-dialog";
 import { resolveCustomerDetailAccess } from "@/features/customers/lib/access";
@@ -303,6 +304,8 @@ export function CustomerDetailPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <CustomerRelatedTabs customerUuid={c.uuid} />
 
       <VehicleFormDialog
         open={vehicleDialog !== null}

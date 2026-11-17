@@ -47,5 +47,21 @@
   "related.empty.service": "Keine Services.",
   "related.empty.warranty": "Keine Garantien.",
   "related.empty.order": "Keine Bestellungen.",
-  "related.empty.task": "Keine Aufgaben."
+  "related.empty.task": "Keine Aufgaben.",
+  "related.columns.temperature": "Temperatur",
+  "related.columns.follow_up": "Nachverfolgung",
+  "related.columns.measured_at": "Gemessen",
+  "related.columns.starts_at": "Beginn",
+  "related.columns.service": "Service",
+  "related.empty.lead": "Keine Leads.",
+  "related.empty.measurement": "Keine Messungen.",
+  "related.empty.appointment": "Keine Termine.",
+  "related.empty.contract": "Keine Verträge.",
+  "related.section_title": "Verknüpfte Datensätze",
+  "related.tabs.service": "Services",
+  "related.tabs.warranty": "Garantien",
+  "related.tabs.appointment": "Termine",
+  "related.tabs.lead": "Leads",
+  "related.tabs.measurement": "Messungen",
+  "related.tabs.contract": "Verträge"
 }

@@ -47,5 +47,21 @@
   "related.empty.service": "Δεν υπάρχουν υπηρεσίες.",
   "related.empty.warranty": "Δεν υπάρχουν εγγυήσεις.",
   "related.empty.order": "Δεν υπάρχουν παραγγελίες.",
-  "related.empty.task": "Δεν υπάρχουν εργασίες."
+  "related.empty.task": "Δεν υπάρχουν εργασίες.",
+  "related.columns.temperature": "Θερμοκρασία",
+  "related.columns.follow_up": "Παρακολούθηση",
+  "related.columns.measured_at": "Μέτρηση",
+  "related.columns.starts_at": "Έναρξη",
+  "related.columns.service": "Υπηρεσία",
+  "related.empty.lead": "Δεν υπάρχουν leads.",
+  "related.empty.measurement": "Δεν υπάρχουν μετρήσεις.",
+  "related.empty.appointment": "Δεν υπάρχουν ραντεβού.",
+  "related.empty.contract": "Δεν υπάρχουν συμβάσεις.",
+  "related.section_title": "Συνδεδεμένες εγγραφές",
+  "related.tabs.service": "Υπηρεσίες",
+  "related.tabs.warranty": "Εγγυήσεις",
+  "related.tabs.appointment": "Ραντεβού",
+  "related.tabs.lead": "Leads",
+  "related.tabs.measurement": "Μετρήσεις",
+  "related.tabs.contract": "Συμβάσεις"
 }

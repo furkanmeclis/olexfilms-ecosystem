@@ -47,5 +47,21 @@
   "related.empty.service": "暂无服务。",
   "related.empty.warranty": "暂无质保。",
   "related.empty.order": "暂无订单。",
-  "related.empty.task": "暂无任务。"
+  "related.empty.task": "暂无任务。",
+  "related.columns.temperature": "热度",
+  "related.columns.follow_up": "跟进",
+  "related.columns.measured_at": "测量时间",
+  "related.columns.starts_at": "开始",
+  "related.columns.service": "服务",
+  "related.empty.lead": "暂无线索。",
+  "related.empty.measurement": "暂无测量。",
+  "related.empty.appointment": "暂无预约。",
+  "related.empty.contract": "暂无合同。",
+  "related.section_title": "关联记录",
+  "related.tabs.service": "服务",
+  "related.tabs.warranty": "质保",
+  "related.tabs.appointment": "预约",
+  "related.tabs.lead": "线索",
+  "related.tabs.measurement": "测量",
+  "related.tabs.contract": "合同"
 }

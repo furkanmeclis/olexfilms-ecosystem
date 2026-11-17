@@ -47,5 +47,21 @@
   "related.empty.service": "No hay servicios.",
   "related.empty.warranty": "No hay garantías.",
   "related.empty.order": "No hay pedidos.",
-  "related.empty.task": "No hay tareas."
+  "related.empty.task": "No hay tareas.",
+  "related.columns.temperature": "Temperatura",
+  "related.columns.follow_up": "Seguimiento",
+  "related.columns.measured_at": "Medido",
+  "related.columns.starts_at": "Inicio",
+  "related.columns.service": "Servicio",
+  "related.empty.lead": "No hay leads.",
+  "related.empty.measurement": "No hay mediciones.",
+  "related.empty.appointment": "No hay citas.",
+  "related.empty.contract": "No hay contratos.",
+  "related.section_title": "Registros relacionados",
+  "related.tabs.service": "Servicios",
+  "related.tabs.warranty": "Garantías",
+  "related.tabs.appointment": "Citas",
+  "related.tabs.lead": "Leads",
+  "related.tabs.measurement": "Mediciones",
+  "related.tabs.contract": "Contratos"
 }

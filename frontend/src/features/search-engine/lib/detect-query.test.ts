@@ -45,7 +45,7 @@ describe("resolveSearchHitHref (TEC-213)", () => {
       "/t/bayi-a/stock?barcode=OLX-1",
     );
     expect(resolveSearchHitHref("/organizations/o1", "bayi-a")).toBe(
-      "/t/bayi-a/stock?organization=o1",
+      "/t/bayi-a/organizations/o1",
     );
     expect(resolveSearchHitHref("/platform/users/u1", "bayi-a")).toBe(
       "/platform/users/u1",

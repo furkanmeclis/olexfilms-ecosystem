@@ -47,5 +47,21 @@
   "related.empty.service": "Нет услуг.",
   "related.empty.warranty": "Нет гарантий.",
   "related.empty.order": "Нет заказов.",
-  "related.empty.task": "Нет задач."
+  "related.empty.task": "Нет задач.",
+  "related.columns.temperature": "Температура",
+  "related.columns.follow_up": "Контроль",
+  "related.columns.measured_at": "Дата замера",
+  "related.columns.starts_at": "Начало",
+  "related.columns.service": "Услуга",
+  "related.empty.lead": "Нет лидов.",
+  "related.empty.measurement": "Нет замеров.",
+  "related.empty.appointment": "Нет записей.",
+  "related.empty.contract": "Нет договоров.",
+  "related.section_title": "Связанные записи",
+  "related.tabs.service": "Услуги",
+  "related.tabs.warranty": "Гарантии",
+  "related.tabs.appointment": "Записи",
+  "related.tabs.lead": "Лиды",
+  "related.tabs.measurement": "Замеры",
+  "related.tabs.contract": "Договоры"
 }

@@ -47,5 +47,21 @@
   "related.empty.service": "لا توجد خدمات.",
   "related.empty.warranty": "لا توجد ضمانات.",
   "related.empty.order": "لا توجد طلبات.",
-  "related.empty.task": "لا توجد مهام."
+  "related.empty.task": "لا توجد مهام.",
+  "related.columns.temperature": "الحرارة",
+  "related.columns.follow_up": "المتابعة",
+  "related.columns.measured_at": "تاريخ القياس",
+  "related.columns.starts_at": "البداية",
+  "related.columns.service": "الخدمة",
+  "related.empty.lead": "لا يوجد عملاء محتملون.",
+  "related.empty.measurement": "لا توجد قياسات.",
+  "related.empty.appointment": "لا توجد مواعيد.",
+  "related.empty.contract": "لا توجد عقود.",
+  "related.section_title": "السجلات المرتبطة",
+  "related.tabs.service": "الخدمات",
+  "related.tabs.warranty": "الضمانات",
+  "related.tabs.appointment": "المواعيد",
+  "related.tabs.lead": "العملاء المحتملون",
+  "related.tabs.measurement": "القياسات",
+  "related.tabs.contract": "العقود"
 }
