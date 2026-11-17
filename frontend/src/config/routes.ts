@@ -120,6 +120,15 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/staff`,
       detail: (slug: string, uuid: string) => `/t/${slug}/staff/${uuid}`,
     },
+    /** TEC-1218: staff user (member) detail with what the user did. */
+    users: {
+      detail: (slug: string, uuid: string, tab?: string) =>
+        `/t/${slug}/users/${uuid}${tab ? `?tab=${tab}` : ""}`,
+    },
+    /** TEC-1218: contract detail (subject record linked). */
+    contracts: {
+      detail: (slug: string, uuid: string) => `/t/${slug}/contracts/${uuid}`,
+    },
     accountingReports: (slug: string) => `/t/${slug}/accounting/reports`,
     /** TEC-176 accounting; statement and disputes: TEC-195. */
     accounting: {
@@ -129,6 +138,9 @@ export const routes = {
       cariDetail: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/cari/${uuid}`,
       entries: (slug: string) => `/t/${slug}/accounting/entries`,
+      /** TEC-1218: one ledger entry with its source record. */
+      entryDetail: (slug: string, uuid: string) =>
+        `/t/${slug}/accounting/entries/${uuid}`,
       statement: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/cari/${uuid}/statement`,
       disputes: (slug: string) => `/t/${slug}/accounting/disputes`,
@@ -260,6 +272,9 @@ export const routes = {
     /** TEC-326 appointment calendar (day / week) and settings tab. */
     appointments: {
       calendar: (slug: string) => `/t/${slug}/appointments`,
+      /** TEC-1218: one appointment with its customer / vehicle / service. */
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/appointments/${uuid}`,
       /** TEC-328: network occupancy (center / distributor). */
       occupancy: (slug: string) => `/t/${slug}/appointments/occupancy`,
       /** TEC-328: read-only calendar of one organization of the network. */
@@ -291,6 +306,9 @@ export const routes = {
     /** TEC-332 announcements: feed, composer and read report. */
     announcements: {
       list: (slug: string) => `/t/${slug}/announcements`,
+      /** TEC-1218: one announcement (author linked). */
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/announcements/${uuid}`,
     },
     /** TEC-408 campaigns: list, wizard, detail and approval queue. */
     campaigns: {
@@ -321,6 +339,9 @@ export const routes = {
     warehouse: {
       root: (slug: string) => `/t/${slug}/warehouse`,
       locations: (slug: string) => `/t/${slug}/warehouse/locations`,
+      /** TEC-1218: one warehouse with its stock and movements. */
+      warehouseDetail: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/warehouses/${uuid}`,
       scan: (slug: string) => `/t/${slug}/warehouse/scan`,
       entries: (slug: string) => `/t/${slug}/warehouse/entries`,
       entry: (slug: string, uuid: string) =>
@@ -617,6 +638,11 @@ const TENANT_ENTITY_ROUTES: Partial<Record<EntityKind, TenantEntityRoute>> = {
   transfer: routes.tenant.transfers.detail,
   organization: (slug, id) => routes.tenant.organizations.detail(slug, id),
   lead: routes.tenant.leads.detail,
+  user: (slug, id) => routes.tenant.users.detail(slug, id),
+  appointment: routes.tenant.appointments.detail,
+  contract: routes.tenant.contracts.detail,
+  announcement: routes.tenant.announcements.detail,
+  warehouse: routes.tenant.warehouse.warehouseDetail,
   task: routes.tenant.tasks.detail,
   measurement: routes.tenant.measurements.detail,
   invoice: routes.tenant.einvoices.detail,

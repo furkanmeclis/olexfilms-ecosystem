@@ -61,7 +61,10 @@ describe("entityHref (TEC-1217)", () => {
       "/t/olex/stock/units/OLX-1",
     );
     expect(entityHref("cari", "c1", "olex")).toBe("/t/olex/accounting/cari/c1");
-    expect(entityHref("announcement", "a1", "olex")).toBeNull();
+    expect(entityHref("announcement", "a1", "olex")).toBe(
+      "/t/olex/announcements/a1",
+    );
+    expect(entityHref("user", "u1", "olex")).toBe("/t/olex/users/u1");
     expect(entityHref("service", "", "olex")).toBeNull();
     expect(entityHref("service", "s1", null)).toBeNull();
     expect(entityHref("nope", "s1", "olex")).toBeNull();
