@@ -185,5 +185,8 @@
   "codes.ORDER_INVOICED": "Eine fakturierte Bestellung kann nicht storniert werden; löschen Sie zuerst den Rechnungseintrag.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Eine Zusatzlieferung kann nur zu einem versendeten, zugestellten oder empfangenen Auftrag hinzugefügt werden.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Für diesen Barcode ist kein Nutzungsguthaben mehr übrig; er kann in keinem weiteren Service ausgewählt werden.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rollen und feste Barcodes haben kein Nutzungsguthaben."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rollen und feste Barcodes haben kein Nutzungsguthaben.",
+  "codes.ORDER_ALREADY_CLAIMED": "Jemand anderes hat diesen Auftrag übernommen.",
+  "codes.ORDER_NOT_CLAIMABLE": "Nur eine bestätigte, noch nicht versandte Bestellung ist ein Lagerauftrag.",
+  "codes.ORDER_SCHEDULE_LOCKED": "Priorität und Termin können in diesem Status nicht geändert werden."
 }

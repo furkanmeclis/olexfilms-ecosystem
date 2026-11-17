@@ -185,5 +185,8 @@
   "codes.ORDER_INVOICED": "Faturalanmış sipariş iptal edilemez; önce fatura kaydını silin.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Ek gönderim yalnızca sevk edilmiş, teslim edilmiş veya teslim alınmış siparişe eklenebilir.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Bu barkodun kullanım kredisi bitti; başka bir hizmette seçilemez.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulo ve sabit barkodlu birimler kullanım kredisi taşımaz."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulo ve sabit barkodlu birimler kullanım kredisi taşımaz.",
+  "codes.ORDER_ALREADY_CLAIMED": "Bu işi başka biri üstlendi.",
+  "codes.ORDER_NOT_CLAIMABLE": "Yalnız onaylanmış ve henüz sevk edilmemiş sipariş depo işidir.",
+  "codes.ORDER_SCHEDULE_LOCKED": "Bu durumda öncelik ve termin değiştirilemez."
 }

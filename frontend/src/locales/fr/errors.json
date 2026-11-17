@@ -185,5 +185,8 @@
   "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée, livrée ou réceptionnée.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Ce code-barres n'a plus de crédits d'utilisation ; il ne peut pas être sélectionné dans une autre prestation.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation.",
+  "codes.ORDER_ALREADY_CLAIMED": "Quelqu'un d'autre a pris ce travail.",
+  "codes.ORDER_NOT_CLAIMABLE": "Seule une commande approuvée non expédiée est un travail d'entrepôt.",
+  "codes.ORDER_SCHEDULE_LOCKED": "La priorité et l'échéance ne peuvent pas changer dans ce statut."
 }

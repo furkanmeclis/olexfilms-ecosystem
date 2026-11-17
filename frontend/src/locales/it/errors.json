@@ -185,5 +185,8 @@
   "codes.ORDER_INVOICED": "Un ordine fatturato non può essere annullato; elimina prima la registrazione della fattura.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Una spedizione integrativa si può aggiungere solo a un ordine spedito, consegnato o ricevuto.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Questo codice a barre non ha più crediti di utilizzo; non può essere selezionato in un altro servizio.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rotoli e codici a barre fissi non hanno crediti di utilizzo."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rotoli e codici a barre fissi non hanno crediti di utilizzo.",
+  "codes.ORDER_ALREADY_CLAIMED": "Qualcun altro ha preso questo lavoro.",
+  "codes.ORDER_NOT_CLAIMABLE": "Solo un ordine approvato e non spedito è un lavoro di magazzino.",
+  "codes.ORDER_SCHEDULE_LOCKED": "Priorità e scadenza non possono cambiare in questo stato."
 }

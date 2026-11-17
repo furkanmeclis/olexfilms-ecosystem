@@ -35,6 +35,7 @@ import { routes } from "@/config/routes";
 import { NewRecipientDialog } from "@/features/accounts/components/new-recipient-dialog";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
+import { ScheduleFields } from "@/features/orders/components/order-work-queue";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
   NOTE_MAX,
@@ -111,6 +112,9 @@ export function CenterOrderForm({
   const canShip = can(permissions.orders.ship);
   const canSeePrices = can(permissions.pricing.saleRead);
   const [selfPrepare, setSelfPrepare] = useState(false);
+  // TEC-1228: priority and due date.
+  const [urgent, setUrgent] = useState(false);
+  const [due, setDue] = useState("");
   const warehouses = useQuery({
     queryKey: warehouseKeys.warehouses,
     queryFn: () => warehouseService.listWarehouses(),
@@ -231,6 +235,8 @@ export function CenterOrderForm({
         ...(canShip && selfPrepare ? { self_prepare: true } : {}),
         items: toItemInputs(lines, true),
         ...(note.trim() ? { note: note.trim() } : {}),
+        ...(urgent ? { priority: "urgent" as const } : {}),
+        ...(due ? { due_date: due } : {}),
       };
       return parent
         ? ordersService.createSupplement(parent.uuid, common)
@@ -420,6 +426,14 @@ export function CenterOrderForm({
                   </div>
                 </div>
               ) : null}
+              <div className="pt-2">
+                <ScheduleFields
+                  urgent={urgent}
+                  onUrgent={setUrgent}
+                  due={due}
+                  onDue={setDue}
+                />
+              </div>
             </CardContent>
           </Card>
           <Card data-testid="order-summary">

@@ -46,6 +46,10 @@ import {
   ShippingCard,
 } from "@/features/orders/components/order-picking";
 import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
+import {
+  OrderQueueBadges,
+  OrderWorkCard,
+} from "@/features/orders/components/order-work-queue";
 import { PlotterLineControl } from "@/features/orders/components/plotter-toggle";
 import {
   AddSupplementButton,
@@ -953,6 +957,7 @@ export function OrderDetailPage({
                 {t("orders.receipt.open_badge")}
               </Badge>
             ) : null}
+            <OrderQueueBadges order={order} />
             {order.created_by_seller ? (
               <Badge variant="secondary" data-testid="created-by-seller">
                 {t("orders.detail.created_by_seller")}
@@ -1117,6 +1122,7 @@ export function OrderDetailPage({
           }
         >
           <Parties order={order} />
+          <OrderWorkCard order={order} />
           <OrderSupplementsCard slug={slug} order={order} />
           <OrderBackordersCard slug={slug} order={order} />
           <OrderDiscrepanciesCard order={order} />
