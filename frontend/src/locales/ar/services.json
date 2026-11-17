@@ -392,7 +392,5 @@
   "detail.created_by": "أنشأه",
   "detail.performed_by": "نفّذه",
   "detail.completed_by": "أكمله",
-  "detail.cancelled_by": "ألغاه",
-  "list.columns.created_by": "أنشأه",
-  "list.columns.performed_by": "نفّذه"
+  "detail.cancelled_by": "ألغاه"
 }

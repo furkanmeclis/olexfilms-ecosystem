@@ -392,7 +392,5 @@
   "detail.created_by": "Yaradan",
   "detail.performed_by": "İcra edən",
   "detail.completed_by": "Tamamlayan",
-  "detail.cancelled_by": "Ləğv edən",
-  "list.columns.created_by": "Yaradan",
-  "list.columns.performed_by": "İcra edən"
+  "detail.cancelled_by": "Ləğv edən"
 }

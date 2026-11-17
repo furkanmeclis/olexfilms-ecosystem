@@ -392,7 +392,5 @@
   "detail.created_by": "Created by",
   "detail.performed_by": "Performed by",
   "detail.completed_by": "Completed by",
-  "detail.cancelled_by": "Cancelled by",
-  "list.columns.created_by": "Created by",
-  "list.columns.performed_by": "Performed by"
+  "detail.cancelled_by": "Cancelled by"
 }

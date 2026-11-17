@@ -392,7 +392,5 @@
   "detail.created_by": "Oluşturan",
   "detail.performed_by": "Uygulayan",
   "detail.completed_by": "Tamamlayan",
-  "detail.cancelled_by": "İptal eden",
-  "list.columns.created_by": "Oluşturan",
-  "list.columns.performed_by": "Uygulayan"
+  "detail.cancelled_by": "İptal eden"
 }

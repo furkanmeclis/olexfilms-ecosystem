@@ -392,7 +392,5 @@
   "detail.created_by": "Створив",
   "detail.performed_by": "Виконав",
   "detail.completed_by": "Завершив",
-  "detail.cancelled_by": "Скасував",
-  "list.columns.created_by": "Створив",
-  "list.columns.performed_by": "Виконав"
+  "detail.cancelled_by": "Скасував"
 }

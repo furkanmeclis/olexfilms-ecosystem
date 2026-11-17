@@ -392,7 +392,5 @@
   "detail.created_by": "创建人",
   "detail.performed_by": "施工人",
   "detail.completed_by": "完成人",
-  "detail.cancelled_by": "取消人",
-  "list.columns.created_by": "创建人",
-  "list.columns.performed_by": "施工人"
+  "detail.cancelled_by": "取消人"
 }

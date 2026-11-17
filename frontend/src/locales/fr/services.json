@@ -392,7 +392,5 @@
   "detail.created_by": "Créé par",
   "detail.performed_by": "Réalisé par",
   "detail.completed_by": "Terminé par",
-  "detail.cancelled_by": "Annulé par",
-  "list.columns.created_by": "Créé par",
-  "list.columns.performed_by": "Réalisé par"
+  "detail.cancelled_by": "Annulé par"
 }

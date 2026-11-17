@@ -179,14 +179,14 @@ export function ServicesListPage({ slug }: { slug: string }) {
           id: "created_by",
           kind: "user",
           getRef: (row) => row.created_by,
-          labelKey: "services.list.columns.created_by",
+          labelKey: "services.detail.created_by",
           defaultHidden: true,
         }),
         refColumn<Service>({
           id: "performed_by",
           kind: "user",
           getRef: (row) => row.performed_by,
-          labelKey: "services.list.columns.performed_by",
+          labelKey: "services.detail.performed_by",
           defaultHidden: true,
         }),
         createColumn<Service>({

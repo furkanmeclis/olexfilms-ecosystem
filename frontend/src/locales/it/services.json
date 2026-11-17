@@ -392,7 +392,5 @@
   "detail.created_by": "Creato da",
   "detail.performed_by": "Eseguito da",
   "detail.completed_by": "Completato da",
-  "detail.cancelled_by": "Annullato da",
-  "list.columns.created_by": "Creato da",
-  "list.columns.performed_by": "Eseguito da"
+  "detail.cancelled_by": "Annullato da"
 }
