@@ -132,5 +132,8 @@
   "orders.on_behalf_note": "alıcı adına",
   "home.network_dealers": "Ağdaki bayiler",
   "home.last_order": "Son sipariş: {{date}}",
-  "home.never_ordered": "Hiç sipariş vermedi"
+  "home.never_ordered": "Hiç sipariş vermedi",
+  "network.related_orders": "Siparişler",
+  "network.related_services": "Hizmetler",
+  "network.related_warranties": "Garantiler"
 }

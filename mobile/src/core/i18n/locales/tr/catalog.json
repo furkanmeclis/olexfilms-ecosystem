@@ -25,5 +25,6 @@
   "stock_in": "Stokta: {{amount}}",
   "stock_out": "Stokta yok",
   "stock_pieces": "{{n}} adet",
-  "stock_meters": "{{n}} m"
+  "stock_meters": "{{n}} m",
+  "stock_units": "Stok birimleri"
 }

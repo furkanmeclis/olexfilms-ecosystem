@@ -12,6 +12,12 @@ import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
+import { RefRow } from '@/features/entity/ref-row';
+import { RelatedList } from '@/features/entity/related-list';
+import { useCan } from '@/core/spaces';
+import { useModuleFilter } from '@/core/modules';
+import { fullName, vehicleLabel } from '@/features/services/lib';
+
 import { CardRow, Chips, ErrorState, InfoRow, ListSkeleton, PagedList, PAGE_SIZE, useChildHref, useDebounced, useFormat, usePagedQuery } from './kit';
 
 type OrgType = 'center' | 'distributor' | 'dealer';
@@ -145,16 +151,90 @@ export function NetworkDetailScreen() {
 
             <SectionHeader title={t('network.details')} />
             <List>
-              <InfoRow label={t('network.parent')} value={o.parent?.name} />
+              {o.parent ? <RefRow kind="organization" label={t('network.parent')} value={o.parent} /> : null}
               {/* plan_code is a free-text code with no readable name anywhere (web edits it as text): not shown. */}
               <InfoRow label={t('network.access_starts')} value={f.date(o.access_starts_at)} />
               <InfoRow label={t('network.access_ends')} value={o.access_ends_at ? f.date(o.access_ends_at) : null} />
               <InfoRow label={t('network.contract_until')} value={o.contract_valid_until ? f.date(o.contract_valid_until) : null} />
               <InfoRow label={t('network.created')} value={f.date(o.created_at)} last />
             </List>
+
+            <NetworkRelated orgUuid={o.uuid} />
           </>
         )}
       </Screen>
+    </>
+  );
+}
+
+/**
+ * Reverse lists of a network organization (TEC-1219): its latest orders,
+ * services and warranties, each behind its permission and module.
+ */
+function NetworkRelated({ orgUuid }: { orgUuid: string }) {
+  const { t } = useTranslation('admin');
+  const f = useFormat();
+  const on = useModuleFilter();
+  const canOrders = useCan('orders.read') && on('orders');
+  const canServices = useCan('services.read');
+  const canWarranties = useCan('warranties.read');
+  return (
+    <>
+      <RelatedList
+        kind="order"
+        title={t('network.related_orders')}
+        enabled={canOrders}
+        queryKey={['orders', 'list', { buyer: orgUuid }]}
+        fetch={async (limit) => {
+          const r = await unwrap(
+            api.GET('/v1/orders', { params: { query: { buyer_org_uuid: orgUuid, limit, offset: 0 } } }),
+          );
+          return {
+            total: r.total,
+            items: r.items.map((x) => ({ uuid: x.uuid, title: x.order_no, subtitle: `${x.status_label} · ${f.date(x.created_at)}` })),
+          };
+        }}
+      />
+      <RelatedList
+        kind="service"
+        title={t('network.related_services')}
+        enabled={canServices}
+        queryKey={['services', 'list', { organization: orgUuid }]}
+        fetch={async (limit) => {
+          const r = await unwrap(
+            api.GET('/v1/services', { params: { query: { organization_uuid: orgUuid, sort: '-created_at', limit, offset: 0 } } }),
+          );
+          return {
+            total: r.total,
+            items: r.items.map((x) => ({
+              uuid: x.uuid,
+              title: [x.plate, x.service_no].filter(Boolean).join(' · '),
+              subtitle: [fullName(x.customer), x.status_label].filter(Boolean).join(' · '),
+            })),
+          };
+        }}
+      />
+      <RelatedList
+        kind="warranty"
+        title={t('network.related_warranties')}
+        enabled={canWarranties}
+        queryKey={['warranties', 'list', { organization: orgUuid }]}
+        fetch={async (limit) => {
+          const r = await unwrap(
+            api.GET('/v1/warranties', { params: { query: { organization_uuid: orgUuid, limit, offset: 0 } } }),
+          );
+          return {
+            total: r.total,
+            items: r.items.map((x) => ({
+              uuid: x.uuid,
+              title: x.public_code,
+              subtitle: [x.product.name, x.vehicle.plate ?? vehicleLabel(x.vehicle.brand_name, x.vehicle.model_name, x.vehicle.model_year)]
+                .filter(Boolean)
+                .join(' · '),
+            })),
+          };
+        }}
+      />
     </>
   );
 }

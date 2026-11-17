@@ -132,5 +132,8 @@
   "orders.on_behalf_note": "on behalf of the buyer",
   "home.network_dealers": "Dealers in the network",
   "home.last_order": "Last order: {{date}}",
-  "home.never_ordered": "Never ordered"
+  "home.never_ordered": "Never ordered",
+  "network.related_orders": "Orders",
+  "network.related_services": "Services",
+  "network.related_warranties": "Warranties"
 }
