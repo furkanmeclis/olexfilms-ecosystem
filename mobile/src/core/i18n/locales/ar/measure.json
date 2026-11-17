@@ -122,5 +122,9 @@
   "guide.points_count": "النقاط: {{count}}",
   "body_change_title": "تغيير نوع الهيكل؟",
   "body_change_body": "ستُحذف قراءات النقاط المأخوذة لهذا الهيكل.",
-  "body_change_confirm": "تغيير وحذف"
+  "body_change_confirm": "تغيير وحذف",
+  "leave_draft_title": "هل تريد الحفظ كمسودة؟",
+  "leave_draft_body": "لم يتم إرسال هذا القياس بعد. الحفظ يبقيه كمسودة على هذا الهاتف؛ الحذف يتجاهل ما أدخلته.",
+  "leave_draft_save": "حفظ",
+  "leave_draft_discard": "حذف"
 }

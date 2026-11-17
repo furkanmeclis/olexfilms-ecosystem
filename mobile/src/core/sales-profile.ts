@@ -15,3 +15,22 @@ export function isSalesProfile(input: { orgType: string | null | undefined; perm
   if (input.orgType !== 'center') return false;
   return SALES_PERMISSIONS.every((p) => input.permissions.includes(p));
 }
+
+/**
+ * Tab slots of the dealer/center workplace bar (`bayi`). Sales staff get
+ * Orders in the bar (TEC-1068). Measuring sits in the bar for everyone who
+ * can create a service, sales staff included (TEC-1222: center_owner and
+ * center_staff measure from the bar; center_sales has no `services.write`
+ * so its bar is unchanged). Without `services.write` Stock takes that slot.
+ */
+export function workplaceTabs(input: {
+  sales: boolean;
+  can: (permission: string) => boolean;
+}): { orders: boolean; measure: boolean; stock: boolean } {
+  const writes = input.can('services.write');
+  return {
+    orders: input.sales,
+    measure: writes,
+    stock: !writes && input.can('stock.read'),
+  };
+}

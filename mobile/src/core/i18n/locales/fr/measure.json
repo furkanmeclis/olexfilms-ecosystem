@@ -122,5 +122,9 @@
   "guide.points_count": "Points : {{count}}",
   "body_change_title": "Changer le type de carrosserie ?",
   "body_change_body": "Les lectures de points prises pour cette carrosserie seront supprimées.",
-  "body_change_confirm": "Changer et supprimer"
+  "body_change_confirm": "Changer et supprimer",
+  "leave_draft_title": "Enregistrer comme brouillon ?",
+  "leave_draft_body": "Cette mesure n'a pas été envoyée. Enregistrer la garde comme brouillon sur ce téléphone ; Supprimer efface votre saisie.",
+  "leave_draft_save": "Enregistrer",
+  "leave_draft_discard": "Supprimer"
 }
