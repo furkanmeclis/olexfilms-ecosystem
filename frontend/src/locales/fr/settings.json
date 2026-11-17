@@ -42,6 +42,7 @@
   "system.hub.territories": "Pays, provinces, districts et territoires des distributeurs.",
   "system.hub.plate_formats": "Formats de plaque par pays.",
   "system.hub.exchange_rates": "Taux TCMB/ECB quotidiens et corrections manuelles.",
+  "system.hub.brand_currency": "Devise des prix et commandes de la marque, changement avec aperçu et outil de conversion des prix.",
   "system.hub.legal_texts": "KVKK, consigne IA et autres textes juridiques.",
   "system.hub.modules": "Activer ou désactiver les modules et définir leurs valeurs par défaut.",
   "system.hub.whatsapp": "Le numéro WhatsApp unique et sa session.",

@@ -200,6 +200,7 @@ type Querier interface {
 	// was priced and not excluded); a dispute on that order's sale cannot then
 	// be resolved with a reversal.
 	CountBookedReturnItemsOfOrder(ctx context.Context, orderID int64) (int64, error)
+	CountBrandActiveProducts(ctx context.Context, brandID int64) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountCampaignApprovals(ctx context.Context, arg CountCampaignApprovalsParams) (int64, error)
@@ -967,6 +968,7 @@ type Querier interface {
 	GetBonusSettings(ctx context.Context, organizationID int64) (BonusSetting, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
+	GetBrandByUUID(ctx context.Context, argUuid uuid.UUID) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
@@ -1373,6 +1375,10 @@ type Querier interface {
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
 	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
 	GetServiceSubscriptionPeriodByStart(ctx context.Context, arg GetServiceSubscriptionPeriodByStartParams) (ServiceSubscriptionPeriod, error)
+	// /auth/me (TEC-1214): the brand currency (price and order currency) of the
+	// active organization's brand, else of the request brand, and the active
+	// organization's ledger currency ('' when unknown).
+	GetSessionCurrencies(ctx context.Context, arg GetSessionCurrenciesParams) (GetSessionCurrenciesRow, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -1822,7 +1828,22 @@ type Querier interface {
 	ListBonusCalculationCandidates(ctx context.Context, arg ListBonusCalculationCandidatesParams) ([]ListBonusCalculationCandidatesRow, error)
 	ListBonusRules(ctx context.Context, arg ListBonusRulesParams) ([]BonusRule, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
+	// Draft and submitted (waiting for approval) orders of the brand: their
+	// prices are not frozen yet. total_count is the full count.
+	ListBrandOpenOrders(ctx context.Context, arg ListBrandOpenOrdersParams) ([]ListBrandOpenOrdersRow, error)
+	// Price list rows of the brand in the source currency next to the row of
+	// the target currency (price conversion tool).
+	ListBrandPricesInCurrency(ctx context.Context, arg ListBrandPricesInCurrencyParams) ([]ListBrandPricesInCurrencyRow, error)
+	// Active products of the brand without a center sale price
+	// (sale_to_distributor_price) in the currency; total_count is the full
+	// count (rows stop at row_limit).
+	ListBrandProductsMissingPrice(ctx context.Context, arg ListBrandProductsMissingPriceParams) ([]ListBrandProductsMissingPriceRow, error)
 	ListBrands(ctx context.Context) ([]Brand, error)
+	// TEC-1214: brand currency management (platform). brands.currency is the
+	// price and order currency of the brand; organizations.currency stays the
+	// ledger currency. Existing orders, caris and finance entries keep their
+	// own currency and frozen rates.
+	ListBrandsWithCurrency(ctx context.Context) ([]ListBrandsWithCurrencyRow, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	ListBulkOperationsForOrganization(ctx context.Context, arg ListBulkOperationsForOrganizationParams) ([]BulkOperation, error)
@@ -3091,6 +3112,8 @@ type Querier interface {
 	LockBarcodeCounter(ctx context.Context, arg LockBarcodeCounterParams) (BarcodeCounter, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
 	LockBonusAccrual(ctx context.Context, arg LockBonusAccrualParams) (BonusAccrual, error)
+	LockBrandByUUID(ctx context.Context, argUuid uuid.UUID) (Brand, error)
+	LockBrandOpenOrders(ctx context.Context, brandID int64) ([]int64, error)
 	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
 	LockCampaignRecipient(ctx context.Context, id int64) (CampaignRecipient, error)
 	// Serializes photo inserts and status moves of one showcase (the caller
@@ -3720,6 +3743,10 @@ type Querier interface {
 	// services.
 	ReportWarrantyCounts(ctx context.Context, arg ReportWarrantyCountsParams) (ReportWarrantyCountsRow, error)
 	ReportWarrantyTrend(ctx context.Context, arg ReportWarrantyTrendParams) ([]ReportWarrantyTrendRow, error)
+	RepriceOrderHeader(ctx context.Context, arg RepriceOrderHeaderParams) error
+	// Converts the unfrozen line prices of an open order with a rate (brand
+	// currency change, "reprice" option).
+	RepriceOrderItems(ctx context.Context, arg RepriceOrderItemsParams) (int64, error)
 	// Finishes a claimed action: executing → confirmed | failed.
 	ResolveAIPendingAction(ctx context.Context, arg ResolveAIPendingActionParams) (AiPendingAction, error)
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
@@ -3813,6 +3840,7 @@ type Querier interface {
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetAppointmentStatus(ctx context.Context, arg SetAppointmentStatusParams) (Appointment, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
+	SetBrandCurrency(ctx context.Context, arg SetBrandCurrencyParams) (Brand, error)
 	// Ends a pending recipient (sent stamps sent_at); no row when it is no
 	// longer pending.
 	SetCampaignRecipientStatus(ctx context.Context, arg SetCampaignRecipientStatusParams) (CampaignRecipient, error)
@@ -4266,6 +4294,7 @@ type Querier interface {
 	// Inserts version 1 or replaces the content and bumps the version.
 	UpsertContractTemplateLocale(ctx context.Context, arg UpsertContractTemplateLocaleParams) (ContractTemplateLocale, error)
 	UpsertConversation(ctx context.Context, arg UpsertConversationParams) (Conversation, error)
+	UpsertConvertedPrice(ctx context.Context, arg UpsertConvertedPriceParams) error
 	// ---------------------------------------------------------------------------
 	// Dealer product prices.
 	UpsertDealerProductPrice(ctx context.Context, arg UpsertDealerProductPriceParams) (DealerProductPrice, error)

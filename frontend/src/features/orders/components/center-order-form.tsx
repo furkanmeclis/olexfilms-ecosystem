@@ -56,6 +56,7 @@ import {
   warehouseKeys,
   warehouseService,
 } from "@/features/warehouse/services/warehouse.service";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -163,7 +164,12 @@ export function CenterOrderForm({
       ),
     [quoteData?.items],
   );
-  const currency = quoteData?.currency ?? "";
+  // TEC-1214: brand currency from the quote (else the session); the small
+  // converted total is in the local display currency.
+  const { brand: brandCurrency, display: localCurrency } =
+    useSessionCurrencies();
+  const currency = quoteData?.currency ?? brandCurrency ?? "";
+  const local = localCurrency ?? "";
   const defaultDiscount = quoteData?.discount_pct ?? null;
 
   const previews = useMemo(
@@ -200,7 +206,8 @@ export function CenterOrderForm({
     [previews],
   );
   const tryRate = quoteData?.try_rate ? Number(quoteData.try_rate) : null;
-  const showTry = pricesVisible && currency !== "TRY" && lines.length > 0;
+  const showTry =
+    pricesVisible && Boolean(local) && currency !== local && lines.length > 0;
 
   // Labels of every dealer the search returned, to name the picked one.
   const names = useRef(new Map<string, string>());
@@ -257,7 +264,7 @@ export function CenterOrderForm({
     );
 
   const money = (v: number | null) =>
-    v === null ? "—" : format.currency(v, currency || "USD");
+    v === null ? "—" : format.currency(v, currency);
   const discountInfo = (() => {
     if (!quoteData) return null;
     if (quoteData.discount_pct === null) {
@@ -445,6 +452,7 @@ export function CenterOrderForm({
                         <span>
                           {t("orders.center_form.total_try", {
                             currency,
+                            local,
                             rate: format.number(tryRate, {
                               maximumFractionDigits: 4,
                             }),
@@ -456,13 +464,15 @@ export function CenterOrderForm({
                         <span className="tabular-nums" dir="ltr">
                           {format.currency(
                             Math.round(total * tryRate * 100) / 100,
-                            "TRY",
+                            local,
                           )}
                         </span>
                       </div>
                     ) : (
                       <p className="text-muted-foreground text-xs">
-                        {t("orders.center_form.total_try_unavailable")}
+                        {t("orders.center_form.total_try_unavailable", {
+                          local,
+                        })}
                       </p>
                     )
                   ) : null}

@@ -42,6 +42,7 @@
   "system.hub.territories": "الدول والمحافظات والمناطق ومناطق الموزعين.",
   "system.hub.plate_formats": "صيغ لوحات المركبات حسب الدولة.",
   "system.hub.exchange_rates": "أسعار TCMB/ECB اليومية والتعديلات اليدوية.",
+  "system.hub.brand_currency": "عملة أسعار وطلبات العلامة، التغيير مع المعاينة وأداة تحويل الأسعار.",
   "system.hub.legal_texts": "KVKK وإرشادات الذكاء الاصطناعي والنصوص القانونية الأخرى.",
   "system.hub.modules": "تشغيل الوحدات أو إيقافها وتعيين قيمها الافتراضية.",
   "system.hub.whatsapp": "رقم WhatsApp الوحيد وجلسته.",

@@ -56,6 +56,7 @@ import {
   performanceService,
   type PerformanceBonusRule,
 } from "@/features/performance/services/performance.service";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -68,6 +69,8 @@ export const BONUS_RULES_PERSIST_KEY = "tenant-performance-bonus-rules-v1";
  */
 export function BonusRulesTab() {
   const { t, format } = useLocale();
+  // TEC-1214: bonuses are paid in the organization currency.
+  const { organization: orgCurrency } = useSessionCurrencies();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<PerformanceBonusRule | null>(null);
   const [creating, setCreating] = useState(false);
@@ -145,7 +148,7 @@ export function BonusRulesTab() {
             row.original.kind === "fixed"
               ? format.currency(
                   numberValue(row.original.amount) ?? 0,
-                  row.original.currency ?? "TRY",
+                  row.original.currency ?? orgCurrency ?? "",
                 )
               : t("performance.bonus_rules.percent_of_revenue_value", {
                   value: row.original.percent ?? "",
@@ -202,7 +205,7 @@ export function BonusRulesTab() {
           },
         }),
       ] as ColumnDef<PerformanceBonusRule, unknown>[],
-    [format, t],
+    [format, orgCurrency, t],
   );
 
   return (

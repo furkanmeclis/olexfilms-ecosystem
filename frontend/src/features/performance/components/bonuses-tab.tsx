@@ -44,6 +44,7 @@ import {
   performanceService,
   type PerformanceBonus,
 } from "@/features/performance/services/performance.service";
+import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -94,6 +95,8 @@ function selectedValues(
  */
 export function BonusesTab({ period }: { period: string }) {
   const { t, format } = useLocale();
+  // TEC-1214: bonuses are paid in the organization currency.
+  const { organization: orgCurrency } = useSessionCurrencies();
   const qc = useQueryClient();
   const [approving, setApproving] = useState<PerformanceBonus | null>(null);
   const [items, setItems] = useState<PerformanceBonus[]>([]);
@@ -164,7 +167,7 @@ export function BonusesTab({ period }: { period: string }) {
           cell: ({ row }) =>
             format.currency(
               numberValue(row.original.amount) ?? 0,
-              row.original.currency ?? "TRY",
+              row.original.currency ?? orgCurrency ?? "",
             ),
         }),
         createColumn<PerformanceBonus>({
@@ -225,7 +228,7 @@ export function BonusesTab({ period }: { period: string }) {
           },
         }),
       ] as ColumnDef<PerformanceBonus, unknown>[],
-    [cancelBonus, format, t, userOptions],
+    [cancelBonus, format, orgCurrency, t, userOptions],
   );
 
   const listState = useServerListState({
@@ -308,7 +311,7 @@ export function BonusesTab({ period }: { period: string }) {
               {row.rule_name} ·{" "}
               {format.currency(
                 numberValue(row.amount) ?? 0,
-                row.currency ?? "TRY",
+                row.currency ?? orgCurrency ?? "",
               )}
             </p>
             <AchievementBar pct={row.achievement_pct} />
@@ -356,6 +359,7 @@ export function BonusApproveDialog({
   onClose: () => void;
 }) {
   const { t, format } = useLocale();
+  const { organization: orgCurrency } = useSessionCurrencies();
   const qc = useQueryClient();
   const [amount, setAmount] = useState(bonus.amount ?? "");
   const [note, setNote] = useState("");
@@ -385,7 +389,7 @@ export function BonusApproveDialog({
               name: bonus.user_name ?? "",
               amount: format.currency(
                 numberValue(bonus.amount) ?? 0,
-                bonus.currency ?? "TRY",
+                bonus.currency ?? orgCurrency ?? "",
               ),
             })}
           </DialogDescription>

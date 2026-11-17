@@ -28,6 +28,14 @@ vi.mock("next/link", () => ({
     createElement("a", { href }, children as never),
 }));
 vi.mock("sonner", () => ({ toast }));
+// TEC-1214: brand USD, local display currency TRY (from the session).
+vi.mock("@/lib/currency", () => ({
+  useSessionCurrencies: () => ({
+    brand: "USD",
+    organization: "TRY",
+    display: "TRY",
+  }),
+}));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>

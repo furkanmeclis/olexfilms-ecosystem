@@ -85,11 +85,15 @@ export function orderAmounts(o: Amounts): { pieces: number | null; meters: numbe
 }
 
 /**
- * The TRY figure shown small next to a foreign currency total: only when the
- * API gave one and the order is not already in TRY.
+ * The local display currency figure (TEC-1214: pricing.local_currency, `display_currency` of
+ * the session) shown small next to a foreign currency total: only when the local currency is
+ * known, the API gave a figure and the order is not already in that currency.
  */
-export function liveTryAmount(o: { currency: string; live_total_try?: string | null }): string | null {
-  if (o.currency === 'TRY') return null;
+export function liveTryAmount(
+  o: { currency: string; live_total_try?: string | null },
+  local: string | null,
+): string | null {
+  if (!local || o.currency === local) return null;
   const v = o.live_total_try;
   if (v == null || v === '' || !Number.isFinite(Number(v))) return null;
   return v;

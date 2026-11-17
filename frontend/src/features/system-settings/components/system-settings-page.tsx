@@ -5,6 +5,7 @@ import {
   Blocks,
   BellRing,
   BadgeCheck,
+  Banknote,
   Coins,
   FileText,
   KeyRound,
@@ -109,6 +110,14 @@ export const HUB_LINKS: HubLink[] = [
     descriptionKey: "settings.system.hub.exchange_rates",
     icon: Coins,
     permission: permissions.rates.read,
+  },
+  {
+    id: "brand-currency",
+    href: routes.platform.brandCurrency.root,
+    titleKey: "layout.nav_brand_currency",
+    descriptionKey: "settings.system.hub.brand_currency",
+    icon: Banknote,
+    permission: permissions.organizations.read,
   },
   {
     id: "legal-texts",

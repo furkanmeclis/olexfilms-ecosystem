@@ -17359,6 +17359,128 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
 
+  /v1/platform/brands:
+    get:
+      tags: [Platform]
+      operationId: listPlatformBrands
+      summary: Brands with their currency (platform.organizations.read)
+      description: >-
+        TEC-1214. Every brand with its price and order currency
+        (brands.currency) and the local display currency
+        (pricing.local_currency).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Brands
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlatformBrandList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/brands/{uuid}/currency:
+    put:
+      tags: [Platform]
+      operationId: changePlatformBrandCurrency
+      summary: Preview or change the brand currency (platform admin)
+      description: >-
+        TEC-1214, platform super admin only. brands.currency is the price and
+        order currency of the brand; organizations.currency (the ledger
+        currency) does not change. With dry_run=true nothing is written and
+        the preview lists the active products without a center sale price in
+        the new currency, the open (draft / submitted) orders, the rate new
+        currency -> local currency (order approvals freeze it) and old -> new
+        (repricing), and the blockers. Without dry_run the change is applied
+        in one transaction only when there is no blocker, else 409
+        CURRENCY_CHANGE_BLOCKED with details[].code = same_currency |
+        open_orders | missing_prices | rate_to_local_missing |
+        conversion_rate_missing. open_orders: block (default; open orders
+        are a blocker) or reprice (their unfrozen line prices and totals are
+        converted at today's old -> new rate). allow_missing_prices accepts
+        products without a price in the new currency. Approved orders,
+        caris and finance entries keep their own currency and frozen rates.
+        An applied change writes the activity event brands.currency_changed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandCurrencyChangeRequest"
+      responses:
+        "200":
+          description: Preview (dry_run) or applied change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBrandCurrencyChange"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/brands/{uuid}/price-conversion:
+    post:
+      tags: [Platform]
+      operationId: convertPlatformBrandPrices
+      summary: Convert the price list to another currency (platform admin)
+      description: >-
+        TEC-1214, platform super admin only. Converts the center price list
+        (product_prices: purchase, sale to distributor, recommended) of the
+        active products from source_currency (default: the brand currency)
+        to target_currency at today's rate, rounded to cents. The rows in
+        the target currency stay unused (draft) until the brand currency
+        switches and can be edited in the catalog first. A product that
+        already has a target row is skipped unless overwrite. dry_run=true
+        only previews. 422 RATE_NOT_FOUND without a rate. An applied run
+        writes the activity event brands.prices_converted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandPriceConversionRequest"
+      responses:
+        "200":
+          description: Preview (dry_run) or applied conversion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeBrandPriceConversion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/BadRequest"
+
   /v1/platform/exchange-rates:
     get:
       tags: [Rates]
@@ -36649,6 +36771,24 @@ components:
             Resolved IANA timezone: user -> active organization -> brand
             center -> Europe/Istanbul.
           examples: ["Europe/Istanbul"]
+        brand_currency:
+          type: string
+          description: >-
+            TEC-1214. Price and order currency of the active organization's
+            brand (else the request brand). Prices and order totals are in
+            this currency.
+          examples: ["USD"]
+        organization_currency:
+          type: string
+          description: TEC-1214. Ledger (cari / finance) currency of the active organization.
+          examples: ["TRY"]
+        display_currency:
+          type: string
+          description: >-
+            TEC-1214. Local display currency (pricing.local_currency): the
+            quote currency of try_rate / live_total_try and of the small
+            converted amount next to brand-currency prices.
+          examples: ["TRY"]
         user:
           $ref: "#/components/schemas/PublicUser"
         roles:
@@ -38630,6 +38770,174 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/SessionList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PlatformBrand:
+      type: object
+      required: [uuid, slug, name, status, currency]
+      properties:
+        uuid: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        status: { type: string }
+        currency: { type: string, description: Price and order currency (ISO 4217). }
+
+    EnvelopePlatformBrandList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, local_currency]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PlatformBrand" }
+            local_currency: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    BrandCurrencyChangeRequest:
+      type: object
+      required: [currency]
+      additionalProperties: false
+      properties:
+        currency: { type: string, examples: ["USD"] }
+        dry_run: { type: boolean, default: false }
+        open_orders: { type: string, enum: [block, reprice], default: block }
+        allow_missing_prices: { type: boolean, default: false }
+
+    BrandCurrencyRate:
+      type: object
+      required: [base, quote, rate, rate_date, source]
+      properties:
+        base: { type: string }
+        quote: { type: string }
+        rate: { type: string }
+        rate_date: { type: string }
+        source: { type: string }
+
+    BrandCurrencyChange:
+      type: object
+      required: [brand, from, to, local_currency, open_orders_option, active_products, missing_price_count,
+        missing_prices, open_order_count, open_orders, rate_to_local, conversion_rate, blockers, dry_run, applied,
+        repriced_orders]
+      properties:
+        brand: { $ref: "#/components/schemas/PlatformBrand" }
+        from: { type: string }
+        to: { type: string }
+        local_currency: { type: string }
+        open_orders_option: { type: string, enum: [block, reprice] }
+        active_products: { type: integer, format: int64 }
+        missing_price_count: { type: integer, format: int64 }
+        missing_prices:
+          type: array
+          description: First 200 products without a center sale price in the new currency.
+          items:
+            type: object
+            required: [product_uuid, sku, name]
+            properties:
+              product_uuid: { type: string, format: uuid }
+              sku: { type: string }
+              name: { type: string }
+        open_order_count: { type: integer, format: int64 }
+        open_orders:
+          type: array
+          description: First 200 draft / submitted orders.
+          items:
+            type: object
+            required: [uuid, order_no, status, currency, total, seller_name, buyer_name, created_at]
+            properties:
+              uuid: { type: string, format: uuid }
+              order_no: { type: string }
+              status: { type: string }
+              currency: { type: string }
+              total: { type: string }
+              seller_name: { type: string }
+              buyer_name: { type: string }
+              created_at: { type: string, format: date-time }
+        rate_to_local:
+          oneOf:
+            - $ref: "#/components/schemas/BrandCurrencyRate"
+            - type: "null"
+        conversion_rate:
+          oneOf:
+            - $ref: "#/components/schemas/BrandCurrencyRate"
+            - type: "null"
+        blockers:
+          type: array
+          items:
+            type: string
+            enum: [same_currency, open_orders, missing_prices, rate_to_local_missing, conversion_rate_missing]
+        dry_run: { type: boolean }
+        applied: { type: boolean }
+        repriced_orders: { type: integer, format: int64 }
+
+    EnvelopeBrandCurrencyChange:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/BrandCurrencyChange" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    BrandPriceConversionRequest:
+      type: object
+      required: [target_currency]
+      additionalProperties: false
+      properties:
+        source_currency: { type: string, description: Default the brand currency. }
+        target_currency: { type: string, examples: ["USD"] }
+        dry_run: { type: boolean, default: false }
+        overwrite: { type: boolean, default: false }
+
+    BrandPriceSet:
+      type: object
+      required: [purchase_price, sale_to_distributor_price, recommended_sale_price]
+      properties:
+        purchase_price: { type: [string, "null"] }
+        sale_to_distributor_price: { type: [string, "null"] }
+        recommended_sale_price: { type: [string, "null"] }
+
+    BrandPriceConversion:
+      type: object
+      required: [brand, source_currency, target_currency, rate, overwrite, total, create, update, skip, rows, dry_run,
+        applied]
+      properties:
+        brand: { $ref: "#/components/schemas/PlatformBrand" }
+        source_currency: { type: string }
+        target_currency: { type: string }
+        rate: { $ref: "#/components/schemas/BrandCurrencyRate" }
+        overwrite: { type: boolean }
+        total: { type: integer }
+        create: { type: integer }
+        update: { type: integer }
+        skip: { type: integer }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [product_uuid, sku, name, action, source, converted, existing]
+            properties:
+              product_uuid: { type: string, format: uuid }
+              sku: { type: string }
+              name: { type: string }
+              action: { type: string, enum: [create, update, skip] }
+              source: { $ref: "#/components/schemas/BrandPriceSet" }
+              converted: { $ref: "#/components/schemas/BrandPriceSet" }
+              existing:
+                oneOf:
+                  - $ref: "#/components/schemas/BrandPriceSet"
+                  - type: "null"
+        dry_run: { type: boolean }
+        applied: { type: boolean }
+
+    EnvelopeBrandPriceConversion:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/BrandPriceConversion" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeMe:

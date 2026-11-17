@@ -128,11 +128,12 @@ export function formatAxisValue(
     Math.abs(value) >= 10000
       ? { notation: "compact", maximumFractionDigits: 1 }
       : { maximumFractionDigits: 1 };
-  if (kind === "money") {
+  // TEC-1214: no assumed currency; without one the axis shows the number.
+  if (kind === "money" && format?.currency) {
     return fmt.number(value, {
       ...opts,
       style: "currency",
-      currency: format?.currency ?? "TRY",
+      currency: format.currency,
       currencyDisplay: "narrowSymbol",
       maximumFractionDigits: opts.maximumFractionDigits ?? 0,
     });

@@ -46,6 +46,15 @@ export type AuthUser = {
   timeZone: string;
   /** The user's own time zone; null inherits from the organization. */
   ownTimeZone: string | null;
+  /**
+   * TEC-1214: price and order currency of the active brand
+   * (Me.brand_currency); null when unknown.
+   */
+  brandCurrency?: string | null;
+  /** Ledger currency of the active organization (Me.organization_currency). */
+  organizationCurrency?: string | null;
+  /** Local display currency (Me.display_currency, pricing.local_currency). */
+  displayCurrency?: string | null;
   isSuperAdmin: boolean;
   emailVerified: boolean;
   permissions: string[];
@@ -92,6 +101,9 @@ export function mapMeToAuthUser(me: Me): AuthUser {
     ownLocale,
     timeZone,
     ownTimeZone,
+    brandCurrency: me.brand_currency || null,
+    organizationCurrency: me.organization_currency || null,
+    displayCurrency: me.display_currency || null,
     isSuperAdmin: Boolean(user.is_super_admin),
     emailVerified: Boolean(user.email_verified),
     permissions: permissions ?? [],

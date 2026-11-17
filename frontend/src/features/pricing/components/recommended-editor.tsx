@@ -57,6 +57,7 @@ import {
   type CurrentRecommendedPrice,
   type RecommendedPriceVersion,
 } from "@/features/pricing/services/recommended.service";
+import { useCurrencyList, useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -64,7 +65,6 @@ export const RECOMMENDED_EDITOR_PERSIST_KEY = "tenant-recommended-prices-v1";
 
 /** Value of the country picker for the currency-wide price. */
 const CURRENCY_WIDE = "none";
-const FALLBACK_CURRENCIES = ["TRY", "EUR", "USD"];
 const EXPORT_PAGE = 100;
 
 export type EditorRow = {
@@ -95,7 +95,11 @@ export function RecommendedEditor({
 }: RecommendedEditorProps) {
   const { t, format, locale } = useLocale();
   const [country, setCountry] = useState(CURRENCY_WIDE);
-  const [currency, setCurrency] = useState("TRY");
+  // TEC-1214: starts in the brand currency; the list is the active
+  // currencies (GET /v1/currencies) plus the country defaults.
+  const [pickedCurrency, setCurrency] = useState<string | null>(null);
+  const { brand: brandCurrency } = useSessionCurrencies();
+  const activeCurrencies = useCurrencyList();
   const [percentFor, setPercentFor] = useState<EditorRow[] | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -111,12 +115,14 @@ export function RecommendedEditor({
     [countries.data, locale],
   );
   const currencyOptions = useMemo(() => {
-    const set = new Set(FALLBACK_CURRENCIES);
+    const set = new Set(activeCurrencies.data ?? []);
+    if (brandCurrency) set.add(brandCurrency);
     for (const c of countries.data ?? []) {
       if (c.default_currency) set.add(c.default_currency);
     }
     return [...set].sort();
-  }, [countries.data]);
+  }, [activeCurrencies.data, brandCurrency, countries.data]);
+  const currency = pickedCurrency ?? brandCurrency ?? currencyOptions[0] ?? "";
 
   const columns = useMemo(
     () =>

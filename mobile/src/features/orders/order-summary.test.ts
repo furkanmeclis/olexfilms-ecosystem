@@ -27,10 +27,11 @@ test('orderAmounts: pieces and meters only when present', () => {
   assert.deepEqual(orderAmounts({ total_quantity: 0, total_meters: '' }), { pieces: null, meters: null });
 });
 
-test('liveTryAmount: only a foreign currency with a rate', () => {
-  assert.equal(liveTryAmount({ currency: 'USD', live_total_try: '4200.00' }), '4200.00');
-  assert.equal(liveTryAmount({ currency: 'USD', live_total_try: null }), null);
-  assert.equal(liveTryAmount({ currency: 'TRY', live_total_try: '100.00' }), null);
+test('liveTryAmount: only a foreign currency with a rate and a known local currency', () => {
+  assert.equal(liveTryAmount({ currency: 'USD', live_total_try: '4200.00' }, 'TRY'), '4200.00');
+  assert.equal(liveTryAmount({ currency: 'USD', live_total_try: null }, 'TRY'), null);
+  assert.equal(liveTryAmount({ currency: 'TRY', live_total_try: '100.00' }, 'TRY'), null);
+  assert.equal(liveTryAmount({ currency: 'USD', live_total_try: '4200.00' }, null), null);
 });
 
 test('creatorOf and newestFirst', () => {

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
+import { useSessionCurrencies } from '@/core/currency';
 import { errorMessage } from '@/core/i18n';
 import { activeMembership, kindsOf, useCan } from '@/core/spaces';
 import { usePricesVisible } from '@/core/use-prices-visible';
@@ -99,7 +100,9 @@ function LineQuote({
 }) {
   const { t, i18n } = useTranslation('orders');
   const p = linePrice(line, quote);
-  const currency = quote?.currency ?? 'USD';
+  // TEC-1214: the quote's currency, else the brand currency of the session.
+  const { brand } = useSessionCurrencies();
+  const currency = quote?.currency ?? brand ?? '';
   const money = (v: number | null) => (v === null ? '—' : formatMoney(v, currency, i18n.language));
   return (
     <View className="gap-2 border-t border-border pt-2">
@@ -133,9 +136,13 @@ function LineQuote({
   );
 }
 
-/** Order total in USD and its current TRY value, with the default discount it was priced with. */
+/**
+ * Order total in the brand currency and its current value in the local display currency
+ * (TEC-1214), with the default discount it was priced with.
+ */
 function QuoteSummary({ lines, quote, pending }: { lines: CartLine[]; quote: Quote | undefined; pending: boolean }) {
   const { t, i18n } = useTranslation('orders');
+  const { display: local } = useSessionCurrencies();
   if (!quote) {
     return (
       <Text variant="footnote" tone="muted">
@@ -153,11 +160,13 @@ function QuoteSummary({ lines, quote, pending }: { lines: CartLine[]; quote: Quo
       ) : null}
       <PriceRow label={t('quote.total')} value={formatMoney(totals.total, quote.currency, i18n.language)} strong />
       <PriceRow
-        label={t('quote.total_try')}
-        value={totals.totalTry === null ? '—' : formatMoney(totals.totalTry, 'TRY', i18n.language)}
+        label={t('quote.total_try', { local: local ?? '' })}
+        value={totals.totalTry === null || !local ? '—' : formatMoney(totals.totalTry, local, i18n.language)}
       />
       <Text variant="footnote" tone="muted">
-        {quote.try_rate ? t('quote.rate', { currency: quote.currency, rate: quote.try_rate }) : t('quote.no_rate')}
+        {quote.try_rate
+          ? t('quote.rate', { currency: quote.currency, rate: quote.try_rate, local: local ?? '' })
+          : t('quote.no_rate', { local: local ?? '' })}
       </Text>
       {totals.incomplete ? (
         <Text variant="footnote" tone="danger">
