@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Преобразование единицы",
   "movement_type.quarantine": "На карантине",
   "movement_type.quarantine_release": "Снят с карантина",
-  "movement_type.found": "Найден"
+  "movement_type.found": "Найден",
+  "labels.printed_title": "Этикетки напечатаны?",
+  "labels.printed_description": "Если да, {{count}} единиц будут отмечены как напечатанные. Приход с напечатанными этикетками нельзя отменить.",
+  "labels.printed_confirm": "Да, напечатаны",
+  "labels.mark_failed": "Не удалось отметить этикетки как напечатанные."
 }

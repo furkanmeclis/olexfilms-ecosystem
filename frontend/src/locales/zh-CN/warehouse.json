@@ -927,5 +927,9 @@
   "movement_type.measure_conversion": "计量转换",
   "movement_type.quarantine": "已隔离",
   "movement_type.quarantine_release": "解除隔离",
-  "movement_type.found": "已找到"
+  "movement_type.found": "已找到",
+  "labels.printed_title": "标签已打印吗？",
+  "labels.printed_description": "如已打印，{{count}} 个单元将标记为已打印。已打印标签的入库单无法取消。",
+  "labels.printed_confirm": "是，已打印",
+  "labels.mark_failed": "无法将标签标记为已打印。"
 }

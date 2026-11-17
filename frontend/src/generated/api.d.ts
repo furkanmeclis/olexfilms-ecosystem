@@ -7054,11 +7054,31 @@ export interface paths {
         };
         /**
          * Label sheet PDF of the given unit barcodes
-         * @description Needs `stock.read`. One label per `barcode` (repeat the parameter; at most 1000). A unit is printable when its holder is inside the caller's stock.read reach, or, while it is only printed (not in stock yet), when the caller is its issuing center. The new unit of a roll split links here (`new_unit.label_url`). Unknown or unreachable barcodes answer 404. Template as for the batch sheet.
+         * @description Needs `stock.read`. One label per `barcode` (repeat the parameter; at most 1000). A unit is printable when its holder is inside the caller's stock.read reach, or, while it is only printed (not in stock yet), when the caller is its issuing center. The new unit of a roll split links here (`new_unit.label_url`). Unknown or unreachable barcodes answer 404. Template as for the batch sheet. A roll label shows the remaining meters (TEC-1224). Rendering never changes a unit (TEC-1224): a preview or download leaves reserved units (and their stock entry) cancellable; after printing, the client confirms with POST /v1/stock/labels/units/mark-printed.
          */
         get: operations["printUnitLabels"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/labels/units/mark-printed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that unit labels were printed
+         * @description TEC-1224. Needs `stock.read` (same gate as the label sheet it confirms). The client calls it after the user confirms the label sheet was printed. The barcodes resolve like GET /v1/stock/labels/units.pdf (at most 1000; unknown or unreachable answer 404); reserved units become printed, others are left as they are, so the call is idempotent. `marked` is the number of units that changed.
+         */
+        post: operations["markUnitLabelsPrinted"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7910,7 +7930,7 @@ export interface paths {
         };
         /**
          * Active suppliers of the active organization for stock entries (TEC-1007)
-         * @description Needs `warehouse.write`. `q` matches the name; sorted by name.
+         * @description Needs `warehouse.read` (TEC-1224). `q` matches the name; sorted by name.
          */
         get: operations["listWarehouseSuppliers"];
         put?: never;
@@ -7934,7 +7954,7 @@ export interface paths {
         };
         /**
          * Saved column mappings of the stock entry import (TEC-1007)
-         * @description Needs `warehouse.write`. Sorted by name.
+         * @description Needs `warehouse.read` (TEC-1224). Sorted by name.
          */
         get: operations["listEntryImportTemplates"];
         put?: never;
@@ -10895,7 +10915,7 @@ export interface paths {
          * Mobile: Approve a completed count and apply the resolutions
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; add_to_stock -> entry of an unowned serial unit issued by this organization into the counted location; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). TEC-1224: like the panel route it needs a recent step-up grant (403 STEP_UP_REQUIRED); the app earns it through `/v1/mobile/panel/auth/step-up/password` or `/totp`. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; add_to_stock -> entry of an unowned serial unit issued by this organization into the counted location; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["mobileApproveStockCount"];
         delete?: never;
@@ -47966,6 +47986,41 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    markUnitLabelsPrinted: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    barcodes: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Units marked printed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: int64 */
+                            marked: number;
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     printLocationLabels: {

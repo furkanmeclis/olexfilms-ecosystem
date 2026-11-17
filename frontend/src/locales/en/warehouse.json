@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Measure conversion",
   "movement_type.quarantine": "Quarantined",
   "movement_type.quarantine_release": "Released from quarantine",
-  "movement_type.found": "Found"
+  "movement_type.found": "Found",
+  "labels.printed_title": "Were the labels printed?",
+  "labels.printed_description": "If so, {{count}} units are marked as printed. An entry with printed labels cannot be cancelled.",
+  "labels.printed_confirm": "Yes, printed",
+  "labels.mark_failed": "The labels could not be marked as printed."
 }

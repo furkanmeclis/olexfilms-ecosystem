@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Conversione di misura",
   "movement_type.quarantine": "In quarantena",
   "movement_type.quarantine_release": "Rilasciato dalla quarantena",
-  "movement_type.found": "Ritrovato"
+  "movement_type.found": "Ritrovato",
+  "labels.printed_title": "Le etichette sono state stampate?",
+  "labels.printed_description": "Se sì, {{count}} unità vengono segnate come stampate. Un carico con etichette stampate non può essere annullato.",
+  "labels.printed_confirm": "Sì, stampate",
+  "labels.mark_failed": "Impossibile segnare le etichette come stampate."
 }

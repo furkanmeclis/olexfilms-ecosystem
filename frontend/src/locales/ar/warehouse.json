@@ -927,5 +927,9 @@
   "movement_type.measure_conversion": "تحويل الوحدة",
   "movement_type.quarantine": "وُضع في الحجر",
   "movement_type.quarantine_release": "أُفرج عنه من الحجر",
-  "movement_type.found": "تم العثور عليه"
+  "movement_type.found": "تم العثور عليه",
+  "labels.printed_title": "هل طُبعت الملصقات؟",
+  "labels.printed_description": "إذا طُبعت، تُعلَّم {{count}} وحدات كمطبوعة. لا يمكن إلغاء إدخال ذي ملصقات مطبوعة.",
+  "labels.printed_confirm": "نعم، طُبعت",
+  "labels.mark_failed": "تعذّر تعليم الملصقات كمطبوعة."
 }

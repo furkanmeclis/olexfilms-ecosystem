@@ -177,5 +177,8 @@ func RegisterLabelRoutes(
 	mux.Handle("DELETE /v1/stock/label-templates/{uuid}", write(h.DeleteTemplate))
 
 	mux.Handle("GET /v1/stock/labels/units.pdf", read(h.PrintUnits))
+	// TEC-1224: same gate as the sheet it confirms; only the issuer's reserved
+	// units change (printable), so stock.read reach cannot widen it.
+	mux.Handle("POST /v1/stock/labels/units/mark-printed", read(h.MarkUnitsPrinted))
 	mux.Handle("GET /v1/warehouse/labels/locations.pdf", scoped(h.PrintLocations, features.ModuleWarehouse, rbac.PermWarehouseRead))
 }

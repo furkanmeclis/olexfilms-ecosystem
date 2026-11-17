@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Maßumrechnung",
   "movement_type.quarantine": "In Quarantäne",
   "movement_type.quarantine_release": "Aus Quarantäne freigegeben",
-  "movement_type.found": "Gefunden"
+  "movement_type.found": "Gefunden",
+  "labels.printed_title": "Wurden die Etiketten gedruckt?",
+  "labels.printed_description": "Dann werden {{count}} Einheiten als gedruckt markiert. Ein Eingang mit gedruckten Etiketten kann nicht storniert werden.",
+  "labels.printed_confirm": "Ja, gedruckt",
+  "labels.mark_failed": "Die Etiketten konnten nicht als gedruckt markiert werden."
 }

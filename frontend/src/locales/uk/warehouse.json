@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Перетворення одиниці",
   "movement_type.quarantine": "У карантині",
   "movement_type.quarantine_release": "Знято з карантину",
-  "movement_type.found": "Знайдено"
+  "movement_type.found": "Знайдено",
+  "labels.printed_title": "Етикетки надруковано?",
+  "labels.printed_description": "Якщо так, {{count}} одиниць буде позначено як надруковані. Прихід із надрукованими етикетками не можна скасувати.",
+  "labels.printed_confirm": "Так, надруковано",
+  "labels.mark_failed": "Не вдалося позначити етикетки як надруковані."
 }

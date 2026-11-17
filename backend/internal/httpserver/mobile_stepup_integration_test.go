@@ -30,6 +30,11 @@ func TestIntegrationMobileStepUp(t *testing.T) {
 	if code, env, _ := it.doMobile("POST", approve, mobile, "1", nil); code != http.StatusForbidden || errCode(env) != "STEP_UP_REQUIRED" {
 		t.Fatalf("approve without step-up = %d %s", code, errCode(env))
 	}
+	// TEC-1224: the mobile stock count approval asks for step-up like the panel.
+	countApprove := "/v1/mobile/warehouse/stock-counts/" + uuid.NewString() + "/approve"
+	if code, env, _ := it.doMobile("POST", countApprove, mobile, "1", nil); code != http.StatusForbidden || errCode(env) != "STEP_UP_REQUIRED" {
+		t.Fatalf("count approve without step-up = %d %s", code, errCode(env))
+	}
 	if code, env, _ := it.doMobile("POST", "/v1/mobile/panel/auth/step-up/password", mobile, "1",
 		map[string]string{"password": "wrong-password"}); code != http.StatusUnauthorized || errCode(env) != "INVALID_CREDENTIALS" {
 		t.Fatalf("wrong password = %d %s", code, errCode(env))
@@ -52,6 +57,9 @@ func TestIntegrationMobileStepUp(t *testing.T) {
 	// The gate passes now; the unknown request is the handler's 404.
 	if code, env, _ := it.doMobile("POST", approve, mobile, "1", nil); code != http.StatusNotFound {
 		t.Fatalf("approve after step-up = %d %s", code, errCode(env))
+	}
+	if code, env, _ := it.doMobile("POST", countApprove, mobile, "1", nil); code == http.StatusForbidden || errCode(env) == "STEP_UP_REQUIRED" {
+		t.Fatalf("count approve after step-up = %d %s", code, errCode(env))
 	}
 	var n int
 	if err := it.pool.QueryRow(ctx, `SELECT count(*) FROM activity_events WHERE actor_user_id = $1 AND action = 'stepup.verified'`, wh.ID).Scan(&n); err != nil || n != 1 {

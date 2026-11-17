@@ -14,6 +14,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -122,12 +123,15 @@ func (im *EntryBarcodeImporter) Bind(ctx context.Context, jobUUID uuid.UUID, ent
 		return fmt.Errorf("%w: existing_policy", ioengine.ErrImportRejected)
 	}
 	return im.entries.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		var jobID int64
-		if err := tx.QueryRow(ctx, `SELECT id FROM import_jobs WHERE uuid=$1 AND organization_id=$2 AND resource=$3 FOR UPDATE`, jobUUID, orgID, EntryBarcodeImportResource).Scan(&jobID); err != nil {
+		var jobID, actorID int64
+		if err := tx.QueryRow(ctx, `SELECT id, actor_id FROM import_jobs WHERE uuid=$1 AND organization_id=$2 AND resource=$3 FOR UPDATE`, jobUUID, orgID, EntryBarcodeImportResource).Scan(&jobID, &actorID); err != nil {
 			return fmt.Errorf("%w: import job missing", ioengine.ErrImportRejected)
 		}
 		e, err := im.entries.lockDraft(ctx, q, orgID, entryUUID)
 		if err != nil {
+			return err
+		}
+		if err := entryImportMember(ctx, q, e, actorID); err != nil {
 			return err
 		}
 		if e.Mode != EntryModeWithExisting {
@@ -195,7 +199,20 @@ func (im *EntryBarcodeImporter) batch(ctx context.Context, q *db.Queries, job io
 	}
 	return b, nil
 }
-func (im *EntryBarcodeImporter) draft(ctx context.Context, tx pgx.Tx, q *db.Queries, b entryImportBatch) (db.StockEntry, error) {
+
+// entryImportMember (TEC-1224): the import actor must be a member of the
+// entry's warehouse (TEC-769), like every other write on the entry.
+func entryImportMember(ctx context.Context, q *db.Queries, e db.StockEntry, actorID int64) error {
+	if !e.WarehouseID.Valid {
+		return nil
+	}
+	if err := requireMember(ctx, q, authctx.Principal{UserInternal: actorID}, e.OrganizationID, e.WarehouseID.Int64); err != nil {
+		return fmt.Errorf("%w: %w", ioengine.ErrImportRejected, err)
+	}
+	return nil
+}
+
+func (im *EntryBarcodeImporter) draft(ctx context.Context, tx pgx.Tx, q *db.Queries, b entryImportBatch, actorID int64) (db.StockEntry, error) {
 	var id uuid.UUID
 	if err := tx.QueryRow(ctx, `SELECT uuid FROM stock_entries WHERE id=$1 AND organization_id=$2 AND brand_id=$3`, b.EntryID, b.OrganizationID, b.BrandID).Scan(&id); err != nil {
 		return db.StockEntry{}, fmt.Errorf("%w: entry missing", ioengine.ErrImportRejected)
@@ -206,6 +223,9 @@ func (im *EntryBarcodeImporter) draft(ctx context.Context, tx pgx.Tx, q *db.Quer
 	}
 	if e.Mode != EntryModeWithExisting {
 		return e, ioengine.ErrImportRejected
+	}
+	if err := entryImportMember(ctx, q, e, actorID); err != nil {
+		return e, err
 	}
 	return e, nil
 }
@@ -278,7 +298,7 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 		if b.Status != "draft" && b.Status != "validated" {
 			return ioengine.ErrImportRejected
 		}
-		e, err := im.draft(ctx, tx, q, b)
+		e, err := im.draft(ctx, tx, q, b, job.ActorID)
 		if err != nil {
 			return err
 		}
@@ -572,7 +592,7 @@ func (im *EntryBarcodeImporter) Apply(ctx context.Context, job ioengine.ImportJo
 		if b.Status != "validated" {
 			return ioengine.ErrImportRejected
 		}
-		e, err := im.draft(ctx, tx, q, b)
+		e, err := im.draft(ctx, tx, q, b, job.ActorID)
 		if err != nil {
 			return err
 		}

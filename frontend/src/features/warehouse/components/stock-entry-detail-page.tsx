@@ -37,10 +37,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Permission } from "@/config/permissions";
+import { isApiError } from "@/lib/api";
 import { routes } from "@/config/routes";
 import { ImportWizard } from "@/features/io/components/import-wizard";
 import {
   MAX_UNIT_LABELS,
+  stockService,
   unitLabelsPath,
 } from "@/features/stock/services/stock.service";
 import {
@@ -77,7 +79,6 @@ import {
   arrivalChecked,
   timelineDetail,
 } from "@/features/warehouse/lib/receiving";
-import { isApiError } from "@/lib/api";
 import { entryImportConfirmCopy } from "@/features/warehouse/lib/entry-import";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import {
@@ -260,9 +261,9 @@ export function StockEntryDetailPage({
     onSuccess: (next, action) => {
       apply(next);
       appToast.success(
-        action === "confirm"
-          ? t("warehouse.entry.confirmed")
-          : t("warehouse.entry.cancelled"),
+        action === "cancel"
+          ? t("warehouse.entry.cancelled")
+          : t("warehouse.entry.confirmed"),
       );
     },
     onError: (err) => {
@@ -278,6 +279,37 @@ export function StockEntryDetailPage({
       () => qc.invalidateQueries({ queryKey: key }),
       () => undefined,
     );
+  // TEC-1224: downloading a label sheet changes nothing; after the user
+  // confirms it was printed, the reserved units are marked printed and the
+  // print is recorded on the entry timeline (TEC-1225). A reprint (no
+  // reserved unit left) is only recorded.
+  const askMarkPrinted = async (barcodes: string[]) => {
+    const wanted = new Set(barcodes);
+    const reserved = (entry?.lines ?? [])
+      .filter((l) => wanted.has(l.barcode) && l.unit_status === "reserved")
+      .map((l) => l.barcode);
+    if (reserved.length === 0) {
+      recordPrint();
+      return;
+    }
+    const ok = await confirm({
+      title: t("warehouse.labels.printed_title"),
+      description: t("warehouse.labels.printed_description", {
+        count: reserved.length,
+      }),
+      confirmLabel: t("warehouse.labels.printed_confirm"),
+    });
+    if (!ok) return;
+    try {
+      await stockService.markUnitsPrinted(reserved);
+      recordPrint();
+      await qc.invalidateQueries({ queryKey: key });
+    } catch (err) {
+      appToast.error(
+        warehouseErrorMessage(err, t, t("warehouse.labels.mark_failed")),
+      );
+    }
+  };
 
   const addBarcode = async (barcode: string, fixedQuantity?: number) => {
     try {
@@ -759,7 +791,13 @@ export function StockEntryDetailPage({
                       count: selected.length,
                     })}
                     testId="entry-selected-labels"
-                    onPrinted={recordPrint}
+                    onPrinted={() =>
+                      void askMarkPrinted(
+                        lines
+                          .filter((l) => selected.includes(l.uuid))
+                          .map((l) => l.barcode),
+                      )
+                    }
                   />
                 ) : null}
                 {lines.length > 0 && !(entry.label_batches ?? []).length
@@ -778,7 +816,7 @@ export function StockEntryDetailPage({
                                 })
                           }
                           testId="entry-all-labels"
-                          onPrinted={recordPrint}
+                          onPrinted={() => void askMarkPrinted(chunk)}
                         />
                       ),
                     )
@@ -801,6 +839,9 @@ export function StockEntryDetailPage({
                   onSelectedChange={setSelected}
                   onRemove={removeLine.mutate}
                   removing={removeLine.isPending}
+                  onLabelDownloaded={
+                    editable ? (codes) => void askMarkPrinted(codes) : undefined
+                  }
                 />
               )}
             </CardContent>

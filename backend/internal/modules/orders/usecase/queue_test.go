@@ -97,7 +97,7 @@ func TestOverdue(t *testing.T) {
 func TestShippingDocumentPackages(t *testing.T) {
 	d := ShippingDoc{
 		Locale: i18n.LocaleTR, OrderNo: "ORD-9", Zone: time.UTC, PackageCount: "4", Desi: "12.50", WeightKg: "7.25",
-		Lines:       []ShippingLine{{SKU: "S1", Name: "Film", Amount: "2 adet", UnitPrice: "987.65", LineTotal: "1975.30"}},
+		Lines:       []ShippingLine{{SKU: "S1", Name: "Film", Amount: "2 adet"}},
 		GeneratedAt: time.Date(2026, 10, 1, 9, 5, 0, 0, time.UTC),
 	}
 	out := ShippingDocumentHTML(d)

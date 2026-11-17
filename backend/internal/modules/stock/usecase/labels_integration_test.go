@@ -325,9 +325,35 @@ func TestLabelPrinting(t *testing.T) {
 	if _, err := e.lb.PrintUnits(e.ctx, c, []string{individual.Units[0].Barcode}, nil); err != nil {
 		t.Fatalf("print reserved unit: %v", err)
 	}
+	// TEC-1224: rendering the sheet (a preview, a download) changes nothing.
+	if still, err := e.q.GetUnitByUUID(e.ctx, individual.Units[0].UUID); err != nil || still.Status != "reserved" {
+		t.Fatalf("GET units.pdf changed the unit: %s %v", still.Status, err)
+	}
+	if n, err := e.lb.MarkUnitsPrinted(e.ctx, e.caller(e.dist), []string{individual.Units[0].Barcode}); !errors.Is(err, stockusecase.ErrNotFound) || n != 0 {
+		t.Fatalf("distributor marks center's reserved unit: %d %v", n, err)
+	}
+	if n, err := e.lb.MarkUnitsPrinted(e.ctx, c, []string{individual.Units[0].Barcode}); err != nil || n != 1 {
+		t.Fatalf("mark printed: %d %v", n, err)
+	}
 	printed, err := e.q.GetUnitByUUID(e.ctx, individual.Units[0].UUID)
 	if err != nil || printed.Status != "printed" {
 		t.Fatalf("individual print status: %s %v", printed.Status, err)
+	}
+	if n, err := e.lb.MarkUnitsPrinted(e.ctx, c, []string{individual.Units[0].Barcode}); err != nil || n != 0 {
+		t.Fatalf("mark printed again (idempotent): %d %v", n, err)
+	}
+	if _, err := e.lb.MarkUnitsPrinted(e.ctx, c, nil); err == nil {
+		t.Fatal("empty mark-printed accepted")
+	}
+	// A roll label shows the remaining meters (a reprint after a cut).
+	if _, err := e.pool.Exec(e.ctx, `UPDATE units SET remaining_meters = 0.75 WHERE id = $1`, printed.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.lb.PrintUnits(e.ctx, c, []string{individual.Units[0].Barcode}, nil); err != nil {
+		t.Fatalf("reprint: %v", err)
+	}
+	if html := e.pdf.html[len(e.pdf.html)-1]; !strings.Contains(html, "0.75 m") || strings.Contains(html, "2.00 m") {
+		t.Fatalf("roll reprint shows initial meters: %.400s", html)
 	}
 	if _, err := e.lb.PrintBatch(e.ctx, e.caller(e.dist), b.UUID, nil); !errors.Is(err, stockusecase.ErrBarcodesCenterOnly) {
 		t.Fatalf("distributor prints batch: %v", err)

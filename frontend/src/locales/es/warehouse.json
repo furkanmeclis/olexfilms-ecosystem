@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Conversión de medida",
   "movement_type.quarantine": "En cuarentena",
   "movement_type.quarantine_release": "Liberado de cuarentena",
-  "movement_type.found": "Encontrado"
+  "movement_type.found": "Encontrado",
+  "labels.printed_title": "¿Se imprimieron las etiquetas?",
+  "labels.printed_description": "Si es así, {{count}} unidades se marcan como impresas. Una entrada con etiquetas impresas no se puede cancelar.",
+  "labels.printed_confirm": "Sí, impresas",
+  "labels.mark_failed": "No se pudieron marcar las etiquetas como impresas."
 }

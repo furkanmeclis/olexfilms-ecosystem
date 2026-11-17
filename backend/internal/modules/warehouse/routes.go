@@ -124,9 +124,10 @@ func RegisterEntryRoutes(
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/arrival-scans", write(h.Scan))
 	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/arrival-scans", write(h.Unscan))
 	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/arrival-report", read(h.ArrivalReport))
-	mux.Handle("GET /v1/warehouse/suppliers", write(h.Suppliers))
+	// TEC-1224: the read-only lists open with warehouse.read.
+	mux.Handle("GET /v1/warehouse/suppliers", read(h.Suppliers))
 	mux.Handle("POST /v1/warehouse/suppliers", write(h.CreateSupplier))
-	mux.Handle("GET /v1/warehouse/entry-import-templates", write(h.MappingTemplates))
+	mux.Handle("GET /v1/warehouse/entry-import-templates", read(h.MappingTemplates))
 	mux.Handle("POST /v1/warehouse/entry-import-templates", write(h.SaveMappingTemplate))
 	mux.Handle("DELETE /v1/warehouse/entry-import-templates/{uuid}", write(h.DeleteMappingTemplate))
 	// TEC-1225: receiving exceptions. Undo also needs stock.adjust (use

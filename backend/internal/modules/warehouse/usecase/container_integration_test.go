@@ -1,6 +1,8 @@
 package usecase_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -178,5 +180,43 @@ func TestContainerEntryImportScanAndUndo(t *testing.T) {
 	}
 	if err := e.entries.DeleteMappingTemplate(e.ctx, c, tpl.UUID); err != nil {
 		t.Fatal(err)
+	}
+
+	// TEC-1224 on the TEC-1225 discrepancy flow: once the arrival scan has
+	// started, a line not scanned cannot be confirmed without a left_out
+	// decision; with it the line leaves the entry and never enters stock.
+	entry3, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: w.UUID.String(), Mode: wh.EntryModeWithExisting, Header: wh.EntryHeaderInput{
+		SupplierUUID: &supUUID, DefaultLocationUUID: &binUUID,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job3 := importJob(t, e, adapter, entry3.UUID, "none")
+	if _, err := adapter.Stage(e.ctx, job3, []map[string]any{
+		{"product_sku": e.piece.Sku, "barcode": code("9")},
+		{"product_sku": e.piece.Sku, "barcode": code("10")},
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if applied, err := adapter.Apply(e.ctx, job3); err != nil || applied.Counts["applied"] != 2 {
+		t.Fatalf("apply 3 %+v %v", applied.Counts, err)
+	}
+	if _, err := e.entries.Scan(e.ctx, c, entry3.UUID, strings.ToLower(code("9"))); err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.entries.Confirm(e.ctx, c, entry3.UUID)
+	var dr *wh.DiscrepancyRequiredError
+	if !errors.As(err, &dr) || len(dr.Missing) != 1 || !strings.EqualFold(dr.Missing[0], code("10")) {
+		t.Fatalf("confirm with a missing line: %v %+v", err, dr)
+	}
+	done, err := e.entries.ConfirmWith(e.ctx, c, entry3.UUID, wh.ConfirmInput{Decisions: []wh.DiscrepancyDecision{
+		{Barcode: dr.Missing[0], Kind: wh.DiscrepancyMissing, Decision: wh.DecisionLeftOut},
+	}})
+	if err != nil || done.Status != "confirmed" || len(done.Lines) != 1 || !strings.EqualFold(done.Lines[0].Barcode, code("9")) {
+		t.Fatalf("confirm left_out %+v %v", done, err)
+	}
+	var missingState int
+	if err := e.pool.QueryRow(e.ctx, `SELECT count(*) FROM unit_current_state s JOIN units u ON u.id = s.unit_id WHERE u.barcode = $1`, code("10")).Scan(&missingState); err != nil || missingState != 0 {
+		t.Fatalf("dropped unit entered stock: %d %v", missingState, err)
 	}
 }

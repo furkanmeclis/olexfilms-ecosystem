@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Renderer converts HTML to PDF (satisfied by *pdfrender.Client).
@@ -102,42 +103,13 @@ func (s *Labels) PrintBatch(ctx context.Context, c Caller, batchID uuid.UUID, te
 // PrintUnits renders the labels of the given barcodes. A unit is printable
 // when its holder is inside the caller's stock.read reach, or, before it
 // enters stock (reserved or printed, no state), when the caller is its issuer.
+// TEC-1224: rendering never changes a unit; the client confirms the print with
+// MarkUnitsPrinted (POST /v1/stock/labels/units/mark-printed), so a preview
+// leaves reserved units (and their stock entry) cancellable.
 func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, templateID *uuid.UUID) ([]byte, error) {
-	org, err := labelOrg(c)
+	org, units, err := s.printableUnits(ctx, c, barcodes)
 	if err != nil {
 		return nil, err
-	}
-	codes := uniqueTrimmed(barcodes)
-	switch {
-	case len(codes) == 0:
-		return nil, invalid("barcode", "at least one barcode is required")
-	case len(codes) > MaxLabelsPerSheet:
-		return nil, invalid("barcode", fmt.Sprintf("at most %d barcodes per sheet", MaxLabelsPerSheet))
-	}
-	rows, err := s.q.ListUnitsByBarcodes(ctx, codes)
-	if err != nil {
-		return nil, fmt.Errorf("stock: units: %w", err)
-	}
-	byCode := map[string]db.Unit{}
-	for _, u := range rows {
-		if _, seen := byCode[u.Barcode]; seen && u.BrandID != c.Org.BrandID {
-			continue // barcodes are unique per brand; the active brand wins
-		}
-		ok, err := s.printable(ctx, c, org, u)
-		if err != nil {
-			return nil, err
-		}
-		if ok {
-			byCode[u.Barcode] = u
-		}
-	}
-	units := make([]db.Unit, 0, len(codes))
-	for _, code := range codes {
-		u, ok := byCode[code]
-		if !ok {
-			return nil, ErrNotFound
-		}
-		units = append(units, u)
 	}
 	tpl, err := s.resolveTemplate(ctx, org, labels.KindUnit, templateID, nil)
 	if err != nil {
@@ -147,9 +119,17 @@ func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, te
 	if err != nil {
 		return nil, err
 	}
-	pdf, err := s.render(ctx, org, tpl, items)
+	return s.render(ctx, org, tpl, items)
+}
+
+// MarkUnitsPrinted records that the labels of the given barcodes were printed
+// (TEC-1224): reserved units become printed. The same barcodes as PrintUnits
+// are accepted; units already printed or in stock are left as they are, so the
+// call is idempotent. It returns how many units changed.
+func (s *Labels) MarkUnitsPrinted(ctx context.Context, c Caller, barcodes []string) (int64, error) {
+	_, units, err := s.printableUnits(ctx, c, barcodes)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	ids := make([]int64, 0, len(units))
 	for _, u := range units {
@@ -157,16 +137,56 @@ func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, te
 			ids = append(ids, u.ID)
 		}
 	}
-	if len(ids) > 0 {
-		marked, err := s.q.MarkSelectedUnitsPrinted(ctx, ids)
-		if err != nil {
-			return nil, fmt.Errorf("stock: mark labels printed: %w", err)
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	marked, err := s.q.MarkSelectedUnitsPrinted(ctx, ids)
+	if err != nil {
+		return 0, fmt.Errorf("stock: mark labels printed: %w", err)
+	}
+	return marked, nil
+}
+
+// printableUnits resolves the barcodes to units the caller may print, in the
+// order given; any unknown or out-of-reach barcode is ErrNotFound.
+func (s *Labels) printableUnits(ctx context.Context, c Caller, barcodes []string) (int64, []db.Unit, error) {
+	org, err := labelOrg(c)
+	if err != nil {
+		return 0, nil, err
+	}
+	codes := uniqueTrimmed(barcodes)
+	switch {
+	case len(codes) == 0:
+		return 0, nil, invalid("barcode", "at least one barcode is required")
+	case len(codes) > MaxLabelsPerSheet:
+		return 0, nil, invalid("barcode", fmt.Sprintf("at most %d barcodes per sheet", MaxLabelsPerSheet))
+	}
+	rows, err := s.q.ListUnitsByBarcodes(ctx, codes)
+	if err != nil {
+		return 0, nil, fmt.Errorf("stock: units: %w", err)
+	}
+	byCode := map[string]db.Unit{}
+	for _, u := range rows {
+		if _, seen := byCode[u.Barcode]; seen && u.BrandID != c.Org.BrandID {
+			continue // barcodes are unique per brand; the active brand wins
 		}
-		if marked != int64(len(ids)) {
-			return nil, ErrNotFound
+		ok, err := s.printable(ctx, c, org, u)
+		if err != nil {
+			return 0, nil, err
+		}
+		if ok {
+			byCode[u.Barcode] = u
 		}
 	}
-	return pdf, nil
+	units := make([]db.Unit, 0, len(codes))
+	for _, code := range codes {
+		u, ok := byCode[code]
+		if !ok {
+			return 0, nil, ErrNotFound
+		}
+		units = append(units, u)
+	}
+	return org, units, nil
 }
 
 func (s *Labels) printable(ctx context.Context, c Caller, org int64, u db.Unit) (bool, error) {
@@ -317,16 +337,22 @@ func (s *Labels) unitItems(ctx context.Context, units []db.Unit) ([]labels.Item,
 			products[u.ProductID] = p
 		}
 		sub := p.Sku
-		// TEC-1230: a roll label shows the meters left on it (a reprint
-		// after a cut), not the first length.
-		if u.RemainingMeters.Valid {
-			sub += " · " + numericString(u.RemainingMeters) + " m"
-		} else if u.InitialMeters.Valid {
-			sub += " · " + numericString(u.InitialMeters) + " m"
+		if m := labelMeters(u); m.Valid {
+			sub += " · " + numericString(m) + " m"
 		}
 		items = append(items, labels.Item{Code: u.Barcode, Title: p.Name, Subtitle: sub})
 	}
 	return items, nil
+}
+
+// labelMeters is the length printed on a roll label: the remaining meters, so
+// a reprint after a cut shows what is left (TEC-1224); the initial length
+// only when no remaining value is recorded.
+func labelMeters(u db.Unit) pgtype.Numeric {
+	if u.RemainingMeters.Valid {
+		return u.RemainingMeters
+	}
+	return u.InitialMeters
 }
 
 func (s *Labels) render(ctx context.Context, org int64, tpl labels.Template, items []labels.Item) ([]byte, error) {

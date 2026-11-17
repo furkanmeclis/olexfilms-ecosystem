@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Ölçü dönüşümü",
   "movement_type.quarantine": "Karantinaya alındı",
   "movement_type.quarantine_release": "Karantinadan çıktı",
-  "movement_type.found": "Bulundu"
+  "movement_type.found": "Bulundu",
+  "labels.printed_title": "Etiketler basıldı mı?",
+  "labels.printed_description": "Basıldıysa {{count}} birim \"basıldı\" olarak işaretlenir. Basılmış etiketli fiş iptal edilemez.",
+  "labels.printed_confirm": "Evet, basıldı",
+  "labels.mark_failed": "Etiketler basıldı olarak işaretlenemedi."
 }

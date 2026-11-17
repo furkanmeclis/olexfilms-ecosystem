@@ -927,5 +927,9 @@
   "movement_type.measure_conversion": "Преобразуване на мярка",
   "movement_type.quarantine": "Под карантина",
   "movement_type.quarantine_release": "Освободен от карантина",
-  "movement_type.found": "Намерен"
+  "movement_type.found": "Намерен",
+  "labels.printed_title": "Отпечатани ли са етикетите?",
+  "labels.printed_description": "Ако да, {{count}} единици се отбелязват като отпечатани. Запис с отпечатани етикети не може да се отмени.",
+  "labels.printed_confirm": "Да, отпечатани",
+  "labels.mark_failed": "Етикетите не можаха да се отбележат като отпечатани."
 }

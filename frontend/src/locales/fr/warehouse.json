@@ -957,5 +957,9 @@
   "movement_type.measure_conversion": "Conversion d'unité",
   "movement_type.quarantine": "Mis en quarantaine",
   "movement_type.quarantine_release": "Sorti de quarantaine",
-  "movement_type.found": "Retrouvé"
+  "movement_type.found": "Retrouvé",
+  "labels.printed_title": "Les étiquettes ont-elles été imprimées ?",
+  "labels.printed_description": "Si oui, {{count}} unités sont marquées comme imprimées. Une entrée aux étiquettes imprimées ne peut pas être annulée.",
+  "labels.printed_confirm": "Oui, imprimées",
+  "labels.mark_failed": "Les étiquettes n'ont pas pu être marquées comme imprimées."
 }

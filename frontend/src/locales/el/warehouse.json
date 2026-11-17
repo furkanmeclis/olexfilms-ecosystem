@@ -927,5 +927,9 @@
   "movement_type.measure_conversion": "Μετατροπή μονάδας",
   "movement_type.quarantine": "Σε καραντίνα",
   "movement_type.quarantine_release": "Αποδέσμευση από καραντίνα",
-  "movement_type.found": "Βρέθηκε"
+  "movement_type.found": "Βρέθηκε",
+  "labels.printed_title": "Τυπώθηκαν οι ετικέτες;",
+  "labels.printed_description": "Αν ναι, {{count}} μονάδες σημειώνονται ως τυπωμένες. Μια εισαγωγή με τυπωμένες ετικέτες δεν ακυρώνεται.",
+  "labels.printed_confirm": "Ναι, τυπώθηκαν",
+  "labels.mark_failed": "Οι ετικέτες δεν σημειώθηκαν ως τυπωμένες."
 }

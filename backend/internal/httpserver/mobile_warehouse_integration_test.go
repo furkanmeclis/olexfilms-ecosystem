@@ -106,6 +106,10 @@ func TestIntegrationMobileWarehouse(t *testing.T) {
 	if len(scans.Items) == 0 {
 		t.Fatal("mobile count has no scans")
 	}
+	// TEC-1224: approving the count needs step-up on mobile as on the panel.
+	if code, env, _ := it.doMobile("POST", "/v1/mobile/warehouse/stock-counts/"+countUUID+"/approve", tp.AccessToken, "1", nil); code != http.StatusForbidden || errCode(env) != "STEP_UP_REQUIRED" {
+		t.Fatalf("mobile count approve without step-up = %d %s", code, errCode(env))
+	}
 
 	// 3. Transfer w1 -> w2 with the unit.
 	_ = json.Unmarshal(m("POST", "/v1/mobile/warehouse/transfers", map[string]any{

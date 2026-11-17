@@ -54,6 +54,7 @@ export function EntryLinesTable({
   onSelectedChange,
   onRemove,
   removing,
+  onLabelDownloaded,
 }: {
   lines: StockEntryLine[];
   editable: boolean;
@@ -61,6 +62,8 @@ export function EntryLinesTable({
   onSelectedChange: (next: string[]) => void;
   onRemove: (lineUuid: string) => void;
   removing: boolean;
+  /** TEC-1224: a line's label sheet was downloaded. */
+  onLabelDownloaded?: (barcodes: string[]) => void;
 }) {
   const { t, format } = useLocale();
 
@@ -222,6 +225,11 @@ export function EntryLinesTable({
                   filename={`${l.barcode}.pdf`}
                   size="icon-sm"
                   variant="ghost"
+                  onPrinted={
+                    onLabelDownloaded
+                      ? () => onLabelDownloaded([l.barcode])
+                      : undefined
+                  }
                 />
                 {editable ? (
                   <Button
@@ -242,7 +250,7 @@ export function EntryLinesTable({
           },
         }),
       ] as ColumnDef<StockEntryLine, unknown>[],
-    [editable, format, onRemove, removing, t],
+    [editable, format, onRemove, removing, onLabelDownloaded, t],
   );
 
   const rowSelection = useMemo<RowSelectionState>(

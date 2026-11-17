@@ -927,5 +927,9 @@
   "movement_type.measure_conversion": "Ölçü çevrilməsi",
   "movement_type.quarantine": "Karantinə alındı",
   "movement_type.quarantine_release": "Karantindən çıxdı",
-  "movement_type.found": "Tapıldı"
+  "movement_type.found": "Tapıldı",
+  "labels.printed_title": "Etiketlər çap olundu?",
+  "labels.printed_description": "Əgər çap olunubsa, {{count}} vahid \"çap olunub\" kimi qeyd edilir. Çap olunmuş etiketli sənəd ləğv edilə bilməz.",
+  "labels.printed_confirm": "Bəli, çap olundu",
+  "labels.mark_failed": "Etiketlər çap olunmuş kimi qeyd edilə bilmədi."
 }

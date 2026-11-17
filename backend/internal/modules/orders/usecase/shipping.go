@@ -365,17 +365,18 @@ type ShippingParty struct {
 	TaxNo   string
 }
 
-// ShippingLine is one line of the shipping note.
+// ShippingLine is one line of the shipping note. It carries no price
+// (TEC-1224): the note goes with the goods and warehouse roles render it;
+// the order slip adds its prices in OrderSlipLine.
 type ShippingLine struct {
-	// Stored amounts are also used by the order slip; the shipping note omits them.
-	UnitPrice string
 	// IsGift: a line charged 0 (TEC-1064), marked on the order slip.
-	IsGift    bool
-	LineTotal string
-	SKU       string
-	Name      string
-	Amount    string
-	Barcodes  []string
+	IsGift   bool
+	SKU      string
+	Name     string
+	Amount   string
+	Barcodes []string
+	// itemID links the line to its order item (the order slip's prices).
+	itemID int64
 }
 
 // ShippingDoc is the data of one shipping note.
@@ -494,7 +495,7 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		if it.Meters.Valid {
 			amount = numericText(it.Meters, 2) + " m"
 		}
-		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Barcodes: byItem[it.ID], UnitPrice: numericText(it.UnitPrice, 2), LineTotal: numericText(it.LineTotal, 2), IsGift: it.IsGift})
+		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Barcodes: byItem[it.ID], IsGift: it.IsGift, itemID: it.ID})
 	}
 	return d, nil
 }

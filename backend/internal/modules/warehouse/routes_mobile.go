@@ -19,7 +19,8 @@ type MobileHandlers struct {
 	Transfers *whhandler.Transfers
 	Entries   *whhandler.Entries
 	Members   *whhandler.Members
-	// StepUp guards the stock entry undo (TEC-1225).
+	// StepUp guards the stock entry undo (TEC-1225) and the count approval
+	// like the panel route (TEC-1224); nil fails closed (STEP_UP_REQUIRED).
 	StepUp middleware.StepUpChecker
 }
 
@@ -99,7 +100,10 @@ func RegisterMobileRoutes(
 	mux.Handle("DELETE "+p+"/stock-counts/{uuid}/scans/{scan_uuid}", write(h.Counts.DeleteScan))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/complete", write(h.Counts.Complete))
 	mux.Handle("GET "+p+"/stock-counts/{uuid}/report", read(h.Counts.Report))
-	mux.Handle("POST "+p+"/stock-counts/{uuid}/approve", write(h.Counts.Approve))
+	// TEC-1224: same step-up as POST /v1/warehouse/stock-counts/{uuid}/approve.
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/approve",
+		middleware.Chain(http.HandlerFunc(h.Counts.Approve), version, authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(h.StepUp)))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/cancel", write(h.Counts.Cancel))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/recount-requests", write(h.Counts.RequestRecount))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/lines/{line_uuid}/recount", write(h.Counts.Recount))
