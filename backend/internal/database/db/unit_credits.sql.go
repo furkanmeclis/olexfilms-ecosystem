@@ -202,6 +202,101 @@ func (q *Queries) InsertUnitCreditMovement(ctx context.Context, arg InsertUnitCr
 	return i, err
 }
 
+const listUnitCreditDrift = `-- name: ListUnitCreditDrift :many
+WITH scope AS (
+    SELECT unit_id FROM unit_credit_movements
+    WHERE $1::bigint = 0 OR organization_id = $1::bigint
+    UNION
+    SELECT unit_id FROM unit_credit_balances
+    WHERE $1::bigint = 0 OR organization_id = $1::bigint
+), exp AS (
+    SELECT m.unit_id,
+           SUM(m.total_delta)::int AS total, SUM(m.remaining_delta)::int AS remaining,
+           SUM(m.uses_delta)::int AS used, MAX(m.id)::bigint AS last_movement_id,
+           (ARRAY_AGG(m.organization_id ORDER BY m.id))[1]::bigint AS organization_id,
+           MAX(m.brand_id)::bigint AS brand_id
+    FROM unit_credit_movements m
+    WHERE m.unit_id IN (SELECT unit_id FROM scope)
+    GROUP BY m.unit_id
+)
+SELECT s.unit_id::bigint AS unit_id, u.barcode, u.brand_id AS unit_brand_id,
+       (e.unit_id IS NOT NULL)::bool AS has_expected,
+       (b.unit_id IS NOT NULL)::bool AS has_actual,
+       COALESCE(e.total, 0)::int AS expected_total,
+       COALESCE(e.remaining, 0)::int AS expected_remaining,
+       COALESCE(e.used, 0)::int AS expected_used,
+       COALESCE(e.last_movement_id, 0)::bigint AS expected_last_movement_id,
+       COALESCE(e.organization_id, b.organization_id, u.organization_id)::bigint AS organization_id,
+       COALESCE(b.credits_total, 0)::int AS actual_total,
+       COALESCE(b.credits_remaining, 0)::int AS actual_remaining,
+       COALESCE(b.used_count, 0)::int AS actual_used,
+       COALESCE(b.last_movement_id, 0)::bigint AS actual_last_movement_id
+FROM scope s
+JOIN units u ON u.id = s.unit_id
+LEFT JOIN exp e ON e.unit_id = s.unit_id
+LEFT JOIN unit_credit_balances b ON b.unit_id = s.unit_id
+WHERE e.unit_id IS NULL OR b.unit_id IS NULL
+   OR e.total <> b.credits_total OR e.remaining <> b.credits_remaining
+   OR e.used <> b.used_count OR e.last_movement_id IS DISTINCT FROM b.last_movement_id
+ORDER BY s.unit_id
+`
+
+type ListUnitCreditDriftRow struct {
+	UnitID                 int64  `json:"unit_id"`
+	Barcode                string `json:"barcode"`
+	UnitBrandID            int64  `json:"unit_brand_id"`
+	HasExpected            bool   `json:"has_expected"`
+	HasActual              bool   `json:"has_actual"`
+	ExpectedTotal          int32  `json:"expected_total"`
+	ExpectedRemaining      int32  `json:"expected_remaining"`
+	ExpectedUsed           int32  `json:"expected_used"`
+	ExpectedLastMovementID int64  `json:"expected_last_movement_id"`
+	OrganizationID         int64  `json:"organization_id"`
+	ActualTotal            int32  `json:"actual_total"`
+	ActualRemaining        int32  `json:"actual_remaining"`
+	ActualUsed             int32  `json:"actual_used"`
+	ActualLastMovementID   int64  `json:"actual_last_movement_id"`
+}
+
+// TEC-1229: credit balances that differ from the sum of their movements
+// (rebuild check). organization_id 0 checks every unit; otherwise the units
+// with a movement or a balance of the organization. has_expected: the unit
+// has movements; has_actual: it has a balance row.
+func (q *Queries) ListUnitCreditDrift(ctx context.Context, organizationID int64) ([]ListUnitCreditDriftRow, error) {
+	rows, err := q.db.Query(ctx, listUnitCreditDrift, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUnitCreditDriftRow{}
+	for rows.Next() {
+		var i ListUnitCreditDriftRow
+		if err := rows.Scan(
+			&i.UnitID,
+			&i.Barcode,
+			&i.UnitBrandID,
+			&i.HasExpected,
+			&i.HasActual,
+			&i.ExpectedTotal,
+			&i.ExpectedRemaining,
+			&i.ExpectedUsed,
+			&i.ExpectedLastMovementID,
+			&i.OrganizationID,
+			&i.ActualTotal,
+			&i.ActualRemaining,
+			&i.ActualUsed,
+			&i.ActualLastMovementID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUnitCreditMovements = `-- name: ListUnitCreditMovements :many
 SELECT m.id, m.uuid, m.type, m.total_delta, m.remaining_delta, m.uses_delta, m.reason, m.created_at,
        s.uuid AS service_uuid, s.service_no AS service_no,
@@ -374,4 +469,42 @@ func (q *Queries) UnitCreditsBackfill(ctx context.Context) (int32, error) {
 	var opened int32
 	err := row.Scan(&opened)
 	return opened, err
+}
+
+const upsertUnitCreditBalanceForRepair = `-- name: UpsertUnitCreditBalanceForRepair :exec
+INSERT INTO unit_credit_balances (
+    unit_id, organization_id, brand_id, credits_total, credits_remaining, used_count, last_movement_id
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7
+)
+ON CONFLICT (unit_id) DO UPDATE
+SET credits_total = EXCLUDED.credits_total,
+    credits_remaining = EXCLUDED.credits_remaining,
+    used_count = EXCLUDED.used_count,
+    last_movement_id = EXCLUDED.last_movement_id
+`
+
+type UpsertUnitCreditBalanceForRepairParams struct {
+	UnitID           int64       `json:"unit_id"`
+	OrganizationID   int64       `json:"organization_id"`
+	BrandID          int64       `json:"brand_id"`
+	CreditsTotal     int32       `json:"credits_total"`
+	CreditsRemaining int32       `json:"credits_remaining"`
+	UsedCount        int32       `json:"used_count"`
+	LastMovementID   pgtype.Int8 `json:"last_movement_id"`
+}
+
+// TEC-1229: rebuild repair sets the balance to the sum of the movements.
+func (q *Queries) UpsertUnitCreditBalanceForRepair(ctx context.Context, arg UpsertUnitCreditBalanceForRepairParams) error {
+	_, err := q.db.Exec(ctx, upsertUnitCreditBalanceForRepair,
+		arg.UnitID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.CreditsTotal,
+		arg.CreditsRemaining,
+		arg.UsedCount,
+		arg.LastMovementID,
+	)
+	return err
 }

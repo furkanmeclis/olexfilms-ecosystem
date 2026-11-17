@@ -713,6 +713,10 @@ function countLine(over: Partial<StockCountLine>): StockCountLine {
     allowed_resolutions: ["ignore", "void_missing"],
     note: null,
     resolved_at: null,
+    recount_status: null,
+    recount_rounds: 0,
+    recounted_at: null,
+    first_count: null,
     ...over,
   };
 }

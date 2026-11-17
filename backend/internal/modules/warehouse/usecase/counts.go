@@ -301,6 +301,20 @@ type CountLine struct {
 	AllowedResolutions []string       `json:"allowed_resolutions"`
 	Note               *string        `json:"note"`
 	ResolvedAt         *time.Time     `json:"resolved_at"`
+	// Recount (TEC-1229): null, requested or recounted; the first count
+	// is kept in First (null until a recount).
+	RecountStatus *string          `json:"recount_status"`
+	RecountRounds int32            `json:"recount_rounds"`
+	RecountedAt   *time.Time       `json:"recounted_at"`
+	First         *CountLineResult `json:"first_count"`
+}
+
+// CountLineResult is the first counted values of a recounted line.
+type CountLineResult struct {
+	CountedQuantity int32          `json:"counted_quantity"`
+	CountedMeters   *string        `json:"counted_meters"`
+	CountedLocation *CountLocation `json:"counted_location"`
+	Result          string         `json:"result"`
 }
 
 // CountReport is a completed count with its lines.
@@ -1575,6 +1589,9 @@ func (s *Counts) lines(ctx context.Context, q *db.Queries, countID int64) ([]Cou
 		if l.CountedLocationID.Valid {
 			locIDs = append(locIDs, l.CountedLocationID.Int64)
 		}
+		if l.FirstCountedLocationID.Valid {
+			locIDs = append(locIDs, l.FirstCountedLocationID.Int64)
+		}
 		if l.UnitID.Valid {
 			unitIDs = append(unitIDs, l.UnitID.Int64)
 		}
@@ -1593,6 +1610,16 @@ func (s *Counts) lines(ctx context.Context, q *db.Queries, countID int64) ([]Cou
 			ExpectedMeters: stockusecase.MetersString(l.ExpectedMeters), CountedMeters: stockusecase.MetersString(l.CountedMeters),
 			Result: l.Result, Resolution: textPtr(l.Resolution), AllowedResolutions: allowedResolutions(l.LineKind, l.Result),
 			Note: textPtr(l.Note), ResolvedAt: tsPtr(l.ResolvedAt),
+			RecountStatus: textPtr(l.RecountStatus), RecountRounds: l.RecountRounds, RecountedAt: tsPtr(l.RecountedAt),
+		}
+		if l.ResolvedAt.Valid || l.RecountStatus.String == CountRecountRequested {
+			v.AllowedResolutions = []string{}
+		}
+		if l.FirstResult.Valid {
+			v.First = &CountLineResult{
+				CountedQuantity: l.FirstCountedQuantity.Int32, CountedMeters: stockusecase.MetersString(l.FirstCountedMeters),
+				CountedLocation: r.location(l.FirstCountedLocationID), Result: l.FirstResult.String,
+			}
 		}
 		out = append(out, v)
 	}
@@ -1644,6 +1671,17 @@ func (s *Counts) Export(ctx context.Context, c ScanCaller, id uuid.UUID, w io.Wr
 // Approve applies the resolutions of a completed count in one transaction.
 // Every difference needs a resolution; matched lines take none.
 func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []CountResolution) (CountReport, error) {
+	return s.approve(ctx, c, id, in, false)
+}
+
+// ApprovePartial applies the given resolutions only (TEC-1229): lines left
+// open (and lines waiting for a recount) stay pending; the count is
+// approved once no difference is left unresolved.
+func (s *Counts) ApprovePartial(ctx context.Context, c ScanCaller, id uuid.UUID, in []CountResolution) (CountReport, error) {
+	return s.approve(ctx, c, id, in, true)
+}
+
+func (s *Counts) approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []CountResolution, partial bool) (CountReport, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return CountReport{}, err
@@ -1703,6 +1741,12 @@ func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []C
 			if _, dup := chosen[i]; dup {
 				return invalid("resolutions", "line "+lid.String()+" is resolved twice")
 			}
+			if lines[i].ResolvedAt.Valid {
+				return invalid("resolutions", "line "+lid.String()+" is already resolved")
+			}
+			if lines[i].RecountStatus.String == CountRecountRequested {
+				return invalid("resolutions", "line "+lid.String()+" waits for a recount")
+			}
 			if !slices.Contains(allowedResolutions(lines[i].LineKind, lines[i].Result), r.Resolution) {
 				return invalid("resolutions", fmt.Sprintf("line %s (%s) does not accept %q", lid, lines[i].Result, r.Resolution))
 			}
@@ -1711,10 +1755,17 @@ func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []C
 			}
 			chosen[i] = r
 		}
+		open := 0
 		for i, l := range lines {
-			if _, ok := chosen[i]; !ok && l.Result != CountResultMatched {
-				return invalid("resolutions", "line "+l.Uuid.String()+" ("+l.Result+") needs a resolution")
+			if _, ok := chosen[i]; !ok && l.Result != CountResultMatched && !l.ResolvedAt.Valid {
+				if !partial {
+					return invalid("resolutions", "line "+l.Uuid.String()+" ("+l.Result+") needs a resolution")
+				}
+				open++
 			}
+		}
+		if partial && len(chosen) == 0 && open > 0 {
+			return invalid("resolutions", "a partial approval resolves at least one line")
 		}
 		for i, l := range lines {
 			r, ok := chosen[i]
@@ -1733,6 +1784,9 @@ func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []C
 			}); err != nil {
 				return fmt.Errorf("warehouse: resolve line: %w", err)
 			}
+		}
+		if open > 0 {
+			return nil
 		}
 		_, err = q.ApproveStockCount(ctx, db.ApproveStockCountParams{UserID: userArg(c), ID: cnt.ID})
 		return err

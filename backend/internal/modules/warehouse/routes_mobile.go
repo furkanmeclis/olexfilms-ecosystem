@@ -101,6 +101,8 @@ func RegisterMobileRoutes(
 	mux.Handle("GET "+p+"/stock-counts/{uuid}/report", read(h.Counts.Report))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/approve", write(h.Counts.Approve))
 	mux.Handle("POST "+p+"/stock-counts/{uuid}/cancel", write(h.Counts.Cancel))
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/recount-requests", write(h.Counts.RequestRecount))
+	mux.Handle("POST "+p+"/stock-counts/{uuid}/lines/{line_uuid}/recount", write(h.Counts.Recount))
 
 	mux.Handle("GET "+p+"/transfers", read(h.Transfers.List))
 	mux.Handle("POST "+p+"/transfers", write(h.Transfers.Create))

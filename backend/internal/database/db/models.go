@@ -3325,23 +3325,33 @@ type StockCount struct {
 }
 
 type StockCountLine struct {
-	ID                 int64              `json:"id"`
-	Uuid               uuid.UUID          `json:"uuid"`
-	CountID            int64              `json:"count_id"`
-	LineKind           string             `json:"line_kind"`
-	UnitID             pgtype.Int8        `json:"unit_id"`
-	ProductID          int64              `json:"product_id"`
-	ExpectedLocationID pgtype.Int8        `json:"expected_location_id"`
-	CountedLocationID  pgtype.Int8        `json:"counted_location_id"`
-	ExpectedQuantity   int32              `json:"expected_quantity"`
-	CountedQuantity    int32              `json:"counted_quantity"`
-	ExpectedMeters     pgtype.Numeric     `json:"expected_meters"`
-	CountedMeters      pgtype.Numeric     `json:"counted_meters"`
-	Result             string             `json:"result"`
-	Resolution         pgtype.Text        `json:"resolution"`
-	Note               pgtype.Text        `json:"note"`
-	ResolvedAt         pgtype.Timestamptz `json:"resolved_at"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	CountID                  int64              `json:"count_id"`
+	LineKind                 string             `json:"line_kind"`
+	UnitID                   pgtype.Int8        `json:"unit_id"`
+	ProductID                int64              `json:"product_id"`
+	ExpectedLocationID       pgtype.Int8        `json:"expected_location_id"`
+	CountedLocationID        pgtype.Int8        `json:"counted_location_id"`
+	ExpectedQuantity         int32              `json:"expected_quantity"`
+	CountedQuantity          int32              `json:"counted_quantity"`
+	ExpectedMeters           pgtype.Numeric     `json:"expected_meters"`
+	CountedMeters            pgtype.Numeric     `json:"counted_meters"`
+	Result                   string             `json:"result"`
+	Resolution               pgtype.Text        `json:"resolution"`
+	Note                     pgtype.Text        `json:"note"`
+	ResolvedAt               pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	RecountStatus            pgtype.Text        `json:"recount_status"`
+	RecountRequestedAt       pgtype.Timestamptz `json:"recount_requested_at"`
+	RecountRequestedByUserID pgtype.Int8        `json:"recount_requested_by_user_id"`
+	RecountedAt              pgtype.Timestamptz `json:"recounted_at"`
+	RecountedByUserID        pgtype.Int8        `json:"recounted_by_user_id"`
+	RecountRounds            int32              `json:"recount_rounds"`
+	FirstCountedQuantity     pgtype.Int4        `json:"first_counted_quantity"`
+	FirstCountedMeters       pgtype.Numeric     `json:"first_counted_meters"`
+	FirstCountedLocationID   pgtype.Int8        `json:"first_counted_location_id"`
+	FirstResult              pgtype.Text        `json:"first_result"`
 }
 
 type StockCountScan struct {
@@ -3568,6 +3578,27 @@ type StockReclassification struct {
 	MovementID        pgtype.Int8        `json:"movement_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockReorderRule struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	WarehouseID     int64              `json:"warehouse_id"`
+	ProductID       int64              `json:"product_id"`
+	MinQuantity     int32              `json:"min_quantity"`
+	ReorderPoint    pgtype.Int4        `json:"reorder_point"`
+	MaxQuantity     pgtype.Int4        `json:"max_quantity"`
+	WarningDays     pgtype.Int4        `json:"warning_days"`
+	CoverDays       pgtype.Int4        `json:"cover_days"`
+	AlertState      string             `json:"alert_state"`
+	AlertedAt       pgtype.Timestamptz `json:"alerted_at"`
+	EvaluatedAt     pgtype.Timestamptz `json:"evaluated_at"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type StockReservation struct {

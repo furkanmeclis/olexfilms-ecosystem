@@ -244,6 +244,15 @@ func card(env Envelope, key string) float64 {
 	return -1
 }
 
+func kpi(env Envelope, key string) float64 {
+	for _, k := range env.KPIs {
+		if k.Key == key {
+			return k.Value
+		}
+	}
+	return -1
+}
+
 // TestReportsFollowScope: every report reads exactly the caller's reach —
 // a dealer its own organization, a distributor its subtree, the center the
 // brand.
@@ -278,6 +287,7 @@ func TestReportsFollowScope(t *testing.T) {
 		ReportOrdersByBuyer:              func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportServicesByOrg:              func(e Envelope) float64 { return sumSeries(e, "") },
 		ReportNetworkSummary:             func(e Envelope) float64 { return card(e, "network_services") },
+		ReportStockAging:                 func(e Envelope) float64 { return kpi(e, "aging_quantity") },
 	}
 	for _, d := range Definitions {
 		if d.Key == ReportDealersPerformance || d.Key == ReportOrdersInactiveBuyer ||

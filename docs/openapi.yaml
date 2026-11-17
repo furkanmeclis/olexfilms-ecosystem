@@ -11423,6 +11423,196 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/stock/movements:
+    get:
+      tags: [Stock]
+      operationId: listStockMovements
+      summary: Ledger movements of the active organization (TEC-1229)
+      description: >-
+        Needs `stock.read` reaching the active organization (404 otherwise).
+        Every stock ledger movement recorded on the organization, landing on
+        one of its locations or on the organization itself. Filters:
+        `warehouse_uuid` (movements leaving or reaching a location of that
+        warehouse), `type` (CSV of movement types), `product_uuid`,
+        `actor_uuid`, `created_from` / `created_to` and `q` (barcode, SKU or
+        product name). Sort keys: created_at (default -created_at), type,
+        product. No prices.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: warehouse_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          description: CSV of movement types.
+          schema: { type: string }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: actor_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: created_from
+          in: query
+          schema: { type: string }
+        - name: created_to
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Movement page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockMovementPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/stock/movements/export:
+    post:
+      tags: [Stock]
+      operationId: requestStockMovementsExport
+      summary: Queue a movement list export (TEC-1229)
+      description: >-
+        stock.read. `query`: the movement list filters (warehouse_uuid, type,
+        product_uuid, actor_uuid, created_from, created_to, q, sort).
+        Resource `stock.movements`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarehouseExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/stock/reorder-rules:
+    get:
+      tags: [Stock]
+      operationId: listStockReorderRules
+      summary: Reorder rules (min / reorder point / max) with their evaluation (TEC-1229)
+      description: >-
+        Needs `stock.read` and the warehouse module. The rules of the active
+        organization, one per warehouse and product, each with its warehouse
+        balance (available = on hand - reserved), level (ok,
+        reorder, below_min, days_low) and suggested quantity. days_low uses
+        the rule's warning_days and the latest stock forecast average. Sort
+        keys: level (default), product, warehouse, available. No prices.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: warehouse_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Rule page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockReorderRulePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Stock]
+      operationId: putStockReorderRule
+      summary: Create or replace the reorder rule of a warehouse and product (TEC-1229)
+      description: >-
+        Needs `stock.write` and the warehouse module. min_quantity <=
+        reorder_point <= max_quantity; warning_days / cover_days 1..3650; at
+        least one of min_quantity, reorder_point, max_quantity or
+        warning_days. The hourly check notifies organization owners and
+        warehouse roles (STOCK_REORDER_LOW) when the level leaves ok.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockReorderRuleInput" }
+      responses:
+        "200":
+          description: Rule with its evaluation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockReorderRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock/reorder-rules/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    delete:
+      tags: [Stock]
+      operationId: deleteStockReorderRule
+      summary: Delete a reorder rule (TEC-1229)
+      description: Needs `stock.write` and the warehouse module.
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/stock/critical:
+    get:
+      tags: [Stock]
+      operationId: listStockCritical
+      summary: Critical stock (reorder rules whose level is not ok, TEC-1229)
+      description: >-
+        Same as GET /v1/stock/reorder-rules, only the rules at reorder,
+        below_min or days_low. Mobile: /v1/mobile/panel/stock/critical.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: warehouse_uuid
+          in: query
+          schema: { type: string, format: uuid }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Critical rule page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockReorderRulePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/stock/locations/{uuid}/products:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -13398,7 +13588,10 @@ paths:
         and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole
         scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL).
         Every line that is not matched needs a resolution from its
-        `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one
+        `allowed_resolutions` (400 VALIDATION_ERROR otherwise). With
+        `partial: true` (TEC-1229) only the given lines are resolved and the
+        count stays pending_review while a difference is open; a resolved
+        line or one waiting for a recount cannot be resolved. In one
         transaction, through the stock ledger with the idempotency keys
         `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing
         -> void; relocate -> placement to the counted location (and a
@@ -13438,6 +13631,74 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-counts/{uuid}/recount-requests:
+    post:
+      tags: [Warehouse]
+      operationId: requestStockCountRecount
+      summary: Send difference lines back for a recount (TEC-1229)
+      description: >-
+        Needs `warehouse.write`. The count must be pending_review (409
+        COUNT_INVALID_STATUS); every line must be an unresolved difference
+        (400 VALIDATION_ERROR). The lines get recount_status requested and
+        cannot be resolved until recounted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountRecountRequestInput" }
+      responses:
+        "200":
+          description: Count report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount:
+    post:
+      tags: [Warehouse]
+      operationId: recountStockCountLine
+      summary: Record the recounted values of a line (TEC-1229)
+      description: >-
+        Needs `warehouse.write`. The line must wait for a recount
+        (409 COUNT_INVALID_STATUS otherwise). counted_quantity is 0 or 1 for
+        a serial unit (location_uuid required when it is found and was
+        expected in a location; counted_meters for a roll). The result is
+        evaluated again; the first counted values stay in first_count.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountRecountInput" }
+      responses:
+        "200":
+          description: Count report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/BadRequest" }
 
   /v1/warehouse/stock-counts/{uuid}/cancel:
     post:
@@ -19893,6 +20154,78 @@ paths:
           $ref: '#/components/responses/Conflict'
         '426':
           $ref: '#/components/responses/MobileApiVersionUnsupported'
+  /v1/mobile/warehouse/stock-counts/{uuid}/recount-requests:
+    post:
+      tags: [Mobile]
+      operationId: mobileRequestStockCountRecount
+      summary: Send difference lines back for a recount (TEC-1229)
+      description: >-
+        Mobile mirror of the panel route (same handler, permission and module gate). Needs `warehouse.write`. The count must be pending_review (409
+        COUNT_INVALID_STATUS); every line must be an unresolved difference
+        (400 VALIDATION_ERROR). The lines get recount_status requested and
+        cannot be resolved until recounted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountRecountRequestInput" }
+      responses:
+        "200":
+          description: Count report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "426": { $ref: "#/components/responses/MobileApiVersionUnsupported" }
+
+  /v1/mobile/warehouse/stock-counts/{uuid}/lines/{line_uuid}/recount:
+    post:
+      tags: [Mobile]
+      operationId: mobileRecountStockCountLine
+      summary: Record the recounted values of a line (TEC-1229)
+      description: >-
+        Mobile mirror of the panel route (same handler, permission and module gate). Needs `warehouse.write`. The line must wait for a recount
+        (409 COUNT_INVALID_STATUS otherwise). counted_quantity is 0 or 1 for
+        a serial unit (location_uuid required when it is found and was
+        expected in a location; counted_meters for a roll). The result is
+        evaluated again; the first counted values stay in first_count.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockCountRecountInput" }
+      responses:
+        "200":
+          description: Count report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockCountReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+        "426": { $ref: "#/components/responses/MobileApiVersionUnsupported" }
+
   /v1/mobile/warehouse/transfers:
     get:
       tags:
@@ -35501,7 +35834,11 @@ paths:
         shipping warehouse), network.summary (organizations.read, subtree /
         brand reach; network services / orders / warranties / active
         dealers, rows per dealer), stock.movement (stock.read; serial units
-        into / out of the warehouses, rows per warehouse).
+        into / out of the warehouses, rows per warehouse), stock.aging
+        (TEC-1229, stock.read; stock on hand per product and warehouse
+        bucketed by days since the last movement 0-30 / 30-60 / 60-90 /
+        90-180 / 180+; unit_price and stock_value only with
+        pricing.purchase.read or pricing.sale.read).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/ReportKey"
@@ -43627,6 +43964,195 @@ components:
               barcode: { type: string }
               quantity: { type: integer }
         updated_at: { type: string, format: date-time }
+        balance:
+          $ref: "#/components/schemas/StockBalance"
+
+    StockBalance:
+      type: object
+      description: >-
+        TEC-1229 stock view of a product in the listed scope (organization,
+        warehouse or location). Quantities count pieces, rolls and fixed
+        barcode pieces; meters are roll meters (decimal strings). available
+        = on hand - reserved (active order reservations). incoming
+        (in-transit warehouse transfers and shipped purchase orders) and
+        quarantine (returned serial units in status quarantine, TEC-1226)
+        are not on hand. No prices.
+      required: [on_hand_quantity, on_hand_meters, reserved_quantity, reserved_meters, available_quantity,
+        available_meters, incoming_quantity, incoming_meters, quarantine_quantity, quarantine_meters]
+      properties:
+        on_hand_quantity: { type: integer, format: int64 }
+        on_hand_meters: { type: string }
+        reserved_quantity: { type: integer, format: int64 }
+        reserved_meters: { type: string }
+        available_quantity: { type: integer, format: int64 }
+        available_meters: { type: string }
+        incoming_quantity: { type: integer, format: int64 }
+        incoming_meters: { type: string }
+        quarantine_quantity: { type: integer, format: int64 }
+        quarantine_meters: { type: string }
+
+    StockMovementRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    StockMovementEnd:
+      type: object
+      required: [owner_type, status, location, warehouse, organization]
+      properties:
+        owner_type: { type: string, enum: [warehouse_location, organization, service, trash] }
+        status: { type: [string, "null"] }
+        location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementRef"
+        warehouse:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementRef"
+        organization:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementRef"
+
+    StockMovementRow:
+      type: object
+      required: [uuid, type, quantity_delta, meters_delta, unit, product, from, to, actor, reference_type, reason, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        type: { type: string }
+        quantity_delta: { type: integer }
+        meters_delta: { type: string }
+        unit:
+          type: object
+          required: [uuid, barcode, unit_kind]
+          properties:
+            uuid: { type: string, format: uuid }
+            barcode: { type: string }
+            unit_kind: { type: string, enum: [serial, fixed] }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { type: string }
+        from:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementEnd"
+        to:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementEnd"
+        actor:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockMovementRef"
+        reference_type: { type: [string, "null"] }
+        reason: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeStockMovementPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockMovementRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockReorderRuleInput:
+      type: object
+      required: [warehouse_uuid, product_uuid, min_quantity]
+      additionalProperties: false
+      properties:
+        warehouse_uuid: { type: string, format: uuid }
+        product_uuid: { type: string, format: uuid }
+        min_quantity: { type: integer, minimum: 0, maximum: 1000000 }
+        reorder_point: { type: [integer, "null"], minimum: 0, maximum: 1000000 }
+        max_quantity: { type: [integer, "null"], minimum: 1, maximum: 1000000 }
+        warning_days: { type: [integer, "null"], minimum: 1, maximum: 3650 }
+        cover_days: { type: [integer, "null"], minimum: 1, maximum: 3650 }
+
+    StockReorderRule:
+      type: object
+      required: [uuid, warehouse, product, min_quantity, reorder_point, max_quantity, warning_days, cover_days,
+        balance, level, avg_daily, days_left, suggested_quantity, alert_state, alerted_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        warehouse:
+          type: object
+          required: [uuid, code, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+        product:
+          type: object
+          required: [uuid, sku, name, unit_type, uses_fixed_barcode, active, category]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+            unit_type: { type: string }
+            uses_fixed_barcode: { type: boolean }
+            active: { type: boolean }
+            category:
+              type: object
+              required: [uuid, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                name: { type: string }
+        min_quantity: { type: integer }
+        reorder_point: { type: [integer, "null"] }
+        max_quantity: { type: [integer, "null"] }
+        warning_days: { type: [integer, "null"] }
+        cover_days: { type: [integer, "null"] }
+        balance: { $ref: "#/components/schemas/StockBalance" }
+        level: { type: string, enum: [ok, reorder, below_min, days_low] }
+        avg_daily: { type: [string, "null"] }
+        days_left: { type: [string, "null"] }
+        suggested_quantity: { type: integer, format: int64 }
+        alert_state: { type: string, enum: [ok, low] }
+        alerted_at: { type: [string, "null"], format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeStockReorderRule:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockReorderRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockReorderRulePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockReorderRule" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockUnitHistory:
       type: object
@@ -44209,7 +44735,8 @@ components:
     StockCountLine:
       type: object
       required: [uuid, line_kind, unit, product, expected_location, counted_location, expected_quantity, counted_quantity,
-        expected_meters, counted_meters, result, resolution, allowed_resolutions, note, resolved_at]
+        expected_meters, counted_meters, result, resolution, allowed_resolutions, note, resolved_at,
+        recount_status, recount_rounds, recounted_at, first_count]
       properties:
         uuid: { type: string, format: uuid }
         line_kind: { type: string, enum: [serial, fixed, product] }
@@ -44239,6 +44766,45 @@ components:
           items: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated, add_to_stock] }
         note: { type: [string, "null"] }
         resolved_at: { type: [string, "null"], format: date-time }
+        recount_status:
+          type: [string, "null"]
+          enum: [requested, recounted, null]
+          description: TEC-1229 recount state.
+        recount_rounds: { type: integer }
+        recounted_at: { type: [string, "null"], format: date-time }
+        first_count:
+          description: The first counted values of a recounted line.
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [counted_quantity, counted_meters, counted_location, result]
+              properties:
+                counted_quantity: { type: integer }
+                counted_meters: { type: [string, "null"] }
+                counted_location:
+                  oneOf:
+                    - type: "null"
+                    - $ref: "#/components/schemas/StockCountLocation"
+                result: { type: string }
+
+    StockCountRecountRequestInput:
+      type: object
+      required: [line_uuids]
+      additionalProperties: false
+      properties:
+        line_uuids:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+
+    StockCountRecountInput:
+      type: object
+      required: [counted_quantity]
+      additionalProperties: false
+      properties:
+        counted_quantity: { type: integer, minimum: 0, maximum: 100000 }
+        counted_meters: { type: [string, "null"] }
+        location_uuid: { type: [string, "null"], format: uuid }
 
     StockCountReport:
       type: object
@@ -44254,6 +44820,9 @@ components:
       required: [resolutions]
       additionalProperties: false
       properties:
+        partial:
+          type: boolean
+          description: TEC-1229 partial approval (default false).
         resolutions:
           type: array
           items:
@@ -52698,7 +53267,7 @@ components:
 
     EodSummary:
       type: object
-      required: [totals, groups, types, products]
+      required: [totals, groups, types, products, balances, pending]
       properties:
         totals: { $ref: "#/components/schemas/EodTotals" }
         groups:
@@ -52710,6 +53279,42 @@ components:
         products:
           type: array
           items: { $ref: "#/components/schemas/EodProductLine" }
+        balances:
+          description: >-
+            TEC-1229 opening (period start) and closing (period end) on-hand
+            stock per product of the scope; empty on reports written before.
+          type: array
+          items: { $ref: "#/components/schemas/EodBalance" }
+        pending:
+          description: TEC-1229 open work when the report was written (null on older reports).
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/EodPending"
+
+    EodBalance:
+      type: object
+      required: [product_uuid, sku, product_name, opening_quantity, opening_meters, closing_quantity, closing_meters,
+        change_quantity, change_meters]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sku: { type: string }
+        product_name: { type: string }
+        opening_quantity: { type: integer, format: int64 }
+        opening_meters: { type: string }
+        closing_quantity: { type: integer, format: int64 }
+        closing_meters: { type: string }
+        change_quantity: { type: integer, format: int64 }
+        change_meters: { type: string }
+
+    EodPending:
+      type: object
+      required: [as_of, open_transfers, unplaced_entries, pending_counts, preparing_orders]
+      properties:
+        as_of: { type: string, format: date-time }
+        open_transfers: { type: integer, format: int64 }
+        unplaced_entries: { type: integer, format: int64 }
+        pending_counts: { type: integer, format: int64 }
+        preparing_orders: { type: integer, format: int64 }
 
     EodReport:
       type: object

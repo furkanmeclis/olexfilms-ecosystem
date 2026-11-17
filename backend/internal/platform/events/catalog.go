@@ -742,6 +742,7 @@ func catalogConstants() []string {
 		ShowcaseRejected,
 		StockForecastComputed,
 		StockForecastLow,
+		StockReorderLow,
 		PerformanceComputed,
 		PerformanceBonusCalculated,
 		PerformanceBonusApproved,
@@ -856,6 +857,12 @@ const (
 	StockForecastComputed = "stock.forecast_computed"
 	StockForecastLow      = "stock.forecast_low"
 )
+
+// StockReorderLow (TEC-1229): a product's available quantity in one
+// warehouse fell to its reorder point / below its minimum (ok -> low edge of
+// the hourly stock_reorder_rules check). Reaches organization owners and
+// warehouse roles.
+const StockReorderLow = "stock.reorder_low"
 
 // Recommended prices (TEC-506, F5-09b). recommended_published is written in
 // the transaction that publishes a batch (API or import); tenant is the

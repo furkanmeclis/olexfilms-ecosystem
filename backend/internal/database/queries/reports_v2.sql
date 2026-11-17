@@ -166,3 +166,63 @@ WHERE d.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR d.id = ANY (sqlc.narg(org_ids)::bigint[]))
 ORDER BY services_count DESC, orders_count DESC, lower(d.name), d.id
 LIMIT sqlc.arg(row_limit);
+
+-- name: ReportStockAging :many
+-- TEC-1229: stock on hand (counted serial units and fixed holdings) of the
+-- organizations in reach, per product and warehouse (NULL: held without a
+-- location), bucketed by the days since the last ledger movement of each
+-- unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
+-- brand price list's recommended sale price; the report shows it only
+-- with a pricing read permission.
+WITH stock AS (
+    SELECT u.product_id, st.holder_org_id AS org_id, wl.warehouse_id,
+           1::bigint AS qty, COALESCE(u.remaining_meters, 0)::numeric(14,2) AS meters,
+           COALESCE(m.created_at, u.created_at) AS last_at
+    FROM unit_current_state st
+    JOIN units u ON u.id = st.unit_id
+    LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+    LEFT JOIN stock_movements m ON m.id = st.last_movement_id
+    WHERE st.status IN ('available', 'placed')
+      AND st.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR st.holder_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
+    UNION ALL
+    SELECT u.product_id, h.holder_org_id AS org_id, wl.warehouse_id,
+           h.quantity_on_hand::bigint AS qty, 0::numeric(14,2) AS meters,
+           COALESCE(m.created_at, h.updated_at) AS last_at
+    FROM fixed_barcode_holdings h
+    JOIN units u ON u.id = h.unit_id
+    LEFT JOIN warehouse_locations wl ON wl.id = h.owner_location_id
+    LEFT JOIN stock_movements m ON m.id = h.last_movement_id
+    WHERE h.quantity_on_hand > 0
+      AND h.owner_type IN ('warehouse_location', 'organization')
+      AND h.brand_id = sqlc.arg(brand_id)
+      AND (sqlc.narg(org_ids)::bigint[] IS NULL OR h.holder_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
+), aged AS (
+    SELECT s.*, GREATEST(0, EXTRACT(EPOCH FROM (sqlc.arg(as_of)::timestamptz - s.last_at)) / 86400)::int AS age_days
+    FROM stock s
+)
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       o.uuid AS organization_uuid, o.name AS organization_name,
+       w.uuid AS warehouse_uuid, w.name AS warehouse_name,
+       SUM(a.qty)::bigint AS quantity,
+       SUM(a.meters)::numeric(14,2)::text AS meters,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days < 30), 0)::bigint AS qty_0_30,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 30 AND a.age_days < 60), 0)::bigint AS qty_30_60,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 60 AND a.age_days < 90), 0)::bigint AS qty_60_90,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 90 AND a.age_days < 180), 0)::bigint AS qty_90_180,
+       COALESCE(SUM(a.qty) FILTER (WHERE a.age_days >= 180), 0)::bigint AS qty_180_plus,
+       MAX(a.age_days)::int AS oldest_days,
+       MIN(a.last_at)::timestamptz AS oldest_movement_at,
+       COALESCE(pp.recommended_sale_price::numeric(14,4)::text, '')::text AS unit_price,
+       b.currency::text AS currency
+FROM aged a
+JOIN products p ON p.id = a.product_id
+JOIN organizations o ON o.id = a.org_id
+JOIN brands b ON b.id = p.brand_id
+LEFT JOIN warehouses w ON w.id = a.warehouse_id
+LEFT JOIN product_prices pp ON pp.product_id = p.id AND pp.currency = b.currency
+GROUP BY p.id, p.uuid, p.sku, p.name, o.id, o.uuid, o.name, w.id, w.uuid, w.name,
+         pp.recommended_sale_price, b.currency
+HAVING MAX(a.age_days) >= sqlc.arg(min_days)::int
+ORDER BY MAX(a.age_days) DESC, p.name, p.id, o.id, w.id NULLS FIRST
+LIMIT sqlc.arg(row_limit);

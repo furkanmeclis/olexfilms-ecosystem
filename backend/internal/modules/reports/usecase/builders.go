@@ -241,6 +241,8 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		return s.networkSummary(ctx, q, a, env)
 	case ReportStockMovement:
 		return s.stockMovement(ctx, q, a, env)
+	case ReportStockAging:
+		return s.stockAging(ctx, c, q, a, env)
 	case ReportDealersPerformance:
 		return s.dealersPerformance(ctx, c, f, q, env)
 	case ReportDealersTopByWarranty:

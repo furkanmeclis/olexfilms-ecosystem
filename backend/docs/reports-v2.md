@@ -108,6 +108,7 @@ değeri yalnız `pricing.purchase.read` ya da `pricing.sale.read` izniyle gelir.
 | `orders.fulfillment` | summary | orders | orders.read | ✓ | ✓ | – |
 | `network.summary` | summary | organizations | organizations.read (subtree/brand/all; bayi hariç) | ✓ | ✓ | ✓ |
 | `stock.movement` | timeseries | stock | stock.read | ✓ | ✓ | ✓ |
+| `stock.aging` | table | stock | stock.read | – | – | ✓ |
 
 * `orders.fulfillment` (depo): kapsamdaki kurumların **sattığı** siparişler
   (`organization_id` = satıcı).
@@ -138,6 +139,17 @@ değeri yalnız `pricing.purchase.read` ya da `pricing.sale.read` izniyle gelir.
     `net_count`.
   * Depo konumu olmayan bayi stoğu bu raporda görünmez; anlık stok için `stock.summary`
     kullanılır.
+* `stock.aging` (TEC-1229): yavaş dönen / yaşlanan stok. Kapsamdaki kurumların eldeki
+  stoğu (sayılan seri birimler ve sabit barkod miktarları) ürün ve depo bazında; her
+  birimin son defter hareketinden bu yana geçen gün sayısına göre kovalara ayrılır.
+  * Kolonlar: `product`, `sku`, `warehouse` (konumsuz stokta `null`), `organization`,
+    `quantity`, `meters`, `qty_0_30`, `qty_30_60`, `qty_60_90`, `qty_90_180`,
+    `qty_180_plus`, `oldest_days`, `oldest_movement_at`.
+  * `unit_price` ve `stock_value` (markanın fiyat listesindeki tavsiye satış fiyatı ×
+    adet) yalnız `pricing.purchase.read` ya da `pricing.sale.read` izniyle gelir. Depo
+    rolleri bu kolonları görmez.
+  * KPI'lar: `aging_quantity` (stoktaki adet), `aging_over_90` (90 günden eski adet).
+  * Satırlar en eski stoktan yeniye sıralanır; `limit` satır sayısını sınırlar.
 
 ## Dışa aktarma
 

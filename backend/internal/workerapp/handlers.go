@@ -413,6 +413,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 			return err
 		}).
 		WithStockForecastDaily(stockForecastSvc.DailyTask).
+		// TEC-1229: hourly warehouse low stock check (reorder rules).
+		WithStockReorderCheck(stockusecase.NewReorderAlerts(pool, stockusecase.New(queries), outboxStore).Task).
 		WithPerformanceDaily(performanceSvc.DailyTask).
 		WithEfficiencyNetworkRefresh(efficiencyNetwork.Task).
 		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
