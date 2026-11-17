@@ -3968,7 +3968,13 @@ type Querier interface {
 	// TEC-1058: the information-only "sent plotter cut" mark of a line.
 	SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPlotterCutParams) (OrderItem, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
+	// TEC-1228: package count, desi and weight entered at shipping.
+	SetOrderPackages(ctx context.Context, arg SetOrderPackagesParams) (Order, error)
+	// TEC-1228: the warehouse user who took the job (NULL releases it).
+	SetOrderPicker(ctx context.Context, arg SetOrderPickerParams) (Order, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
+	// TEC-1228: the priority and the due date of an order.
+	SetOrderSchedule(ctx context.Context, arg SetOrderScheduleParams) (Order, error)
 	// ---------------------------------------------------------------------------
 	// TEC-1028: the seller warehouse of an order.
 	SetOrderSellerWarehouse(ctx context.Context, arg SetOrderSellerWarehouseParams) (Order, error)

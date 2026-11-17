@@ -122,6 +122,28 @@ SET delivery_method_id = sqlc.narg(delivery_method_id),
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
+-- name: SetOrderSchedule :one
+-- TEC-1228: the priority and the due date of an order.
+UPDATE orders
+SET priority = sqlc.arg(priority), due_date = sqlc.narg(due_date)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: SetOrderPicker :one
+-- TEC-1228: the warehouse user who took the job (NULL releases it).
+UPDATE orders
+SET picker_user_id = sqlc.narg(picker_user_id),
+    claimed_at = CASE WHEN sqlc.narg(picker_user_id)::bigint IS NULL THEN NULL ELSE NOW() END
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: SetOrderPackages :one
+-- TEC-1228: package count, desi and weight entered at shipping.
+UPDATE orders
+SET package_count = sqlc.narg(package_count), desi = sqlc.narg(desi), weight_kg = sqlc.narg(weight_kg)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- name: SetOrderReceiptDocument :one
 UPDATE orders
 SET receipt_document_key = sqlc.narg(receipt_document_key)
@@ -181,8 +203,21 @@ WHERE o.brand_id = sqlc.arg(brand_id)
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
                                       AND sw.uuid = ANY (sqlc.narg(seller_warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR o.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (sqlc.narg(picker_user_id)::bigint IS NULL OR o.picker_user_id = sqlc.narg(picker_user_id)::bigint)
+  AND (NOT COALESCE(sqlc.narg(picker_unassigned)::bool, false) OR o.picker_user_id IS NULL)
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR o.uuid = ANY (sqlc.narg(uuids)::uuid[]))
 ORDER BY
+  -- TEC-1228: queue = urgent first, then the due date (none last), then
+  -- the oldest; priority and due_date sort alone.
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text IN ('queue', 'priority') THEN
+    CASE o.priority WHEN 'urgent' THEN 0 ELSE 1 END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text IN ('queue', 'priority') THEN
+    CASE o.priority WHEN 'urgent' THEN 0 ELSE 1 END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text IN ('queue', 'due_date') THEN o.due_date END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text IN ('queue', 'due_date') THEN o.due_date END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'queue' THEN o.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'queue' THEN o.created_at END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'order_no' THEN o.order_no END END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'order_no' THEN o.order_no END END DESC,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
@@ -234,7 +269,10 @@ WHERE o.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(seller_warehouse_uuids)::uuid[]), 0) = 0
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
-                                      AND sw.uuid = ANY (sqlc.narg(seller_warehouse_uuids)::uuid[])));
+                                      AND sw.uuid = ANY (sqlc.narg(seller_warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR o.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (sqlc.narg(picker_user_id)::bigint IS NULL OR o.picker_user_id = sqlc.narg(picker_user_id)::bigint)
+  AND (NOT COALESCE(sqlc.narg(picker_unassigned)::bool, false) OR o.picker_user_id IS NULL);
 
 -- TEC-1054: list facts of a page of orders: the line amounts (pieces and
 -- roll meters apart), the seller warehouse and the last actor. TEC-1060:

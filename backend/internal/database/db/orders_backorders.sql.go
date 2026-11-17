@@ -141,7 +141,7 @@ func (q *Queries) GetOrderItemUnitByID(ctx context.Context, id int64) (OrderItem
 }
 
 const listOrderBackorders = `-- name: ListOrderBackorders :many
-SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id FROM orders
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id, parent_order_id, backorder_of_order_id, priority, due_date, picker_user_id, claimed_at, package_count, desi, weight_kg FROM orders
 WHERE backorder_of_order_id = $1 AND brand_id = $2
 ORDER BY created_at, id
 `
@@ -203,6 +203,13 @@ func (q *Queries) ListOrderBackorders(ctx context.Context, arg ListOrderBackorde
 			&i.SellerWarehouseID,
 			&i.ParentOrderID,
 			&i.BackorderOfOrderID,
+			&i.Priority,
+			&i.DueDate,
+			&i.PickerUserID,
+			&i.ClaimedAt,
+			&i.PackageCount,
+			&i.Desi,
+			&i.WeightKg,
 		); err != nil {
 			return nil, err
 		}
@@ -367,7 +374,7 @@ SET status = 'approved',
     backorder_of_order_id = src.id
 FROM orders src
 WHERE b.id = $1 AND src.id = $2 AND b.approved_at IS NULL
-RETURNING b.id, b.uuid, b.order_no, b.organization_id, b.brand_id, b.seller_org_id, b.buyer_org_id, b.seller_warehouse_location_id, b.buyer_warehouse_location_id, b.status, b.currency, b.rate_snapshot, b.try_rate, b.subtotal, b.tax_total, b.total, b.delivery_mode, b.tracking_no, b.shipping_document_key, b.receipt_document_key, b.external_reference, b.note, b.cancel_reason, b.created_by_user_id, b.approved_by_user_id, b.submitted_at, b.approved_at, b.ready_at, b.shipped_at, b.delivered_at, b.received_at, b.cancel_requested_at, b.cancelled_at, b.created_at, b.updated_at, b.delivery_method_id, b.created_by_seller, b.invoice_status, b.seller_warehouse_id, b.parent_order_id, b.backorder_of_order_id
+RETURNING b.id, b.uuid, b.order_no, b.organization_id, b.brand_id, b.seller_org_id, b.buyer_org_id, b.seller_warehouse_location_id, b.buyer_warehouse_location_id, b.status, b.currency, b.rate_snapshot, b.try_rate, b.subtotal, b.tax_total, b.total, b.delivery_mode, b.tracking_no, b.shipping_document_key, b.receipt_document_key, b.external_reference, b.note, b.cancel_reason, b.created_by_user_id, b.approved_by_user_id, b.submitted_at, b.approved_at, b.ready_at, b.shipped_at, b.delivered_at, b.received_at, b.cancel_requested_at, b.cancelled_at, b.created_at, b.updated_at, b.delivery_method_id, b.created_by_seller, b.invoice_status, b.seller_warehouse_id, b.parent_order_id, b.backorder_of_order_id, b.priority, b.due_date, b.picker_user_id, b.claimed_at, b.package_count, b.desi, b.weight_kg
 `
 
 type MarkOrderBackorderParams struct {
@@ -424,6 +431,13 @@ func (q *Queries) MarkOrderBackorder(ctx context.Context, arg MarkOrderBackorder
 		&i.SellerWarehouseID,
 		&i.ParentOrderID,
 		&i.BackorderOfOrderID,
+		&i.Priority,
+		&i.DueDate,
+		&i.PickerUserID,
+		&i.ClaimedAt,
+		&i.PackageCount,
+		&i.Desi,
+		&i.WeightKg,
 	)
 	return i, err
 }

@@ -389,9 +389,13 @@ type ShippingDoc struct {
 	DeliveryMethod string
 	TrackingNo     string
 	TrackingURL    string
-	Lines          []ShippingLine
-	Letterhead     ioengine.Letterhead
-	GeneratedAt    time.Time
+	// TEC-1228: package count, desi and weight entered at shipping ("" = not given).
+	PackageCount string
+	Desi         string
+	WeightKg     string
+	Lines        []ShippingLine
+	Letterhead   ioengine.Letterhead
+	GeneratedAt  time.Time
 }
 
 func shippingParty(o db.Organization) ShippingParty {
@@ -434,6 +438,15 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 	}
 	if o.ShippedAt.Valid {
 		d.ShippedAt = o.ShippedAt.Time
+	}
+	if o.PackageCount.Valid {
+		d.PackageCount = strconv.Itoa(int(o.PackageCount.Int32))
+	}
+	if o.Desi.Valid {
+		d.Desi = numericText(o.Desi, 2)
+	}
+	if o.WeightKg.Valid {
+		d.WeightKg = numericText(o.WeightKg, 2)
 	}
 	if o.DeliveryMethodID.Valid {
 		m, err := s.q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)
@@ -514,6 +527,9 @@ func ShippingDocumentHTML(d ShippingDoc) string {
 	meta(t("orders.pdf.delivery_method"), d.DeliveryMethod, false)
 	meta(t("orders.pdf.tracking_no"), d.TrackingNo, true)
 	meta(t("orders.pdf.tracking_url"), d.TrackingURL, true)
+	meta(t("orders.pdf.package_count"), d.PackageCount, true)
+	meta(t("orders.pdf.desi"), d.Desi, true)
+	meta(t("orders.pdf.weight_kg"), d.WeightKg, true)
 	b.WriteString(`</table><table class="parties"><tr>`)
 	party := func(label string, p ShippingParty) {
 		b.WriteString(`<td><h2>` + esc(label) + `</h2><p><strong>` + esc(p.Name) + `</strong>`)

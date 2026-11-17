@@ -26840,7 +26840,10 @@ paths:
         buyer names and dealer codes, inside the same scope (hits are
         reloaded from Postgres). TEC-373 (docs/list-contract.md): `sort`
         is one of order_no, status (flow rank draft → cancelled), total,
-        created_at (default `-created_at`, id tiebreak); `status`,
+        created_at, and (TEC-1228) queue or its alias priority (urgent
+        first, then the due date with none last, then the oldest: the
+        warehouse work queue) and due_date (default `-created_at`, id
+        tiebreak); `status`,
         `seller_org_uuid` and `buyer_org_uuid` are comma separated any-of
         filters; `total_min` / `total_max` bound the order total
         (inclusive, order currency). The party filters only narrow the
@@ -26930,6 +26933,16 @@ paths:
           description: >-
             TEC-1216 reverse relation filter (RelatedList): orders the user opened.
           schema: { type: string, format: uuid }
+        - name: priority
+          in: query
+          description: TEC-1228. Comma separated priorities (normal, urgent); unknown value → 400.
+          schema: { type: string }
+        - name: picker
+          in: query
+          description: >-
+            TEC-1228. The warehouse job holder: `me` (the caller's jobs),
+            `none` (nobody took it) or a user uuid; other values → 400.
+          schema: { type: string }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -27394,6 +27407,115 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/orders/{uuid}/schedule:
+    put:
+      tags: [Orders]
+      operationId: setOrderSchedule
+      summary: Set the priority and the due date of an order (TEC-1228)
+      description: >-
+        The buyer (orders.write) while the order is a draft or submitted; the
+        seller (orders.write or orders.approve) until it ships (409
+        ORDER_SCHEDULE_LOCKED otherwise). The warehouse roles (orders.ship
+        only) cannot change it. Written to the timeline as schedule_updated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderScheduleInput"
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/orders/{uuid}/claim:
+    post:
+      tags: [Orders]
+      operationId: claimOrder
+      summary: Take the warehouse job of an order (TEC-1228)
+      description: >-
+        Seller side, orders.ship (or orders.write / orders.approve), status
+        approved, processing, preparing or ready (409 ORDER_NOT_CLAIMABLE
+        otherwise). Taking one's own job again is a no-op. A job someone else
+        holds answers 409 ORDER_ALREADY_CLAIMED with data.picker
+        (OrderUserRef) and data.claimed_at, unless takeover is true and the
+        caller holds orders.write or orders.approve (403 otherwise). Written
+        to the timeline as claimed or claim_taken_over. The body is optional.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderClaimInput"
+      responses:
+        "200":
+          description: Order with the caller as picker
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Orders]
+      operationId: releaseOrderClaim
+      summary: Give the warehouse job back (TEC-1228)
+      description: >-
+        The holder, or a seller manager (orders.write or orders.approve) for
+        someone else's job (403 otherwise). An unclaimed job is a no-op.
+        Written to the timeline as claim_released.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order without a picker
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/orders/{uuid}/transitions:
     post:
       tags: [Orders]
@@ -50181,9 +50303,56 @@ components:
         - live_try_rate
         - live_total_try
         - last_activity
+        - priority
+        - due_date
+        - is_overdue
+        - picker
+        - claimed_at
+        - claimed_by_me
+        - can_claim
+        - can_take_over
+        - can_edit_schedule
+        - package_count
+        - desi
+        - weight_kg
       properties:
         uuid: { type: string, format: uuid }
         order_no: { type: string, example: ORD-00000001 }
+        priority: { $ref: "#/components/schemas/OrderPriority" }
+        due_date:
+          type: [string, "null"]
+          format: date
+          description: TEC-1228. The due date (termin); null without one
+        is_overdue:
+          type: boolean
+          description: >-
+            TEC-1228. The due date passed (in the seller's time zone) and the
+            order has not shipped or been cancelled.
+        picker:
+          description: TEC-1228. The warehouse user who took the job; null while nobody has
+          oneOf:
+            - $ref: "#/components/schemas/OrderUserRef"
+            - type: "null"
+        claimed_at: { type: [string, "null"], format: date-time, description: TEC-1228. When the job was taken }
+        claimed_by_me: { type: boolean, description: TEC-1228. The caller holds the job }
+        can_claim:
+          type: boolean
+          description: >-
+            TEC-1228. The caller may take the job now: seller side with
+            orders.ship (or orders.write / orders.approve), status approved,
+            processing, preparing or ready.
+        can_take_over:
+          type: boolean
+          description: TEC-1228. The caller may take over or release someone else's job (seller orders.write or orders.approve)
+        can_edit_schedule:
+          type: boolean
+          description: >-
+            TEC-1228. The caller may change priority and due_date (PUT
+            schedule): the buyer (orders.write) in draft / submitted, the
+            seller (orders.write or orders.approve) until shipping.
+        package_count: { type: [integer, "null"], format: int32, description: TEC-1228. Packages entered at shipping }
+        desi: { type: [string, "null"], example: "12.50", description: TEC-1228. Volumetric weight entered at shipping }
+        weight_kg: { type: [string, "null"], example: "7.25", description: TEC-1228. Weight (kg) entered at shipping }
         total_quantity:
           type: integer
           format: int64
@@ -50387,7 +50556,9 @@ components:
       description: >-
         TEC-1060: one step of an order. action is created, a status the order
         moved to, unit_assigned, unit_unassigned, updated (line edit) or
-        plotter_marked (TEC-1058: product and plotter_cut). The
+        plotter_marked (TEC-1058: product and plotter_cut), and (TEC-1228)
+        schedule_updated (priority, due_date), claimed, claim_taken_over and
+        claim_released (previous_picker when it was someone else's). The
         unit steps carry product, barcode and the amount of that step
         (quantity or meters; a fixed barcode scanned again counts the
         growth); a status step may carry from_status and reason; an edit
@@ -50428,6 +50599,15 @@ components:
         resolution:
           type: string
           description: TEC-1227 — delivered, returned or closed on a discrepancy_resolved step
+        priority:
+          $ref: "#/components/schemas/OrderPriority"
+        due_date:
+          type: string
+          format: date
+          description: TEC-1228 — the due date set by a schedule_updated step (absent = cleared)
+        previous_picker:
+          type: string
+          description: TEC-1228 — the user whose job a claim_taken_over or claim_released step took away
 
     OrderLineChange:
       type: object
@@ -50756,6 +50936,8 @@ components:
       required: [items]
       properties:
         note: { type: string }
+        priority: { $ref: "#/components/schemas/OrderPriority" }
+        due_date: { type: [string, "null"], format: date, description: TEC-1228. The due date (YYYY-MM-DD) }
         seller_warehouse_uuid:
           type: string
           format: uuid
@@ -50782,6 +50964,8 @@ components:
       required: [items]
       properties:
         note: { type: string }
+        priority: { $ref: "#/components/schemas/OrderPriority" }
+        due_date: { type: [string, "null"], format: date, description: TEC-1228. The due date (YYYY-MM-DD) }
         buyer_org_uuid:
           type: string
           format: uuid
@@ -51175,6 +51359,13 @@ components:
             methods (400 otherwise); the shipping note PDF is rendered after
             the shipment.
         tracking_no: { type: string, maxLength: 128, description: Shipping only (TEC-768) }
+        package_count:
+          type: integer
+          minimum: 1
+          maximum: 9999
+          description: Shipping only (TEC-1228); printed on the shipping note
+        desi: { type: number, minimum: 0, description: Shipping only (TEC-1228); volumetric weight on the shipping note }
+        weight_kg: { type: number, minimum: 0, description: Shipping only (TEC-1228); weight in kg on the shipping note }
         discrepancies:
           type: array
           description: TEC-1227 — received only; missing or damaged units
@@ -51236,6 +51427,31 @@ components:
           type: array
           items: { type: string, enum: [delivered, returned, closed] }
         can_add_photo: { type: boolean }
+
+    OrderPriority:
+      type: string
+      description: TEC-1228. Order priority; the warehouse queue lists urgent first
+      enum: [normal, urgent]
+
+    OrderScheduleInput:
+      type: object
+      required: [priority]
+      properties:
+        priority: { $ref: "#/components/schemas/OrderPriority" }
+        due_date:
+          type: [string, "null"]
+          format: date
+          description: The due date (YYYY-MM-DD); null or omitted clears it
+
+    OrderClaimInput:
+      type: object
+      properties:
+        takeover:
+          type: boolean
+          description: >-
+            Take over a job someone else holds (seller orders.write or
+            orders.approve, else 403). Without it such a job answers 409
+            ORDER_ALREADY_CLAIMED with data.picker and data.claimed_at.
 
     OrderQuoteInput:
       type: object

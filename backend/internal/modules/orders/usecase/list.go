@@ -20,6 +20,9 @@ import (
 var ListSort = apiquery.SortSpec{
 	Columns: apiquery.SortColumns{
 		"order_no": "order_no", "status": "status", "total": "total", "created_at": "created_at",
+		// TEC-1228: queue (alias priority) = urgent first, then the due date,
+		// then the oldest.
+		"queue": "queue", "priority": "queue", "due_date": "due_date",
 	},
 	Default: apiquery.SortField{Field: "created_at", Desc: true},
 }
@@ -38,13 +41,19 @@ const (
 	QueryOrganizationUUID = "organization_uuid"
 	QueryProductUUID      = "product_uuid"
 	QueryCreatedByUUID    = "created_by_uuid"
+	// TEC-1228: priority (CSV) and picker (me, none or a user uuid).
+	QueryPriority = "priority"
+	QueryPicker   = "picker"
+	// PickerMe and PickerNone are the picker filter keywords.
+	PickerMe   = "me"
+	PickerNone = "none"
 )
 
 // listKeys are the list parameters an export job carries.
 var listKeys = []string{
 	"q", "sort", QuerySide, QueryStatus, "created_from", "created_to",
 	QuerySellerOrgUUID, QueryBuyerOrgUUID, "total_min", "total_max", QuerySellerWarehouse,
-	QueryOrganizationUUID, QueryProductUUID, QueryCreatedByUUID,
+	QueryOrganizationUUID, QueryProductUUID, QueryCreatedByUUID, QueryPriority,
 }
 
 // ListValues keeps the list parameters of a job query (or export body).
@@ -94,6 +103,16 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 	if f.CreatedByUUID, err = optUUID(values, QueryCreatedByUUID); err != nil {
 		return f, err
 	}
+	if f.Priorities, err = apiquery.EnumList(values, QueryPriority, Priorities...); err != nil {
+		return f, err
+	}
+	if f.Picker = strings.TrimSpace(values.Get(QueryPicker)); f.Picker != "" && f.Picker != PickerMe && f.Picker != PickerNone {
+		if _, err := uuid.Parse(f.Picker); err != nil {
+			return f, &apiquery.ValidationError{Details: []apiquery.Detail{{
+				Field: QueryPicker, Message: "must be me, none or a user uuid", Code: "invalid",
+			}}}
+		}
+	}
 	total, err := apiquery.NumRange(values, "total")
 	if err != nil {
 		return f, err
@@ -141,7 +160,8 @@ func (f ListFilter) sqlOnly() bool {
 	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil || len(f.InvoiceStatuses) > 0 ||
 		len(f.SellerOrgUUIDs) > 0 || len(f.BuyerOrgUUIDs) > 0 || len(f.SellerWarehouseUUIDs) > 0 ||
 		f.TotalMin != nil || f.TotalMax != nil ||
-		len(f.PartyOrgUUIDs) > 0 || f.ProductUUID.Valid || f.CreatedByUUID.Valid
+		len(f.PartyOrgUUIDs) > 0 || f.ProductUUID.Valid || f.CreatedByUUID.Valid ||
+		len(f.Priorities) > 0 || f.Picker != ""
 }
 
 func sortArgs(f ListFilter) (string, bool) {
