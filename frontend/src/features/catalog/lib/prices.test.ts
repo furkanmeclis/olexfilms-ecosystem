@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseLines,
+  productFormSchema,
   productInput,
   productDefaults,
 } from "@/features/catalog/lib/form";
@@ -105,7 +106,28 @@ describe("product form", () => {
       micron_thickness: 190.5,
       uses_fixed_barcode: false,
       active: true,
+      usage_credits: 5,
     });
+  });
+
+  it("keeps the usage credits of a product within 1..1000 (TEC-1221)", () => {
+    const schema = productFormSchema((key) => key);
+    const values = {
+      ...productDefaults(null),
+      category_uuid: "c1",
+      sku: "S",
+      name: "N",
+    };
+    expect(values.usage_credits).toBe("5");
+    expect(schema.safeParse(values).success).toBe(true);
+    expect(
+      productInput({ ...values, usage_credits: " 12 " }).usage_credits,
+    ).toBe(12);
+    for (const bad of ["0", "1001", "2.5", ""]) {
+      expect(schema.safeParse({ ...values, usage_credits: bad }).success).toBe(
+        false,
+      );
+    }
   });
 });
 

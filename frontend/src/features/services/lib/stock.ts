@@ -79,6 +79,8 @@ export const STOCK_ERROR_CODES = [
   "CONTRACT_REQUIRED",
   // TEC-499: a required intake photo angle is missing (photo standard).
   "PHOTO_STANDARD_INCOMPLETE",
+  // TEC-1221: the barcode has no usage credits left.
+  "UNIT_CREDITS_EXHAUSTED",
 ] as const;
 
 export function stockErrorKey(code: string | undefined): string {

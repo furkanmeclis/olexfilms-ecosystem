@@ -392,5 +392,11 @@
   "detail.created_by": "Creado por",
   "detail.performed_by": "Realizado por",
   "detail.completed_by": "Completado por",
-  "detail.cancelled_by": "Cancelado por"
+  "detail.cancelled_by": "Cancelado por",
+  "stock.credits": "Créditos restantes: {{remaining}} / {{total}}",
+  "stock.credit_take": "Esta selección usa 1 crédito.",
+  "stock.finish_product": "He terminado el producto",
+  "stock.finish_product_hint": "Todos los créditos restantes del código de barras ({{count}}) se asignan a este servicio; el código no podrá seleccionarse en otro servicio.",
+  "stock.finished_product": "Producto terminado",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Este código de barras no tiene créditos de uso restantes; no se puede seleccionar en otro servicio."
 }

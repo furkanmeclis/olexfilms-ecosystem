@@ -164,6 +164,9 @@ export function ProductDetailPage({
                 ? "—"
                 : format.number(p.micron_thickness)}
             </Field>
+            <Field label={t("catalog.fields.usage_credits")}>
+              {format.number(p.usage_credits)}
+            </Field>
             <Field label={t("catalog.fields.active")}>
               <StatusChip
                 label={

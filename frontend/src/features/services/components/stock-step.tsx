@@ -76,6 +76,8 @@ function AddUnitForm({
   const [meters, setMeters] = useState("");
   const [wholeRoll, setWholeRoll] = useState(false);
   const [quantity, setQuantity] = useState("1");
+  // TEC-1221 "ürünü bitirdim": the item takes every remaining credit.
+  const [finish, setFinish] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -117,6 +119,7 @@ function AddUnitForm({
         body.meters = Number(normalizeMeters(meters));
       }
       if (mode === "fixed") body.quantity = Number(quantity);
+      if (unit.credits && finish) body.finish_product = true;
       return serviceWizardService.addItem(service.uuid, body);
     },
     onSuccess: (saved) => {
@@ -257,6 +260,36 @@ function AddUnitForm({
         </div>
       ) : null}
 
+      {unit.credits ? (
+        <div className="space-y-2" data-testid="unit-credits">
+          <p className="text-muted-foreground text-sm">
+            {t("services.stock.credits", {
+              remaining: unit.credits.credits_remaining,
+              total: unit.credits.credits_total,
+            })}{" "}
+            {t("services.stock.credit_take")}
+          </p>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${id}-finish`}
+              checked={finish}
+              data-testid="finish-product"
+              onCheckedChange={(v) => setFinish(v === true)}
+            />
+            <Label htmlFor={`${id}-finish`}>
+              {t("services.stock.finish_product")}
+            </Label>
+          </div>
+          {finish ? (
+            <p className="text-muted-foreground text-xs">
+              {t("services.stock.finish_product_hint", {
+                count: unit.credits.credits_remaining,
+              })}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {allowed.length > 0 ? (
         <fieldset className="space-y-3" data-testid="item-parts-picker">
           <legend className="text-sm font-medium">
@@ -369,7 +402,20 @@ export function ItemRow({
             {item.barcode}
           </span>
           <span className="ms-2">{amount}</span>
+          {item.credits ? (
+            <span className="ms-2" data-testid="item-credits">
+              {t("services.stock.credits", {
+                remaining: item.credits.credits_remaining,
+                total: item.credits.credits_total,
+              })}
+            </span>
+          ) : null}
         </p>
+        {item.finished_product ? (
+          <Badge variant="secondary" className="text-xs">
+            {t("services.stock.finished_product")}
+          </Badge>
+        ) : null}
         {item.applied_parts.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {item.applied_parts.map((p) => (
@@ -607,6 +653,14 @@ export function StockStep({
                                 })
                               : t("services.stock.mode.piece")}
                         </span>
+                        {u.credits ? (
+                          <span className="ms-2" data-testid="unit-row-credits">
+                            {t("services.stock.credits", {
+                              remaining: u.credits.credits_remaining,
+                              total: u.credits.credits_total,
+                            })}
+                          </span>
+                        ) : null}
                       </p>
                     </div>
                     <Button

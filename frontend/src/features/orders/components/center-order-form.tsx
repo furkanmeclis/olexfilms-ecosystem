@@ -571,6 +571,12 @@ export function CenterOrderForm({
                       onChange={(v) =>
                         update(line.product_uuid, { plotter_cut: v })
                       }
+                      credits={{
+                        value: line.plotter_credits ?? "",
+                        invalid: touched && err === "credits_invalid",
+                        onChange: (v) =>
+                          update(line.product_uuid, { plotter_credits: v }),
+                      }}
                     />
                   </div>
                   <div className="space-y-1">
@@ -589,7 +595,8 @@ export function CenterOrderForm({
                         (touched &&
                           Boolean(err) &&
                           err !== "price_invalid" &&
-                          err !== "discount_invalid") ||
+                          err !== "discount_invalid" &&
+                          err !== "credits_invalid") ||
                         undefined
                       }
                       onChange={(e) =>

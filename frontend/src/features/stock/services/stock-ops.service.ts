@@ -14,6 +14,9 @@ export type StockReclassification = Schemas["StockReclassification"];
 export type StockReclassificationStatus =
   Schemas["StockReclassificationStatus"];
 export type StockSplit = Schemas["StockSplit"];
+export type StockUnitCredits = Schemas["StockUnitCredits"];
+export type StockUnitCreditIncreaseInput =
+  Schemas["StockUnitCreditIncreaseInput"];
 
 /**
  * GET /v1/stock/reclassifications params (TEC-763 list contract): `sort`
@@ -55,6 +58,17 @@ export const stockOpsService = {
       "GET",
       `/v1/stock/units/by-barcode/${enc(barcode)}`,
       { query: { limit: HISTORY_PAGE_SIZE, offset } },
+    );
+  },
+  /**
+   * TEC-1221: adds usage credits to a serial piece unit (platform super
+   * admin only; 409 UNIT_CREDITS_NOT_APPLICABLE for a roll or fixed barcode).
+   */
+  increaseUnitCredits(unitUuid: string, body: StockUnitCreditIncreaseInput) {
+    return platformRequest<StockUnitCredits>(
+      "POST",
+      `/v1/platform/stock/units/${enc(unitUuid)}/credits`,
+      { body },
     );
   },
   listReclassifications(params: ReclassificationListQuery) {

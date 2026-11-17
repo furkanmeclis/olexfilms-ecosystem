@@ -181,5 +181,7 @@
   "codes.ORDER_INVOICE_NO_TAKEN": "This invoice number is already recorded on the order.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "The new amount is below the assigned barcodes; unassign first.",
   "codes.ORDER_INVOICED": "An invoiced order cannot be cancelled; delete its invoice record first.",
-  "codes.ORDER_NOT_SUPPLEMENTABLE": "A supplementary shipment can only be added to a shipped, delivered or received order."
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "A supplementary shipment can only be added to a shipped, delivered or received order.",
+  "codes.UNIT_CREDITS_EXHAUSTED": "This barcode has no usage credits left; it cannot be selected in another service.",
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rolls and fixed barcodes carry no usage credits."
 }

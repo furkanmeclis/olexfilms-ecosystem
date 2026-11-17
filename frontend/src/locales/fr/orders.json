@@ -374,5 +374,10 @@
   "supplements.create": "Créer l'envoi complémentaire",
   "supplements.created": "Envoi complémentaire {{no}} créé.",
   "supplements.forbidden": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée ou livrée, par un utilisateur pouvant modifier ou expédier les commandes.",
-  "detail.created_by": "Créé par"
+  "detail.created_by": "Créé par",
+  "plotter.credits_label": "Crédits",
+  "plotter.credits_placeholder": "Par défaut",
+  "plotter.credits_hint": "Crédits d'utilisation des codes-barres expédiés sur cette ligne (1–1000) ; vide, la valeur par défaut du produit s'applique.",
+  "plotter.credits_value": "Crédits : {{credits}}",
+  "form.errors.credits_invalid": "Les crédits doivent être un nombre entier de 1 à 1000 (vide : valeur par défaut du produit)."
 }

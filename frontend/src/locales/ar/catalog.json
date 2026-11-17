@@ -301,5 +301,8 @@
   "discipline.fields.avg_sale_price": "المتوسط الفعلي (30 يومًا)",
   "discipline.fields.sales_quantity": "الكمية المباعة (30 يومًا)",
   "discipline.org_types.dealer": "وكيل",
-  "discipline.org_types.distributor": "موزع"
+  "discipline.org_types.distributor": "موزع",
+  "fields.usage_credits": "أرصدة الاستخدام",
+  "products.usage_credits_hint": "عدد الخدمات التي يمكن استخدام رمز شريطي واحد (وحدة مفردة) فيها. كل اختيار في خدمة يستهلك رصيدًا واحدًا؛ اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة.",
+  "validation.usage_credits": "أدخل عددًا صحيحًا من 1 إلى {{max}}"
 }

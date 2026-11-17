@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { UnitCreditsCard } from "@/features/stock/components/unit-credits-card";
 import { UnitOperations } from "@/features/stock/components/unit-operations";
 import { UnitSplitsCard } from "@/features/stock/components/unit-splits-card";
 import { UnitTraceCard } from "@/features/stock/components/unit-trace-card";
@@ -141,6 +142,13 @@ export function UnitHistoryPage({
       ) : (
         <>
           <UnitSummary slug={slug} data={first} />
+          {first.credits ? (
+            <UnitCreditsCard
+              credits={first.credits}
+              barcode={first.unit.barcode}
+              slug={slug}
+            />
+          ) : null}
           {first.trace ? (
             <UnitTraceCard trace={first.trace} slug={slug} />
           ) : null}

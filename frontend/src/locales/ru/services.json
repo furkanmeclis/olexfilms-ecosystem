@@ -392,5 +392,11 @@
   "detail.created_by": "Создал",
   "detail.performed_by": "Выполнил",
   "detail.completed_by": "Завершил",
-  "detail.cancelled_by": "Отменил"
+  "detail.cancelled_by": "Отменил",
+  "stock.credits": "Осталось кредитов: {{remaining}} / {{total}}",
+  "stock.credit_take": "Этот выбор использует 1 кредит.",
+  "stock.finish_product": "Продукт израсходован полностью",
+  "stock.finish_product_hint": "Все оставшиеся кредиты штрихкода ({{count}}) списываются на эту услугу; штрихкод нельзя выбрать в другой услуге.",
+  "stock.finished_product": "Продукт израсходован",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "У этого штрихкода не осталось кредитов использования; его нельзя выбрать в другой услуге."
 }

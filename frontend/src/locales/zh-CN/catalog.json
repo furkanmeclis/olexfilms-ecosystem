@@ -301,5 +301,8 @@
   "discipline.fields.avg_sale_price": "实际均价（30 天）",
   "discipline.fields.sales_quantity": "销量（30 天）",
   "discipline.org_types.dealer": "经销商",
-  "discipline.org_types.distributor": "分销商"
+  "discipline.org_types.distributor": "分销商",
+  "fields.usage_credits": "使用额度",
+  "products.usage_credits_hint": "一个条码（单件单位）可用于多少次服务。每次在服务中选择扣除 1 个额度；卷材和固定条码没有额度。",
+  "validation.usage_credits": "请输入 1 到 {{max}} 之间的整数"
 }

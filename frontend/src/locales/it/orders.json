@@ -374,5 +374,10 @@
   "supplements.create": "Crea spedizione integrativa",
   "supplements.created": "Spedizione integrativa {{no}} creata.",
   "supplements.forbidden": "Una spedizione integrativa si può aggiungere solo a un ordine spedito o consegnato, da un utente che può modificare o spedire ordini.",
-  "detail.created_by": "Creato da"
+  "detail.created_by": "Creato da",
+  "plotter.credits_label": "Crediti",
+  "plotter.credits_placeholder": "Predefinito",
+  "plotter.credits_hint": "Crediti di utilizzo dei codici a barre spediti su questa riga (1–1000); se vuoto, vale il predefinito del prodotto.",
+  "plotter.credits_value": "Crediti: {{credits}}",
+  "form.errors.credits_invalid": "I crediti devono essere un numero intero da 1 a 1000 (vuoto: predefinito del prodotto)."
 }

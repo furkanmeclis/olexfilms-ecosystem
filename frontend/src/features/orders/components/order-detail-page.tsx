@@ -46,7 +46,7 @@ import {
   ShippingCard,
 } from "@/features/orders/components/order-picking";
 import { OrderLinesEditor } from "@/features/orders/components/order-lines-editor";
-import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
+import { PlotterLineControl } from "@/features/orders/components/plotter-toggle";
 import {
   AddSupplementButton,
   OrderSupplementsCard,
@@ -381,10 +381,10 @@ function Items({
   });
   const unassignUnit = unassign.mutate;
   const unassignPending = unassign.isPending;
-  // TEC-1058: the plotter mark of one line.
+  // TEC-1058: the plotter mark of one line; TEC-1221: and its credits.
   const plotter = useMutation({
-    mutationFn: (v: { item: string; on: boolean }) =>
-      ordersService.setPlotterCut(order.uuid, v.item, v.on),
+    mutationFn: (v: { item: string; on: boolean; credits?: number }) =>
+      ordersService.setPlotterCut(order.uuid, v.item, v.on, v.credits),
     onSuccess: (updated) => store(updated),
     onError: (err) =>
       toast.error(orderErrorMessage(err, t, t("orders.plotter.failed"))),
@@ -475,16 +475,30 @@ function Items({
         labelKey: "orders.plotter.column",
         cell: ({ row }) =>
           markPlotter ? (
-            <PlotterToggle
+            <PlotterLineControl
+              key={`${row.original.uuid}-${row.original.plotter_credits ?? ""}`}
               id={`plotter-${row.original.uuid}`}
               checked={row.original.plotter_cut === true}
+              credits={row.original.plotter_credits}
               disabled={plotterPending}
-              onChange={(on) => setPlotter({ item: row.original.uuid, on })}
+              onSave={(v) => setPlotter({ item: row.original.uuid, ...v })}
             />
           ) : row.original.plotter_cut ? (
-            <Badge variant="secondary" data-testid="line-plotter-badge">
-              {t("orders.plotter.badge")}
-            </Badge>
+            <div className="space-y-1">
+              <Badge variant="secondary" data-testid="line-plotter-badge">
+                {t("orders.plotter.badge")}
+              </Badge>
+              {row.original.plotter_credits != null ? (
+                <div
+                  className="text-muted-foreground text-xs"
+                  data-testid="line-plotter-credits-value"
+                >
+                  {t("orders.plotter.credits_value", {
+                    credits: row.original.plotter_credits,
+                  })}
+                </div>
+              ) : null}
+            </div>
           ) : (
             <span className="text-muted-foreground">—</span>
           ),

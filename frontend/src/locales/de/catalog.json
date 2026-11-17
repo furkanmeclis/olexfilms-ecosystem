@@ -311,5 +311,8 @@
   "roll.save": "Speichern",
   "roll.saved": "Gespeichert.",
   "roll.failed": "Speichern fehlgeschlagen.",
-  "roll.invalid": "Zahl eingeben."
+  "roll.invalid": "Zahl eingeben.",
+  "fields.usage_credits": "Nutzungsguthaben",
+  "products.usage_credits_hint": "In wie vielen Services ein Barcode (Einzelstück) verwendet werden kann. Jede Auswahl in einem Service verbraucht 1 Guthaben; Rollen und feste Barcodes haben kein Guthaben.",
+  "validation.usage_credits": "Geben Sie eine ganze Zahl von 1 bis {{max}} ein"
 }

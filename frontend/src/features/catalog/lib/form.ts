@@ -71,6 +71,13 @@ export function categoryInput(v: CategoryFormValues): CatalogCategoryInput {
   };
 }
 
+/**
+ * TEC-1221 (kredili kod): usage credits of a product — how many services
+ * one barcode may be used in (API bounds 1..1000, default 5).
+ */
+export const DEFAULT_USAGE_CREDITS = 5;
+export const MAX_USAGE_CREDITS = 1000;
+
 export function productFormSchema(t: Translate) {
   return z.object({
     category_uuid: z.string().min(1, t("catalog.validation.required")),
@@ -106,6 +113,17 @@ export function productFormSchema(t: Translate) {
       .max(20000, t("catalog.validation.too_long", { max: 20000 })),
     active: z.boolean(),
     dealer_orderable: z.boolean(),
+    // TEC-1221: services one barcode (serial piece unit) may be used in.
+    usage_credits: z
+      .string()
+      .trim()
+      .refine(
+        (v) =>
+          /^\d{1,4}$/.test(v) &&
+          Number(v) >= 1 &&
+          Number(v) <= MAX_USAGE_CREDITS,
+        t("catalog.validation.usage_credits", { max: MAX_USAGE_CREDITS }),
+      ),
   });
 }
 
@@ -130,6 +148,7 @@ export function productDefaults(p?: CatalogProduct | null): ProductFormValues {
     description_md: p?.description_md ?? "",
     active: p?.active ?? true,
     dealer_orderable: p?.dealer_orderable ?? true,
+    usage_credits: String(p?.usage_credits ?? DEFAULT_USAGE_CREDITS),
   };
 }
 
@@ -153,5 +172,6 @@ export function productInput(v: ProductFormValues): CatalogProductInput {
     description_md: v.description_md,
     active: v.active,
     dealer_orderable: v.dealer_orderable,
+    usage_credits: Number(v.usage_credits.trim()),
   };
 }

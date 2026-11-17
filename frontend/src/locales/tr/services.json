@@ -392,5 +392,11 @@
   "detail.created_by": "Oluşturan",
   "detail.performed_by": "Uygulayan",
   "detail.completed_by": "Tamamlayan",
-  "detail.cancelled_by": "İptal eden"
+  "detail.cancelled_by": "İptal eden",
+  "stock.credits": "Kalan kredi: {{remaining}} / {{total}}",
+  "stock.credit_take": "Bu seçim 1 kredi kullanır.",
+  "stock.finish_product": "Ürünü bitirdim",
+  "stock.finish_product_hint": "Barkodun kalan tüm kredisi ({{count}}) bu hizmete düşülür; barkod başka bir hizmette seçilemez.",
+  "stock.finished_product": "Ürün bitirildi",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Bu barkodun kullanım kredisi bitti; başka bir hizmette seçilemez."
 }

@@ -311,5 +311,8 @@
   "roll.save": "Salva",
   "roll.saved": "Salvato.",
   "roll.failed": "Salvataggio non riuscito.",
-  "roll.invalid": "Inserisci un numero."
+  "roll.invalid": "Inserisci un numero.",
+  "fields.usage_credits": "Crediti di utilizzo",
+  "products.usage_credits_hint": "In quanti servizi può essere usato un codice a barre (unità singola). Ogni selezione in un servizio consuma 1 credito; rotoli e codici a barre fissi non hanno crediti.",
+  "validation.usage_credits": "Inserisci un numero intero da 1 a {{max}}"
 }

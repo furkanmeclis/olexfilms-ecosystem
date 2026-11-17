@@ -181,5 +181,7 @@
   "codes.ORDER_INVOICE_NO_TAKEN": "Questo numero di fattura è già registrato sull'ordine.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "La nuova quantità è inferiore ai codici a barre assegnati; rimuovi prima l'assegnazione.",
   "codes.ORDER_INVOICED": "Un ordine fatturato non può essere annullato; elimina prima la registrazione della fattura.",
-  "codes.ORDER_NOT_SUPPLEMENTABLE": "Una spedizione integrativa si può aggiungere solo a un ordine spedito, consegnato o ricevuto."
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Una spedizione integrativa si può aggiungere solo a un ordine spedito, consegnato o ricevuto.",
+  "codes.UNIT_CREDITS_EXHAUSTED": "Questo codice a barre non ha più crediti di utilizzo; non può essere selezionato in un altro servizio.",
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rotoli e codici a barre fissi non hanno crediti di utilizzo."
 }

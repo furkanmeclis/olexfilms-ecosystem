@@ -181,5 +181,7 @@
   "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "La nouvelle quantité est inférieure aux codes-barres attribués ; retirez d'abord l'attribution.",
   "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture.",
-  "codes.ORDER_NOT_SUPPLEMENTABLE": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée, livrée ou réceptionnée."
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée, livrée ou réceptionnée.",
+  "codes.UNIT_CREDITS_EXHAUSTED": "Ce code-barres n'a plus de crédits d'utilisation ; il ne peut pas être sélectionné dans une autre prestation.",
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation."
 }

@@ -311,5 +311,8 @@
   "roll.save": "Save",
   "roll.saved": "Roll settings saved.",
   "roll.failed": "Could not save.",
-  "roll.invalid": "Enter a number."
+  "roll.invalid": "Enter a number.",
+  "fields.usage_credits": "Usage credits",
+  "products.usage_credits_hint": "How many services one barcode (serial piece unit) can be used in. Each service selection takes 1 credit; rolls and fixed barcodes carry no credits.",
+  "validation.usage_credits": "Enter a whole number from 1 to {{max}}"
 }

@@ -335,5 +335,10 @@
   "supplements.create": "إنشاء الشحنة التكميلية",
   "supplements.created": "تم إنشاء الشحنة التكميلية {{no}}.",
   "supplements.forbidden": "لا يمكن إضافة شحنة تكميلية إلا إلى طلب مشحون أو مُسلَّم، من قِبل مستخدم يمكنه تعديل الطلبات أو شحنها.",
-  "detail.created_by": "أنشأه"
+  "detail.created_by": "أنشأه",
+  "plotter.credits_label": "الأرصدة",
+  "plotter.credits_placeholder": "افتراضي المنتج",
+  "plotter.credits_hint": "أرصدة استخدام الرموز الشريطية المشحونة في هذا البند (1–1000)؛ إذا تُرك فارغًا يُطبَّق الافتراضي للمنتج.",
+  "plotter.credits_value": "الأرصدة: {{credits}}",
+  "form.errors.credits_invalid": "يجب أن تكون الأرصدة عددًا صحيحًا من 1 إلى 1000 (فارغ: افتراضي المنتج)."
 }
