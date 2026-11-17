@@ -295,7 +295,7 @@ func (s *Service) timeline(ctx context.Context, q *db.Queries, o db.Order, hist 
 			Product: strRef(p.Product), Barcode: strRef(p.Barcode), Quantity: p.Quantity, Meters: p.Meters, Lines: p.Lines,
 			Changes: p.Changes, PlotterCut: p.PlotterCut, PlotterCredits: p.PlotterCredits,
 			RelatedOrderNo: strRef(p.RelatedOrderNo), Kind: strRef(p.Kind), Resolution: strRef(p.Resolution),
-			Reason: strRef(p.Reason),
+			Reason:   strRef(p.Reason),
 			Priority: p.Priority, DueDate: p.DueDate, PreviousPicker: p.PreviousPicker,
 		}
 		if ev.Action == ActionUnitAssigned {

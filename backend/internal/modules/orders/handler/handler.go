@@ -372,7 +372,7 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{
 		Status: body.Status, Reason: body.Reason, DeliveryMethodUUID: body.DeliveryMethodUUID, TrackingNo: body.TrackingNo,
 		Discrepancies: body.Discrepancies,
-		Packages: ord.PackagesInput{PackageCount: body.PackageCount, Desi: body.Desi, WeightKg: body.WeightKg},
+		Packages:      ord.PackagesInput{PackageCount: body.PackageCount, Desi: body.Desi, WeightKg: body.WeightKg},
 	})
 	if err != nil {
 		writePartialError(w, r, err)
