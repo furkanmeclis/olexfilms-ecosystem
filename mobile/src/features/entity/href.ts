@@ -106,6 +106,8 @@ const MENU_ROUTES: Partial<Record<EntityKind, MenuRoute>> = {
   announcement: { route: 'announcements', spaces: ['bayi', 'depo', 'admin'], permission: 'announcements.read' },
   subscription: { route: 'service_subscriptions', spaces: ['bayi', 'admin'], permission: 'service_subscriptions.read' },
   transfer: { route: 'transfers', spaces: ['bayi'], permission: 'transfers.request' },
+  // Staff user summary (GET /v1/tenant/users/{uuid}/summary, TEC-1216); no module behind it.
+  user: { route: 'users', spaces: ['bayi', 'admin'], permission: 'members.read' },
 };
 
 const STACK_PERMISSION: Record<StackKind, string> = {
@@ -177,7 +179,7 @@ export function entityPath(ctx: HrefContext, kind: EntityKind, id: string | null
       return `${stockBase(space, inside, seg)}/unit/${e}`;
     }
     default:
-      // vehicle, user, contract, warehouse: no mobile screen yet.
+      // vehicle, contract, warehouse: no mobile screen yet.
       return null;
   }
 }

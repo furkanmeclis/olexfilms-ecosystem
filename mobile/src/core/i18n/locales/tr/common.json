@@ -69,5 +69,7 @@
   "picker.empty": "Sonuç yok",
   "leave_title": "Kaydedilmemiş bilgiler var",
   "leave_body": "Çıkarsanız girdikleriniz silinir.",
-  "leave_discard": "Çık"
+  "leave_discard": "Çık",
+  "related_empty": "Kayıt yok",
+  "related_more": "+{{count}} kayıt daha"
 }

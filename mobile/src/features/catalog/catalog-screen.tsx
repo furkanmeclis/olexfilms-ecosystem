@@ -1,11 +1,12 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { type Href, router, Stack, useLocalSearchParams, useSegments } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
+import { useModule } from '@/core/modules';
 import { activeMembership, useCan } from '@/core/spaces';
 import { stockState } from '@/features/orders/order-summary';
 import { ErrorState, ListSkeleton, PagedList, useDebounced, useFormat } from '@/features/admin/kit';
@@ -241,6 +242,9 @@ export function ProductDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const canOrder = useCanOrder();
   const q = useProduct(uuid);
+  const space = (useSegments() as string[])[1] ?? 'bayi';
+  const stockOn = useModule('stock');
+  const canStock = useCan('stock.read') && stockOn;
   const inCart = useCart((s) => s.lines.some((l) => l.product_uuid === uuid));
   const add = useCart((s) => s.add);
   const p = q.data;
@@ -284,6 +288,17 @@ export function ProductDetailScreen() {
                 last
               />
             </List>
+            {/* TEC-1219: the organization's units of this product (stock product screen). */}
+            {canStock ? (
+              <List>
+                <ListRow
+                  icon="barcode"
+                  title={t('stock_units')}
+                  onPress={() => router.push(`/${space}/stock/${encodeURIComponent(p.uuid)}?name=${encodeURIComponent(p.name)}` as Href)}
+                  last
+                />
+              </List>
+            ) : null}
             {p.description_md.trim() ? (
               <>
                 <SectionHeader title={t('description')} />

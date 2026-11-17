@@ -6,7 +6,7 @@ import { ENTITY_KINDS, entityPath, type HrefContext, KIND_ICONS, menuRoutePath, 
 const ALL = [
   'services.read', 'customers.read', 'warranties.read', 'orders.read', 'leads.read', 'warranty_claims.read', 'accounting.read',
   'einvoice.read', 'tasks.read', 'appointments.read', 'measurements.read', 'announcements.read', 'service_subscriptions.read',
-  'transfers.request', 'organizations.read', 'catalog.read', 'stock.read',
+  'transfers.request', 'organizations.read', 'catalog.read', 'stock.read', 'members.read',
 ];
 
 const ctx = (segments: string[], over: Partial<HrefContext> = {}): HrefContext => ({
@@ -63,6 +63,8 @@ describe('entityPath', () => {
     assert.equal(entityPath(ctx(svc), 'task', 't1'), '/bayi/menu/tasks/t1');
     assert.equal(entityPath(ctx(svc), 'transfer', 'x1'), '/bayi/menu/transfers/x1');
     assert.equal(entityPath(ctx(svc), 'cari', 'k1'), '/bayi/menu/accounting/k1');
+    assert.equal(entityPath(ctx(svc), 'user', 'u1'), '/bayi/menu/users/u1');
+    assert.equal(entityPath(ctx(['(app)', 'admin', 'network']), 'user', 'u1'), '/admin/menu/users/u1');
     assert.equal(entityPath(ctx(['(app)', 'depo', 'jobs']), 'order', 'o1'), '/depo/menu/orders/o1');
     assert.equal(entityPath(ctx(['(app)', 'bayi', 'orders', '[uuid]']), 'order', 'o2'), '/bayi/orders/o2');
   });
@@ -76,7 +78,8 @@ describe('entityPath', () => {
     assert.equal(entityPath(ctx(['(app)', 'depo', 'jobs']), 'customer', 'c1'), null);
     assert.equal(entityPath(ctx(['(app)', 'musteri', 'services']), 'service', 's1'), null);
     assert.equal(entityPath(ctx(svc), 'vehicle', 'v1'), null);
-    assert.equal(entityPath(ctx(svc), 'user', 'u1'), null);
+    assert.equal(entityPath(ctx(svc, { can: (p) => p !== 'members.read' }), 'user', 'u1'), null);
+    assert.equal(entityPath(ctx(['(app)', 'depo', 'menu']), 'user', 'u1'), null);
     assert.equal(entityPath(ctx(svc), 'order', ''), null);
     assert.equal(entityPath(ctx(svc), 'order', null), null);
   });

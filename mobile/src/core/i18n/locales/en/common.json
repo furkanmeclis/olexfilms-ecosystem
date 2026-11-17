@@ -69,5 +69,7 @@
   "picker.empty": "No results",
   "leave_title": "You have unsaved changes",
   "leave_body": "If you leave, what you entered is lost.",
-  "leave_discard": "Leave"
+  "leave_discard": "Leave",
+  "related_empty": "No records",
+  "related_more": "{{count}} more"
 }
