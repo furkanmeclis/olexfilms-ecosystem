@@ -748,5 +748,13 @@
   "home.period.7d": "7 Tage",
   "home.period.30d": "30 Tage",
   "home.period.90d": "90 Tage",
-  "home.period.12m": "12 Monate"
+  "home.period.12m": "12 Monate",
+  "detail.title": "Lagerdetails",
+  "detail.not_found": "Lager nicht gefunden.",
+  "detail.primary": "Hauptlager",
+  "detail.open_locations": "Lagerplätze öffnen",
+  "detail.updated_at": "Zuletzt aktualisiert",
+  "detail.transfers_out": "Ausgehende Umlagerungen",
+  "detail.transfers_in": "Eingehende Umlagerungen",
+  "detail.open": "Details"
 }

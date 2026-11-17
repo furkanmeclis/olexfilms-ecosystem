@@ -748,5 +748,13 @@
   "home.period.7d": "7 días",
   "home.period.30d": "30 días",
   "home.period.90d": "90 días",
-  "home.period.12m": "12 meses"
+  "home.period.12m": "12 meses",
+  "detail.title": "Detalles del almacén",
+  "detail.not_found": "Almacén no encontrado.",
+  "detail.primary": "Almacén principal",
+  "detail.open_locations": "Abrir ubicaciones",
+  "detail.updated_at": "Última actualización",
+  "detail.transfers_out": "Transferencias salientes",
+  "detail.transfers_in": "Transferencias entrantes",
+  "detail.open": "Detalles"
 }

@@ -718,5 +718,13 @@
   "home.period.7d": "7 ημέρες",
   "home.period.30d": "30 ημέρες",
   "home.period.90d": "90 ημέρες",
-  "home.period.12m": "12 μήνες"
+  "home.period.12m": "12 μήνες",
+  "detail.title": "Στοιχεία αποθήκης",
+  "detail.not_found": "Η αποθήκη δεν βρέθηκε.",
+  "detail.primary": "Κύρια αποθήκη",
+  "detail.open_locations": "Άνοιγμα θέσεων",
+  "detail.updated_at": "Τελευταία ενημέρωση",
+  "detail.transfers_out": "Εξερχόμενες μεταφορές",
+  "detail.transfers_in": "Εισερχόμενες μεταφορές",
+  "detail.open": "Λεπτομέρειες"
 }

@@ -17,6 +17,7 @@ import {
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { EntityLink } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -532,6 +533,16 @@ export function LocationTreePage({ slug }: { slug: string }) {
                       name={w.name}
                       inactive={!w.active}
                       testId="warehouse-row"
+                      detail={
+                        <EntityLink
+                          kind="warehouse"
+                          slug={slug}
+                          entity={{ uuid: w.uuid, name: w.name }}
+                          className="text-xs whitespace-nowrap"
+                        >
+                          {t("warehouse.detail.open")}
+                        </EntityLink>
+                      }
                       onSelect={() => {
                         setWarehouseUuid(w.uuid);
                         setRoomUuid(null);
@@ -864,6 +875,7 @@ function SideRow({
   name,
   inactive,
   testId,
+  detail,
   onSelect,
   onEdit,
   onDelete,
@@ -874,6 +886,8 @@ function SideRow({
   name: string;
   inactive: boolean;
   testId: string;
+  /** TEC-1218: link to the record's detail page. */
+  detail?: ReactNode;
   onSelect: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -903,6 +917,7 @@ function SideRow({
           <span className="text-muted-foreground truncate text-xs">{name}</span>
         ) : null}
       </button>
+      {detail}
       {onEdit ? (
         <Button
           type="button"

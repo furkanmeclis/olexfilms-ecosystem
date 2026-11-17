@@ -718,5 +718,13 @@
   "home.period.7d": "7 أيام",
   "home.period.30d": "30 يومًا",
   "home.period.90d": "90 يومًا",
-  "home.period.12m": "12 شهرًا"
+  "home.period.12m": "12 شهرًا",
+  "detail.title": "تفاصيل المستودع",
+  "detail.not_found": "المستودع غير موجود.",
+  "detail.primary": "المستودع الرئيسي",
+  "detail.open_locations": "فتح المواقع",
+  "detail.updated_at": "آخر تحديث",
+  "detail.transfers_out": "التحويلات الصادرة",
+  "detail.transfers_in": "التحويلات الواردة",
+  "detail.open": "التفاصيل"
 }

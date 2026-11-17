@@ -748,5 +748,13 @@
   "home.period.7d": "7 giorni",
   "home.period.30d": "30 giorni",
   "home.period.90d": "90 giorni",
-  "home.period.12m": "12 mesi"
+  "home.period.12m": "12 mesi",
+  "detail.title": "Dettagli magazzino",
+  "detail.not_found": "Magazzino non trovato.",
+  "detail.primary": "Magazzino principale",
+  "detail.open_locations": "Apri ubicazioni",
+  "detail.updated_at": "Ultimo aggiornamento",
+  "detail.transfers_out": "Trasferimenti in uscita",
+  "detail.transfers_in": "Trasferimenti in entrata",
+  "detail.open": "Dettagli"
 }

@@ -718,5 +718,13 @@
   "home.period.7d": "7 gün",
   "home.period.30d": "30 gün",
   "home.period.90d": "90 gün",
-  "home.period.12m": "12 ay"
+  "home.period.12m": "12 ay",
+  "detail.title": "Anbar təfərrüatları",
+  "detail.not_found": "Anbar tapılmadı.",
+  "detail.primary": "Əsas anbar",
+  "detail.open_locations": "Yerləri aç",
+  "detail.updated_at": "Son yeniləmə",
+  "detail.transfers_out": "Gedən transferlər",
+  "detail.transfers_in": "Gələn transferlər",
+  "detail.open": "Təfərrüat"
 }

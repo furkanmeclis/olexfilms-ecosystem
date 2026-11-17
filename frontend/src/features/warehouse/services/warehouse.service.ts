@@ -176,6 +176,13 @@ export const warehouseService = {
       "/v1/warehouse/warehouses",
     );
   },
+  /** TEC-1218: one warehouse (detail page). */
+  getWarehouse(uuid: string) {
+    return platformRequest<Warehouse>(
+      "GET",
+      `/v1/warehouse/warehouses/${enc(uuid)}`,
+    );
+  },
   createWarehouse(body: WarehouseInput) {
     return platformRequest<Warehouse>("POST", "/v1/warehouse/warehouses", {
       body,
@@ -658,6 +665,7 @@ export function eodPdfClient(reportUuid: string): CertificateClient {
 export const warehouseKeys = {
   all: ["warehouse"] as const,
   warehouses: ["warehouse", "warehouses"] as const,
+  warehouse: (uuid: string) => ["warehouse", "warehouse", uuid] as const,
   rooms: (warehouseUuid: string) =>
     ["warehouse", "rooms", warehouseUuid] as const,
   locations: (roomUuid: string) =>
