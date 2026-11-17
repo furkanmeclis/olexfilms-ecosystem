@@ -41,8 +41,17 @@ func (s *Service) ordersByBuyer(ctx context.Context, c Caller, q query, a args, 
 	}
 	cols = append(cols, [2]string{"last_order_at", "datetime"})
 	env.Columns = q.columns(cols)
+	// TEC-1214: a buyer has one row per order currency; the order count
+	// series stays one point per buyer.
+	points := map[string]int{}
 	for i, r := range rows {
-		sr.Points = append(sr.Points, Point{Key: r.OrganizationUuid.String(), Label: r.OrganizationName, Value: float64(r.OrderCount)})
+		key := r.OrganizationUuid.String()
+		if at, ok := points[key]; ok {
+			sr.Points[at].Value += float64(r.OrderCount)
+		} else {
+			points[key] = len(sr.Points)
+			sr.Points = append(sr.Points, Point{Key: key, Label: r.OrganizationName, Value: float64(r.OrderCount)})
+		}
 		row := map[string]any{
 			"rank": i + 1, "organization_uuid": r.OrganizationUuid, "organization": r.OrganizationName,
 			"organization_type": r.OrganizationType, "city": r.City, "order_count": r.OrderCount,

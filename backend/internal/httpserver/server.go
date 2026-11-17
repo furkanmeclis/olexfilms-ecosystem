@@ -545,13 +545,15 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingH := accountinghandler.New(accountingSvc)
 	accountinghandler.RegisterRoutes(mux, accountingH, tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	dealerAccountingSvc := dealeraccountingusecase.New(deps.DB, deps.Queries,
-		stockledger.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), accountingPoster, featureSvc)
+		stockledger.New(deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), accountingPoster, featureSvc).
+		WithRates(ratesSvc) // TEC-1214: purchase cost in the dealer currency
 	dealeraccountingmodule.RegisterRoutes(mux, dealeraccountinghandler.New(dealerAccountingSvc),
 		tokens, loader, deps.Queries, featureSvc)
 	// TEC-166: orders (draft, server-side prices, rate frozen at approval).
 	// TEC-169: a received order books seller income / buyer purchase.
 	ordersSvc := ordersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), ratesSvc).
-		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster))
+		WithReceiptHook(ordersusecase.NewAccountingBridge(accountingPoster)).
+		WithLocalCurrency(sysSvc) // TEC-1214: pricing.local_currency
 	if listFinder != nil {
 		ordersSvc.SetFinder(listFinder) // TEC-210
 	}

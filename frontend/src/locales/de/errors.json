@@ -118,6 +118,7 @@
   "codes.PRICE_NOT_FOUND": "Für dieses Produkt gibt es keinen Preis in der Bestellwährung.",
   "codes.PRODUCT_NOT_ORDERABLE": "Dieses Produkt ist nicht für Händlerbestellungen freigegeben; nur die Zentrale kann es einer Bestellung für Sie hinzufügen.",
   "codes.RATE_NOT_FOUND": "Für die Bestellwährung ist kein einzufrierender Wechselkurs verfügbar.",
+  "codes.CURRENCY_LOCKED": "Die Währung kann nicht geändert werden, da diese Organisation Buchhaltungseinträge hat.",
   "codes.CUSTOMER_ANONYMIZED": "Der Kunde ist anonymisiert und kann nicht geändert werden.",
   "codes.CUSTOMER_INACTIVE": "Das Kundenkonto ist nicht aktiv.",
   "codes.ALREADY_MEMBER": "Der Kunde ist bereits Mitglied dieses Händlers.",

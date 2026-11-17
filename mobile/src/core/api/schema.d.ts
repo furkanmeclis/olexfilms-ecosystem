@@ -2464,7 +2464,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update organization */
+        /**
+         * Update organization
+         * @description TEC-1214: `currency` is the organization's ledger currency (K7). It can change only while the organization has no finance account, no cari (as owner or counterparty) and no finance entry; otherwise 409 CURRENCY_LOCKED. Existing records keep their own currency.
+         */
         patch: operations["patchPlatformOrganization"];
         trace?: never;
     };
@@ -37743,6 +37746,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getPlatformOrganizationChildren: {

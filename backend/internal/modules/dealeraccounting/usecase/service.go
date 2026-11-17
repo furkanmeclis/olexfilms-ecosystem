@@ -4,6 +4,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
@@ -92,6 +94,20 @@ type Service struct {
 	poster   *posting.Poster
 	features FeatureChecker
 	now      func() time.Time
+	// rates converts a price-list cost in the brand currency to the dealer
+	// currency (TEC-1214; nil: no conversion).
+	rates RateResolver
+}
+
+// RateResolver resolves a rate on a day (*fxrates.Service).
+type RateResolver interface {
+	ResolveRate(ctx context.Context, on time.Time, base, quote string) (fxrates.Snapshot, error)
+}
+
+// WithRates sets the rate resolver of the purchase cost fallback.
+func (s *Service) WithRates(r RateResolver) *Service {
+	s.rates = r
+	return s
 }
 
 func New(pool TxBeginner, q *db.Queries, stock *ledger.Ledger, poster *posting.Poster, checker FeatureChecker) *Service {
@@ -726,21 +742,85 @@ func (s *Service) CreatePurchase(ctx context.Context, c Caller, in PurchaseInput
 	return PurchaseView{UUID: row.Uuid, SupplierUUID: sup.Uuid, Amount: format(row.Amount, 2), Currency: row.Currency, PaymentMethod: row.PaymentMethod, PurchasedOn: row.PurchasedOn.Time.Format(time.DateOnly), Note: row.Note}, nil
 }
 
+// purchaseCost is the unit purchase cost in the dealer's ledger currency
+// (TEC-1214): the last order the unit was bought on, in its own currency
+// and converted with the rate frozen at approval; otherwise the current
+// price list in the dealer currency, or in the brand currency converted at
+// today's rate. nil when no price or no rate is found (an unknown cost is
+// reported as such instead of a wrong margin).
 func (s *Service) purchaseCost(ctx context.Context, q *db.Queries, o db.Organization, unitID, productID int64) *string {
 	parent, err := q.SupplierOf(ctx, o.ID)
 	if err == nil {
-		if op, err := q.GetUnitLastOrderPrice(ctx, db.GetUnitLastOrderPriceParams{UnitID: unitID, SellerOrgID: parent.ID, BuyerOrgID: o.ID, Currency: o.Currency}); err == nil {
-			v := format(op.UnitPrice, 2)
-			return &v
+		if op, err := q.GetUnitLastOrderCost(ctx, db.GetUnitLastOrderCostParams{UnitID: unitID, SellerOrgID: parent.ID, BuyerOrgID: o.ID}); err == nil {
+			if v, ok := frozenCost(op.UnitPrice, op.Currency, o.Currency, op.RateSnapshot); ok {
+				return &v
+			}
 		}
 	}
-	prices, err := usecase.New(q).BuyerPurchasePrices(ctx, o.ID, o.Type, o.BrandID, []int64{productID}, o.Currency)
+	pricing := usecase.New(q)
+	prices, err := pricing.BuyerPurchasePrices(ctx, o.ID, o.Type, o.BrandID, []int64{productID}, o.Currency)
 	if err == nil {
 		if p, ok := prices[productID]; ok {
 			return &p.Price
 		}
 	}
-	return nil
+	if s.rates == nil {
+		return nil
+	}
+	brand, err := q.GetBrandByID(ctx, o.BrandID)
+	if err != nil || brand.Currency == o.Currency {
+		return nil
+	}
+	prices, err = pricing.BuyerPurchasePrices(ctx, o.ID, o.Type, o.BrandID, []int64{productID}, brand.Currency)
+	if err != nil {
+		return nil
+	}
+	p, ok := prices[productID]
+	if !ok {
+		return nil
+	}
+	snap, err := s.rates.ResolveRate(ctx, s.now().UTC(), brand.Currency, o.Currency)
+	if err != nil {
+		return nil
+	}
+	v, ok := convertAt(p.Price, snap.Rate)
+	if !ok {
+		return nil
+	}
+	return &v
+}
+
+// frozenCost converts an order unit price from the order currency to the
+// ledger currency with the rate frozen in the order's rate_snapshot.
+func frozenCost(price pgtype.Numeric, from, to string, rawSnapshot []byte) (string, bool) {
+	if from == to {
+		return format(price, 2), true
+	}
+	if len(rawSnapshot) == 0 {
+		return "", false
+	}
+	var snap fxrates.Snapshot
+	if err := json.Unmarshal(rawSnapshot, &snap); err != nil {
+		return "", false
+	}
+	pair, ok := snap.Find(from, to)
+	if !ok {
+		return "", false
+	}
+	return convertAt(posting.FormatNumeric(price), pair.Rate)
+}
+
+// convertAt is amount × rate rounded to cents.
+func convertAt(amount, rate string) (string, bool) {
+	a, ok := new(big.Rat).SetString(amount)
+	if !ok {
+		return "", false
+	}
+	r, ok := new(big.Rat).SetString(rate)
+	if !ok || r.Sign() <= 0 {
+		return "", false
+	}
+	return new(big.Rat).Mul(a, r).FloatString(2), true
 }
 
 func (s *Service) accountForPayment(ctx context.Context, q *db.Queries, o db.Organization, method string) (int64, error) {

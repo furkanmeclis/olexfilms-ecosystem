@@ -1636,6 +1636,27 @@ func (q *Queries) ListOrganizationsInScope(ctx context.Context, arg ListOrganiza
 	return items, nil
 }
 
+const organizationHasLedger = `-- name: OrganizationHasLedger :one
+SELECT (
+    EXISTS (SELECT 1 FROM finance_accounts fa WHERE fa.organization_id = $1::bigint)
+    OR EXISTS (SELECT 1 FROM cari_accounts ca
+               WHERE ca.organization_id = $1::bigint
+                  OR ca.counterparty_org_id = $1::bigint)
+    OR EXISTS (SELECT 1 FROM finance_entries fe WHERE fe.organization_id = $1::bigint)
+)::bool AS has_ledger
+`
+
+// TEC-1214: the organization currency is the ledger currency (K7); once
+// the organization owns a finance account, a cari (either side) or a
+// finance entry, every later posting is checked against it, so the
+// currency is locked.
+func (q *Queries) OrganizationHasLedger(ctx context.Context, orgID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, organizationHasLedger, orgID)
+	var has_ledger bool
+	err := row.Scan(&has_ledger)
+	return has_ledger, err
+}
+
 const setOrganizationBulkState = `-- name: SetOrganizationBulkState :one
 UPDATE organizations
 SET status = $1,

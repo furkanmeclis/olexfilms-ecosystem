@@ -171,6 +171,8 @@
   "system.keys.pricing_deviation_warning_pct_hint": "Un prix client final d'un revendeur ou distributeur qui s'écarte de ce pourcentage du prix conseillé (dans un sens ou dans l'autre) dépasse le seuil.",
   "system.keys.pricing_price_list_auto_publish": "Publier la liste de prix automatiquement",
   "system.keys.pricing_price_list_auto_publish_hint": "Si activé, le PDF de la liste de prix est déposé comme nouvelle version dans le centre de documents après chaque publication de prix conseillés.",
+  "system.keys.pricing_local_currency": "Devise d'affichage locale",
+  "system.keys.pricing_local_currency_hint": "Code ISO 4217 (ex. TRY). Devise de cotation du taux figé à l'approbation de la commande et du petit montant au taux du jour affiché à côté des prix dans la devise de la marque.",
   "system.groups.einvoice": "Facture électronique",
   "system.groups.einvoice_hint": "Factures UBL-TR e-Fatura et e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Taux de TVA par défaut (%)",

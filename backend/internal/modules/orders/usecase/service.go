@@ -76,8 +76,17 @@ const (
 	OrgDealer      = "dealer"
 )
 
-// TryCurrency is the quote currency of the frozen rate (try_rate).
+// TryCurrency is the default local currency: the quote currency of the
+// frozen rate (try_rate) when no local currency setting is wired. TEC-1214:
+// the effective value is the pricing.local_currency system setting
+// (Service.LocalCurrency); the field names try_rate / live_total_try stay.
 const TryCurrency = "TRY"
+
+// LocalCurrencySource reads the local display currency
+// (*sysconfig.Service).
+type LocalCurrencySource interface {
+	LocalCurrency(ctx context.Context) string
+}
 
 // MaxItems bounds the lines of one order.
 const MaxItems = 200
@@ -136,6 +145,24 @@ type Service struct {
 	store storage.Driver
 	pdf   PDFRenderer
 	log   *slog.Logger
+	// local is the local currency setting (TEC-1214; nil: TryCurrency).
+	local LocalCurrencySource
+}
+
+// WithLocalCurrency sets the local currency source (TEC-1214).
+func (s *Service) WithLocalCurrency(l LocalCurrencySource) *Service {
+	s.local = l
+	return s
+}
+
+// LocalCurrency is the quote currency of try_rate and live_total_try.
+func (s *Service) LocalCurrency(ctx context.Context) string {
+	if s.local != nil {
+		if c := s.local.LocalCurrency(ctx); c != "" {
+			return c
+		}
+	}
+	return TryCurrency
 }
 
 // New creates the service.
@@ -936,7 +963,7 @@ func (s *Service) freezeApproval(ctx context.Context, q *db.Queries, c Caller, o
 	// (accounting.go) and the stored rate days; the process zone must not
 	// move it (TEC-775).
 	rateDay := s.now().UTC()
-	snap, err := s.rates.ResolveRate(ctx, rateDay, o.Currency, TryCurrency)
+	snap, err := s.rates.ResolveRate(ctx, rateDay, o.Currency, s.LocalCurrency(ctx))
 	if errors.Is(err, fxrates.ErrRateNotFound) {
 		return o, nil, ErrRateNotFound
 	}

@@ -993,6 +993,42 @@ func (q *Queries) GetSupplierByUUID(ctx context.Context, arg GetSupplierByUUIDPa
 	return i, err
 }
 
+const getUnitLastOrderCost = `-- name: GetUnitLastOrderCost :one
+SELECT oi.unit_price, o.currency::text AS currency, o.rate_snapshot
+FROM order_item_units oiu
+JOIN order_items oi ON oi.id = oiu.order_item_id
+JOIN orders o ON o.id = oi.order_id
+WHERE oiu.unit_id = $1
+  AND o.seller_org_id = $2
+  AND o.buyer_org_id = $3
+  AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
+ORDER BY oiu.assigned_at DESC, oiu.id DESC
+LIMIT 1
+`
+
+type GetUnitLastOrderCostParams struct {
+	UnitID      int64 `json:"unit_id"`
+	SellerOrgID int64 `json:"seller_org_id"`
+	BuyerOrgID  int64 `json:"buyer_org_id"`
+}
+
+type GetUnitLastOrderCostRow struct {
+	UnitPrice    pgtype.Numeric `json:"unit_price"`
+	Currency     string         `json:"currency"`
+	RateSnapshot []byte         `json:"rate_snapshot"`
+}
+
+// TEC-1214: the last order line a unit was bought on from the supplier, in
+// whatever currency the order was placed (a brand currency change leaves
+// older orders in the old currency); rate_snapshot carries the rate frozen
+// at approval to the buyer's ledger currency.
+func (q *Queries) GetUnitLastOrderCost(ctx context.Context, arg GetUnitLastOrderCostParams) (GetUnitLastOrderCostRow, error) {
+	row := q.db.QueryRow(ctx, getUnitLastOrderCost, arg.UnitID, arg.SellerOrgID, arg.BuyerOrgID)
+	var i GetUnitLastOrderCostRow
+	err := row.Scan(&i.UnitPrice, &i.Currency, &i.RateSnapshot)
+	return i, err
+}
+
 const listCustomerCariAccounts = `-- name: ListCustomerCariAccounts :many
 SELECT id, uuid, organization_id, brand_id, counterparty_type, counterparty_org_id, counterparty_user_id, currency, active, created_at, updated_at FROM cari_accounts
 WHERE organization_id = $1

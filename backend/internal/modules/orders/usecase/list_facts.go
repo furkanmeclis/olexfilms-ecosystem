@@ -32,16 +32,18 @@ type LastActivity struct {
 // ActivityCreated is the LastActivity action of an order's first step.
 const ActivityCreated = "created"
 
-// liveRates resolves today's rate from an order currency to TRY once per
-// currency of a page. A missing rate leaves the TRY amount empty.
+// liveRates resolves today's rate from an order currency to the local
+// currency (TEC-1214: pricing.local_currency, default TRY) once per currency
+// of a page. A missing rate leaves the local amount empty.
 type liveRates struct {
 	s     *Service
 	day   time.Time
+	local string
 	cache map[string]*string
 }
 
-func (s *Service) newLiveRates() *liveRates {
-	return &liveRates{s: s, day: s.now().UTC(), cache: map[string]*string{}}
+func (s *Service) newLiveRates(ctx context.Context) *liveRates {
+	return &liveRates{s: s, day: s.now().UTC(), local: s.LocalCurrency(ctx), cache: map[string]*string{}}
 }
 
 func (l *liveRates) rate(ctx context.Context, currency string) *string {
@@ -50,11 +52,11 @@ func (l *liveRates) rate(ctx context.Context, currency string) *string {
 		return r
 	}
 	var out *string
-	if cur == TryCurrency {
+	if cur == l.local {
 		one := "1"
 		out = &one
 	} else if l.s.rates != nil {
-		snap, err := l.s.rates.ResolveRate(ctx, l.day, cur, TryCurrency)
+		snap, err := l.s.rates.ResolveRate(ctx, l.day, cur, l.local)
 		if err == nil {
 			out = &snap.Rate
 		} else {
@@ -101,7 +103,7 @@ func (s *Service) withFacts(ctx context.Context, q *db.Queries, c Caller, orders
 	for _, r := range rows {
 		byID[r.OrderID] = r
 	}
-	rates := s.newLiveRates()
+	rates := s.newLiveRates(ctx)
 	for i, o := range orders {
 		v := &views[i]
 		if r, ok := byID[o.ID]; ok {

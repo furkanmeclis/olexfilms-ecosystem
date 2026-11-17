@@ -252,6 +252,8 @@ cari_balances AS (
     LEFT JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < sqlc.arg(as_of)::timestamptz
     WHERE c.brand_id = sqlc.arg(brand_id)
       AND c.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+      -- TEC-1214: only caris in the metric currency are added up.
+      AND c.currency = sqlc.arg(currency)::text
     GROUP BY c.id
 ),
 cari_stats AS (
@@ -302,7 +304,20 @@ waste AS (
       AND f.service_date < sqlc.arg(period_to)::date
 ),
 orders_in AS (
-    SELECT COALESCE(SUM(o.total), 0)::numeric(18,4) AS total
+    -- TEC-1214: each order total is converted to the metric currency with
+    -- the rate frozen at approval (the order currency itself, the main
+    -- rate_snapshot pair or one of its pairs); an order without a frozen
+    -- rate to that currency is left out instead of being added in its own
+    -- currency.
+    SELECT COALESCE(SUM(o.total * CASE
+               WHEN o.currency = sqlc.arg(currency)::text THEN 1::numeric
+               WHEN o.rate_snapshot->>'base' = o.currency AND o.rate_snapshot->>'quote' = sqlc.arg(currency)::text
+                   THEN (o.rate_snapshot->>'rate')::numeric
+               ELSE (SELECT (p->>'rate')::numeric
+                     FROM jsonb_array_elements(COALESCE(o.rate_snapshot->'pairs', '[]'::jsonb)) p
+                     WHERE p->>'base' = o.currency AND p->>'quote' = sqlc.arg(currency)::text
+                     LIMIT 1)
+           END), 0)::numeric(18,4) AS total
     FROM orders o
     WHERE o.brand_id = sqlc.arg(brand_id)
       AND o.buyer_org_id = ANY(sqlc.arg(org_ids)::bigint[])

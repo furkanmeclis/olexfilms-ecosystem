@@ -43,7 +43,9 @@ const (
 	CodeInvalidPlate              = "INVALID_PLATE"
 	CodeRateNotFound              = "RATE_NOT_FOUND"
 	// TEC-1036 membership guards.
-	CodeLastOwner      = "LAST_OWNER"
+	CodeLastOwner = "LAST_OWNER"
+	// CodeCurrencyLocked: the currency cannot change any more (TEC-1214).
+	CodeCurrencyLocked = "CURRENCY_LOCKED"
 	CodeSelfMembership = "SELF_MEMBERSHIP"
 
 	// Session realms (TEC-90): panel vs customer portal.

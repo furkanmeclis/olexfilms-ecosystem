@@ -225,6 +225,7 @@ func mergePrevious(env *Envelope, prev Envelope) {
 
 // finalize fills the series totals and every delta.
 func finalize(env *Envelope) {
+	moneyColumns(env)
 	for i := range env.Series {
 		sr := &env.Series[i]
 		if sr.Key != seriesCards {
@@ -237,6 +238,41 @@ func finalize(env *Envelope) {
 		k := &env.KPIs[i]
 		v := k.Value
 		k.DeltaPct = deltaPct(&v, k.Previous)
+	}
+}
+
+// moneyColumns (TEC-1214) sets the currency of each money column from the
+// rows: one shared currency becomes columns[].currency; rows in different
+// currencies keep their own row currency and the column gets no sum
+// footer, so amounts in different currencies are never added up.
+func moneyColumns(env *Envelope) {
+	cur, mixed := "", false
+	for _, row := range env.Rows {
+		c, _ := row["currency"].(string)
+		if c == "" {
+			continue
+		}
+		if cur == "" {
+			cur = c
+		} else if c != cur {
+			mixed = true
+		}
+	}
+	for i := range env.Columns {
+		col := &env.Columns[i]
+		if col.Type != "money" {
+			continue
+		}
+		switch {
+		case mixed:
+			col.Currency = nil
+			if col.Aggregate == "sum" {
+				col.Aggregate = "none"
+			}
+		case cur != "":
+			c := cur
+			col.Currency = &c
+		}
 	}
 }
 

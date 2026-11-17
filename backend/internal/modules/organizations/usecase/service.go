@@ -29,6 +29,10 @@ var (
 	ErrNoTenantMembership        = errors.New("no tenant membership")
 	ErrOrganizationAccessExpired = errors.New("organization access expired")
 	ErrOrganizationSuspended     = errors.New("organization suspended")
+	// ErrCurrencyLocked: the organization already has a finance account, a
+	// cari or a finance entry, so its ledger currency cannot change
+	// (TEC-1214, K7).
+	ErrCurrencyLocked = errors.New("organization currency is locked: the organization has accounting records")
 )
 
 var reservedSlugs = map[string]struct{}{
@@ -513,6 +517,15 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 		c := strings.ToUpper(strings.TrimSpace(*in.Currency))
 		if !validCurrency(c) {
 			return Organization{}, fmt.Errorf("%w: currency must be an ISO 4217 code", ErrInvalidRequest)
+		}
+		if c != current.Organization.Currency {
+			locked, err := s.q.OrganizationHasLedger(ctx, current.Organization.ID)
+			if err != nil {
+				return Organization{}, fmt.Errorf("organizations: currency lock: %w", err)
+			}
+			if locked {
+				return Organization{}, ErrCurrencyLocked
+			}
 		}
 		params.Currency = pgtype.Text{String: c, Valid: true}
 	}

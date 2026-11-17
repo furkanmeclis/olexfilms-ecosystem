@@ -101,7 +101,7 @@ const reportOrdersByBuyer = `-- name: ReportOrdersByBuyer :many
 SELECT b.uuid AS organization_uuid, b.name AS organization_name, b.type AS organization_type, b.city,
        COUNT(*)::bigint AS order_count,
        SUM(o.total)::numeric(18,2)::text AS total,
-       MAX(o.currency)::text AS currency,
+       o.currency::text AS currency,
        MAX(o.created_at)::timestamptz AS last_order_at
 FROM orders o
 JOIN organizations b ON b.id = o.buyer_org_id
@@ -114,8 +114,8 @@ WHERE o.brand_id = $1
   AND o.status NOT IN ('draft', 'cancelling', 'cancelled')
   AND o.created_at >= $5::timestamptz
   AND o.created_at < $6::timestamptz
-GROUP BY b.id, b.uuid, b.name, b.type, b.city
-ORDER BY order_count DESC, SUM(o.total) DESC, lower(b.name), b.id
+GROUP BY b.id, b.uuid, b.name, b.type, b.city, o.currency
+ORDER BY order_count DESC, SUM(o.total) DESC, lower(b.name), b.id, o.currency
 LIMIT $7
 `
 
@@ -144,7 +144,9 @@ type ReportOrdersByBuyerRow struct {
 // order counts once it left draft and was not cancelled (draft, cancelling
 // and cancelled are out); the scope narrows like the other order reports
 // (seller or buyer inside org_ids). The active organization's own
-// purchases are not a buyer row (self_org_id).
+// purchases are not a buyer row (self_org_id). TEC-1214: totals are kept
+// per order currency (a brand currency change leaves older orders in the
+// old currency): a buyer with orders in two currencies has one row each.
 func (q *Queries) ReportOrdersByBuyer(ctx context.Context, arg ReportOrdersByBuyerParams) ([]ReportOrdersByBuyerRow, error) {
 	rows, err := q.db.Query(ctx, reportOrdersByBuyer,
 		arg.BrandID,

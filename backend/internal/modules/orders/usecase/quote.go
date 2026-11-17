@@ -127,7 +127,7 @@ func (s *Service) Quote(ctx context.Context, c Caller, in QuoteInput) (QuoteView
 		out.FirstOrderDiscountPct = numericTextPtr(d.FirstOnly, 2)
 	}
 	if visible {
-		if snap, err := s.rates.ResolveRate(ctx, s.now().UTC(), currency, TryCurrency); err == nil {
+		if snap, err := s.rates.ResolveRate(ctx, s.now().UTC(), currency, s.LocalCurrency(ctx)); err == nil {
 			rate, day := snap.Rate, snap.RateDate
 			out.TryRate, out.RateDate = &rate, &day
 		} else if !errors.Is(err, fxrates.ErrRateNotFound) {

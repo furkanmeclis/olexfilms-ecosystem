@@ -118,6 +118,7 @@
   "codes.PRICE_NOT_FOUND": "لا يوجد سعر لهذا المنتج بعملة الطلب.",
   "codes.PRODUCT_NOT_ORDERABLE": "هذا المنتج غير متاح لطلبات الوكلاء؛ يمكن للمركز فقط إضافته إلى طلب نيابةً عنك.",
   "codes.RATE_NOT_FOUND": "لا يتوفر سعر صرف لتثبيته لعملة الطلب.",
+  "codes.CURRENCY_LOCKED": "لا يمكن تغيير العملة لأن لدى هذه المؤسسة قيودًا محاسبية.",
   "codes.CUSTOMER_ANONYMIZED": "هوية العميل مجهّلة ولا يمكن تغييره.",
   "codes.CUSTOMER_INACTIVE": "حساب العميل غير نشط.",
   "codes.ALREADY_MEMBER": "العميل عضو بالفعل في هذا الوكيل.",

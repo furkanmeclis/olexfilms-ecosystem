@@ -171,6 +171,8 @@
   "system.keys.pricing_deviation_warning_pct_hint": "Кінцева ціна дилера або дистриб'ютора, що відхиляється від рекомендованої на стільки відсотків (у будь-який бік), перевищує поріг.",
   "system.keys.pricing_price_list_auto_publish": "Автоматично публікувати прайс-лист",
   "system.keys.pricing_price_list_auto_publish_hint": "Якщо увімкнено, після кожної публікації рекомендованих цін PDF прайс-листа завантажується до центру документів як нова версія.",
+  "system.keys.pricing_local_currency": "Локальна валюта відображення",
+  "system.keys.pricing_local_currency_hint": "Код ISO 4217 (напр. TRY). Валюта котирування курсу, зафіксованого під час схвалення замовлення, і невеликої суми за поточним курсом поруч із цінами у валюті бренду.",
   "system.groups.einvoice": "Електронний рахунок",
   "system.groups.einvoice_hint": "Рахунки UBL-TR e-Fatura та e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Ставка ПДВ за замовчуванням (%)",

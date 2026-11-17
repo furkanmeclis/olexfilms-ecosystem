@@ -118,6 +118,7 @@
   "codes.PRICE_NOT_FOUND": "There is no price for this product in the order currency.",
   "codes.PRODUCT_NOT_ORDERABLE": "This product is not open to dealer orders; only the center can add it to an order for you.",
   "codes.RATE_NOT_FOUND": "No exchange rate is available to freeze for the order currency.",
+  "codes.CURRENCY_LOCKED": "The currency cannot change because this organization has accounting records.",
   "codes.CUSTOMER_ANONYMIZED": "The customer is anonymized and cannot be changed.",
   "codes.CUSTOMER_INACTIVE": "The customer account is not active.",
   "codes.ALREADY_MEMBER": "The customer is already a member of this dealer.",
