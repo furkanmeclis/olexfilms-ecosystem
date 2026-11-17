@@ -81,6 +81,13 @@ func t229Return(t *testing.T, c *f1Chain) stockTransferView {
 	if v.Status != "received" {
 		t.Fatalf("return after receipt = %+v", v)
 	}
+	// TEC-1226: the received rolls wait for inspection (not counted).
+	if got := c.stockOf(c.distTok, c.dist); got != 0 {
+		t.Fatalf("distributor stock while the return is quarantined = %d, want 0", got)
+	}
+	for _, u := range c.rolls {
+		it.restockReturn(c.distTok, u.Barcode)
+	}
 	if got := c.stockOf(c.distTok, c.dist); got != 2 {
 		t.Fatalf("distributor stock after the return = %d, want 2", got)
 	}

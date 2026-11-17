@@ -169,8 +169,8 @@ func TestIntegrationStockReturnRequests(t *testing.T) {
 	}
 	move(dTok, r1.UUID, "received")
 	st, err := it.q.GetUnitCurrentState(ctx, units[0].ID)
-	if err != nil || st.HolderOrgID != dist.ID || st.Status != "available" {
-		t.Fatalf("returned unit = %+v, %v", st, err)
+	if err != nil || st.HolderOrgID != dist.ID || st.Status != "quarantine" {
+		t.Fatalf("returned unit = %+v, %v (want quarantine, TEC-1226)", st, err)
 	}
 	rows := finance(r1.UUID)
 	if len(rows) != 2 ||
@@ -300,8 +300,8 @@ func TestIntegrationCenterDecidesDistributorReturn(t *testing.T) {
 	move(wTok, r1.UUID, "approved")
 	move(dTok, r1.UUID, "shipped")
 	move(wTok, r1.UUID, "received")
-	if st, err := it.q.GetUnitCurrentState(ctx, units[0].ID); err != nil || st.HolderOrgID != center.ID || st.Status != "available" {
-		t.Fatalf("returned unit = %+v, %v", st, err)
+	if st, err := it.q.GetUnitCurrentState(ctx, units[0].ID); err != nil || st.HolderOrgID != center.ID || st.Status != "quarantine" {
+		t.Fatalf("returned unit = %+v, %v (want quarantine, TEC-1226)", st, err)
 	}
 
 	// The center staff role rejects the second return; the unit stays.
@@ -309,5 +309,17 @@ func TestIntegrationCenterDecidesDistributorReturn(t *testing.T) {
 	move(sTok, r2.UUID, "rejected")
 	if st, err := it.q.GetUnitCurrentState(ctx, units[1].ID); err != nil || st.HolderOrgID != dist.ID || st.Status != "available" {
 		t.Fatalf("rejected unit = %+v, %v", st, err)
+	}
+}
+
+// restockReturn puts a quarantined return back on stock (TEC-1226 return
+// inspection, decision restock).
+func (it *itest) restockReturn(access, barcode string) {
+	it.t.Helper()
+	code, env := it.do("POST", "/v1/warehouse/return-inspections", hostOlex, access, map[string]any{
+		"barcode": barcode, "decision": "restock", "return_reason": "other",
+	})
+	if code != http.StatusOK {
+		it.t.Fatalf("restock %s = %d %+v %s", barcode, code, env.Error, env.Data)
 	}
 }
