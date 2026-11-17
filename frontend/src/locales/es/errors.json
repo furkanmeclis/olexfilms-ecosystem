@@ -118,6 +118,7 @@
   "codes.PRICE_NOT_FOUND": "No hay precio para este producto en la moneda del pedido.",
   "codes.PRODUCT_NOT_ORDERABLE": "Este producto no está disponible para pedidos de concesionarios; solo la central puede añadirlo a un pedido para usted.",
   "codes.RATE_NOT_FOUND": "No hay tipo de cambio disponible para congelar en la moneda del pedido.",
+  "codes.CURRENCY_LOCKED": "La moneda no puede cambiar porque esta organización tiene registros contables.",
   "codes.CUSTOMER_ANONYMIZED": "El cliente está anonimizado y no se puede cambiar.",
   "codes.CUSTOMER_INACTIVE": "La cuenta del cliente no está activa.",
   "codes.ALREADY_MEMBER": "El cliente ya es miembro de este concesionario.",

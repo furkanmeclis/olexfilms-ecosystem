@@ -118,6 +118,7 @@
   "codes.PRICE_NOT_FOUND": "Bu məhsul üçün sifariş valyutasında qiymət yoxdur.",
   "codes.PRODUCT_NOT_ORDERABLE": "Bu məhsul diler sifarişinə bağlıdır; onu yalnız mərkəz sizin adınıza sifarişə əlavə edə bilər.",
   "codes.RATE_NOT_FOUND": "Sifariş valyutası üçün dondurulacaq məzənnə tapılmadı.",
+  "codes.CURRENCY_LOCKED": "Bu təşkilatın mühasibat qeydləri olduğu üçün valyuta dəyişdirilə bilməz.",
   "codes.CUSTOMER_ANONYMIZED": "Müştəri anonimləşdirilib, dəyişdirilə bilməz.",
   "codes.CUSTOMER_INACTIVE": "Müştəri hesabı aktiv deyil.",
   "codes.ALREADY_MEMBER": "Müştəri artıq bu dilerin üzvüdür.",
