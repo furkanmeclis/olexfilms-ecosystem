@@ -1,7 +1,10 @@
 import { apiConfig } from "@/config/api";
 import type { CertificateClient } from "@/features/warranty/lib/certificate";
 import type { components } from "@/generated/api";
-import { platformDownloadFile } from "@/lib/api/platform-form-request";
+import {
+  platformDownloadFile,
+  platformFormRequest,
+} from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
@@ -41,6 +44,13 @@ export type StockEntryMode = Schemas["StockEntryMode"];
 export type StockEntryHeaderInput = Schemas["StockEntryHeaderInput"];
 export type StockEntryArrivalScan = Schemas["StockEntryArrivalScan"];
 export type StockEntryArrivalReport = Schemas["StockEntryArrivalReport"];
+// TEC-1225: receiving exceptions.
+export type StockEntryAttachment = Schemas["StockEntryAttachment"];
+export type StockEntryDiscrepancy = Schemas["StockEntryDiscrepancy"];
+export type StockEntryDecision = Schemas["StockEntryDiscrepancyDecisionInput"];
+export type StockEntryReceipt = Schemas["StockEntryReceipt"];
+export type StockEntryUndoCheck = Schemas["StockEntryUndoCheck"];
+export type StockEntryAttachmentKind = StockEntryAttachment["kind"];
 export type WarehouseSupplier = Schemas["WarehouseSupplier"];
 export type EntryImportMappingTemplate = Schemas["EntryImportMappingTemplate"];
 export type EntryImportMappingTemplateInput =
@@ -325,10 +335,68 @@ export const warehouseService = {
       { body },
     );
   },
-  confirm(uuid: string) {
+  confirm(uuid: string, decisions?: StockEntryDecision[]) {
     return platformRequest<StockEntry>(
       "POST",
       `/v1/warehouse/stock-entries/${enc(uuid)}/confirm`,
+      decisions ? { body: { decisions } } : undefined,
+    );
+  },
+  // --- Receiving exceptions (TEC-1225) -----------------------------------------
+  getEntryReceipt(uuid: string) {
+    return platformRequest<StockEntryReceipt>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/receipt`,
+    );
+  },
+  entryReceiptPdfPath(uuid: string) {
+    return `/v1/warehouse/stock-entries/${enc(uuid)}/receipt.pdf`;
+  },
+  addEntryAttachment(uuid: string, file: File, kind: StockEntryAttachmentKind) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("kind", kind);
+    return platformFormRequest<StockEntryAttachment>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/attachments`,
+      form,
+    );
+  },
+  deleteEntryAttachment(uuid: string, attachmentUuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/attachments/${enc(attachmentUuid)}`,
+    );
+  },
+  updateEntryLine(
+    uuid: string,
+    lineUuid: string,
+    body: Schemas["StockEntryLineDetailsInput"],
+  ) {
+    return platformRequest<StockEntry>(
+      "PATCH",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/lines/${enc(lineUuid)}`,
+      { body },
+    );
+  },
+  recordEntryLabelPrint(uuid: string, count = 0) {
+    return platformRequest<void>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/label-prints`,
+      { body: { count } },
+    );
+  },
+  entryUndoCheck(uuid: string) {
+    return platformRequest<StockEntryUndoCheck>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/undo-check`,
+    );
+  },
+  undoEntry(uuid: string, reason: string) {
+    return platformRequest<StockEntry>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/undo`,
+      { body: { reason } },
     );
   },
   cancel(uuid: string) {
@@ -685,6 +753,10 @@ export const warehouseKeys = {
   entries: (params: StockEntryListQuery) =>
     ["warehouse", "entries", params] as const,
   entry: (uuid: string) => ["warehouse", "entry", uuid] as const,
+  entryReceipt: (uuid: string) =>
+    ["warehouse", "entry", uuid, "receipt"] as const,
+  entryUndoCheck: (uuid: string) =>
+    ["warehouse", "entry", uuid, "undo-check"] as const,
   arrivalReport: (uuid: string) =>
     ["warehouse", "arrival-report", uuid] as const,
   suppliers: (q: string) => ["warehouse", "suppliers", q] as const,
