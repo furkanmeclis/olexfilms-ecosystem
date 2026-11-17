@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Очікують, в обробці, готові · {{draft}} чернеток",
   "list.stats.completed": "Завершені",
   "list.stats.active_warranties": "Активні гарантії",
-  "list.stats.warranties_hint": "Усього {{total}} гарантій"
+  "list.stats.warranties_hint": "Усього {{total}} гарантій",
+  "detail.created_by": "Створив",
+  "detail.performed_by": "Виконав",
+  "detail.completed_by": "Завершив",
+  "detail.cancelled_by": "Скасував"
 }

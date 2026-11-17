@@ -90,6 +90,13 @@ function Section({
   );
 }
 
+const SERVICE_PEOPLE = [
+  "created_by",
+  "performed_by",
+  "completed_by",
+  "cancelled_by",
+] as const;
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-0.5">
@@ -186,6 +193,14 @@ function VehicleCustomer({
           <Field label={t("services.detail.organization")}>
             <EntityLink kind="organization" entity={service.organization} />
           </Field>
+          {/* TEC-1216/1217: who opened, performed, completed or cancelled. */}
+          {SERVICE_PEOPLE.map((key) =>
+            service[key] ? (
+              <Field key={key} label={t(`services.detail.${key}`)}>
+                <EntityLink kind="user" entity={service[key]} />
+              </Field>
+            ) : null,
+          )}
           <Field label={t("services.detail.measurement")}>
             {service.has_measurement
               ? t("services.measurement.yes")

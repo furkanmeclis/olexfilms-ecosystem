@@ -38,6 +38,63 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 type StockProduct = components["schemas"]["StockProduct"];
+type OrganizationSummary = components["schemas"]["OrganizationSummary"];
+type OrganizationCounts = OrganizationSummary["counts"];
+
+const TAB_COUNT_KEYS: Partial<Record<string, keyof OrganizationCounts>> = {
+  children: "children",
+  orders: "orders",
+  services: "services",
+  warranties: "warranties",
+  tasks: "open_tasks",
+};
+
+/** Counter shown next to a tab label (null: none or not permitted). */
+function tabCount(
+  counts: OrganizationCounts | undefined,
+  tab: string,
+): number | null {
+  const key = TAB_COUNT_KEYS[tab];
+  if (!counts || !key) return null;
+  return counts[key] ?? null;
+}
+
+const SUMMARY_COUNT_KEYS = [
+  "members",
+  "customers",
+  "leads",
+  "warehouses",
+] as const satisfies readonly (keyof OrganizationCounts)[];
+
+/** Counters without a tab of their own (members, customers, …). */
+function CountsCard({ counts }: { counts: OrganizationCounts }) {
+  const { t, format } = useLocale();
+  const shown = SUMMARY_COUNT_KEYS.filter((key) => counts[key] !== null);
+  if (shown.length === 0) return null;
+  return (
+    <Card data-testid="organization-counts">
+      <CardHeader>
+        <CardTitle className="text-base">
+          {t("organizations.tenant_detail.counts")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          {shown.map((key) => (
+            <Field
+              key={key}
+              label={t(`organizations.tenant_detail.count.${key}`)}
+            >
+              <span className="tabular-nums">
+                {format.number(counts[key] ?? 0)}
+              </span>
+            </Field>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
 
 export const ORGANIZATION_TABS = [
   "summary",
@@ -117,12 +174,14 @@ export function TenantOrganizationDetailPage({
   const search = useSearchParams();
   const canRead = can(permissions.organizations.tenantRead);
 
+  // TEC-1216: the organization plus counters (null without that module's
+  // read permission), inside the organizations.read scope (404 outside).
   const detail = useQuery({
     queryKey: organizationKeys.detail(uuid),
     queryFn: () =>
-      platformRequest<Organization>(
+      platformRequest<OrganizationSummary>(
         "GET",
-        `/v1/tenant/organizations/${encodeURIComponent(uuid)}`,
+        `/v1/tenant/organizations/${encodeURIComponent(uuid)}/summary`,
       ),
     enabled: canRead && Boolean(uuid),
   });
@@ -137,7 +196,8 @@ export function TenantOrganizationDetailPage({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const org = detail.data;
+  const org = detail.data?.organization as Organization | undefined;
+  const counts = detail.data?.counts;
   const title = org?.name ?? t("organizations.tenant_detail.title");
   const header = (
     <PageHeader
@@ -205,11 +265,16 @@ export function TenantOrganizationDetailPage({
               data-testid={`organization-tab-${value}`}
             >
               {t(`organizations.tenant_detail.tabs.${value}`)}
+              {tabCount(counts, value) !== null ? (
+                <span className="text-muted-foreground ms-1 text-xs tabular-nums">
+                  {tabCount(counts, value)}
+                </span>
+              ) : null}
             </TabsTrigger>
           ))}
         </TabsList>
         <TabsContent value="summary" className="pt-4">
-          {tab === "summary" ? <SummaryTab org={org} /> : null}
+          {tab === "summary" ? <SummaryTab org={org} counts={counts} /> : null}
         </TabsContent>
         <TabsContent value="children" className="pt-4">
           {tab === "children" ? <ChildrenTab slug={slug} org={org} /> : null}
@@ -258,7 +323,13 @@ export function TenantOrganizationDetailPage({
   );
 }
 
-function SummaryTab({ org }: { org: Organization }) {
+function SummaryTab({
+  org,
+  counts,
+}: {
+  org: Organization;
+  counts: OrganizationCounts | undefined;
+}) {
   const { t, format } = useLocale();
   const { can } = usePermission();
   const canDiscount = can(permissions.pricing.saleWrite);
@@ -320,6 +391,7 @@ function SummaryTab({ org }: { org: Organization }) {
         </CardContent>
       </Card>
       {canDiscount && org.parent ? <DiscountCard uuid={org.uuid} /> : null}
+      {counts ? <CountsCard counts={counts} /> : null}
     </div>
   );
 }

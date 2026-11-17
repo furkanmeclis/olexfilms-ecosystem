@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Randevular",
   "related.tabs.lead": "Lead'ler",
   "related.tabs.measurement": "Ölçümler",
-  "related.tabs.contract": "Sözleşmeler"
+  "related.tabs.contract": "Sözleşmeler",
+  "related.columns.subject": "Konu"
 }

@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "质保",
   "tenant_detail.tabs.stock": "库存",
   "tenant_detail.tabs.cari": "往来账户",
-  "tenant_detail.tabs.tasks": "任务"
+  "tenant_detail.tabs.tasks": "任务",
+  "tenant_detail.counts": "计数",
+  "tenant_detail.count.members": "成员",
+  "tenant_detail.count.customers": "客户",
+  "tenant_detail.count.leads": "线索",
+  "tenant_detail.count.warehouses": "仓库"
 }

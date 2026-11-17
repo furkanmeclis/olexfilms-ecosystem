@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Ausstehend, in Arbeit, fertig · {{draft}} Entwürfe",
   "list.stats.completed": "Abgeschlossen",
   "list.stats.active_warranties": "Aktive Garantien",
-  "list.stats.warranties_hint": "Insgesamt {{total}} Garantien"
+  "list.stats.warranties_hint": "Insgesamt {{total}} Garantien",
+  "detail.created_by": "Erstellt von",
+  "detail.performed_by": "Ausgeführt von",
+  "detail.completed_by": "Abgeschlossen von",
+  "detail.cancelled_by": "Storniert von"
 }

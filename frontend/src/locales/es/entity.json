@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Citas",
   "related.tabs.lead": "Leads",
   "related.tabs.measurement": "Mediciones",
-  "related.tabs.contract": "Contratos"
+  "related.tabs.contract": "Contratos",
+  "related.columns.subject": "Asunto"
 }

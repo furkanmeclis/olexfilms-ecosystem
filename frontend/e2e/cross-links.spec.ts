@@ -61,8 +61,23 @@ test("service → customer → customer's services → dealer page", async ({
       });
       return true;
     }
-    if (path === `/v1/tenant/organizations/${ORG}`) {
-      void ok(dealer);
+    if (path === `/v1/tenant/organizations/${ORG}/summary`) {
+      void ok({
+        organization: dealer,
+        ref: { kind: "organization", uuid: ORG, name: dealer.name },
+        parent: null,
+        counts: {
+          members: 3,
+          children: 0,
+          customers: 12,
+          services: 1,
+          warranties: null,
+          orders: null,
+          open_tasks: null,
+          leads: null,
+          warehouses: null,
+        },
+      });
       return true;
     }
     if (path === "/v1/tenant/organizations") {
@@ -101,6 +116,8 @@ test("service → customer → customer's services → dealer page", async ({
   await expect(page).toHaveURL(new RegExp(`/t/${SLUG}/organizations/${ORG}$`));
   await expect(page.getByRole("heading", { name: "Acme Bayi" })).toBeVisible();
   await expect(page.getByText("Bağdat Cd. 1")).toBeVisible();
+  // Counters without a tab (members, customers) sit on the summary.
+  await expect(page.getByTestId("organization-counts")).toContainText("12");
 
   // Organization tabs: services with the organization filter.
   await page.getByTestId("organization-tab-services").click();

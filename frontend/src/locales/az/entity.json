@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Görüşlər",
   "related.tabs.lead": "Lead-lər",
   "related.tabs.measurement": "Ölçmələr",
-  "related.tabs.contract": "Müqavilələr"
+  "related.tabs.contract": "Müqavilələr",
+  "related.columns.subject": "Mövzu"
 }

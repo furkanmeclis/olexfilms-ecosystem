@@ -34,11 +34,11 @@ export const CUSTOMER_RELATED_TABS: readonly CustomerRelatedTab[] = [
     ready: true,
     hideColumns: ["customer"],
   },
-  { kind: "warranty", param: "customer_uuid", ready: false },
-  { kind: "appointment", param: "customer_uuid", ready: false },
-  { kind: "lead", param: "customer_uuid", ready: false },
-  { kind: "measurement", param: "customer_uuid", ready: false },
-  { kind: "contract", param: "customer_uuid", ready: false },
+  { kind: "warranty", param: "customer_uuid", ready: true },
+  { kind: "appointment", param: "customer_uuid", ready: true },
+  { kind: "lead", param: "customer_uuid", ready: true },
+  { kind: "measurement", param: "customer_uuid", ready: true },
+  { kind: "contract", param: "customer_uuid", ready: true },
 ];
 
 /** Tabs the caller may open whose list endpoint and filter exist. */

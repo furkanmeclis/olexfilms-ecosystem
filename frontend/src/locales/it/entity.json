@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Appuntamenti",
   "related.tabs.lead": "Lead",
   "related.tabs.measurement": "Misurazioni",
-  "related.tabs.contract": "Contratti"
+  "related.tabs.contract": "Contratti",
+  "related.columns.subject": "Oggetto"
 }

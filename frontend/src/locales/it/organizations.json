@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Garanzie",
   "tenant_detail.tabs.stock": "Magazzino",
   "tenant_detail.tabs.cari": "Conto",
-  "tenant_detail.tabs.tasks": "Attività"
+  "tenant_detail.tabs.tasks": "Attività",
+  "tenant_detail.counts": "Contatori",
+  "tenant_detail.count.members": "Membri",
+  "tenant_detail.count.customers": "Clienti",
+  "tenant_detail.count.leads": "Lead",
+  "tenant_detail.count.warehouses": "Magazzini"
 }

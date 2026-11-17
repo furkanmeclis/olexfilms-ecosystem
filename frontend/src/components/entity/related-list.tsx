@@ -429,6 +429,68 @@ const appointmentSpec: RelatedListSpec<Schemas["Appointment"]> = {
   ],
 };
 
+const contractSpec: RelatedListSpec<Schemas["ContractListItem"]> = {
+  path: "/v1/contracts",
+  defaultSort: "-created_at",
+  emptyKey: "entity.related.empty.contract",
+  columns: ({ t, format }) => [
+    createColumn<Schemas["ContractListItem"], unknown>({
+      accessorKey: "contract_no",
+      labelKey: "entity.related.columns.number",
+      enableSorting: true,
+      gridPrimary: true,
+      cell: ({ row }) => (
+        <EntityLink
+          kind="contract"
+          entity={{
+            uuid: row.original.uuid,
+            name: String(row.original.contract_no),
+          }}
+          className="font-mono"
+        />
+      ),
+    }),
+    createColumn<Schemas["ContractListItem"], unknown>({
+      accessorKey: "status",
+      labelKey: "entity.related.columns.status",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <StatusChip
+          label={t(`services.contract.status.${row.original.status}`)}
+        />
+      ),
+    }),
+    createColumn<Schemas["ContractListItem"], unknown>({
+      id: "subject",
+      accessorFn: (row) => row.subject?.name ?? "",
+      labelKey: "entity.related.columns.subject",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const subject = row.original.subject;
+        if (!subject) return "—";
+        return (
+          <EntityLink
+            kind={subject.kind === "subscription" ? "subscription" : "service"}
+            entity={subject}
+          />
+        );
+      },
+    }),
+    refColumn<Schemas["ContractListItem"]>({
+      id: "organization",
+      kind: "organization",
+      labelKey: "entity.related.columns.organization",
+      getRef: (row) => row.organization,
+    }) as ColumnDef<Schemas["ContractListItem"], unknown>,
+    dateColumn<Schemas["ContractListItem"]>(
+      "created_at",
+      "entity.related.columns.created_at",
+      (row) => row.created_at,
+      format,
+    ),
+  ],
+};
+
 /**
  * TEC-1217: kinds `RelatedList` can show. Add a kind here when its list
  * endpoint gains the reverse filter you need (TEC-1216).
@@ -442,6 +504,7 @@ export const RELATED_LIST_SPECS: Partial<Record<EntityKind, RelatedListSpec>> =
     lead: leadSpec as unknown as RelatedListSpec,
     measurement: measurementSpec as unknown as RelatedListSpec,
     appointment: appointmentSpec as unknown as RelatedListSpec,
+    contract: contractSpec as unknown as RelatedListSpec,
   };
 
 export type RelatedListProps = {

@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Ραντεβού",
   "related.tabs.lead": "Leads",
   "related.tabs.measurement": "Μετρήσεις",
-  "related.tabs.contract": "Συμβάσεις"
+  "related.tabs.contract": "Συμβάσεις",
+  "related.columns.subject": "Αντικείμενο"
 }

@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "الضمانات",
   "tenant_detail.tabs.stock": "المخزون",
   "tenant_detail.tabs.cari": "الحساب",
-  "tenant_detail.tabs.tasks": "المهام"
+  "tenant_detail.tabs.tasks": "المهام",
+  "tenant_detail.counts": "العدّادات",
+  "tenant_detail.count.members": "الأعضاء",
+  "tenant_detail.count.customers": "العملاء",
+  "tenant_detail.count.leads": "العملاء المحتملون",
+  "tenant_detail.count.warehouses": "المستودعات"
 }

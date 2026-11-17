@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Garantiler",
   "tenant_detail.tabs.stock": "Stok",
   "tenant_detail.tabs.cari": "Cari",
-  "tenant_detail.tabs.tasks": "Görevler"
+  "tenant_detail.tabs.tasks": "Görevler",
+  "tenant_detail.counts": "Sayaçlar",
+  "tenant_detail.count.members": "Üyeler",
+  "tenant_detail.count.customers": "Müşteriler",
+  "tenant_detail.count.leads": "Lead'ler",
+  "tenant_detail.count.warehouses": "Depolar"
 }

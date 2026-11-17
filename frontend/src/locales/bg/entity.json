@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Часове",
   "related.tabs.lead": "Лийдове",
   "related.tabs.measurement": "Измервания",
-  "related.tabs.contract": "Договори"
+  "related.tabs.contract": "Договори",
+  "related.columns.subject": "Предмет"
 }

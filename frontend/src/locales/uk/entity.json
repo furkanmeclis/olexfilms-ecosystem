@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Записи",
   "related.tabs.lead": "Ліди",
   "related.tabs.measurement": "Вимірювання",
-  "related.tabs.contract": "Договори"
+  "related.tabs.contract": "Договори",
+  "related.columns.subject": "Предмет"
 }

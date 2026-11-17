@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Garantías",
   "tenant_detail.tabs.stock": "Stock",
   "tenant_detail.tabs.cari": "Cuenta",
-  "tenant_detail.tabs.tasks": "Tareas"
+  "tenant_detail.tabs.tasks": "Tareas",
+  "tenant_detail.counts": "Contadores",
+  "tenant_detail.count.members": "Miembros",
+  "tenant_detail.count.customers": "Clientes",
+  "tenant_detail.count.leads": "Leads",
+  "tenant_detail.count.warehouses": "Almacenes"
 }

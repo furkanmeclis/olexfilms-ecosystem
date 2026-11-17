@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Гарантії",
   "tenant_detail.tabs.stock": "Залишки",
   "tenant_detail.tabs.cari": "Розрахунковий рахунок",
-  "tenant_detail.tabs.tasks": "Завдання"
+  "tenant_detail.tabs.tasks": "Завдання",
+  "tenant_detail.counts": "Лічильники",
+  "tenant_detail.count.members": "Учасники",
+  "tenant_detail.count.customers": "Клієнти",
+  "tenant_detail.count.leads": "Ліди",
+  "tenant_detail.count.warehouses": "Склади"
 }

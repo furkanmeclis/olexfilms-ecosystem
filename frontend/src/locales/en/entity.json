@@ -63,5 +63,6 @@
   "related.tabs.appointment": "Appointments",
   "related.tabs.lead": "Leads",
   "related.tabs.measurement": "Measurements",
-  "related.tabs.contract": "Contracts"
+  "related.tabs.contract": "Contracts",
+  "related.columns.subject": "Subject"
 }

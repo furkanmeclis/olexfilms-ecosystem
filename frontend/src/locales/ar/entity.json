@@ -63,5 +63,6 @@
   "related.tabs.appointment": "المواعيد",
   "related.tabs.lead": "العملاء المحتملون",
   "related.tabs.measurement": "القياسات",
-  "related.tabs.contract": "العقود"
+  "related.tabs.contract": "العقود",
+  "related.columns.subject": "الموضوع"
 }

@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Pendientes, en proceso, listos · {{draft}} borradores",
   "list.stats.completed": "Completados",
   "list.stats.active_warranties": "Garantías activas",
-  "list.stats.warranties_hint": "{{total}} garantías en total"
+  "list.stats.warranties_hint": "{{total}} garantías en total",
+  "detail.created_by": "Creado por",
+  "detail.performed_by": "Realizado por",
+  "detail.completed_by": "Completado por",
+  "detail.cancelled_by": "Cancelado por"
 }

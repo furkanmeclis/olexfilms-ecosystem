@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Εγγυήσεις",
   "tenant_detail.tabs.stock": "Απόθεμα",
   "tenant_detail.tabs.cari": "Λογαριασμός",
-  "tenant_detail.tabs.tasks": "Εργασίες"
+  "tenant_detail.tabs.tasks": "Εργασίες",
+  "tenant_detail.counts": "Μετρητές",
+  "tenant_detail.count.members": "Μέλη",
+  "tenant_detail.count.customers": "Πελάτες",
+  "tenant_detail.count.leads": "Leads",
+  "tenant_detail.count.warehouses": "Αποθήκες"
 }

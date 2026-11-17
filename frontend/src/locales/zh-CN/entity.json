@@ -63,5 +63,6 @@
   "related.tabs.appointment": "预约",
   "related.tabs.lead": "线索",
   "related.tabs.measurement": "测量",
-  "related.tabs.contract": "合同"
+  "related.tabs.contract": "合同",
+  "related.columns.subject": "标的"
 }

@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Zəmanətlər",
   "tenant_detail.tabs.stock": "Stok",
   "tenant_detail.tabs.cari": "Cari",
-  "tenant_detail.tabs.tasks": "Tapşırıqlar"
+  "tenant_detail.tabs.tasks": "Tapşırıqlar",
+  "tenant_detail.counts": "Sayğaclar",
+  "tenant_detail.count.members": "Üzvlər",
+  "tenant_detail.count.customers": "Müştərilər",
+  "tenant_detail.count.leads": "Lead-lər",
+  "tenant_detail.count.warehouses": "Anbarlar"
 }

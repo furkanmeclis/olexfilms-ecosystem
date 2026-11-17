@@ -262,5 +262,10 @@
   "tenant_detail.tabs.warranties": "Гаранции",
   "tenant_detail.tabs.stock": "Наличност",
   "tenant_detail.tabs.cari": "Сметка",
-  "tenant_detail.tabs.tasks": "Задачи"
+  "tenant_detail.tabs.tasks": "Задачи",
+  "tenant_detail.counts": "Броячи",
+  "tenant_detail.count.members": "Членове",
+  "tenant_detail.count.customers": "Клиенти",
+  "tenant_detail.count.leads": "Лийдове",
+  "tenant_detail.count.warehouses": "Складове"
 }

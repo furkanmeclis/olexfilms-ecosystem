@@ -388,5 +388,9 @@
   "list.stats.in_progress_hint": "Ожидают, в обработке, готовы · {{draft}} черновиков",
   "list.stats.completed": "Завершённые",
   "list.stats.active_warranties": "Активные гарантии",
-  "list.stats.warranties_hint": "Всего {{total}} гарантий"
+  "list.stats.warranties_hint": "Всего {{total}} гарантий",
+  "detail.created_by": "Создал",
+  "detail.performed_by": "Выполнил",
+  "detail.completed_by": "Завершил",
+  "detail.cancelled_by": "Отменил"
 }
