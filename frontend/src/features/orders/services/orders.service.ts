@@ -16,6 +16,8 @@ export type OrderItemInput = Schemas["OrderItemInput"];
 export type OrderCreateInput = Schemas["OrderCreateInput"];
 export type OrderSupplementInput = Schemas["OrderSupplementInput"];
 export type OrderLink = Schemas["OrderLink"];
+export type OrderDiscrepancy = Schemas["OrderDiscrepancy"];
+export type OrderDiscrepancyInput = Schemas["OrderDiscrepancyInput"];
 export type OrderUnitAssignInput = Schemas["OrderUnitAssignInput"];
 export type OrderRateSnapshot = Schemas["OrderRateSnapshot"];
 export type OrderSuggestions = Schemas["OrderSuggestions"];
@@ -214,11 +216,52 @@ export const ordersService = {
     status: OrderStatus,
     reason?: string,
     shipping?: OrderShippingInput,
+    discrepancies?: OrderDiscrepancyInput[],
   ) {
     return platformRequest<Order>(
       "POST",
       `/v1/orders/${enc(uuid)}/transitions`,
-      { body: { status, ...(reason ? { reason } : {}), ...shipping } },
+      {
+        body: {
+          status,
+          ...(reason ? { reason } : {}),
+          ...shipping,
+          ...(discrepancies?.length ? { discrepancies } : {}),
+        },
+      },
+    );
+  },
+  /**
+   * TEC-1227: ship the picked part of a preparing order; the rest becomes
+   * a backorder and the order moves to ready.
+   */
+  partialShip(uuid: string, reason?: string) {
+    return platformRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/partial-ship`,
+      { body: reason ? { reason } : {} },
+    );
+  },
+  /** TEC-1227: close a receipt record (delivered, returned or closed). */
+  resolveDiscrepancy(uuid: string, discrepancy: string, resolution: string) {
+    return platformRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/discrepancies/${enc(discrepancy)}/resolve`,
+      { body: { resolution } },
+    );
+  },
+  addDiscrepancyPhoto(uuid: string, discrepancy: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    return platformFormRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/discrepancies/${enc(discrepancy)}/photos`,
+      form,
+    );
+  },
+  downloadDiscrepancyPhoto(uuid: string, discrepancy: string, index: number) {
+    return platformDownloadFile(
+      `/v1/orders/${enc(uuid)}/discrepancies/${enc(discrepancy)}/photos/${index}`,
     );
   },
   assignUnit(uuid: string, item: string, body: OrderUnitAssignInput) {

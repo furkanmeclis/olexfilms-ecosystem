@@ -26,6 +26,12 @@ import { Textarea } from "@/components/ui/textarea";
 import type { OrderAction } from "@/features/orders/lib/access";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
+  ReceiptCheckFields,
+  receiptDiscrepancies,
+  receiptMarksValid,
+  type ReceiptMark,
+} from "@/features/orders/components/order-partial";
+import {
   deliveryMethodsService,
   orderKeys,
   ordersService,
@@ -69,6 +75,8 @@ export function OrderActionDialog({
   const [method, setMethod] = useState("");
   const [tracking, setTracking] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  // TEC-1227: missing / damaged units reported with the receipt.
+  const [marks, setMarks] = useState<Record<string, ReceiptMark>>({});
   const shipping = action?.kind === "ship";
   const receiving = action?.kind === "receive";
   const methods = useQuery({
@@ -81,6 +89,7 @@ export function OrderActionDialog({
     setMethod("");
     setTracking("");
     setReceipt(null);
+    setMarks({});
   };
   const close = () => {
     reset();
@@ -95,7 +104,19 @@ export function OrderActionDialog({
               delivery_method_uuid: method,
               ...(tracking.trim() ? { tracking_no: tracking.trim() } : {}),
             })
-          : await ordersService.transition(v.order.uuid, v.action.target, why);
+          : v.action.kind === "receive" && receiptDiscrepancies(marks).length
+            ? await ordersService.transition(
+                v.order.uuid,
+                v.action.target,
+                why,
+                undefined,
+                receiptDiscrepancies(marks),
+              )
+            : await ordersService.transition(
+                v.order.uuid,
+                v.action.target,
+                why,
+              );
       if (v.action.kind === "receive" && receipt) {
         try {
           updated = await ordersService.attachReceipt(v.order.uuid, receipt);
@@ -121,6 +142,8 @@ export function OrderActionDialog({
   const reasonOk = !action?.reasonRequired || reason.trim().length >= 3;
   const shippingOk = !shipping || method !== "";
   const receiptTooLarge = receipt !== null && receipt.size > RECEIPT_MAX_BYTES;
+  const marksOk =
+    !receiving || order === null || receiptMarksValid(order, marks);
   return (
     <Dialog open={open} onOpenChange={(o) => (!o ? close() : undefined)}>
       <DialogContent>
@@ -195,6 +218,13 @@ export function OrderActionDialog({
                 </div>
               </div>
             ) : null}
+            {receiving && order.status !== "received" ? (
+              <ReceiptCheckFields
+                order={order}
+                marks={marks}
+                onChange={setMarks}
+              />
+            ) : null}
             {receiving ? (
               <div className="space-y-1.5">
                 <Label htmlFor="receive-receipt">
@@ -225,6 +255,7 @@ export function OrderActionDialog({
                 disabled={
                   !reasonOk ||
                   !shippingOk ||
+                  !marksOk ||
                   receiptTooLarge ||
                   mutation.isPending
                 }

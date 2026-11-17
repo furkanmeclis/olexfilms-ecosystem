@@ -8,6 +8,11 @@ export const ORDER_ACTIVITY_ACTIONS = [
   "unit_unassigned",
   "updated",
   "plotter_marked",
+  // TEC-1227: partial shipment and receipt discrepancies.
+  "backorder_created",
+  "backorder_opened",
+  "discrepancy_reported",
+  "discrepancy_resolved",
 ] as const;
 
 type Translate = (
@@ -120,6 +125,12 @@ export function orderTimelineSteps(
         );
       }
     }
+    // TEC-1227: the other order of a backorder step, the discrepancy kind
+    // and its resolution.
+    if (e.related_order_no) parts.push(e.related_order_no);
+    if (e.kind) parts.push(t(`orders.receipt.kind.${e.kind}`));
+    if (e.resolution)
+      parts.push(t(`orders.receipt.resolution.${e.resolution}`));
     if (e.reason) parts.push(e.reason);
     return {
       key: `${e.at}-${i}`,

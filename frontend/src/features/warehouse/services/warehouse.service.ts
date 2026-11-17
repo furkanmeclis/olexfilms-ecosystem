@@ -498,6 +498,18 @@ export const warehouseService = {
       { body },
     );
   },
+  /** TEC-1227: resolve a row of a completed transfer's record. */
+  resolveTransferDiscrepancy(
+    uuid: string,
+    discrepancy: string,
+    body: Schemas["WarehouseTransferDiscrepancyResolveInput"],
+  ) {
+    return platformRequest<WarehouseTransfer>(
+      "POST",
+      `/v1/warehouse/transfers/${enc(uuid)}/discrepancies/${enc(discrepancy)}/resolve`,
+      { body },
+    );
+  },
   cancelTransfer(uuid: string) {
     return platformRequest<WarehouseTransfer>(
       "POST",

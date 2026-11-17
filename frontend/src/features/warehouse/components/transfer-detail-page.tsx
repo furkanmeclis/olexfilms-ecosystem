@@ -25,6 +25,10 @@ import { LocationPicker } from "@/features/warehouse/components/location-picker"
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { TransferLinesTable } from "@/features/warehouse/components/transfer-lines-table";
 import {
+  CompleteTransferDialog,
+  TransferDiscrepanciesCard,
+} from "@/features/warehouse/components/transfer-discrepancies";
+import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
@@ -73,6 +77,8 @@ export function TransferDetailPage({
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  // TEC-1227: receive with a check (missing / surplus record).
+  const [completing, setCompleting] = useState(false);
   const [fixedUnit, setFixedUnit] = useState<{
     barcode: string;
     product: NonNullable<WarehouseScanResult["product"]>;
@@ -250,7 +256,7 @@ export function TransferDetailPage({
             {transfer.status === "in_transit" ? (
               <Button
                 type="button"
-                onClick={() => void askFinish("complete")}
+                onClick={() => setCompleting(true)}
                 disabled={
                   finish.isPending || !canCompleteWithoutLocation(transfer)
                 }
@@ -436,6 +442,12 @@ export function TransferDetailPage({
             </Card>
           ) : null}
 
+          <TransferDiscrepanciesCard
+            transfer={transfer}
+            writable={writable}
+            onChange={apply}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>{t("warehouse.entry.lines")}</CardTitle>
@@ -463,6 +475,17 @@ export function TransferDetailPage({
           </Card>
         </>
       )}
+      {transfer && completing ? (
+        <CompleteTransferDialog
+          transfer={transfer}
+          open={completing}
+          onClose={() => setCompleting(false)}
+          onDone={(next) => {
+            setCompleting(false);
+            apply(next);
+          }}
+        />
+      ) : null}
       <FixedQuantityDialog
         key={fixedUnit?.barcode ?? "closed"}
         unit={fixedUnit}

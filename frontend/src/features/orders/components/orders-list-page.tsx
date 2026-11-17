@@ -26,6 +26,7 @@ import { routes } from "@/config/routes";
 import { OrderActionDialog } from "@/features/orders/components/order-action-dialog";
 import { OrderQueueChips } from "@/features/orders/components/order-queue-chips";
 import { SupplementBadge } from "@/features/orders/components/order-supplements";
+import { BackorderBadge } from "@/features/orders/components/order-partial";
 import {
   activeOrderSide,
   canEditDraft,
@@ -187,6 +188,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
                 {row.original.order_no}
               </Link>
               <SupplementBadge order={row.original} />
+              <BackorderBadge order={row.original} />
             </span>
           ),
         }),
@@ -602,6 +604,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
                 {order.order_no}
               </Link>
               <SupplementBadge order={order} />
+              <BackorderBadge order={order} />
               <StatusChip
                 label={order.status_label}
                 tone={orderStatusTone(order.status)}
