@@ -95,6 +95,7 @@ var kpiMetas = map[string]kpiMeta{
 	"customers_total":        {good: goodUp, report: ReportCustomersTrend, snapshot: true},
 	"customers_new":          {good: goodUp, report: ReportCustomersTrend},
 	"warranties_active":      {good: goodUp, report: ReportWarrantiesSummary, snapshot: true},
+	"warranties_total":       {good: goodUp, report: ReportWarrantiesSummary, snapshot: true},
 	"warranties_expiring":    {good: goodDown, report: ReportWarrantiesSummary, snapshot: true},
 	"warranties_started":     {good: goodUp, report: ReportWarrantiesSummary},
 	"warranties_expired":     {good: goodDown, report: ReportWarrantiesSummary, snapshot: true},

@@ -187,6 +187,7 @@ func (s *Service) build(ctx context.Context, c Caller, f scopefilter.Filter, d D
 		cards := q.series(seriesCards, unitCount)
 		cards.Points = []Point{
 			q.card("warranties_active", float64(counts.ActiveCount)),
+			q.card("warranties_total", float64(warrantyTotal(counts))),
 			q.card("warranties_expiring", float64(counts.ExpiringCount)),
 			q.card("warranties_started", float64(counts.StartedCount)),
 			q.card("warranties_expired", float64(counts.ExpiredCount)),
@@ -445,6 +446,12 @@ var columnAggregates = map[string]string{
 	"rank": "none", perfmodel.MetricReviewAvg: "avg", "avg_prep_hours": "avg",
 }
 
+// warrantyTotal is every warranty in the scope, whatever its status
+// (active + expired + void; TEC-1220 "toplam garanti").
+func warrantyTotal(r db.ReportWarrantyCountsRow) int64 {
+	return r.ActiveCount + r.ExpiredCount + r.VoidCount
+}
+
 // valuesOf is the bucket values of a series (KPI sparks).
 func valuesOf(sr Series) []float64 {
 	out := make([]float64, 0, len(sr.Points))
@@ -589,6 +596,7 @@ func (s *Service) overview(ctx context.Context, c Caller, d Definition, q query)
 				return Envelope{}, fmt.Errorf("reports: overview warranties: %w", err)
 			}
 			cards.Points = append(cards.Points, q.card("warranties_active", float64(r.ActiveCount)),
+				q.card("warranties_total", float64(warrantyTotal(r))),
 				q.card("warranties_expiring", float64(r.ExpiringCount)), q.card("warranties_started", float64(r.StartedCount)))
 			if !q.previous {
 				rows, err := s.q.ReportWarrantyTrend(ctx, db.ReportWarrantyTrendParams{

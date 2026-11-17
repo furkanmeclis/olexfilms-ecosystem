@@ -330,6 +330,28 @@ func TestReportsFollowScope(t *testing.T) {
 	if card(envC, "dealers_total") != 3 || card(envC, "distributors_total") != 2 {
 		t.Fatalf("center network cards = %v / %v, want 3 / 2", card(envC, "dealers_total"), card(envC, "distributors_total"))
 	}
+	// TEC-1220: "total warranties" counts every status next to the active
+	// card; a voided warranty leaves active but stays in the total.
+	f.exec(t, `UPDATE warranties SET status = 'void', voided_at = now()
+WHERE id = (SELECT MIN(id) FROM warranties WHERE brand_id = $1 AND status = 'active')`, f.brandID)
+	var all int64
+	if err := f.tx.QueryRow(f.ctx, `SELECT COUNT(*) FROM warranties WHERE brand_id = $1`, f.brandID).Scan(&all); err != nil {
+		t.Fatal(err)
+	}
+	envC, err = s.Report(f.ctx, callers[2].c, ReportOverview, Input{Period: "today", Fallback: in30.Fallback})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total, active := card(envC, "warranties_total"), card(envC, "warranties_active"); total != float64(all) || active != float64(all-1) {
+		t.Fatalf("center warranties total / active = %v / %v, want %d / %d", total, active, all, all-1)
+	}
+	envW, err := s.Report(f.ctx, callers[2].c, ReportWarrantiesSummary, in30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := card(envW, "warranties_total"), card(envW, "warranties_active")+card(envW, "warranties_expired")+card(envW, "warranties_void"); got != want || got != float64(all) {
+		t.Fatalf("summary warranties_total = %v, want %v (%d)", got, want, all)
+	}
 	env, err = s.Report(f.ctx, callers[0].c, ReportOverview, in30)
 	if err != nil {
 		t.Fatal(err)
