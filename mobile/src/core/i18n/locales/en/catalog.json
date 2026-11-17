@@ -19,6 +19,8 @@
   "barcode": "Barcode",
   "barcode_fixed": "Fixed barcode",
   "barcode_serial": "One per unit",
+  "usage_credits": "Usage credits",
+  "usage_credits_value": "{{value}} services",
   "description": "Description",
   "unit_type.piece": "Piece",
   "unit_type.roll_meter": "Roll (meters)",

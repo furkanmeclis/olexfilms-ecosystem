@@ -29,7 +29,7 @@ import { useWarehouses } from '@/features/warehouse/api';
 import { WarehouseField } from '@/features/warehouse/warehouse-picker';
 
 import { useCart } from './cart';
-import { PlotterSwitch } from './order-edit';
+import { PlotterCreditsInput, PlotterSwitch } from './order-edit';
 import { type CartLine, cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
 import { linePrice, type Quote, quoteTotals } from './order-quote';
 import { RecipientNewForm } from './recipient-new-form';
@@ -336,7 +336,7 @@ function DealerSheet({
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
-  const { lines, note, parent, setAmount, setPrice, setPlotter, setDiscount, setGift, remove, setNote, clear, leaveSupplement } = useCart();
+  const { lines, note, parent, setAmount, setPrice, setPlotter, setPlotterCredits, setDiscount, setGift, remove, setNote, clear, leaveSupplement } = useCart();
   const me = useSession((s) => s.me);
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
@@ -610,7 +610,15 @@ export function OrderNewScreen() {
                     {seller ? (
                       <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => setPlotter(l.product_uuid, v)} />
                     ) : null}
-                    {err ? (
+                    {/* TEC-1221: the credits of the barcodes shipped on a plotter cut line. */}
+                    {center && l.plotter_cut ? (
+                      <PlotterCreditsInput
+                        value={l.plotter_credits ?? ''}
+                        onChange={(v) => setPlotterCredits(l.product_uuid, v)}
+                        invalid={err === 'credits_invalid'}
+                      />
+                    ) : null}
+                    {err && err !== 'credits_invalid' ? (
                       <Text variant="footnote" tone="danger">
                         {t(`errors.${err}`)}
                       </Text>

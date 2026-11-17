@@ -15,6 +15,8 @@ const PRICE_RE = /^[0-9]{1,12}(\.[0-9]{1,4})?$/;
 const INT_RE = /^[0-9]+$/;
 /** Manual discount (TEC-1064): 0..100, up to 2 decimals. */
 const DISCOUNT_RE = /^[0-9]{1,3}(\.[0-9]{1,2})?$/;
+/** TEC-1221: usage credits of a plotter cut line, 1..1000. */
+export const MAX_PLOTTER_CREDITS = 1000;
 
 /** One cart line; amount is the raw input (pieces or meters). */
 export type CartLine = {
@@ -27,13 +29,18 @@ export type CartLine = {
   unit_price?: string;
   /** TEC-1059: "sent plotter cut" (information only); undefined is not sent. */
   plotter_cut?: boolean;
+  /**
+   * TEC-1221: usage credits of the barcodes shipped on a plotter cut line
+   * (raw input); empty uses the product default. Undefined is not sent.
+   */
+  plotter_credits?: string;
   /** Center orders only (TEC-1064): a manual discount; empty keeps the dealer's default. */
   discount_pct?: string;
   /** Center orders only (TEC-1064): the line is a gift, charged 0. */
   is_gift?: boolean;
 };
 
-export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid' | 'discount_invalid';
+export type LineError = 'quantity_invalid' | 'meters_invalid' | 'price_invalid' | 'discount_invalid' | 'credits_invalid';
 export type CartErrors = { form?: 'empty' | 'too_many'; lines: Record<string, LineError> };
 
 export type ItemInput = {
@@ -42,6 +49,7 @@ export type ItemInput = {
   meters?: string;
   unit_price?: string;
   plotter_cut?: boolean;
+  plotter_credits?: number;
   discount_pct?: string;
   is_gift?: boolean;
 };
@@ -59,7 +67,14 @@ export function discountInvalid(raw: string | undefined): boolean {
   return !!v && (!DISCOUNT_RE.test(v) || Number(v) > 100);
 }
 
+/** Plotter credits the API would refuse; empty is valid (the product default applies). */
+export function plotterCreditsInvalid(raw: string | undefined): boolean {
+  const v = (raw ?? '').trim();
+  return !!v && (!INT_RE.test(v) || Number(v) < 1 || Number(v) > MAX_PLOTTER_CREDITS);
+}
+
 export function lineError(line: CartLine): LineError | null {
+  if (line.plotter_cut === true && plotterCreditsInvalid(line.plotter_credits)) return 'credits_invalid';
   const price = normalizeAmount(line.unit_price ?? '');
   if (price && !PRICE_RE.test(price)) return 'price_invalid';
   if (discountInvalid(line.discount_pct)) return 'discount_invalid';
@@ -99,6 +114,11 @@ export function toItemInputs(lines: CartLine[], withPrice = false, withDiscount 
       : { product_uuid: line.product_uuid, quantity: Number(v) };
     const price = normalizeAmount(line.unit_price ?? '');
     if (line.plotter_cut !== undefined) item.plotter_cut = line.plotter_cut;
+    // TEC-1221: credits go only with a plotter cut line; an emptied field clears them (0).
+    if (line.plotter_cut === true && line.plotter_credits !== undefined) {
+      const credits = line.plotter_credits.trim();
+      item.plotter_credits = credits ? Number(credits) : 0;
+    }
     if (withDiscount && line.is_gift) {
       item.is_gift = true;
       return item;
@@ -140,6 +160,7 @@ type EditableItem = {
   meters: string | null;
   assigned: string;
   plotter_cut: boolean;
+  plotter_credits?: number | null;
 };
 
 /**
@@ -158,7 +179,11 @@ export function linesFromItems(items: readonly EditableItem[], withPlotter: bool
       amount: i.meters != null ? i.meters : String(i.quantity ?? ''),
       assigned: Number.isFinite(assigned) ? assigned : 0,
     };
-    if (withPlotter) line.plotter_cut = i.plotter_cut;
+    if (withPlotter) {
+      line.plotter_cut = i.plotter_cut;
+      // Undefined until typed: a line without credits sends none (the API keeps it).
+      if (i.plotter_credits != null) line.plotter_credits = String(i.plotter_credits);
+    }
     return line;
   });
 }
@@ -191,13 +216,14 @@ export function addEditLine(
   return [...lines, { ...added, assigned: 0, ...(withPlotter ? { plotter_cut: false } : {}) }];
 }
 
-/** Whether the edit changes anything against the order: a line added or removed, an amount or a plotter mark. */
+/** Whether the edit changes anything against the order: a line added or removed, an amount, a plotter mark or its credits. */
 export function editChanged(before: readonly EditLine[], after: readonly EditLine[]): boolean {
   if (before.length !== after.length) return true;
   const old = new Map(before.map((l) => [l.product_uuid, l]));
   return after.some((l) => {
     const o = old.get(l.product_uuid);
     if (!o || o.plotter_cut !== l.plotter_cut) return true;
+    if (l.plotter_cut && (o.plotter_credits ?? '').trim() !== (l.plotter_credits ?? '').trim()) return true;
     const a = Number(normalizeAmount(o.amount));
     const b = Number(normalizeAmount(l.amount));
     return !(Number.isFinite(a) && Number.isFinite(b) && a === b);

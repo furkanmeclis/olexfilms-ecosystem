@@ -76,6 +76,23 @@ test('plotter mark is sent on every line, gift lines included', () => {
   ]);
 });
 
+test('plotter credits: 1..1000 only on a plotter cut line, empty uses the product default (TEC-1221)', () => {
+  const base: CartLine = { product_uuid: 'p', sku: 'S', name: 'N', unit_type: 'piece', amount: '2', plotter_cut: true };
+  assert.equal(lineError({ ...base, plotter_credits: '' }), null);
+  assert.equal(lineError({ ...base, plotter_credits: '12' }), null);
+  assert.equal(lineError({ ...base, plotter_credits: '0' }), 'credits_invalid');
+  assert.equal(lineError({ ...base, plotter_credits: '1001' }), 'credits_invalid');
+  assert.equal(lineError({ ...base, plotter_credits: '2,5' }), 'credits_invalid');
+  // A line that is not plotter cut ignores the field (it is hidden and not sent).
+  assert.equal(lineError({ ...base, plotter_cut: false, plotter_credits: 'x' }), null);
+  assert.deepEqual(toItemInputs([{ ...base, plotter_credits: ' 12 ' }]), [
+    { product_uuid: 'p', quantity: 2, plotter_cut: true, plotter_credits: 12 },
+  ]);
+  assert.deepEqual(toItemInputs([{ ...base, plotter_cut: false, plotter_credits: '12' }]), [
+    { product_uuid: 'p', quantity: 2, plotter_cut: false },
+  ]);
+});
+
 test('submitPreview: amounts with their unit, capped with a remainder', () => {
   const lines = addLine(addLine([], piece), roll).map((l) => (l.unit_type === 'roll_meter' ? { ...l, amount: ' 12,5 ' } : l));
   assert.deepEqual(submitPreview(lines).rows, [

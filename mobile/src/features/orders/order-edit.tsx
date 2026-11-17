@@ -26,6 +26,7 @@ import {
   isRoll,
   linesBelowAssigned,
   linesFromItems,
+  plotterCreditsInvalid,
   toItemInputs,
   validateCart,
 } from './order-lines';
@@ -54,16 +55,20 @@ export function useCanMarkPlotter(order: Pick<Order, 'role' | 'status'> | undefi
   return !!order && canMarkPlotter(order, { write, ship });
 }
 
-/** PATCH of one line's "sent plotter cut" mark (TEC-1059); the returned order goes to the cache. */
+/**
+ * PATCH of one line's "sent plotter cut" mark (TEC-1059) and, on a plotter
+ * cut line, its usage credits (TEC-1221; 0 clears); the returned order goes
+ * to the cache.
+ */
 export function usePlotterMark(orderUuid: string) {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { item: string; plotter_cut: boolean }) =>
+    mutationFn: (v: { item: string; plotter_cut: boolean; plotter_credits?: number }) =>
       unwrap(
         api.PATCH('/v1/orders/{uuid}/items/{item_uuid}', {
           params: { path: { uuid: orderUuid, item_uuid: v.item } },
-          body: { plotter_cut: v.plotter_cut },
+          body: { plotter_cut: v.plotter_cut, plotter_credits: v.plotter_credits },
         }),
       ),
     onSuccess: (order) => {
@@ -95,32 +100,106 @@ export function PlotterSwitch({
   );
 }
 
-/** Plotter mark of an order line: a switch for who may set it, else a small badge when marked. */
+/**
+ * TEC-1221: usage credits of the barcodes shipped on a plotter cut line; empty
+ * keeps the product default. Shown only under a plotter cut line.
+ */
+export function PlotterCreditsInput({
+  value,
+  onChange,
+  onEndEditing,
+  invalid,
+  editable = true,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onEndEditing?: () => void;
+  invalid?: boolean;
+  editable?: boolean;
+}) {
+  const { t } = useTranslation('orders');
+  return (
+    <View className="gap-1">
+      <View className="flex-row items-center gap-3">
+        <Text variant="callout" tone="muted" className="flex-1">
+          {t('plotter.credits')}
+        </Text>
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          onEndEditing={onEndEditing}
+          editable={editable}
+          accessibilityLabel={t('plotter.credits')}
+          placeholder={t('plotter.credits_default')}
+          placeholderTextColorClassName="accent-muted-foreground"
+          keyboardType="number-pad"
+          selectTextOnFocus
+          className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
+        />
+      </View>
+      <Text variant="footnote" tone={invalid ? 'danger' : 'muted'}>
+        {invalid ? t('errors.credits_invalid') : t('plotter.credits_hint')}
+      </Text>
+    </View>
+  );
+}
+
+/** Credits field of a plotter cut order line, saved on its own (PATCH) when editing ends. */
+function LinePlotterCredits({
+  item,
+  mark,
+}: {
+  item: { uuid: string; plotter_credits?: number | null };
+  mark: ReturnType<typeof usePlotterMark>;
+}) {
+  const saved = item.plotter_credits != null ? String(item.plotter_credits) : '';
+  const [value, setValue] = useState(saved);
+  const [prev, setPrev] = useState(saved);
+  // A refetched order (or another device) moves the field along.
+  if (prev !== saved) {
+    setPrev(saved);
+    setValue(saved);
+  }
+  const invalid = plotterCreditsInvalid(value);
+  const save = () => {
+    const v = value.trim();
+    if (invalid || v === saved) return;
+    mark.mutate({ item: item.uuid, plotter_cut: true, plotter_credits: v ? Number(v) : 0 });
+  };
+  return <PlotterCreditsInput value={value} onChange={setValue} onEndEditing={save} invalid={invalid} editable={!mark.isPending} />;
+}
+
+/**
+ * Plotter mark of an order line: a switch (and the credits of a plotter cut
+ * line, TEC-1221) for who may set it, else a small badge when marked.
+ */
 export function LinePlotter({
   order,
   item,
 }: {
   order: Pick<Order, 'uuid' | 'role' | 'status'>;
-  item: { uuid: string; plotter_cut: boolean };
+  item: { uuid: string; plotter_cut: boolean; plotter_credits?: number | null };
 }) {
   const { t } = useTranslation('orders');
   const can = useCanMarkPlotter(order);
   const mark = usePlotterMark(order.uuid);
   if (can) {
     const pending = mark.isPending && mark.variables?.item === item.uuid;
+    const on = pending ? !!mark.variables?.plotter_cut : item.plotter_cut;
     return (
-      <PlotterSwitch
-        value={pending ? !!mark.variables?.plotter_cut : item.plotter_cut}
-        disabled={mark.isPending}
-        onChange={(v) => mark.mutate({ item: item.uuid, plotter_cut: v })}
-      />
+      <>
+        <PlotterSwitch value={on} disabled={mark.isPending} onChange={(v) => mark.mutate({ item: item.uuid, plotter_cut: v })} />
+        {on ? <LinePlotterCredits item={item} mark={mark} /> : null}
+      </>
     );
   }
   if (!item.plotter_cut) return null;
   return (
     <View className="flex-row items-center gap-1.5 self-start rounded-md bg-secondary px-2 py-0.5">
       <Icon name="check" tone="primary" size={12} weight="semibold" />
-      <Text variant="footnote">{t('plotter.badge')}</Text>
+      <Text variant="footnote">
+        {item.plotter_credits != null ? t('plotter.badge_credits', { value: item.plotter_credits }) : t('plotter.badge')}
+      </Text>
     </View>
   );
 }
@@ -320,7 +399,14 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
               {seller ? (
                 <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => update(l.product_uuid, { plotter_cut: v })} />
               ) : null}
-              {err ? (
+              {seller && l.plotter_cut ? (
+                <PlotterCreditsInput
+                  value={l.plotter_credits ?? ''}
+                  onChange={(v) => update(l.product_uuid, { plotter_credits: v })}
+                  invalid={err === 'credits_invalid'}
+                />
+              ) : null}
+              {err && err !== 'credits_invalid' ? (
                 <Text variant="footnote" tone="danger">
                   {t(`errors.${err}`)}
                 </Text>

@@ -9,6 +9,7 @@ import { useSession } from '@/core/auth/session';
 import { useModule } from '@/core/modules';
 import { activeMembership, useCan } from '@/core/spaces';
 import { stockState } from '@/features/orders/order-summary';
+import { productUsesCredits } from '@/features/stock/credits';
 import { ErrorState, ListSkeleton, PagedList, useDebounced, useFormat } from '@/features/admin/kit';
 import { useCart } from '@/features/orders/cart';
 import { Button } from '@/ui/button';
@@ -285,8 +286,16 @@ export function ProductDetailScreen() {
               <ListRow
                 title={t('barcode')}
                 trailing={<Text tone="muted">{p.uses_fixed_barcode ? t('barcode_fixed') : t('barcode_serial')}</Text>}
-                last
+                last={!productUsesCredits(p)}
               />
+              {/* TEC-1221: how many services one barcode can be used in (read-only; edited on the web). */}
+              {productUsesCredits(p) ? (
+                <ListRow
+                  title={t('usage_credits')}
+                  trailing={<Text tone="muted">{t('usage_credits_value', { value: p.usage_credits })}</Text>}
+                  last
+                />
+              ) : null}
             </List>
             {/* TEC-1219: the organization's units of this product (stock product screen). */}
             {canStock ? (

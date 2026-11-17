@@ -1,12 +1,15 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
+import { isApiError } from '@/core/api/errors';
+import { errorMessage } from '@/core/i18n';
+import { creditsText, hasCreditsLeft } from '@/features/stock/credits';
 import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -20,6 +23,16 @@ import { Chips, errorText, ListBody, SearchField } from './ui';
 import { itemPartsMode, parseParts, partsForProduct, togglePart } from './wizard';
 
 type Kind = 'full' | 'partial';
+type ItemBody = {
+  barcode: string;
+  kind: Kind;
+  quantity?: number;
+  meters?: number;
+  applied_parts?: string[];
+  notes?: string;
+  /** TEC-1221 "ürünü bitirdim": the item takes every remaining credit of the unit. */
+  finish_product?: boolean;
+};
 
 /**
  * Adds a stock unit to the service: search the organization's stock (name,
@@ -36,6 +49,7 @@ export function AddItemScreen() {
   const [scanning, setScanning] = useState(false);
   const [picked, setPicked] = useState<ServiceStockUnit | null>(null);
   const query = useDebounced(q.trim());
+  const qc = useQueryClient();
 
   const units = useQuery({
     queryKey: ['services', 'stock-units', uuid, query],
@@ -48,23 +62,25 @@ export function AddItemScreen() {
   });
 
   const add = useMutation({
-    mutationFn: (body: {
-      barcode: string;
-      kind: Kind;
-      quantity?: number;
-      meters?: number;
-      applied_parts?: string[];
-      notes?: string;
-    }) => unwrap(api.POST('/v1/services/{uuid}/items', { params: { path: { uuid } }, body })),
+    mutationFn: (body: ItemBody) => unwrap(api.POST('/v1/services/{uuid}/items', { params: { path: { uuid } }, body })),
     onSuccess: (s) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onWrite(s);
       router.back();
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => {
+      // TEC-1221: the barcode has no usage credits left (another service took the last one).
+      if (isApiError(e) && e.code === 'UNIT_CREDITS_EXHAUSTED') {
+        setPicked(null);
+        void qc.invalidateQueries({ queryKey: ['services', 'stock-units', uuid] });
+        return Alert.alert(t('credits.exhausted_title'), errorMessage(e.code, t('credits.exhausted')));
+      }
+      Alert.alert(t('action_failed'), errorText(e));
+    },
   });
 
-  const items = units.data?.items ?? [];
+  // A unit without credits left cannot be selected (the API lists none, this guards a stale row).
+  const items = (units.data?.items ?? []).filter((u) => hasCreditsLeft(u.credits));
 
   // A scanned barcode that matches exactly one stock unit opens its form directly.
   const [scanned, setScanned] = useState<string | null>(null);
@@ -140,6 +156,7 @@ export function AddItemScreen() {
                       : u.remaining_meters
                         ? t('meters_left', { value: u.remaining_meters })
                         : null,
+                    u.credits ? t('credits.left', { value: creditsText(u.credits) }) : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -190,7 +207,7 @@ function UnitForm({
   preset: readonly string[];
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (b: { barcode: string; kind: Kind; quantity?: number; meters?: number; applied_parts?: string[]; notes?: string }) => void;
+  onSubmit: (b: ItemBody) => void;
 }) {
   const { t } = useTranslation('dealer');
   const fixed = unit.unit_kind === 'fixed';
@@ -200,6 +217,7 @@ function UnitForm({
   const [quantity, setQuantity] = useState('1');
   const [meters, setMeters] = useState('');
   const [notes, setNotes] = useState('');
+  const [finish, setFinish] = useState(false);
   const [parts, setParts] = useState<string[]>(() => partsForProduct(preset, unit.product.available_parts));
   const [error, setError] = useState<string | null>(null);
   const partLabel = usePartLabel();
@@ -221,6 +239,7 @@ function UnitForm({
     }
     if (parts.length) body.applied_parts = parts;
     if (notes.trim()) body.notes = notes.trim();
+    if (unit.credits && finish) body.finish_product = true;
     onSubmit(body);
   };
 
@@ -235,7 +254,29 @@ function UnitForm({
         <Text variant="footnote" tone="muted">
           {unit.barcode}
         </Text>
+        {unit.credits ? (
+          <Text variant="footnote" tone="muted">
+            {t('credits.left', { value: creditsText(unit.credits) })}
+          </Text>
+        ) : null}
       </View>
+
+      {/* TEC-1221: a credit unit takes one credit; "finish product" takes all that are left. */}
+      {unit.credits ? (
+        <View className="gap-1 rounded-lg border border-border bg-card px-4 py-3">
+          <View className="min-h-11 flex-row items-center justify-between gap-3">
+            <Text variant="callout" className="flex-1">
+              {t('credits.finish')}
+            </Text>
+            <Switch value={finish} onValueChange={setFinish} accessibilityLabel={t('credits.finish')} />
+          </View>
+          <Text variant="footnote" tone="muted">
+            {finish
+              ? t('credits.finish_hint', { value: unit.credits.credits_remaining })
+              : t('credits.use_one_hint')}
+          </Text>
+        </View>
+      ) : null}
 
       {fixed ? (
         <Input

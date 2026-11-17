@@ -72,6 +72,25 @@ test('addEditLine / editChanged', () => {
   assert.equal(editChanged(initial, [{ ...initial[0]!, amount: '6' }]), true);
   assert.equal(editChanged(initial, [{ ...initial[0]!, plotter_cut: false }]), true);
   assert.equal(editChanged(initial, []), true);
+  // TEC-1221: the credits of a plotter cut line count as a change.
+  assert.equal(editChanged(initial, [{ ...initial[0]!, plotter_credits: '3' }]), true);
+  assert.equal(editChanged(initial, [{ ...initial[0]!, plotter_credits: ' ' }]), false);
+});
+
+test('plotter credits: kept from the order, sent only with a plotter cut line, emptied → 0 (TEC-1221)', () => {
+  const [a, b] = linesFromItems([item({ plotter_credits: 8 }), roll], true);
+  assert.equal(a!.plotter_credits, '8');
+  assert.equal(b!.plotter_credits, undefined);
+  assert.deepEqual(toItemInputs([a!, b!]), [
+    { product_uuid: 'p1', quantity: 5, plotter_cut: true, plotter_credits: 8 },
+    { product_uuid: 'p2', meters: '12.50', plotter_cut: false },
+  ]);
+  assert.deepEqual(toItemInputs([{ ...a!, plotter_credits: '' }]), [
+    { product_uuid: 'p1', quantity: 5, plotter_cut: true, plotter_credits: 0 },
+  ]);
+  assert.deepEqual(toItemInputs([{ ...a!, plotter_cut: false }]), [{ product_uuid: 'p1', quantity: 5, plotter_cut: false }]);
+  const [buyer] = linesFromItems([item({ plotter_credits: 8 })], false);
+  assert.equal(buyer!.plotter_credits, undefined);
 });
 
 test('canMarkPlotter: the seller with orders.write or orders.ship, not on a draft or cancelled order (TEC-1059)', () => {
