@@ -126,5 +126,16 @@
   "quote.default_first_order": "İlk sipariş iskontosu uygulanıyor: %{{pct}}",
   "quote.default_standard": "Standart bayi iskontosu uygulanıyor: %{{pct}}",
   "errors.discount_invalid": "İskonto 0 ile 100 arasında olmalı, en fazla 2 ondalık.",
-  "card.created_by": "Siparişi geçen: {{name}}"
+  "card.created_by": "Siparişi geçen: {{name}}",
+  "supplement.add": "Ek gönderim ekle",
+  "supplement.badge": "Ek gönderim",
+  "supplement.parent": "Ana sipariş",
+  "supplement.list": "Ek gönderimler",
+  "supplement.title": "Ek gönderim",
+  "supplement.create": "Ek gönderimi oluştur",
+  "supplement.banner": "{{no}} siparişine ek gönderim",
+  "supplement.hint": "Bayi ve depo ana siparişten gelir. Ürünleri katalogdan ekleyin; hediye kalem eklenebilir.",
+  "supplement.leave": "Ek gönderimden çık",
+  "supplement.replace_cart_title": "Sepet boşaltılsın mı?",
+  "supplement.replace_cart_body": "Sepette {{n}} ürün var. Ek gönderim boş sepetle başlar."
 }

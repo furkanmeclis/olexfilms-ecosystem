@@ -126,5 +126,16 @@
   "quote.default_first_order": "First order discount applied: {{pct}}%",
   "quote.default_standard": "Standard dealer discount applied: {{pct}}%",
   "errors.discount_invalid": "Discount must be between 0 and 100, with up to 2 decimals.",
-  "card.created_by": "Placed by {{name}}"
+  "card.created_by": "Placed by {{name}}",
+  "supplement.add": "Add supplementary shipment",
+  "supplement.badge": "Supplement",
+  "supplement.parent": "Main order",
+  "supplement.list": "Supplementary shipments",
+  "supplement.title": "Supplementary shipment",
+  "supplement.create": "Create supplementary shipment",
+  "supplement.banner": "Supplementary shipment for {{no}}",
+  "supplement.hint": "The dealer and warehouse come from the main order. Add products from the catalog; gift lines are allowed.",
+  "supplement.leave": "Leave supplementary shipment",
+  "supplement.replace_cart_title": "Empty the cart?",
+  "supplement.replace_cart_body": "The cart holds {{n}} products. A supplementary shipment starts with an empty cart."
 }

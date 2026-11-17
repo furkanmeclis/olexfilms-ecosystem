@@ -29,6 +29,7 @@ import {
 import { RefRow, RefText } from '@/features/entity/ref-row';
 import { CartButton, CATALOG_PRODUCTS, useCanOrder } from '@/features/catalog/catalog-screen';
 import { OrderReturnsSection } from '@/features/transfers/order-returns';
+import { confirmAction } from '@/ui/confirm';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -36,9 +37,11 @@ import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
+import { useCart } from './cart';
 import { LinePlotter, OrderLinesEditor } from './order-edit';
 import { creatorOf, liveTryAmount } from './order-summary';
 import { OrderTimeline, useActivityText, useAmountText } from './order-timeline';
+import { canStartSupplement, orderSubtitle, supplementParentOf } from './supplement';
 
 type ListOp = paths['/v1/orders']['get'];
 export type Order = ListOp['responses'][200]['content']['application/json']['data']['items'][number];
@@ -159,11 +162,10 @@ export function OrdersScreen() {
           return (
             <CardRow
               title={party}
-              subtitle={
-                item.seller_warehouse
-                  ? `${item.order_no} · ${t('orders:card.warehouse', { name: item.seller_warehouse.name })}`
-                  : item.order_no
-              }
+              subtitle={orderSubtitle(item, {
+                supplement: t('orders:supplement.badge'),
+                warehouse: item.seller_warehouse ? t('orders:card.warehouse', { name: item.seller_warehouse.name }) : null,
+              })}
               meta={[amountText(item), money, f.date(item.created_at)].filter(Boolean).join(' · ')}
               detail={activityText(item.last_activity)}
               trailing={<StatusPill label={item.status_label} tone={orderTone(item.status)} />}
@@ -184,6 +186,11 @@ export function OrderDetailScreen() {
   const prices = usePricesVisible();
   const amountText = useAmountText();
   const [editing, setEditing] = useState(false);
+  // TEC-1222: "Add supplementary shipment" fills the cart for a new order of the same dealer.
+  const pathname = usePathname();
+  const canOrder = useCanOrder();
+  const cartLines = useCart((s) => s.lines.length);
+  const startSupplement = useCart((s) => s.startSupplement);
   const q = useQuery({
     queryKey: ['orders', 'detail', uuid],
     queryFn: () => unwrap(api.GET('/v1/orders/{uuid}', { params: { path: { uuid: uuid! } } })),
@@ -206,6 +213,25 @@ export function OrderDetailScreen() {
   });
   const o = q.data;
   const actions = (o?.available_transitions ?? []).filter((s) => SIMPLE_TRANSITIONS.includes(s));
+  const supplementable = canStartSupplement(o, { pathname, canOrder });
+  const addSupplement = () => {
+    const parent = supplementParentOf(o);
+    if (!parent) return;
+    const go = () => {
+      startSupplement(parent);
+      router.push('/bayi/menu/orders/new' as never);
+    };
+    // The supplement starts with an empty cart: products already in it are dropped.
+    if (cartLines) {
+      confirmAction({
+        title: t('orders:supplement.replace_cart_title'),
+        body: t('orders:supplement.replace_cart_body', { n: cartLines }),
+        action: t('orders:supplement.add'),
+        destructive: true,
+        onConfirm: go,
+      });
+    } else go();
+  };
 
   // TEC-1062/1063: the seller receives for a pool recipient without members.
   const onBehalf = (status: OrderStatus) => status === 'received' && !!o?.receive_on_behalf;
@@ -252,6 +278,10 @@ export function OrderDetailScreen() {
               ) : null}
             </View>
 
+            {supplementable ? (
+              <Button title={t('orders:supplement.add')} icon="add" variant="outline" onPress={addSupplement} />
+            ) : null}
+
             {actions.length ? (
               <View className="gap-2">
                 {actions.map((s) => (
@@ -268,6 +298,13 @@ export function OrderDetailScreen() {
             ) : null}
 
             <List>
+              {o.parent_order ? (
+                <RefRow
+                  kind="order"
+                  label={t('orders:supplement.parent')}
+                  value={{ uuid: o.parent_order.uuid, name: o.parent_order.order_no, sub: o.parent_order.status_label }}
+                />
+              ) : null}
               <RefRow kind="organization" label={t('orders.seller')} value={o.seller} />
               <RefRow kind="organization" label={t('orders.buyer')} value={o.buyer} />
               {o.seller_warehouse ? <InfoRow label={t('orders:seller_warehouse')} value={o.seller_warehouse.name} /> : null}
@@ -283,6 +320,23 @@ export function OrderDetailScreen() {
                 </>
               ) : null}
             </List>
+
+            {o.supplements?.length ? (
+              <>
+                <SectionHeader title={t('orders:supplement.list')} />
+                <List>
+                  {o.supplements.map((sup, i, arr) => (
+                    <RefRow
+                      key={sup.uuid}
+                      kind="order"
+                      label={sup.status_label}
+                      value={{ uuid: sup.uuid, name: sup.order_no }}
+                      last={i === arr.length - 1}
+                    />
+                  ))}
+                </List>
+              </>
+            ) : null}
 
             {o.note || o.cancel_reason ? (
               <View className="gap-1 rounded-lg border border-border bg-card px-4 py-3">

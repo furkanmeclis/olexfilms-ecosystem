@@ -111,5 +111,16 @@
   "quote.pick_buyer": "请先选择经销商以查看价格。",
   "quote.default_first_order": "已应用首单折扣：{{pct}}%",
   "quote.default_standard": "已应用标准经销商折扣：{{pct}}%",
-  "errors.discount_invalid": "折扣必须在 0 到 100 之间，最多 2 位小数。"
+  "errors.discount_invalid": "折扣必须在 0 到 100 之间，最多 2 位小数。",
+  "supplement.add": "添加补充发货",
+  "supplement.badge": "补充发货",
+  "supplement.parent": "主订单",
+  "supplement.list": "补充发货",
+  "supplement.title": "补充发货",
+  "supplement.create": "创建补充发货",
+  "supplement.banner": "{{no}} 的补充发货",
+  "supplement.hint": "经销商和仓库取自主订单。请从目录添加产品；可添加赠品行。",
+  "supplement.leave": "退出补充发货",
+  "supplement.replace_cart_title": "清空购物车？",
+  "supplement.replace_cart_body": "购物车中有 {{n}} 件产品。补充发货从空购物车开始。"
 }

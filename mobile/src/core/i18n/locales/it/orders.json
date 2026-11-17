@@ -111,5 +111,16 @@
   "quote.pick_buyer": "Scegli prima il rivenditore per vedere i prezzi.",
   "quote.default_first_order": "Sconto primo ordine applicato: {{pct}}%",
   "quote.default_standard": "Sconto rivenditore standard applicato: {{pct}}%",
-  "errors.discount_invalid": "Lo sconto deve essere tra 0 e 100, con al massimo 2 decimali."
+  "errors.discount_invalid": "Lo sconto deve essere tra 0 e 100, con al massimo 2 decimali.",
+  "supplement.add": "Aggiungi spedizione integrativa",
+  "supplement.badge": "Spedizione integrativa",
+  "supplement.parent": "Ordine principale",
+  "supplement.list": "Spedizioni integrative",
+  "supplement.title": "Spedizione integrativa",
+  "supplement.create": "Crea spedizione integrativa",
+  "supplement.banner": "Spedizione integrativa per {{no}}",
+  "supplement.hint": "Rivenditore e magazzino provengono dall'ordine principale. Aggiungi prodotti dal catalogo; sono ammesse righe omaggio.",
+  "supplement.leave": "Esci dalla spedizione integrativa",
+  "supplement.replace_cart_title": "Svuotare il carrello?",
+  "supplement.replace_cart_body": "Il carrello contiene {{n}} prodotti. Una spedizione integrativa inizia con il carrello vuoto."
 }
