@@ -91,5 +91,6 @@
   "resources.stock.products": "Наличност по продукти",
   "resources.stock.location_stock": "Наличност на местоположение",
   "resources.stock.unit_history": "История на движенията на единица",
-  "resources.stock.barcode_batches": "Партиди баркодове"
+  "resources.stock.barcode_batches": "Партиди баркодове",
+  "resources.stock.movements": "Движения на наличности"
 }

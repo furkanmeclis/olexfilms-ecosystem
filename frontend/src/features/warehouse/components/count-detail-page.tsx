@@ -14,6 +14,13 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
   countAccuracyPercent,
@@ -33,6 +40,7 @@ import {
 } from "@/features/warehouse/components/count-tables";
 import { countScopeText } from "@/features/warehouse/components/counts-page";
 import { Info } from "@/features/warehouse/components/list-controls";
+import { LocationPicker } from "@/features/warehouse/components/location-picker";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import {
   useWarehouseAccess,
@@ -45,6 +53,7 @@ import {
   countStatusTone,
   linesToResolve,
   needsStartApproval,
+  partialApproveBody,
   showsQuantity,
 } from "@/features/warehouse/lib/counts";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
@@ -58,6 +67,8 @@ import {
   warehouseKeys,
   warehouseService,
   type StockCount,
+  type StockCountLine,
+  type StockCountReport,
   type StockCountResolution,
   type StockCountScan,
   type StockCountScanResult,
@@ -317,6 +328,7 @@ export function CountDetailPage({
                 access.can(Permission.StockAdjust) &&
                 count.status === "pending_review"
               }
+              canRecount={canWrite && count.status === "pending_review"}
             />
           ) : null}
         </>
@@ -577,10 +589,13 @@ export function CountReportCard({
   slug,
   count,
   canApprove,
+  canRecount = false,
 }: {
   slug: string;
   count: StockCount;
   canApprove: boolean;
+  /** TEC-1229: warehouse.write enters recounted values. */
+  canRecount?: boolean;
 }) {
   const { t, format } = useLocale();
   const qc = useQueryClient();
@@ -618,6 +633,55 @@ export function CountReportCard({
     onError: (err) =>
       setError(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
+
+  const applyReport = (next: StockCountReport) => {
+    setError(null);
+    qc.setQueryData(warehouseKeys.countReport(count.uuid), next);
+    qc.setQueryData(warehouseKeys.count(count.uuid), next.count);
+    void qc.invalidateQueries({ queryKey: ["warehouse", "counts"] });
+  };
+  const fail = (err: unknown) =>
+    setError(warehouseErrorMessage(err, t, t("warehouse.form.error")));
+
+  // TEC-1229: recount and partial approval.
+  const requestRecount = useMutation({
+    mutationFn: (uuids: string[]) =>
+      warehouseService.requestCountRecount(count.uuid, uuids),
+    onSuccess: (next) => {
+      applyReport(next);
+      appToast.success(t("warehouse.count.recount_requested_done"));
+    },
+    onError: fail,
+  });
+  const partial = useMutation({
+    mutationFn: (body: ReturnType<typeof partialApproveBody>) =>
+      warehouseService.approveCount(count.uuid, {
+        resolutions: body,
+        partial: true,
+      }),
+    onSuccess: (next) => {
+      applyReport(next);
+      appToast.success(t("warehouse.count.partial_approved"));
+    },
+    onError: fail,
+  });
+  const [recountLine, setRecountLine] = useState<StockCountLine | null>(null);
+  const onPartialApprove = async (selected: StockCountLine[]) => {
+    const body = partialApproveBody(
+      lines,
+      choices,
+      selected.map((l) => l.uuid),
+    );
+    if (body.length === 0) return;
+    const ok = await confirm({
+      title: t("warehouse.count.partial_approve"),
+      description: t("warehouse.count.approve_description", {
+        count: body.length,
+      }),
+      confirmLabel: t("warehouse.count.approve"),
+    });
+    if (ok && (await ensure())) partial.mutate(body);
+  };
 
   const onApprove = async () => {
     const { resolutions, missing } = approveBody(lines, choices);
@@ -776,9 +840,148 @@ export function CountReportCard({
             canApprove={canApprove}
             choices={choices}
             onChoices={onChoices}
+            onRequestRecount={
+              canApprove && count.status === "pending_review"
+                ? (sel) => requestRecount.mutate(sel.map((l) => l.uuid))
+                : undefined
+            }
+            onRecountLine={
+              canRecount && count.status === "pending_review"
+                ? setRecountLine
+                : undefined
+            }
+            onPartialApprove={
+              canApprove && !isCreator && count.status === "pending_review"
+                ? (sel) => void onPartialApprove(sel)
+                : undefined
+            }
           />
         )}
+        {recountLine ? (
+          <RecountDialog
+            count={count}
+            line={recountLine}
+            onClose={() => setRecountLine(null)}
+            onDone={(next) => {
+              applyReport(next);
+              setRecountLine(null);
+              appToast.success(t("warehouse.count.recount_saved"));
+            }}
+          />
+        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * TEC-1229: the recounted values of one difference line. A serial unit is
+ * 0 (not found) or 1 with its location (and meters for a roll); fixed
+ * barcodes and products take the counted quantity.
+ */
+function RecountDialog({
+  count,
+  line,
+  onClose,
+  onDone,
+}: {
+  count: StockCount;
+  line: StockCountLine;
+  onClose: () => void;
+  onDone: (next: StockCountReport) => void;
+}) {
+  const { t } = useLocale();
+  const serial = line.line_kind === "serial";
+  const [qty, setQty] = useState(serial ? "1" : String(line.counted_quantity));
+  const [meters, setMeters] = useState(line.counted_meters ?? "");
+  const [location, setLocation] = useState(
+    line.counted_location?.uuid ?? line.expected_location?.uuid ?? "",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: () =>
+      warehouseService.recountCountLine(count.uuid, line.uuid, {
+        counted_quantity: Number(qty),
+        counted_meters: meters.trim() ? meters.trim() : null,
+        location_uuid: serial && qty === "1" && location ? location : null,
+      }),
+    onSuccess: onDone,
+    onError: (err) =>
+      setError(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
+  });
+  const qtyError =
+    !/^\d+$/.test(qty) || (serial && qty !== "0" && qty !== "1")
+      ? t("warehouse.count.recount_qty_invalid")
+      : null;
+  return (
+    <Dialog open onOpenChange={(open) => (!open ? onClose() : undefined)}>
+      <DialogContent data-testid="count-recount-dialog">
+        <DialogHeader>
+          <DialogTitle>
+            {t("warehouse.count.recount_title", {
+              code: line.unit?.barcode ?? line.product.sku,
+            })}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="recount-qty">
+              {serial
+                ? t("warehouse.count.recount_found")
+                : t("warehouse.count.recount_quantity")}
+            </Label>
+            <Input
+              id="recount-qty"
+              inputMode="numeric"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              data-testid="count-recount-qty"
+            />
+            {qtyError ? (
+              <p className="text-destructive text-xs">{qtyError}</p>
+            ) : null}
+          </div>
+          {serial && line.expected_meters !== null ? (
+            <div className="space-y-1">
+              <Label htmlFor="recount-meters">
+                {t("warehouse.count.recount_meters")}
+              </Label>
+              <Input
+                id="recount-meters"
+                inputMode="decimal"
+                value={meters}
+                onChange={(e) => setMeters(e.target.value)}
+              />
+            </div>
+          ) : null}
+          {serial && qty === "1" ? (
+            <LocationPicker
+              warehouseUuid={count.warehouse.uuid}
+              value={location}
+              onChange={setLocation}
+              testId="count-recount-location"
+            />
+          ) : null}
+          {error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            disabled={Boolean(qtyError) || save.isPending}
+            onClick={() => save.mutate()}
+            data-testid="count-recount-save"
+          >
+            {t("warehouse.count.recount_save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

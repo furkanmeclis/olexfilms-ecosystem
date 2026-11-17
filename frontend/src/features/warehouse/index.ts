@@ -20,3 +20,5 @@ export {
   WarehouseDashboardBody,
 } from "./components/warehouse-dashboard";
 export { isWarehouseHomeRole } from "./lib/home-role";
+// TEC-1229
+export { ReorderRulesPage, StockMovementsPage } from "./components/stock-view";

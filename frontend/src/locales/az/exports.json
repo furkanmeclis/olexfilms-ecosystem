@@ -91,5 +91,6 @@
   "resources.stock.products": "Məhsul üzrə stok",
   "resources.stock.location_stock": "Yer stoku",
   "resources.stock.unit_history": "Vahid hərəkət tarixçəsi",
-  "resources.stock.barcode_batches": "Barkod partiyaları"
+  "resources.stock.barcode_batches": "Barkod partiyaları",
+  "resources.stock.movements": "Stok hərəkətləri"
 }

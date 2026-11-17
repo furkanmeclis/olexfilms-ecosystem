@@ -91,5 +91,6 @@
   "resources.stock.products": "按产品库存",
   "resources.stock.location_stock": "库位库存",
   "resources.stock.unit_history": "单元移动历史",
-  "resources.stock.barcode_batches": "条码批次"
+  "resources.stock.barcode_batches": "条码批次",
+  "resources.stock.movements": "库存变动"
 }
