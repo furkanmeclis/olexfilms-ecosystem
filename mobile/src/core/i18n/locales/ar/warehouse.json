@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "الطول المقطوع",
   "m.split_new_code": "رمز جزء جديد: {{barcode}} · {{meters}} م",
   "orders.assign.cuts_title": "الأجزاء المقطوعة",
-  "orders.assign.cut_from": "{{meters}} م · {{source}} (المتبقي {{remaining}} م)"
+  "orders.assign.cut_from": "{{meters}} م · {{source}} (المتبقي {{remaining}} م)",
+  "entry.timeline": "سجل العمليات",
+  "entry.activity.created": "أنشأ",
+  "entry.activity.header_updated": "عدّل بيانات التسليم",
+  "entry.activity.confirmed": "أكّد",
+  "entry.activity.cancelled": "ألغى"
 }

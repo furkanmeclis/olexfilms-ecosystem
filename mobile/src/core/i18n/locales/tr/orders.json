@@ -125,5 +125,6 @@
   "quote.pick_buyer": "Fiyatları görmek için önce bayiyi seç.",
   "quote.default_first_order": "İlk sipariş iskontosu uygulanıyor: %{{pct}}",
   "quote.default_standard": "Standart bayi iskontosu uygulanıyor: %{{pct}}",
-  "errors.discount_invalid": "İskonto 0 ile 100 arasında olmalı, en fazla 2 ondalık."
+  "errors.discount_invalid": "İskonto 0 ile 100 arasında olmalı, en fazla 2 ondalık.",
+  "card.created_by": "Siparişi geçen: {{name}}"
 }

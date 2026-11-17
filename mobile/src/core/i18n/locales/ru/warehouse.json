@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "Отрезанная длина",
   "m.split_new_code": "Новый код части: {{barcode}} · {{meters}} м",
   "orders.assign.cuts_title": "Отрезанные части",
-  "orders.assign.cut_from": "{{meters}} м · {{source}} (остаток {{remaining}} м)"
+  "orders.assign.cut_from": "{{meters}} м · {{source}} (остаток {{remaining}} м)",
+  "entry.timeline": "История действий",
+  "entry.activity.created": "Создал",
+  "entry.activity.header_updated": "Отредактировал данные поставки",
+  "entry.activity.confirmed": "Подтвердил",
+  "entry.activity.cancelled": "Отменил"
 }

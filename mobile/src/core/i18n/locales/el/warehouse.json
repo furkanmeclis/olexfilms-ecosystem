@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "Μήκος κοπής",
   "m.split_new_code": "Νέος κωδικός τμήματος: {{barcode}} · {{meters}} m",
   "orders.assign.cuts_title": "Κομμένα τμήματα",
-  "orders.assign.cut_from": "{{meters}} m · {{source}} (απομένουν {{remaining}} m)"
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (απομένουν {{remaining}} m)",
+  "entry.timeline": "Ιστορικό ενεργειών",
+  "entry.activity.created": "Δημιούργησε",
+  "entry.activity.header_updated": "Επεξεργάστηκε τα στοιχεία παράδοσης",
+  "entry.activity.confirmed": "Επιβεβαίωσε",
+  "entry.activity.cancelled": "Ακύρωσε"
 }

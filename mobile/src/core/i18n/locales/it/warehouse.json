@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "Lunghezza tagliata",
   "m.split_new_code": "Nuovo codice parte: {{barcode}} · {{meters}} m",
   "orders.assign.cuts_title": "Parti tagliate",
-  "orders.assign.cut_from": "{{meters}} m · {{source}} (restano {{remaining}} m)"
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (restano {{remaining}} m)",
+  "entry.timeline": "Cronologia",
+  "entry.activity.created": "Ha creato",
+  "entry.activity.header_updated": "Ha modificato i dati di consegna",
+  "entry.activity.confirmed": "Ha confermato",
+  "entry.activity.cancelled": "Ha annullato"
 }

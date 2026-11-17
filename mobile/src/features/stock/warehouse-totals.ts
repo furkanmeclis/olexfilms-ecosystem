@@ -1,45 +1,46 @@
 /**
- * Product totals of one warehouse (TEC-1069). The API has no "products of a
- * warehouse" list, only the units that sit in it
- * (GET /v1/stock/warehouses/{uuid}/units?state=in), so the app sums those
- * units by product. Pure, no `@/` imports, so node --test runs it.
+ * Product totals of one warehouse (TEC-1069, TEC-1220). The rows come from
+ * GET /v1/stock/warehouses/{uuid}/products (TEC-1090): the backend sums the
+ * warehouse's locations, so a fixed barcode holding many pieces counts its
+ * quantity, not 1, and nothing is capped at a number of units. These helpers
+ * only shape the rows for the list. Pure, no `@/` imports, so node --test runs it.
  */
 
-/** Pages of 100 units read at most for one warehouse (the API caps `limit` at 100). */
+/** Page size and the most pages read for one warehouse (the API caps `limit` at 100). */
 export const WAREHOUSE_TOTALS_PAGE = 100;
-export const WAREHOUSE_TOTALS_MAX_PAGES = 10;
+export const WAREHOUSE_TOTALS_MAX_PAGES = 50;
 
-type UnitLike = {
-  product: { uuid: string; sku: string; name: string };
-  remaining_meters: string | null;
+type WarehouseProductLike = {
+  product: { uuid: string; sku: string; name: string; unit_type: string; category?: { name: string } | null };
+  quantity: number;
+  meters: string;
 };
 
 export type WarehouseProductTotal = {
   product: { uuid: string; sku: string; name: string };
-  /** Units (pieces or rolls) in the warehouse. */
+  category?: string;
+  /** Pieces, rolls and fixed barcode quantities in the warehouse (the API's `quantity`). */
   units: number;
-  /** Meters left on the rolls; null when the product has no roll units. */
+  /** Meters left on the rolls; null for products not sold by the meter. */
   meters: number | null;
 };
 
-/** Sums units by product, ordered by product name (then uuid, stable). */
-export function warehouseProductTotals(units: readonly UnitLike[]): WarehouseProductTotal[] {
-  const by = new Map<string, WarehouseProductTotal>();
-  for (const u of units) {
-    let row = by.get(u.product.uuid);
-    if (!row) {
-      row = { product: { uuid: u.product.uuid, sku: u.product.sku, name: u.product.name }, units: 0, meters: null };
-      by.set(u.product.uuid, row);
-    }
-    row.units += 1;
-    if (u.remaining_meters !== null && u.remaining_meters !== '') {
-      const m = Number(u.remaining_meters);
-      if (Number.isFinite(m)) row.meters = Math.round(((row.meters ?? 0) + m) * 100) / 100;
-    }
-  }
-  return [...by.values()].sort(
-    (a, b) => a.product.name.localeCompare(b.product.name) || (a.product.uuid < b.product.uuid ? -1 : a.product.uuid > b.product.uuid ? 1 : 0),
-  );
+/** Maps the API rows to list rows, keeping the API's order (by product name). */
+export function warehouseProductTotals(rows: readonly WarehouseProductLike[]): WarehouseProductTotal[] {
+  return rows.map((r) => {
+    const m = Number(r.meters);
+    return {
+      product: { uuid: r.product.uuid, sku: r.product.sku, name: r.product.name },
+      category: r.product.category?.name,
+      units: r.quantity,
+      meters: r.product.unit_type === 'roll_meter' ? (Number.isFinite(m) ? m : 0) : null,
+    };
+  });
+}
+
+/** Rows that hold stock in the warehouse (the "in stock" filter). */
+export function inStockTotals(rows: readonly WarehouseProductTotal[]): WarehouseProductTotal[] {
+  return rows.filter((r) => r.units > 0 || (r.meters ?? 0) > 0);
 }
 
 /** Rows matching a search (product name or SKU, case-insensitive). */
@@ -49,7 +50,3 @@ export function filterTotals(rows: readonly WarehouseProductTotal[], q: string):
   return rows.filter((r) => r.product.name.toLocaleLowerCase().includes(s) || r.product.sku.toLocaleLowerCase().includes(s));
 }
 
-/** Whether more units exist than the pages read (the totals are then partial). */
-export function totalsTruncated(read: number, total: number | undefined): boolean {
-  return total !== undefined && read < total;
-}

@@ -718,5 +718,10 @@
   "stock.unit.cut_meters": "Kesilen uzunluk",
   "m.split_new_code": "Yeni parça kodu: {{barcode}} · {{meters}} m",
   "orders.assign.cuts_title": "Kesilen parçalar",
-  "orders.assign.cut_from": "{{meters}} m · {{source}} (kalan {{remaining}} m)"
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (kalan {{remaining}} m)",
+  "entry.timeline": "Hareket geçmişi",
+  "entry.activity.created": "Oluşturdu",
+  "entry.activity.header_updated": "Teslimat bilgisini düzenledi",
+  "entry.activity.confirmed": "Onayladı",
+  "entry.activity.cancelled": "İptal etti"
 }

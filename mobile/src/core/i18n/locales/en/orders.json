@@ -125,5 +125,6 @@
   "quote.pick_buyer": "Pick the dealer first to see prices.",
   "quote.default_first_order": "First order discount applied: {{pct}}%",
   "quote.default_standard": "Standard dealer discount applied: {{pct}}%",
-  "errors.discount_invalid": "Discount must be between 0 and 100, with up to 2 decimals."
+  "errors.discount_invalid": "Discount must be between 0 and 100, with up to 2 decimals.",
+  "card.created_by": "Placed by {{name}}"
 }

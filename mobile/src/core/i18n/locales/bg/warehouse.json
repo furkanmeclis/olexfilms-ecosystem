@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "Отрязана дължина",
   "m.split_new_code": "Нов код на част: {{barcode}} · {{meters}} m",
   "orders.assign.cuts_title": "Отрязани части",
-  "orders.assign.cut_from": "{{meters}} m · {{source}} (остават {{remaining}} m)"
+  "orders.assign.cut_from": "{{meters}} m · {{source}} (остават {{remaining}} m)",
+  "entry.timeline": "История на действията",
+  "entry.activity.created": "Създаде",
+  "entry.activity.header_updated": "Редактира данните за доставка",
+  "entry.activity.confirmed": "Потвърди",
+  "entry.activity.cancelled": "Отмени"
 }

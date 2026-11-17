@@ -585,5 +585,10 @@
   "stock.unit.cut_meters": "Відрізана довжина",
   "m.split_new_code": "Новий код частини: {{barcode}} · {{meters}} м",
   "orders.assign.cuts_title": "Відрізані частини",
-  "orders.assign.cut_from": "{{meters}} м · {{source}} (залишок {{remaining}} м)"
+  "orders.assign.cut_from": "{{meters}} м · {{source}} (залишок {{remaining}} м)",
+  "entry.timeline": "Історія дій",
+  "entry.activity.created": "Створив",
+  "entry.activity.header_updated": "Відредагував дані доставки",
+  "entry.activity.confirmed": "Підтвердив",
+  "entry.activity.cancelled": "Скасував"
 }

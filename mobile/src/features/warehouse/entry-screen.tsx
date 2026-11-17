@@ -7,9 +7,11 @@ import { View } from 'react-native';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
+import { newestFirst } from '@/features/orders/order-summary';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
+import { StepTimeline } from '@/ui/step-timeline';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
@@ -198,6 +200,17 @@ export function EntryScreen() {
             ))}
           </View>
         )}
+
+        {/* TEC-1220 (revize 5.4.1): who took each step of the entry. */}
+        <StepTimeline
+          title={t('entry.timeline')}
+          steps={newestFirst(x.timeline).map((s, i) => ({
+            key: `${s.action}-${s.at}-${i}`,
+            user: s.user?.name ?? t('orders:timeline.system'),
+            label: t(`entry.activity.${s.action}`, { defaultValue: s.action }),
+            when: formatDate(s.at),
+          }))}
+        />
       </Screen>
 
       {reserving ? (
