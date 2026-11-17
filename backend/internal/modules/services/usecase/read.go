@@ -438,14 +438,19 @@ type ListFilter struct {
 	OrganizationUUIDs []uuid.UUID
 	CustomerUUID      string
 	VehicleUUID       string
-	CreatedFrom       *time.Time
-	CreatedTo         *time.Time
-	CompletedFrom     *time.Time
-	CompletedTo       *time.Time
-	Sort              apiquery.ResolvedSort
-	SortExplicit      bool
-	Limit             int32
-	Offset            int32
+	// TEC-1216: created_by_uuid, performer_uuid (performed_by, falling back
+	// to created_by) and product_uuid (an item of the product).
+	CreatedByUUID pgtype.UUID
+	PerformerUUID pgtype.UUID
+	ProductUUID   pgtype.UUID
+	CreatedFrom   *time.Time
+	CreatedTo     *time.Time
+	CompletedFrom *time.Time
+	CompletedTo   *time.Time
+	Sort          apiquery.ResolvedSort
+	SortExplicit  bool
+	Limit         int32
+	Offset        int32
 }
 
 // List returns services inside the caller's services.read scope (dealer:
@@ -458,6 +463,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 		CreatedFrom: tsArg(f.CreatedFrom), CreatedTo: tsArg(f.CreatedTo),
 		CompletedFrom: tsArg(f.CompletedFrom), CompletedTo: tsArg(f.CompletedTo),
 		SortKey: sortKey, SortDesc: sortDesc,
+		CreatedByUuid: f.CreatedByUUID, PerformerUuid: f.PerformerUUID, ProductUuid: f.ProductUUID,
 	}
 	if c.Filter.UserOnly() {
 		p.CreatedByUserID = pgtype.Int8{Int64: c.Filter.UserID, Valid: true}
@@ -525,6 +531,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]ServiceVi
 			CreatedByUserID: p.CreatedByUserID, CustomerUserID: p.CustomerUserID, VehicleID: p.VehicleID,
 			Statuses: p.Statuses, Q: p.Q, CreatedFrom: p.CreatedFrom, CreatedTo: p.CreatedTo,
 			CompletedFrom: p.CompletedFrom, CompletedTo: p.CompletedTo,
+			CreatedByUuid: p.CreatedByUuid, PerformerUuid: p.PerformerUuid, ProductUuid: p.ProductUuid,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("services: count: %w", err)

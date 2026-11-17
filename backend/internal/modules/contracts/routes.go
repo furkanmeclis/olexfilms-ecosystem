@@ -47,6 +47,7 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/platform/contract-templates/{uuid}/default", route(h.SetDefault))
 
 	mux.Handle("POST /v1/services/{uuid}/contract", instance(h.CreateForService, rbac.PermContractsWrite))
+	mux.Handle("GET /v1/contracts", instance(h.ListContracts, rbac.PermContractsRead))
 	mux.Handle("GET /v1/contracts/{uuid}", instance(h.GetContract, rbac.PermContractsRead))
 	mux.Handle("GET /v1/contracts/{uuid}/pdf", instance(h.PDF, rbac.PermContractsRead))
 	mux.Handle("GET /v1/portal/contracts/{uuid}/pdf", portal(h.PortalPDF))

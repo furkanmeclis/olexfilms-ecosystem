@@ -167,6 +167,14 @@ WHERE o.brand_id = sqlc.arg(brand_id)
        OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY (sqlc.narg(seller_uuids)::uuid[])))
   AND (COALESCE(cardinality(sqlc.narg(buyer_uuids)::uuid[]), 0) = 0
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(party_uuids)::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY (sqlc.narg(party_uuids)::uuid[]))
+       OR o.buyer_org_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY (sqlc.narg(party_uuids)::uuid[])))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL OR EXISTS (
+       SELECT 1 FROM order_items foi JOIN products fp ON fp.id = foi.product_id
+       WHERE foi.order_id = o.id AND fp.uuid = sqlc.narg(product_uuid)::uuid))
+  AND (sqlc.narg(created_by_uuid)::uuid IS NULL
+       OR o.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(created_by_uuid)::uuid))
   AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
   AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric)
   AND (COALESCE(cardinality(sqlc.narg(seller_warehouse_uuids)::uuid[]), 0) = 0
@@ -213,6 +221,14 @@ WHERE o.brand_id = sqlc.arg(brand_id)
        OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY (sqlc.narg(seller_uuids)::uuid[])))
   AND (COALESCE(cardinality(sqlc.narg(buyer_uuids)::uuid[]), 0) = 0
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY (sqlc.narg(buyer_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(party_uuids)::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY (sqlc.narg(party_uuids)::uuid[]))
+       OR o.buyer_org_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY (sqlc.narg(party_uuids)::uuid[])))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL OR EXISTS (
+       SELECT 1 FROM order_items foi JOIN products fp ON fp.id = foi.product_id
+       WHERE foi.order_id = o.id AND fp.uuid = sqlc.narg(product_uuid)::uuid))
+  AND (sqlc.narg(created_by_uuid)::uuid IS NULL
+       OR o.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(created_by_uuid)::uuid))
   AND (sqlc.narg(total_min)::numeric IS NULL OR o.total >= sqlc.narg(total_min)::numeric)
   AND (sqlc.narg(total_max)::numeric IS NULL OR o.total <= sqlc.narg(total_max)::numeric)
   AND (COALESCE(cardinality(sqlc.narg(seller_warehouse_uuids)::uuid[]), 0) = 0

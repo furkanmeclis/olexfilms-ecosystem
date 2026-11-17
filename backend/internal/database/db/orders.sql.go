@@ -319,12 +319,20 @@ WHERE o.brand_id = $1
        OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY ($10::uuid[])))
   AND (COALESCE(cardinality($11::uuid[]), 0) = 0
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($11::uuid[])))
-  AND ($12::numeric IS NULL OR o.total >= $12::numeric)
-  AND ($13::numeric IS NULL OR o.total <= $13::numeric)
-  AND (COALESCE(cardinality($14::uuid[]), 0) = 0
+  AND (COALESCE(cardinality($12::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY ($12::uuid[]))
+       OR o.buyer_org_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY ($12::uuid[])))
+  AND ($13::uuid IS NULL OR EXISTS (
+       SELECT 1 FROM order_items foi JOIN products fp ON fp.id = foi.product_id
+       WHERE foi.order_id = o.id AND fp.uuid = $13::uuid))
+  AND ($14::uuid IS NULL
+       OR o.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = $14::uuid))
+  AND ($15::numeric IS NULL OR o.total >= $15::numeric)
+  AND ($16::numeric IS NULL OR o.total <= $16::numeric)
+  AND (COALESCE(cardinality($17::uuid[]), 0) = 0
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
-                                      AND sw.uuid = ANY ($14::uuid[])))
+                                      AND sw.uuid = ANY ($17::uuid[])))
 `
 
 type CountOrdersFilteredParams struct {
@@ -339,6 +347,9 @@ type CountOrdersFilteredParams struct {
 	Q                    pgtype.Text        `json:"q"`
 	SellerUuids          []uuid.UUID        `json:"seller_uuids"`
 	BuyerUuids           []uuid.UUID        `json:"buyer_uuids"`
+	PartyUuids           []uuid.UUID        `json:"party_uuids"`
+	ProductUuid          pgtype.UUID        `json:"product_uuid"`
+	CreatedByUuid        pgtype.UUID        `json:"created_by_uuid"`
 	TotalMin             pgtype.Numeric     `json:"total_min"`
 	TotalMax             pgtype.Numeric     `json:"total_max"`
 	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
@@ -357,6 +368,9 @@ func (q *Queries) CountOrdersFiltered(ctx context.Context, arg CountOrdersFilter
 		arg.Q,
 		arg.SellerUuids,
 		arg.BuyerUuids,
+		arg.PartyUuids,
+		arg.ProductUuid,
+		arg.CreatedByUuid,
 		arg.TotalMin,
 		arg.TotalMax,
 		arg.SellerWarehouseUuids,
@@ -1837,31 +1851,39 @@ WHERE o.brand_id = $1
        OR o.organization_id IN (SELECT so.id FROM organizations so WHERE so.uuid = ANY ($10::uuid[])))
   AND (COALESCE(cardinality($11::uuid[]), 0) = 0
        OR o.buyer_org_id IN (SELECT bo.id FROM organizations bo WHERE bo.uuid = ANY ($11::uuid[])))
-  AND ($12::numeric IS NULL OR o.total >= $12::numeric)
-  AND ($13::numeric IS NULL OR o.total <= $13::numeric)
-  AND (COALESCE(cardinality($14::uuid[]), 0) = 0
+  AND (COALESCE(cardinality($12::uuid[]), 0) = 0
+       OR o.organization_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY ($12::uuid[]))
+       OR o.buyer_org_id IN (SELECT po.id FROM organizations po WHERE po.uuid = ANY ($12::uuid[])))
+  AND ($13::uuid IS NULL OR EXISTS (
+       SELECT 1 FROM order_items foi JOIN products fp ON fp.id = foi.product_id
+       WHERE foi.order_id = o.id AND fp.uuid = $13::uuid))
+  AND ($14::uuid IS NULL
+       OR o.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = $14::uuid))
+  AND ($15::numeric IS NULL OR o.total >= $15::numeric)
+  AND ($16::numeric IS NULL OR o.total <= $16::numeric)
+  AND (COALESCE(cardinality($17::uuid[]), 0) = 0
        OR o.seller_warehouse_id IN (SELECT sw.id FROM warehouses sw
                                     WHERE sw.organization_id = o.seller_org_id
-                                      AND sw.uuid = ANY ($14::uuid[])))
-  AND ($15::uuid[] IS NULL OR o.uuid = ANY ($15::uuid[]))
+                                      AND sw.uuid = ANY ($17::uuid[])))
+  AND ($18::uuid[] IS NULL OR o.uuid = ANY ($18::uuid[]))
 ORDER BY
-  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'order_no' THEN o.order_no END END ASC,
-  CASE WHEN $16::bool THEN CASE $17::text WHEN 'order_no' THEN o.order_no END END DESC,
-  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'status' THEN
+  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'order_no' THEN o.order_no END END ASC,
+  CASE WHEN $19::bool THEN CASE $20::text WHEN 'order_no' THEN o.order_no END END DESC,
+  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END ASC,
-  CASE WHEN $16::bool THEN CASE $17::text WHEN 'status' THEN
+  CASE WHEN $19::bool THEN CASE $20::text WHEN 'status' THEN
     CASE o.status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 WHEN 'preparing' THEN 4
                  WHEN 'ready' THEN 5 WHEN 'processing' THEN 6 WHEN 'shipped' THEN 7 WHEN 'delivered' THEN 8
                  WHEN 'received' THEN 9 WHEN 'cancelling' THEN 10 ELSE 11 END END END DESC,
-  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'total' THEN o.total END END ASC,
-  CASE WHEN $16::bool THEN CASE $17::text WHEN 'total' THEN o.total END END DESC,
-  CASE WHEN NOT $16::bool THEN CASE $17::text WHEN 'created_at' THEN o.created_at END END ASC,
-  CASE WHEN $16::bool THEN CASE $17::text WHEN 'created_at' THEN o.created_at END END DESC,
-  CASE WHEN $16::bool THEN o.id END DESC,
+  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'total' THEN o.total END END ASC,
+  CASE WHEN $19::bool THEN CASE $20::text WHEN 'total' THEN o.total END END DESC,
+  CASE WHEN NOT $19::bool THEN CASE $20::text WHEN 'created_at' THEN o.created_at END END ASC,
+  CASE WHEN $19::bool THEN CASE $20::text WHEN 'created_at' THEN o.created_at END END DESC,
+  CASE WHEN $19::bool THEN o.id END DESC,
   o.id ASC
-LIMIT $19 OFFSET $18
+LIMIT $22 OFFSET $21
 `
 
 type ListOrdersFilteredParams struct {
@@ -1876,6 +1898,9 @@ type ListOrdersFilteredParams struct {
 	Q                    pgtype.Text        `json:"q"`
 	SellerUuids          []uuid.UUID        `json:"seller_uuids"`
 	BuyerUuids           []uuid.UUID        `json:"buyer_uuids"`
+	PartyUuids           []uuid.UUID        `json:"party_uuids"`
+	ProductUuid          pgtype.UUID        `json:"product_uuid"`
+	CreatedByUuid        pgtype.UUID        `json:"created_by_uuid"`
 	TotalMin             pgtype.Numeric     `json:"total_min"`
 	TotalMax             pgtype.Numeric     `json:"total_max"`
 	SellerWarehouseUuids []uuid.UUID        `json:"seller_warehouse_uuids"`
@@ -1906,6 +1931,9 @@ func (q *Queries) ListOrdersFiltered(ctx context.Context, arg ListOrdersFiltered
 		arg.Q,
 		arg.SellerUuids,
 		arg.BuyerUuids,
+		arg.PartyUuids,
+		arg.ProductUuid,
+		arg.CreatedByUuid,
 		arg.TotalMin,
 		arg.TotalMax,
 		arg.SellerWarehouseUuids,

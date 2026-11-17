@@ -34,15 +34,16 @@ WHERE w.brand_id = $1::bigint
   AND ($11::timestamptz IS NULL OR w.end_at < $11::timestamptz)
   AND ($12::bigint IS NULL OR w.product_id = $12::bigint)
   AND ($13::bigint IS NULL OR w.vehicle_id = $13::bigint)
-  AND ($14::timestamptz IS NULL OR w.end_at > $14::timestamptz)
-  AND ($15::timestamptz IS NULL OR w.end_at <= $15::timestamptz)
-  AND ($16::text IS NULL
-       OR w.public_code ILIKE '%' || $16::text || '%'
-       OR s.service_no ILIKE '%' || $16::text || '%'
-       OR p.name ILIKE '%' || $16::text || '%'
-       OR ($17::text IS NOT NULL AND $17::text <> '' AND (
-              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $17::text || '%'
-              OR COALESCE(v.plate_normalized, '') LIKE '%' || $17::text || '%')))
+  AND ($14::uuid IS NULL OR w.holder_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $14::uuid))
+  AND ($15::timestamptz IS NULL OR w.end_at > $15::timestamptz)
+  AND ($16::timestamptz IS NULL OR w.end_at <= $16::timestamptz)
+  AND ($17::text IS NULL
+       OR w.public_code ILIKE '%' || $17::text || '%'
+       OR s.service_no ILIKE '%' || $17::text || '%'
+       OR p.name ILIKE '%' || $17::text || '%'
+       OR ($18::text IS NOT NULL AND $18::text <> '' AND (
+              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $18::text || '%'
+              OR COALESCE(v.plate_normalized, '') LIKE '%' || $18::text || '%')))
 `
 
 type CountWarrantyRowsParams struct {
@@ -59,6 +60,7 @@ type CountWarrantyRowsParams struct {
 	EndBefore         pgtype.Timestamptz `json:"end_before"`
 	ProductID         pgtype.Int8        `json:"product_id"`
 	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CustomerUuid      pgtype.UUID        `json:"customer_uuid"`
 	EndsAfter         pgtype.Timestamptz `json:"ends_after"`
 	EndsBefore        pgtype.Timestamptz `json:"ends_before"`
 	Q                 pgtype.Text        `json:"q"`
@@ -80,6 +82,7 @@ func (q *Queries) CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsPa
 		arg.EndBefore,
 		arg.ProductID,
 		arg.VehicleID,
+		arg.CustomerUuid,
 		arg.EndsAfter,
 		arg.EndsBefore,
 		arg.Q,
@@ -125,56 +128,57 @@ WHERE w.brand_id = $1::bigint
   AND ($11::timestamptz IS NULL OR w.end_at < $11::timestamptz)
   AND ($12::bigint IS NULL OR w.product_id = $12::bigint)
   AND ($13::bigint IS NULL OR w.vehicle_id = $13::bigint)
-  AND ($14::timestamptz IS NULL OR w.end_at > $14::timestamptz)
-  AND ($15::timestamptz IS NULL OR w.end_at <= $15::timestamptz)
-  AND ($16::text IS NULL
-       OR w.public_code ILIKE '%' || $16::text || '%'
-       OR s.service_no ILIKE '%' || $16::text || '%'
-       OR p.name ILIKE '%' || $16::text || '%'
-       OR ($17::text IS NOT NULL AND $17::text <> '' AND (
-              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $17::text || '%'
-              OR COALESCE(v.plate_normalized, '') LIKE '%' || $17::text || '%')))
-  AND ($18::uuid[] IS NULL OR w.uuid = ANY ($18::uuid[]))
+  AND ($14::uuid IS NULL OR w.holder_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $14::uuid))
+  AND ($15::timestamptz IS NULL OR w.end_at > $15::timestamptz)
+  AND ($16::timestamptz IS NULL OR w.end_at <= $16::timestamptz)
+  AND ($17::text IS NULL
+       OR w.public_code ILIKE '%' || $17::text || '%'
+       OR s.service_no ILIKE '%' || $17::text || '%'
+       OR p.name ILIKE '%' || $17::text || '%'
+       OR ($18::text IS NOT NULL AND $18::text <> '' AND (
+              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $18::text || '%'
+              OR COALESCE(v.plate_normalized, '') LIKE '%' || $18::text || '%')))
+  AND ($19::uuid[] IS NULL OR w.uuid = ANY ($19::uuid[]))
 ORDER BY
-  CASE WHEN NOT $19::bool AND $20::text = 'expiry' THEN
+  CASE WHEN NOT $20::bool AND $21::text = 'expiry' THEN
     CASE WHEN w.status = 'active' THEN w.end_at END
   END ASC NULLS LAST,
-  CASE WHEN NOT $19::bool AND $20::text = 'expiry' THEN w.end_at END DESC,
-  CASE WHEN $19::bool AND $20::text = 'expiry' THEN
+  CASE WHEN NOT $20::bool AND $21::text = 'expiry' THEN w.end_at END DESC,
+  CASE WHEN $20::bool AND $21::text = 'expiry' THEN
     CASE WHEN w.status = 'active' THEN w.end_at END
   END DESC NULLS FIRST,
-  CASE WHEN $19::bool AND $20::text = 'expiry' THEN w.end_at END ASC,
-  CASE WHEN NOT $19::bool THEN
-    CASE $20::text
+  CASE WHEN $20::bool AND $21::text = 'expiry' THEN w.end_at END ASC,
+  CASE WHEN NOT $20::bool THEN
+    CASE $21::text
       WHEN 'public_code' THEN w.public_code::text
       WHEN 'service_no' THEN s.service_no::text
       WHEN 'product' THEN p.name::text
       WHEN 'organization' THEN o.name::text
     END
   END ASC,
-  CASE WHEN $19::bool THEN
-    CASE $20::text
+  CASE WHEN $20::bool THEN
+    CASE $21::text
       WHEN 'public_code' THEN w.public_code::text
       WHEN 'service_no' THEN s.service_no::text
       WHEN 'product' THEN p.name::text
       WHEN 'organization' THEN o.name::text
     END
   END DESC,
-  CASE WHEN NOT $19::bool AND $20::text = 'status' THEN
+  CASE WHEN NOT $20::bool AND $21::text = 'status' THEN
     CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
   END ASC,
-  CASE WHEN $19::bool AND $20::text = 'status' THEN
+  CASE WHEN $20::bool AND $21::text = 'status' THEN
     CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
   END DESC,
-  CASE WHEN NOT $19::bool THEN
-    CASE $20::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  CASE WHEN NOT $20::bool THEN
+    CASE $21::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
   END ASC,
-  CASE WHEN $19::bool THEN
-    CASE $20::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  CASE WHEN $20::bool THEN
+    CASE $21::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
   END DESC,
-  CASE WHEN $19::bool THEN w.id END DESC,
+  CASE WHEN $20::bool THEN w.id END DESC,
   w.id ASC
-LIMIT $22::int OFFSET $21::int
+LIMIT $23::int OFFSET $22::int
 `
 
 type ListWarrantyRowsParams struct {
@@ -191,6 +195,7 @@ type ListWarrantyRowsParams struct {
 	EndBefore         pgtype.Timestamptz `json:"end_before"`
 	ProductID         pgtype.Int8        `json:"product_id"`
 	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CustomerUuid      pgtype.UUID        `json:"customer_uuid"`
 	EndsAfter         pgtype.Timestamptz `json:"ends_after"`
 	EndsBefore        pgtype.Timestamptz `json:"ends_before"`
 	Q                 pgtype.Text        `json:"q"`
@@ -268,6 +273,7 @@ func (q *Queries) ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsPara
 		arg.EndBefore,
 		arg.ProductID,
 		arg.VehicleID,
+		arg.CustomerUuid,
 		arg.EndsAfter,
 		arg.EndsBefore,
 		arg.Q,

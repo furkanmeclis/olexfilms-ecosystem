@@ -181,6 +181,7 @@ type ListFilter struct {
 	Sources, Temperatures []string
 	AssigneeIDs           []int64
 	Unassigned            bool
+	CustomerUUID          pgtype.UUID
 	Created               apiquery.TimeRange
 	FollowUp              string
 	Q                     string
@@ -394,6 +395,7 @@ func (s *Service) params(c Caller, f ListFilter) (db.ListLeadsInScopeParams, err
 	}
 	p.Statuses, p.TargetTypes, p.Sources, p.Temperatures = f.Statuses, f.TargetTypes, f.Sources, f.Temperatures
 	p.AssigneeIds, p.Unassigned = f.AssigneeIDs, f.Unassigned
+	p.CustomerUuid = f.CustomerUUID
 	if f.Created.From != nil {
 		p.CreatedFrom = pgtype.Timestamptz{Time: *f.Created.From, Valid: true}
 	}
@@ -429,14 +431,15 @@ func (s *Service) params(c Caller, f ListFilter) (db.ListLeadsInScopeParams, err
 // carries the status, TEC-371 filters stay on SQL).
 func indexable(p db.ListLeadsInScopeParams) bool {
 	return len(p.Statuses) <= 1 && len(p.TargetTypes) == 0 && len(p.Sources) == 0 && len(p.Temperatures) == 0 &&
-		len(p.AssigneeIds) == 0 && !p.Unassigned && !p.CreatedFrom.Valid && !p.CreatedBefore.Valid
+		len(p.AssigneeIds) == 0 && !p.Unassigned && !p.CreatedFrom.Valid && !p.CreatedBefore.Valid &&
+		!p.CustomerUuid.Valid
 }
 
 func countParams(p db.ListLeadsInScopeParams) db.CountLeadsInScopeParams {
 	return db.CountLeadsInScopeParams{
 		BrandID: p.BrandID, OrganizationIds: p.OrganizationIds, Statuses: p.Statuses, TargetTypes: p.TargetTypes,
 		Sources: p.Sources, Temperatures: p.Temperatures, AssigneeIds: p.AssigneeIds, Unassigned: p.Unassigned,
-		CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore,
+		CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, CustomerUuid: p.CustomerUuid,
 		Q: p.Q, FollowUpOnly: p.FollowUpOnly, ActorUserID: p.ActorUserID,
 		FollowUpFrom: p.FollowUpFrom, FollowUpTo: p.FollowUpTo,
 	}

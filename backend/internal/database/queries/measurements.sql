@@ -126,6 +126,10 @@ WHERE mr.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(device_uuids)::uuid[]), 0) = 0 OR md.uuid = ANY(sqlc.narg(device_uuids)::uuid[]))
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR mr.status = ANY(sqlc.narg(statuses)::text[]))
   AND (sqlc.narg(linked)::boolean IS NULL OR (sm.id IS NOT NULL) = sqlc.narg(linked)::boolean)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM users cu WHERE cu.uuid = sqlc.narg(customer_uuid)::uuid
+      AND (cu.id = vs.customer_user_id OR cu.id = v.user_id)
+  ))
   AND (sqlc.narg(measured_from)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= sqlc.narg(measured_from)::timestamptz)
   AND (sqlc.narg(measured_to)::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < sqlc.narg(measured_to)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL

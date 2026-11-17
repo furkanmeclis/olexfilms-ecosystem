@@ -442,6 +442,11 @@ type ListFilter struct {
 	SellerWarehouseUUIDs []uuid.UUID
 	TotalMin             *float64
 	TotalMax             *float64
+	// TEC-1216: PartyOrgUUIDs matches the seller or the buyer; ProductUUID
+	// an order line's product; CreatedByUUID the creator.
+	PartyOrgUUIDs []uuid.UUID
+	ProductUUID   pgtype.UUID
+	CreatedByUUID pgtype.UUID
 	// Q searches the order number, tracking number, external reference
 	// and (index) the parties' names and dealer codes (TEC-210).
 	Q            string
@@ -506,6 +511,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		p.CreatedFrom, p.CreatedBefore, p.Q = tsArg(f.CreatedFrom), tsArg(f.CreatedTo), q
 		p.SellerUuids, p.BuyerUuids = f.SellerOrgUUIDs, f.BuyerOrgUUIDs
 		p.SellerWarehouseUuids = f.SellerWarehouseUUIDs
+		p.PartyUuids, p.ProductUuid, p.CreatedByUuid = f.PartyOrgUUIDs, f.ProductUUID, f.CreatedByUUID
 		p.InvoiceStatuses = f.InvoiceStatuses
 		p.TotalMin, p.TotalMax = numArg(f.TotalMin), numArg(f.TotalMax)
 		p.SortKey, p.SortDesc, p.RowLimit, p.RowOffset = key, desc, f.Limit, f.Offset
@@ -516,6 +522,7 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 				Statuses: p.Statuses, InvoiceStatuses: p.InvoiceStatuses, CreatedFrom: p.CreatedFrom, CreatedBefore: p.CreatedBefore, Q: p.Q,
 				SellerUuids: p.SellerUuids, BuyerUuids: p.BuyerUuids, TotalMin: p.TotalMin, TotalMax: p.TotalMax,
 				SellerWarehouseUuids: p.SellerWarehouseUuids,
+				PartyUuids:           p.PartyUuids, ProductUuid: p.ProductUuid, CreatedByUuid: p.CreatedByUuid,
 			})
 		}
 	}

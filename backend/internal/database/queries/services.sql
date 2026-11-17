@@ -168,6 +168,12 @@ WHERE services.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id))
   AND (sqlc.narg(customer_user_id)::bigint IS NULL OR services.customer_user_id = sqlc.narg(customer_user_id))
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR services.vehicle_id = sqlc.narg(vehicle_id))
+  AND (sqlc.narg(created_by_uuid)::uuid IS NULL OR services.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(created_by_uuid)::uuid))
+  AND (sqlc.narg(performer_uuid)::uuid IS NULL OR COALESCE(services.performed_by_user_id, services.created_by_user_id) = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(performer_uuid)::uuid))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM service_items fsi JOIN products fp ON fp.id = fsi.product_id
+    WHERE fsi.service_id = services.id AND fp.uuid = sqlc.narg(product_uuid)::uuid
+  ))
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR services.status = ANY (sqlc.narg(statuses)::text[]))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR services.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR services.created_at < sqlc.narg(created_to)::timestamptz)
@@ -235,6 +241,12 @@ WHERE services.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR services.created_by_user_id = sqlc.narg(created_by_user_id))
   AND (sqlc.narg(customer_user_id)::bigint IS NULL OR services.customer_user_id = sqlc.narg(customer_user_id))
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR services.vehicle_id = sqlc.narg(vehicle_id))
+  AND (sqlc.narg(created_by_uuid)::uuid IS NULL OR services.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(created_by_uuid)::uuid))
+  AND (sqlc.narg(performer_uuid)::uuid IS NULL OR COALESCE(services.performed_by_user_id, services.created_by_user_id) = (SELECT fu.id FROM users fu WHERE fu.uuid = sqlc.narg(performer_uuid)::uuid))
+  AND (sqlc.narg(product_uuid)::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM service_items fsi JOIN products fp ON fp.id = fsi.product_id
+    WHERE fsi.service_id = services.id AND fp.uuid = sqlc.narg(product_uuid)::uuid
+  ))
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR services.status = ANY (sqlc.narg(statuses)::text[]))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR services.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_to)::timestamptz IS NULL OR services.created_at < sqlc.narg(created_to)::timestamptz)

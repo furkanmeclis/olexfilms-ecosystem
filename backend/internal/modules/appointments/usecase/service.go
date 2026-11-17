@@ -206,8 +206,10 @@ type ListFilter struct {
 	// OrganizationUUIDs narrows the list to these organizations inside the
 	// read scope (TEC-328: read-only calendar of one dealer).
 	OrganizationUUIDs []uuid.UUID
-	Limit             int32
-	Offset            int32
+	// CustomerUUID narrows to one customer's appointments (TEC-1216).
+	CustomerUUID *uuid.UUID
+	Limit        int32
+	Offset       int32
 }
 
 type PortalCaller struct {
@@ -594,12 +596,16 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Appointme
 		FromTime: tsArg(f.From), ToTime: tsArg(f.To), Status: status,
 		PageLimit: f.Limit, PageOffset: f.Offset,
 	}
+	if f.CustomerUUID != nil {
+		params.CustomerUuid = pgtype.UUID{Bytes: *f.CustomerUUID, Valid: true}
+	}
 	rows, err := s.q.ListAppointmentsByOrganizations(ctx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("appointments: list: %w", err)
 	}
 	total, err := s.q.CountAppointmentsByOrganizations(ctx, db.CountAppointmentsByOrganizationsParams{
 		OrganizationIds: params.OrganizationIds, BrandID: params.BrandID, FromTime: params.FromTime, ToTime: params.ToTime, Status: params.Status,
+		CustomerUuid: params.CustomerUuid,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("appointments: count: %w", err)

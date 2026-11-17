@@ -96,6 +96,7 @@ type ListFilter struct {
 	Q                 string
 	ProductUUID       string
 	VehicleUUID       string
+	CustomerUUID      pgtype.UUID
 	OrganizationUUIDs []uuid.UUID
 	DaysLeftMin       *int
 	DaysLeftMax       *int
@@ -265,7 +266,7 @@ func (r *Reader) listArgs(ctx context.Context, sp scopeParams, f ListFilter) (db
 		Statuses: f.Statuses, OrganizationUuids: f.OrganizationUUIDs,
 		StartFrom: tsArg(f.StartFrom), StartBefore: tsArg(f.StartBefore),
 		EndFrom: tsArg(f.EndFrom), EndBefore: tsArg(f.EndBefore),
-		SortKey: sortKey, SortDesc: sortDesc,
+		SortKey: sortKey, SortDesc: sortDesc, CustomerUuid: f.CustomerUUID,
 	}
 	for _, st := range f.Statuses {
 		if !IsStatus(st) {
@@ -336,6 +337,7 @@ func countArgs(p db.ListWarrantyRowsParams) db.CountWarrantyRowsParams {
 	return db.CountWarrantyRowsParams{
 		BrandID: p.BrandID, OrgIds: p.OrgIds, HolderUserID: p.HolderUserID,
 		ServiceCreatedBy: p.ServiceCreatedBy, WarrantyUuid: p.WarrantyUuid, Statuses: p.Statuses,
+		CustomerUuid:      p.CustomerUuid,
 		OrganizationUuids: p.OrganizationUuids, StartFrom: p.StartFrom, StartBefore: p.StartBefore,
 		EndFrom: p.EndFrom, EndBefore: p.EndBefore,
 		ProductID: p.ProductID, VehicleID: p.VehicleID, EndsAfter: p.EndsAfter, EndsBefore: p.EndsBefore,

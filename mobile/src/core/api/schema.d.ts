@@ -3509,6 +3509,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/organizations/{uuid}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organization detail summary with counters (TEC-1216)
+         * @description The organization (as GET /v1/tenant/organizations/{uuid}), its Ref and parent Ref and counters, inside the caller's organizations.read scope (404 outside it). A counter is null when the caller does not hold that module's read permission.
+         */
+        get: operations["getTenantOrganizationSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/users/{uuid}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff user detail summary (TEC-1216)
+         * @description A staff user who is a member of an organization inside the caller's members.read scope (404 otherwise, also for customer only accounts): identity, memberships in the scope with roles and warehouses (Refs), and what the user did there. A counter is null when the caller does not hold that module's read permission.
+         */
+        get: operations["getTenantMemberSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/members": {
         parameters: {
             query?: never;
@@ -4111,6 +4151,26 @@ export interface paths {
          * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["createServiceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contracts inside the contracts.read scope (TEC-1216)
+         * @description Panel contract list (docs/list-contract.md). Every relation is a Ref (docs/refs.md): subject (kind service or subscription), customer, organization. Own / assigned scopes see the contracts of the services they opened and the subscriptions they assigned. `sort` is one of created_at, contract_no, status; default `-created_at`, id tiebreak.
+         */
+        get: operations["listContracts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -27708,6 +27768,130 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        /**
+         * @description Record kind of a Ref (docs/refs.md); the same vocabulary as report row _link.kind.
+         * @enum {string}
+         */
+        RefKind: "service" | "warranty" | "warranty_claim" | "customer" | "vehicle" | "order" | "product" | "stock_unit" | "transfer" | "organization" | "user" | "lead" | "appointment" | "task" | "measurement" | "contract" | "invoice" | "cari" | "announcement" | "warehouse" | "subscription";
+        /** @description TEC-1216 cross-record reference. Clients map kind + uuid to a detail route (web entityHref, mobile useEntityHref). sub is an optional second line (organization type, product SKU, warehouse code). */
+        Ref: {
+            kind: components["schemas"]["RefKind"];
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            sub?: string;
+        };
+        ContractListItem: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: int64 */
+            contract_no: number;
+            /** @enum {string} */
+            kind: "vehicle_intake" | "service_sale";
+            /** @enum {string} */
+            status: "draft" | "pending" | "executed" | "voided";
+            /** @enum {string} */
+            subject_type: "service" | "service_subscription";
+            subject: components["schemas"]["Ref"] | null;
+            customer: components["schemas"]["Ref"] | null;
+            organization: components["schemas"]["Ref"];
+            /** @description The customer is anonymized (K19); the customer name is empty. */
+            customer_anonymized: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            executed_at: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+        };
+        EnvelopeContractListPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ContractListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OrganizationSummary: {
+            organization: components["schemas"]["Organization"];
+            ref: components["schemas"]["Ref"];
+            parent: components["schemas"]["Ref"] | null;
+            /** @description Null when the caller may not read that module. */
+            counts: {
+                /** Format: int64 */
+                members: number | null;
+                /** Format: int64 */
+                children: number | null;
+                /** Format: int64 */
+                customers: number | null;
+                /** Format: int64 */
+                services: number | null;
+                /** Format: int64 */
+                warranties: number | null;
+                /** Format: int64 */
+                orders: number | null;
+                /** Format: int64 */
+                open_tasks: number | null;
+                /** Format: int64 */
+                leads: number | null;
+                /** Format: int64 */
+                warehouses: number | null;
+            };
+        };
+        EnvelopeOrganizationSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrganizationSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        MemberSummary: {
+            user: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+                surname: string;
+                email: string | null;
+                phone_e164: string | null;
+                status: string;
+                /** Format: date-time */
+                last_login_at: string | null;
+                /** Format: date-time */
+                created_at: string | null;
+            };
+            ref: components["schemas"]["Ref"];
+            memberships: {
+                organization: components["schemas"]["Ref"];
+                /** @enum {string} */
+                role: "owner" | "staff";
+                role_slugs: string[];
+                warehouses: components["schemas"]["Ref"][];
+                /** Format: date-time */
+                created_at: string | null;
+            }[];
+            /** @description Null when the caller may not read that module. */
+            counts: {
+                /** Format: int64 */
+                services_created: number | null;
+                /** Format: int64 */
+                services_performed: number | null;
+                /** Format: int64 */
+                orders_created: number | null;
+                /** Format: int64 */
+                open_tasks: number | null;
+                /** Format: int64 */
+                leads_assigned: number | null;
+            };
+        };
+        EnvelopeMemberSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MemberSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeServicePage: {
             /** @enum {boolean} */
             success: true;
@@ -39179,6 +39363,56 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getTenantOrganizationSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrganizationSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getTenantMemberSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Member summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMemberSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     createTenantMember: {
         parameters: {
             query?: never;
@@ -40274,6 +40508,40 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listContracts: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description TEC-1216 reverse relation filter (RelatedList): the service customer or the customer signer. */
+                customer_uuid?: string;
+                /** @description Comma separated statuses (draft, pending, executed, voided). */
+                status?: ("draft" | "pending" | "executed" | "voided")[];
+                /** @description Comma separated kinds (vehicle_intake, service_sale). */
+                kind?: ("vehicle_intake" | "service_sale")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contracts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeContractListPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getContract: {
@@ -49972,6 +50240,8 @@ export interface operations {
                 status?: string;
                 /** @description true for results linked to a service, false for unlinked results. */
                 linked?: boolean;
+                /** @description TEC-1216 reverse relation filter (RelatedList): measurements whose linked service customer or vehicle owner is the customer. */
+                customer_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -54531,6 +54801,8 @@ export interface operations {
                 end_from?: string;
                 /** @description Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before end_from. */
                 end_to?: string;
+                /** @description TEC-1216 reverse relation filter (RelatedList): warranties held by the customer (holder, the current owner after a vehicle transfer). */
+                customer_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -55204,6 +55476,12 @@ export interface operations {
                 completed_from?: string;
                 /** @description Upper bound of completed_at: a YYYY-MM-DD day in UTC covers the whole day, an RFC3339 value that instant. Must not be before completed_from. */
                 completed_to?: string;
+                /** @description TEC-1216 reverse relation filter (RelatedList): services the user opened. */
+                created_by_uuid?: string;
+                /** @description TEC-1216 reverse relation filter (RelatedList): services the user performed (performed_by, else created_by). */
+                performer_uuid?: string;
+                /** @description TEC-1216 reverse relation filter (RelatedList): services with an item of the product. Like every filter it only narrows the scoped set. */
+                product_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -56956,6 +57234,12 @@ export interface operations {
                 total_min?: number;
                 /** @description Inclusive upper bound of the order total. */
                 total_max?: number;
+                /** @description TEC-1216 reverse relation filter (RelatedList): comma separated organizations; an order matches when one of them is the seller or the buyer. It only narrows the scoped set. */
+                organization_uuid?: string[];
+                /** @description TEC-1216 reverse relation filter (RelatedList): orders with a line of the product. */
+                product_uuid?: string;
+                /** @description TEC-1216 reverse relation filter (RelatedList): orders the user opened. */
+                created_by_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -57944,6 +58228,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                /** @description TEC-1216 reverse relation filter (RelatedList): leads of the customer. */
+                customer_uuid?: string;
             };
             header?: never;
             path?: never;
@@ -58978,14 +59264,18 @@ export interface operations {
     };
     listAppointments: {
         parameters: {
-            query: {
-                from: string;
-                to: string;
+            query?: {
+                /** @description Required unless customer_uuid is given (TEC-1216). */
+                from?: string;
+                /** @description Required unless customer_uuid is given (TEC-1216). */
+                to?: string;
                 status?: components["schemas"]["AppointmentStatus"];
                 /** @description CSV of organization UUIDs; appointments of those organizations (inside the read scope, others are ignored). */
                 organization_uuid?: string;
                 limit?: number;
                 offset?: number;
+                /** @description TEC-1216 reverse relation filter (RelatedList): one customer's appointments. With customer_uuid, from and to are optional (default: all time). */
+                customer_uuid?: string;
             };
             header?: never;
             path?: never;
@@ -59235,6 +59525,10 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                /** @description TEC-1216 reverse relation filter (RelatedList): alias of subject_organization_uuid (comma separated). */
+                organization_uuid?: string[];
+                /** @description TEC-1216 reverse relation filter (RelatedList): alias of assignee_user_uuid. */
+                assignee_uuid?: string;
             };
             header?: never;
             path?: never;

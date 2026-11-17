@@ -130,6 +130,7 @@ WHERE (sqlc.narg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sq
   AND starts_at >= sqlc.arg(from_time)::timestamptz
   AND starts_at < sqlc.arg(to_time)::timestamptz
   AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = sqlc.narg(customer_uuid)::uuid))
 ORDER BY starts_at, id
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
@@ -168,7 +169,8 @@ WHERE (sqlc.narg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sq
   AND deleted_at IS NULL
   AND starts_at >= sqlc.arg(from_time)::timestamptz
   AND starts_at < sqlc.arg(to_time)::timestamptz
-  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar);
+  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = sqlc.narg(customer_uuid)::uuid));
 
 -- name: CountActiveAppointmentsForOrganization :one
 SELECT COUNT(*) FROM appointments

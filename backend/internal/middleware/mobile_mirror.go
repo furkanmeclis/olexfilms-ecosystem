@@ -43,6 +43,9 @@ var MobilePanelMirrorPrefixes = []string{
 	// TEC-1063 / TEC-1071 (routes in #515 / #523): the pending delivery
 	// recipients of a new order and the accounting queue.
 	"tenant/pending-recipients", "accounting/queue",
+	// TEC-1216: cross-record detail summaries — the organization summary
+	// (under tenant/organizations above) and the staff user summary.
+	"tenant/users",
 	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
 

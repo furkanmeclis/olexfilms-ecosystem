@@ -32,12 +32,19 @@ const (
 	QueryBuyerOrgUUID  = "buyer_org_uuid"
 	// QuerySellerWarehouse filters by seller warehouse uuids (TEC-1054).
 	QuerySellerWarehouse = "seller_warehouse"
+	// TEC-1216 reverse relation filters: organization_uuid matches the
+	// seller or the buyer (CSV), product_uuid an order line's product,
+	// created_by_uuid the user who opened the order.
+	QueryOrganizationUUID = "organization_uuid"
+	QueryProductUUID      = "product_uuid"
+	QueryCreatedByUUID    = "created_by_uuid"
 )
 
 // listKeys are the list parameters an export job carries.
 var listKeys = []string{
 	"q", "sort", QuerySide, QueryStatus, "created_from", "created_to",
 	QuerySellerOrgUUID, QueryBuyerOrgUUID, "total_min", "total_max", QuerySellerWarehouse,
+	QueryOrganizationUUID, QueryProductUUID, QueryCreatedByUUID,
 }
 
 // ListValues keeps the list parameters of a job query (or export body).
@@ -78,6 +85,15 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 	if f.SellerWarehouseUUIDs, err = uuidList(values, QuerySellerWarehouse); err != nil {
 		return f, err
 	}
+	if f.PartyOrgUUIDs, err = uuidList(values, QueryOrganizationUUID); err != nil {
+		return f, err
+	}
+	if f.ProductUUID, err = optUUID(values, QueryProductUUID); err != nil {
+		return f, err
+	}
+	if f.CreatedByUUID, err = optUUID(values, QueryCreatedByUUID); err != nil {
+		return f, err
+	}
 	total, err := apiquery.NumRange(values, "total")
 	if err != nil {
 		return f, err
@@ -104,12 +120,28 @@ func uuidList(values url.Values, key string) ([]uuid.UUID, error) {
 	return out, nil
 }
 
+// optUUID reads one optional uuid (400 on a bad value).
+func optUUID(values url.Values, key string) (pgtype.UUID, error) {
+	raw := strings.TrimSpace(values.Get(key))
+	if raw == "" {
+		return pgtype.UUID{}, nil
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return pgtype.UUID{}, &apiquery.ValidationError{Details: []apiquery.Detail{{
+			Field: key, Message: "must be a uuid", Code: "invalid",
+		}}}
+	}
+	return pgtype.UUID{Bytes: id, Valid: true}, nil
+}
+
 // sqlOnly reports whether the filter uses a parameter the orders index
 // cannot answer (TEC-210 keeps q on the index otherwise).
 func (f ListFilter) sqlOnly() bool {
 	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil || len(f.InvoiceStatuses) > 0 ||
 		len(f.SellerOrgUUIDs) > 0 || len(f.BuyerOrgUUIDs) > 0 || len(f.SellerWarehouseUUIDs) > 0 ||
-		f.TotalMin != nil || f.TotalMax != nil
+		f.TotalMin != nil || f.TotalMax != nil ||
+		len(f.PartyOrgUUIDs) > 0 || f.ProductUUID.Valid || f.CreatedByUUID.Valid
 }
 
 func sortArgs(f ListFilter) (string, bool) {

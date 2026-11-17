@@ -51,6 +51,47 @@ func (q *Queries) CountContractInstances(ctx context.Context, arg CountContractI
 	return column_1, err
 }
 
+const countContractInstancesPanel = `-- name: CountContractInstancesPanel :one
+SELECT COUNT(*) FROM contract_instances ci
+LEFT JOIN services s ON ci.subject_type = 'service' AND s.id = ci.subject_id
+LEFT JOIN service_subscriptions ss ON ci.subject_type = 'service_subscription' AND ss.id = ci.subject_id
+LEFT JOIN users cu ON cu.id = s.customer_user_id
+WHERE ($1::bigint IS NULL OR ci.brand_id = $1::bigint)
+  AND ($2::bigint[] IS NULL OR ci.organization_id = ANY($2::bigint[]))
+  AND ($3::bigint IS NULL
+       OR s.created_by_user_id = $3::bigint
+       OR ss.assigned_by_user_id = $3::bigint)
+  AND ($4::uuid IS NULL
+       OR cu.uuid = $4::uuid
+       OR EXISTS (SELECT 1 FROM contract_signers cs JOIN users su ON su.id = cs.user_id
+                  WHERE cs.instance_id = ci.id AND cs.role = 'customer' AND su.uuid = $4::uuid))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR ci.status = ANY($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR ci.kind = ANY($6::text[]))
+`
+
+type CountContractInstancesPanelParams struct {
+	BrandID      pgtype.Int8 `json:"brand_id"`
+	OrgIds       []int64     `json:"org_ids"`
+	ActorUserID  pgtype.Int8 `json:"actor_user_id"`
+	CustomerUuid pgtype.UUID `json:"customer_uuid"`
+	Statuses     []string    `json:"statuses"`
+	Kinds        []string    `json:"kinds"`
+}
+
+func (q *Queries) CountContractInstancesPanel(ctx context.Context, arg CountContractInstancesPanelParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countContractInstancesPanel,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.ActorUserID,
+		arg.CustomerUuid,
+		arg.Statuses,
+		arg.Kinds,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createContractInstance = `-- name: CreateContractInstance :one
 
 INSERT INTO contract_instances (
@@ -1304,6 +1345,139 @@ func (q *Queries) ListContractInstancesBySubject(ctx context.Context, arg ListCo
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.NumberedByOrg,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContractInstancesPanel = `-- name: ListContractInstancesPanel :many
+SELECT ci.id, ci.uuid, ci.contract_no, ci.kind, ci.status, ci.subject_type,
+       ci.created_at, ci.executed_at, ci.voided_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       s.uuid AS service_uuid, s.service_no AS service_no,
+       ss.uuid AS subscription_uuid, sci.name AS subscription_item_name,
+       cu.uuid AS customer_uuid, cu.name AS customer_name, cu.surname AS customer_surname,
+       cu.status AS customer_status
+FROM contract_instances ci
+JOIN organizations o ON o.id = ci.organization_id
+LEFT JOIN services s ON ci.subject_type = 'service' AND s.id = ci.subject_id
+LEFT JOIN service_subscriptions ss ON ci.subject_type = 'service_subscription' AND ss.id = ci.subject_id
+LEFT JOIN service_catalog_items sci ON sci.id = ss.item_id
+LEFT JOIN users cu ON cu.id = s.customer_user_id
+WHERE ($1::bigint IS NULL OR ci.brand_id = $1::bigint)
+  AND ($2::bigint[] IS NULL OR ci.organization_id = ANY($2::bigint[]))
+  AND ($3::bigint IS NULL
+       OR s.created_by_user_id = $3::bigint
+       OR ss.assigned_by_user_id = $3::bigint)
+  AND ($4::uuid IS NULL
+       OR cu.uuid = $4::uuid
+       OR EXISTS (SELECT 1 FROM contract_signers cs JOIN users su ON su.id = cs.user_id
+                  WHERE cs.instance_id = ci.id AND cs.role = 'customer' AND su.uuid = $4::uuid))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR ci.status = ANY($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR ci.kind = ANY($6::text[]))
+ORDER BY
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'created_at' THEN ci.created_at END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'created_at' THEN ci.created_at END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'contract_no' THEN ci.contract_no END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'contract_no' THEN ci.contract_no END END DESC,
+  CASE WHEN NOT $7::bool AND $8::text = 'status' THEN
+    CASE ci.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'executed' THEN 2 ELSE 3 END END ASC,
+  CASE WHEN $7::bool AND $8::text = 'status' THEN
+    CASE ci.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'executed' THEN 2 ELSE 3 END END DESC,
+  CASE WHEN $7::bool THEN ci.id END DESC,
+  ci.id ASC
+LIMIT $10 OFFSET $9
+`
+
+type ListContractInstancesPanelParams struct {
+	BrandID      pgtype.Int8 `json:"brand_id"`
+	OrgIds       []int64     `json:"org_ids"`
+	ActorUserID  pgtype.Int8 `json:"actor_user_id"`
+	CustomerUuid pgtype.UUID `json:"customer_uuid"`
+	Statuses     []string    `json:"statuses"`
+	Kinds        []string    `json:"kinds"`
+	SortDesc     bool        `json:"sort_desc"`
+	SortKey      string      `json:"sort_key"`
+	RowOffset    int32       `json:"row_offset"`
+	RowLimit     int32       `json:"row_limit"`
+}
+
+type ListContractInstancesPanelRow struct {
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	ContractNo           int64              `json:"contract_no"`
+	Kind                 string             `json:"kind"`
+	Status               string             `json:"status"`
+	SubjectType          string             `json:"subject_type"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	ExecutedAt           pgtype.Timestamptz `json:"executed_at"`
+	VoidedAt             pgtype.Timestamptz `json:"voided_at"`
+	OrganizationUuid     uuid.UUID          `json:"organization_uuid"`
+	OrganizationName     string             `json:"organization_name"`
+	OrganizationType     string             `json:"organization_type"`
+	ServiceUuid          pgtype.UUID        `json:"service_uuid"`
+	ServiceNo            pgtype.Text        `json:"service_no"`
+	SubscriptionUuid     pgtype.UUID        `json:"subscription_uuid"`
+	SubscriptionItemName pgtype.Text        `json:"subscription_item_name"`
+	CustomerUuid         pgtype.UUID        `json:"customer_uuid"`
+	CustomerName         pgtype.Text        `json:"customer_name"`
+	CustomerSurname      pgtype.Text        `json:"customer_surname"`
+	CustomerStatus       pgtype.Text        `json:"customer_status"`
+}
+
+// TEC-1216: panel contract list (GET /v1/contracts, docs/list-contract.md).
+// brand_id / org_ids is the contracts.read scope (NULL = no restriction);
+// actor_user_id narrows own / assigned scopes to the services the user
+// opened and the subscriptions the user assigned. customer_uuid matches
+// the service customer or the customer signer. Sort keys from contracts
+// usecase.ListSort; id is the tiebreak.
+func (q *Queries) ListContractInstancesPanel(ctx context.Context, arg ListContractInstancesPanelParams) ([]ListContractInstancesPanelRow, error) {
+	rows, err := q.db.Query(ctx, listContractInstancesPanel,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.ActorUserID,
+		arg.CustomerUuid,
+		arg.Statuses,
+		arg.Kinds,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContractInstancesPanelRow{}
+	for rows.Next() {
+		var i ListContractInstancesPanelRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ContractNo,
+			&i.Kind,
+			&i.Status,
+			&i.SubjectType,
+			&i.CreatedAt,
+			&i.ExecutedAt,
+			&i.VoidedAt,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.OrganizationType,
+			&i.ServiceUuid,
+			&i.ServiceNo,
+			&i.SubscriptionUuid,
+			&i.SubscriptionItemName,
+			&i.CustomerUuid,
+			&i.CustomerName,
+			&i.CustomerSurname,
+			&i.CustomerStatus,
 		); err != nil {
 			return nil, err
 		}

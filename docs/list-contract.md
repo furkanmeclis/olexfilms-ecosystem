@@ -126,3 +126,8 @@ Kurallar:
    `style: form, explode: false` dizi), `make api-generate`.
 6. Test: asc/desc gerçekten sıralıyor, eşit değerlerde `id` tiebreak kararlı, bilinmeyen sort → 400,
    çok değerli filtre çalışıyor (örnek: `internal/httpserver/list_sort_contract_integration_test.go`).
+
+## 5. Ters ilişki filtreleri
+
+Detay sayfalarının `RelatedList` sekmeleri için uuid filtreleri (`customer_uuid`,
+`product_uuid`, `created_by_uuid`, …) ve Ref şekli: `docs/refs.md` (TEC-1216).

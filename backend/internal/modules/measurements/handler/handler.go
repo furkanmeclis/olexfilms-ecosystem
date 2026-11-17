@@ -196,8 +196,17 @@ func (h *Handler) ListMeasurements(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, &usecase.ValidationError{Field: "measured_to", Message: "must be a date or RFC3339 date-time"})
 		return
 	}
+	var customer *uuid.UUID
+	if raw := strings.TrimSpace(v.Get("customer_uuid")); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			writeError(w, r, &usecase.ValidationError{Field: "customer_uuid", Message: "must be a UUID"})
+			return
+		}
+		customer = &id
+	}
 	items, total, err := h.svc.ListMeasurements(r.Context(), panelCaller(r), usecase.MeasurementFilter{
-		VIN: v.Get("vin"), DeviceUUIDs: deviceIDs, Statuses: statuses, Q: q.Q,
+		VIN: v.Get("vin"), DeviceUUIDs: deviceIDs, Statuses: statuses, Q: q.Q, CustomerUUID: customer,
 		Linked: linked, MeasuredFrom: from, MeasuredTo: to, Sort: sort, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {

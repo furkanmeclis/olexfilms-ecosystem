@@ -64,6 +64,8 @@ type MeasurementFilter struct {
 	Linked       *bool
 	MeasuredFrom *time.Time
 	MeasuredTo   *time.Time
+	// CustomerUUID: the service customer or the vehicle owner (TEC-1216).
+	CustomerUUID *uuid.UUID
 	Sort         apiquery.ResolvedSort
 	Limit        int32
 	Offset       int32
@@ -211,7 +213,8 @@ func (s *Service) ListMeasurements(ctx context.Context, c PanelCaller, f Measure
 		BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(), Vin: text(strings.ToUpper(strings.TrimSpace(f.VIN))),
 		DeviceUuids: f.DeviceUUIDs, Statuses: f.Statuses, Linked: boolPtr(f.Linked),
 		MeasuredFrom: timePtr(f.MeasuredFrom), MeasuredTo: timePtr(f.MeasuredTo), Q: q,
-		SortKey: sort.Key, SortDesc: sort.Desc,
+		CustomerUuid: uuidArg(f.CustomerUUID),
+		SortKey:      sort.Key, SortDesc: sort.Desc,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
@@ -407,4 +410,12 @@ func tireViews(rows []db.MeasurementTire) []MeasurementTireView {
 		})
 	}
 	return out
+}
+
+// uuidArg is an optional uuid query argument.
+func uuidArg(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
 }
