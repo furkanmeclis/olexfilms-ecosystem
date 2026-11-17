@@ -178,5 +178,7 @@
   "codes.ORDER_LINE_BELOW_ASSIGNED": "新数量低于已分配的条码;请先取消分配。",
   "codes.ORDER_NOT_INVOICEABLE": "只有已发货、已送达或已收货的订单才能标记为已开票。",
   "codes.ORDER_INVOICED": "已开票的订单不能取消；请先删除发票记录。",
-  "codes.ORDER_NOT_SUPPLEMENTABLE": "只能为已发货、已送达或已签收的订单添加补充发货。"
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "只能为已发货、已送达或已签收的订单添加补充发货。",
+  "codes.UNIT_CREDITS_EXHAUSTED": "该条码的使用额度已用完，无法在其他服务中选择。",
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "卷材和固定条码没有使用额度。"
 }

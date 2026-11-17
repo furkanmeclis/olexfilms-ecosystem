@@ -374,5 +374,10 @@
   "supplements.create": "Create supplementary shipment",
   "supplements.created": "Supplementary shipment {{no}} created.",
   "supplements.forbidden": "A supplementary shipment can only be added to a shipped or delivered order, by a user who can edit or ship orders.",
-  "detail.created_by": "Created by"
+  "detail.created_by": "Created by",
+  "plotter.credits_label": "Credits",
+  "plotter.credits_placeholder": "Product default",
+  "plotter.credits_hint": "Usage credits of the barcodes shipped on this line (1–1000); left empty, the product default applies.",
+  "plotter.credits_value": "Credits: {{credits}}",
+  "form.errors.credits_invalid": "Credits must be a whole number from 1 to 1000 (empty: product default)."
 }

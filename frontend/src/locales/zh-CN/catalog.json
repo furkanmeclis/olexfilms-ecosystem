@@ -306,5 +306,8 @@
   "related.tabs.orders": "未结订单",
   "related.tabs.warranties": "质保",
   "related.tabs.prices": "价格历史",
-  "related.empty_stock": "该产品没有库存单元。"
+  "related.empty_stock": "该产品没有库存单元。",
+  "fields.usage_credits": "使用额度",
+  "products.usage_credits_hint": "一个条码（单件单位）可用于多少次服务。每次在服务中选择扣除 1 个额度；卷材和固定条码没有额度。",
+  "validation.usage_credits": "请输入 1 到 {{max}} 之间的整数"
 }

@@ -48949,6 +48949,9 @@ components:
         plotter_cut:
           type: boolean
           description: TEC-1058 — the new mark of a plotter_marked step
+        plotter_credits:
+          type: integer
+          description: TEC-1221 — the line's usage credits set with a plotter_marked step
 
     OrderLineChange:
       type: object

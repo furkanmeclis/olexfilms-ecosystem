@@ -392,5 +392,11 @@
   "detail.created_by": "创建人",
   "detail.performed_by": "施工人",
   "detail.completed_by": "完成人",
-  "detail.cancelled_by": "取消人"
+  "detail.cancelled_by": "取消人",
+  "stock.credits": "剩余额度：{{remaining}} / {{total}}",
+  "stock.credit_take": "此次选择将使用 1 个额度。",
+  "stock.finish_product": "产品已用完",
+  "stock.finish_product_hint": "该条码的全部剩余额度（{{count}}）计入本服务；该条码将无法在其他服务中选择。",
+  "stock.finished_product": "产品已用完",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "该条码的使用额度已用完，无法在其他服务中选择。"
 }

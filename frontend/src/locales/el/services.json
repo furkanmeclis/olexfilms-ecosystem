@@ -392,5 +392,11 @@
   "detail.created_by": "Δημιουργήθηκε από",
   "detail.performed_by": "Εκτελέστηκε από",
   "detail.completed_by": "Ολοκληρώθηκε από",
-  "detail.cancelled_by": "Ακυρώθηκε από"
+  "detail.cancelled_by": "Ακυρώθηκε από",
+  "stock.credits": "Υπόλοιπο πιστώσεων: {{remaining}} / {{total}}",
+  "stock.credit_take": "Αυτή η επιλογή χρησιμοποιεί 1 πίστωση.",
+  "stock.finish_product": "Ολοκλήρωσα το προϊόν",
+  "stock.finish_product_hint": "Όλες οι υπόλοιπες πιστώσεις του κωδικού ({{count}}) πηγαίνουν σε αυτή την υπηρεσία· ο κωδικός δεν μπορεί να επιλεγεί σε άλλη υπηρεσία.",
+  "stock.finished_product": "Το προϊόν ολοκληρώθηκε",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Αυτός ο κωδικός δεν έχει άλλες πιστώσεις χρήσης· δεν μπορεί να επιλεγεί σε άλλη υπηρεσία."
 }

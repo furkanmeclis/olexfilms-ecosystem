@@ -306,5 +306,8 @@
   "related.tabs.orders": "الطلبات المفتوحة",
   "related.tabs.warranties": "الضمانات",
   "related.tabs.prices": "سجل الأسعار",
-  "related.empty_stock": "لا توجد وحدات مخزون لهذا المنتج."
+  "related.empty_stock": "لا توجد وحدات مخزون لهذا المنتج.",
+  "fields.usage_credits": "أرصدة الاستخدام",
+  "products.usage_credits_hint": "عدد الخدمات التي يمكن استخدام رمز شريطي واحد (وحدة مفردة) فيها. كل اختيار في خدمة يستهلك رصيدًا واحدًا؛ اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة.",
+  "validation.usage_credits": "أدخل عددًا صحيحًا من 1 إلى {{max}}"
 }

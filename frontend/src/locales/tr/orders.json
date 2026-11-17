@@ -374,5 +374,10 @@
   "supplements.create": "Ek gönderimi oluştur",
   "supplements.created": "{{no}} ek gönderimi oluşturuldu.",
   "supplements.forbidden": "Ek gönderim yalnızca sevk edilmiş veya teslim edilmiş siparişe, sipariş düzenleme veya sevk yetkisiyle eklenebilir.",
-  "detail.created_by": "Oluşturan"
+  "detail.created_by": "Oluşturan",
+  "plotter.credits_label": "Kredi",
+  "plotter.credits_placeholder": "Ürün varsayılanı",
+  "plotter.credits_hint": "Bu kalemle gönderilen barkodların kullanım kredisi (1–1000); boş bırakılırsa ürünün varsayılanı geçerli olur.",
+  "plotter.credits_value": "Kredi: {{credits}}",
+  "form.errors.credits_invalid": "Kredi 1 ile 1000 arasında tam sayı olmalı (boş: ürün varsayılanı)."
 }

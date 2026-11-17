@@ -306,5 +306,8 @@
   "related.tabs.orders": "Açıq sifarişlər",
   "related.tabs.warranties": "Zəmanətlər",
   "related.tabs.prices": "Qiymət tarixçəsi",
-  "related.empty_stock": "Bu məhsulun stok vahidi yoxdur."
+  "related.empty_stock": "Bu məhsulun stok vahidi yoxdur.",
+  "fields.usage_credits": "İstifadə krediti",
+  "products.usage_credits_hint": "Bir barkodun (tək vahid) neçə xidmətdə istifadə oluna biləcəyi. Hər xidmət seçimi 1 kredit çıxır; rulonlar və sabit barkodlar kredit daşımır.",
+  "validation.usage_credits": "1 ilə {{max}} arasında tam ədəd daxil edin"
 }

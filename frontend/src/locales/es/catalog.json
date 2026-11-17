@@ -316,5 +316,8 @@
   "related.tabs.orders": "Pedidos abiertos",
   "related.tabs.warranties": "Garantías",
   "related.tabs.prices": "Historial de precios",
-  "related.empty_stock": "No hay unidades de stock de este producto."
+  "related.empty_stock": "No hay unidades de stock de este producto.",
+  "fields.usage_credits": "Créditos de uso",
+  "products.usage_credits_hint": "En cuántos servicios se puede usar un código de barras (unidad individual). Cada selección en un servicio consume 1 crédito; los rollos y los códigos de barras fijos no tienen créditos.",
+  "validation.usage_credits": "Introduzca un número entero de 1 a {{max}}"
 }

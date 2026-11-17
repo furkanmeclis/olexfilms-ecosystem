@@ -392,5 +392,11 @@
   "detail.created_by": "Created by",
   "detail.performed_by": "Performed by",
   "detail.completed_by": "Completed by",
-  "detail.cancelled_by": "Cancelled by"
+  "detail.cancelled_by": "Cancelled by",
+  "stock.credits": "Credits left: {{remaining}} / {{total}}",
+  "stock.credit_take": "This selection uses 1 credit.",
+  "stock.finish_product": "I finished the product",
+  "stock.finish_product_hint": "All remaining credits of the barcode ({{count}}) go to this service; the barcode cannot be selected in another service.",
+  "stock.finished_product": "Product finished",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "This barcode has no usage credits left; it cannot be selected in another service."
 }

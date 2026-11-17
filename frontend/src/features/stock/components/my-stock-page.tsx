@@ -265,6 +265,31 @@ export function MyStockPage({
               })
             : "—",
       }) as ColumnDef<StockUnitRow, unknown>,
+      // TEC-1221: usage credits of a serial piece unit (none for rolls and
+      // fixed barcodes).
+      createColumn<StockUnitRow>({
+        id: "credits",
+        accessorFn: (r) => r.credits_remaining ?? -1,
+        labelKey: "stock.columns.credits",
+        enableSorting: false,
+        meta: { cellClassName: "text-end whitespace-nowrap tabular-nums" },
+        cell: ({ row }) =>
+          row.original.credits_total != null &&
+          row.original.credits_remaining != null
+            ? `${format.number(row.original.credits_remaining)} / ${format.number(row.original.credits_total)}`
+            : "—",
+      }) as ColumnDef<StockUnitRow, unknown>,
+      createColumn<StockUnitRow>({
+        id: "credits_used",
+        accessorFn: (r) => r.credits_used ?? -1,
+        labelKey: "stock.columns.credits_used",
+        enableSorting: false,
+        meta: { cellClassName: "text-end tabular-nums" },
+        cell: ({ row }) =>
+          row.original.credits_used != null
+            ? format.number(row.original.credits_used)
+            : "—",
+      }) as ColumnDef<StockUnitRow, unknown>,
       createColumn<StockUnitRow>({
         id: "location",
         accessorFn: (r) => r.location?.code ?? "",

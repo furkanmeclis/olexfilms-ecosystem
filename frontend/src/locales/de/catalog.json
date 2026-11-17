@@ -316,5 +316,8 @@
   "related.tabs.orders": "Offene Bestellungen",
   "related.tabs.warranties": "Garantien",
   "related.tabs.prices": "Preisverlauf",
-  "related.empty_stock": "Keine Lagereinheiten dieses Produkts."
+  "related.empty_stock": "Keine Lagereinheiten dieses Produkts.",
+  "fields.usage_credits": "Nutzungsguthaben",
+  "products.usage_credits_hint": "In wie vielen Services ein Barcode (Einzelstück) verwendet werden kann. Jede Auswahl in einem Service verbraucht 1 Guthaben; Rollen und feste Barcodes haben kein Guthaben.",
+  "validation.usage_credits": "Geben Sie eine ganze Zahl von 1 bis {{max}} ein"
 }

@@ -392,5 +392,11 @@
   "detail.created_by": "Създаден от",
   "detail.performed_by": "Изпълнен от",
   "detail.completed_by": "Завършен от",
-  "detail.cancelled_by": "Отменен от"
+  "detail.cancelled_by": "Отменен от",
+  "stock.credits": "Оставащи кредити: {{remaining}} / {{total}}",
+  "stock.credit_take": "Този избор използва 1 кредит.",
+  "stock.finish_product": "Продуктът е изразходван",
+  "stock.finish_product_hint": "Всички оставащи кредити на баркода ({{count}}) отиват за тази услуга; баркодът не може да бъде избран в друга услуга.",
+  "stock.finished_product": "Продуктът е изразходван",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Този баркод няма оставащи кредити за употреба; не може да бъде избран в друга услуга."
 }

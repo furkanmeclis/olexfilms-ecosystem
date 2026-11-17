@@ -335,5 +335,10 @@
   "supplements.create": "Əlavə göndərişi yarat",
   "supplements.created": "{{no}} əlavə göndərişi yaradıldı.",
   "supplements.forbidden": "Əlavə göndəriş yalnız göndərilmiş və ya çatdırılmış sifarişə, sifarişləri redaktə və ya göndərmə səlahiyyəti olan istifadəçi tərəfindən əlavə edilə bilər.",
-  "detail.created_by": "Yaradan"
+  "detail.created_by": "Yaradan",
+  "plotter.credits_label": "Kredit",
+  "plotter.credits_placeholder": "Məhsul defoltu",
+  "plotter.credits_hint": "Bu sətirlə göndərilən barkodların istifadə krediti (1–1000); boş qalarsa, məhsulun defolt dəyəri tətbiq olunur.",
+  "plotter.credits_value": "Kredit: {{credits}}",
+  "form.errors.credits_invalid": "Kredit 1 ilə 1000 arasında tam ədəd olmalıdır (boş: məhsul defoltu)."
 }

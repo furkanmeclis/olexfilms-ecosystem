@@ -316,5 +316,8 @@
   "related.tabs.orders": "Open orders",
   "related.tabs.warranties": "Warranties",
   "related.tabs.prices": "Price history",
-  "related.empty_stock": "No stock units of this product."
+  "related.empty_stock": "No stock units of this product.",
+  "fields.usage_credits": "Usage credits",
+  "products.usage_credits_hint": "How many services one barcode (serial piece unit) can be used in. Each service selection takes 1 credit; rolls and fixed barcodes carry no credits.",
+  "validation.usage_credits": "Enter a whole number from 1 to {{max}}"
 }

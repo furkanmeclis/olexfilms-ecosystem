@@ -28695,6 +28695,8 @@ export interface components {
             changes?: components["schemas"]["OrderLineChange"][];
             /** @description TEC-1058 — the new mark of a plotter_marked step */
             plotter_cut?: boolean;
+            /** @description TEC-1221 — the line's usage credits set with a plotter_marked step */
+            plotter_credits?: number;
         };
         /** @description TEC-1056: one line of an edit. before is the old amount (null: the line was added), after the new one (null: removed); pieces as a whole number, meters with two decimals. */
         OrderLineChange: {

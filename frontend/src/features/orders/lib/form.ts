@@ -32,10 +32,35 @@ export type OrderFormLine = {
   is_gift?: boolean;
   /** TEC-1058: "sent plotter cut" (information only); undefined = off. */
   plotter_cut?: boolean;
+  /**
+   * TEC-1221: typed usage credits of the barcodes shipped on a plotter cut
+   * line, "" = the product default. Sent only with plotter_cut on.
+   */
+  plotter_credits?: string;
 };
 
 export type LineError =
-  "quantity_invalid" | "meters_invalid" | "price_invalid" | "discount_invalid";
+  | "quantity_invalid"
+  | "meters_invalid"
+  | "price_invalid"
+  | "discount_invalid"
+  | "credits_invalid";
+
+/** order_items.plotter_credits bound (TEC-1221). */
+export const MAX_PLOTTER_CREDITS = 1000;
+
+/** Typed plotter credits: empty (product default) or a whole 1..1000. */
+export function plotterCreditsValid(raw: string | undefined): boolean {
+  const v = (raw ?? "").trim();
+  if (v === "") return true;
+  return INT_RE.test(v) && Number(v) >= 1 && Number(v) <= MAX_PLOTTER_CREDITS;
+}
+
+/** Typed plotter credits as the API value: 0 clears (product default). */
+export function plotterCreditsValue(raw: string | undefined): number {
+  const v = (raw ?? "").trim();
+  return v === "" ? 0 : Number(v);
+}
 
 /** order_items.discount_pct / organizations.*_discount_pct: 0..100. */
 const DISCOUNT_RE = /^[0-9]{1,3}(\.[0-9]{1,2})?$/;
@@ -98,6 +123,9 @@ export function unitPriceValid(raw: string | undefined): boolean {
 function lineError(line: OrderFormLine): LineError | null {
   if (!unitPriceValid(line.unit_price)) return "price_invalid";
   if (!discountValid(line.discount_pct)) return "discount_invalid";
+  if (line.plotter_cut === true && !plotterCreditsValid(line.plotter_credits)) {
+    return "credits_invalid";
+  }
   const v = normalizeAmount(line.amount);
   if (isRoll(line.unit_type)) {
     return METERS_RE.test(v) && Number(v) > 0 ? null : "meters_invalid";
@@ -141,10 +169,18 @@ export function toItemInputs(
       ? { product_uuid: line.product_uuid, meters: v }
       : { product_uuid: line.product_uuid, quantity: Number(v) };
     // TEC-1058: the plotter mark rides on every kind of line.
+    // TEC-1221: a plotter cut line always states its credits (0 = the
+    // product default), so a cleared field clears the stored override.
     const marked: OrderItemInput =
       line.plotter_cut === undefined
         ? base
-        : { ...base, plotter_cut: line.plotter_cut };
+        : line.plotter_cut
+          ? {
+              ...base,
+              plotter_cut: true,
+              plotter_credits: plotterCreditsValue(line.plotter_credits),
+            }
+          : { ...base, plotter_cut: false };
     if (!withPrice) return marked;
     const price = normalizeAmount(line.unit_price ?? "");
     const discount = normalizeAmount(line.discount_pct ?? "");
@@ -188,6 +224,8 @@ export function linesFromOrder(order: Order): OrderFormLine[] {
         ? item.meters
         : String(item.quantity ?? ""),
     plotter_cut: item.plotter_cut ?? false,
+    plotter_credits:
+      item.plotter_credits != null ? String(item.plotter_credits) : "",
   }));
 }
 

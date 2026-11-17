@@ -579,6 +579,78 @@ describe("Step 4: products and stock", () => {
     expect(api.removeItem).toHaveBeenCalledWith("s1", "i1");
     expect(props.onChanged).toHaveBeenCalledWith(after);
   });
+
+  it("shows the credits of a piece unit and finishes the product (TEC-1221)", async () => {
+    const pieceUnit: ServiceStockUnit = {
+      uuid: "u-piece",
+      barcode: "P-001",
+      unit_kind: "serial",
+      product: product("p-piece", "Glass Film", "piece", []),
+      quantity_on_hand: 1,
+      initial_meters: null,
+      remaining_meters: null,
+      credits: { credits_total: 5, credits_remaining: 3 },
+    };
+    api.listStockUnits.mockResolvedValue({ items: [pieceUnit, rollUnit] });
+    api.addItem.mockRejectedValue(
+      new ApiError({
+        status: 409,
+        code: "UNIT_CREDITS_EXHAUSTED",
+        message: "no credits",
+      }),
+    );
+    await renderStock(
+      service({
+        items: [
+          item({
+            uuid: "i2",
+            barcode: "P-002",
+            kind: "full",
+            meters: null,
+            finished_product: true,
+            credits: { credits_total: 5, credits_remaining: 0 },
+          }),
+        ],
+      }),
+    );
+    // The picker row shows the credits; a roll carries none.
+    expect(
+      $('[data-unit="P-001"] [data-testid="unit-row-credits"]')?.textContent,
+    ).toBe('services.stock.credits {"remaining":3,"total":5}');
+    expect(
+      $('[data-unit="R-001"] [data-testid="unit-row-credits"]'),
+    ).toBeNull();
+    // The selected item shows its unit's credits and the finished mark.
+    const row = $('[data-testid="service-item"]');
+    expect(
+      row?.querySelector('[data-testid="item-credits"]')?.textContent,
+    ).toBe('services.stock.credits {"remaining":0,"total":5}');
+    expect(row?.textContent).toContain("services.stock.finished_product");
+
+    await click($('[data-unit="P-001"] [data-testid="pick-unit"]'));
+    expect($('[data-testid="unit-credits"]')).not.toBeNull();
+    await click($('[data-testid="finish-product"]'));
+    await submit($('[data-testid="add-unit-form"]'));
+    expect(api.addItem).toHaveBeenCalledWith("s1", {
+      barcode: "P-001",
+      product_uuid: "p-piece",
+      kind: "full",
+      applied_parts: [],
+      finish_product: true,
+    });
+    expect($('[data-testid="add-error"]')?.textContent).toBe(
+      "services.stock.errors.UNIT_CREDITS_EXHAUSTED",
+    );
+  });
+
+  it("offers no credits or finish option for a roll", async () => {
+    api.listStockUnits.mockResolvedValue({ items: [rollUnit] });
+    api.addItem.mockResolvedValue(service());
+    await renderStock(service());
+    await click($('[data-testid="pick-unit"]'));
+    expect($('[data-testid="unit-credits"]')).toBeNull();
+    expect($('[data-testid="finish-product"]')).toBeNull();
+  });
 });
 
 describe("Last step: service number and completion (TEC-1076)", () => {

@@ -392,5 +392,11 @@
   "detail.created_by": "أنشأه",
   "detail.performed_by": "نفّذه",
   "detail.completed_by": "أكمله",
-  "detail.cancelled_by": "ألغاه"
+  "detail.cancelled_by": "ألغاه",
+  "stock.credits": "الأرصدة المتبقية: {{remaining}} / {{total}}",
+  "stock.credit_take": "يستخدم هذا الاختيار رصيدًا واحدًا.",
+  "stock.finish_product": "أنهيت المنتج",
+  "stock.finish_product_hint": "تُخصم جميع الأرصدة المتبقية للرمز الشريطي ({{count}}) لهذه الخدمة؛ ولا يمكن اختيار الرمز في خدمة أخرى.",
+  "stock.finished_product": "انتهى المنتج",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "لم يتبقَّ لهذا الرمز الشريطي أي رصيد استخدام؛ لا يمكن اختياره في خدمة أخرى."
 }

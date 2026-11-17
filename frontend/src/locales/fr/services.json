@@ -392,5 +392,11 @@
   "detail.created_by": "Créé par",
   "detail.performed_by": "Réalisé par",
   "detail.completed_by": "Terminé par",
-  "detail.cancelled_by": "Annulé par"
+  "detail.cancelled_by": "Annulé par",
+  "stock.credits": "Crédits restants : {{remaining}} / {{total}}",
+  "stock.credit_take": "Cette sélection utilise 1 crédit.",
+  "stock.finish_product": "J'ai terminé le produit",
+  "stock.finish_product_hint": "Tous les crédits restants du code-barres ({{count}}) sont imputés à cette prestation ; le code-barres ne pourra plus être sélectionné dans une autre prestation.",
+  "stock.finished_product": "Produit terminé",
+  "stock.errors.UNIT_CREDITS_EXHAUSTED": "Ce code-barres n'a plus de crédits d'utilisation ; il ne peut pas être sélectionné dans une autre prestation."
 }

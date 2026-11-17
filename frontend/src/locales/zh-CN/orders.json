@@ -335,5 +335,10 @@
   "supplements.create": "创建补充发货",
   "supplements.created": "补充发货 {{no}} 已创建。",
   "supplements.forbidden": "只有可编辑或发货订单的用户才能为已发货或已送达的订单添加补充发货。",
-  "detail.created_by": "创建人"
+  "detail.created_by": "创建人",
+  "plotter.credits_label": "额度",
+  "plotter.credits_placeholder": "产品默认",
+  "plotter.credits_hint": "本行发货条码的使用额度（1–1000）；留空则使用产品默认值。",
+  "plotter.credits_value": "额度：{{credits}}",
+  "form.errors.credits_invalid": "额度必须是 1 到 1000 之间的整数（留空：产品默认值）。"
 }
