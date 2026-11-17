@@ -226,7 +226,7 @@ func (s *Service) Claim(ctx context.Context, c Caller, orderUUID uuid.UUID, take
 		if err != nil {
 			return err
 		}
-		if partyOf(c, o) != PartySeller || !(c.can(rbac.PermOrdersShip) || canTakeOver(c)) {
+		if partyOf(c, o) != PartySeller || (!c.can(rbac.PermOrdersShip) && !canTakeOver(c)) {
 			return ErrForbidden
 		}
 		if !slices.Contains(queueStatuses, o.Status) {
@@ -272,7 +272,7 @@ func (s *Service) ReleaseClaim(ctx context.Context, c Caller, orderUUID uuid.UUI
 		if err != nil {
 			return err
 		}
-		if partyOf(c, o) != PartySeller || !(c.can(rbac.PermOrdersShip) || canTakeOver(c)) {
+		if partyOf(c, o) != PartySeller || (!c.can(rbac.PermOrdersShip) && !canTakeOver(c)) {
 			return ErrForbidden
 		}
 		result = o
