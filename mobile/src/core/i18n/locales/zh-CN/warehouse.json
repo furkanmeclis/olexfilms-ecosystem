@@ -739,5 +739,16 @@
   "stock.credits.short": "次数 {{value}}",
   "stock.credits.taken": "{{value}} 次",
   "stock.credits.title": "使用次数",
-  "stock.credits.used": "使用过的服务数"
+  "stock.credits.used": "使用过的服务数",
+  "discrepancy.complete_missing": "{{n}} 行标记为未到达。调拨完成；这些单位保持在途，并在记录中作为丢失调查跟踪。",
+  "discrepancy.kind.missing": "缺失",
+  "discrepancy.kind.surplus": "多余",
+  "discrepancy.mark_missing": "未到达",
+  "discrepancy.card_count": "差异记录（{{n}} 个未结）",
+  "discrepancy.resolution.found": "已找到",
+  "discrepancy.resolution.returned_to_source": "已退回来源",
+  "discrepancy.resolution.closed": "已关闭",
+  "discrepancy.resolve.found": "已找到，上架",
+  "discrepancy.resolve.returned_to_source": "已退回来源",
+  "discrepancy.resolve.closed": "关闭"
 }

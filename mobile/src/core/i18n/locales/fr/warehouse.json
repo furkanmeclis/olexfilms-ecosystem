@@ -739,5 +739,16 @@
   "stock.credits.short": "Crédits {{value}}",
   "stock.credits.taken": "{{value}} crédits",
   "stock.credits.title": "Crédits d'utilisation",
-  "stock.credits.used": "Utilisé dans des services"
+  "stock.credits.used": "Utilisé dans des services",
+  "discrepancy.complete_missing": "{{n}} lignes sont marquées non arrivées. Le transfert est clôturé ; ces unités restent en transit et sont suivies dans le constat comme enquête de perte.",
+  "discrepancy.kind.missing": "Manquant",
+  "discrepancy.kind.surplus": "Excédent",
+  "discrepancy.mark_missing": "Non arrivée",
+  "discrepancy.card_count": "Constat d'écarts ({{n}} ouverts)",
+  "discrepancy.resolution.found": "Retrouvée",
+  "discrepancy.resolution.returned_to_source": "Retour à la source",
+  "discrepancy.resolution.closed": "Clos",
+  "discrepancy.resolve.found": "Retrouvée, ranger",
+  "discrepancy.resolve.returned_to_source": "Retour à la source",
+  "discrepancy.resolve.closed": "Clore"
 }

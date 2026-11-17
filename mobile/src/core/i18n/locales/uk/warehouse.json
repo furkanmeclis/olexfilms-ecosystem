@@ -739,5 +739,16 @@
   "stock.credits.short": "Кредити {{value}}",
   "stock.credits.taken": "{{value}} кредитів",
   "stock.credits.title": "Кредити використання",
-  "stock.credits.used": "Використано в послугах"
+  "stock.credits.used": "Використано в послугах",
+  "discrepancy.complete_missing": "Рядків, позначених як не отримані: {{n}}. Переміщення завершується; ці одиниці лишаються в дорозі й відстежуються в акті як розслідування втрати.",
+  "discrepancy.kind.missing": "Нестача",
+  "discrepancy.kind.surplus": "Надлишок",
+  "discrepancy.mark_missing": "Не надійшла",
+  "discrepancy.card_count": "Акт розбіжностей (відкрито: {{n}})",
+  "discrepancy.resolution.found": "Знайдено",
+  "discrepancy.resolution.returned_to_source": "Повернено до джерела",
+  "discrepancy.resolution.closed": "Закрито",
+  "discrepancy.resolve.found": "Знайдено, розмістити",
+  "discrepancy.resolve.returned_to_source": "Повернено до джерела",
+  "discrepancy.resolve.closed": "Закрити"
 }

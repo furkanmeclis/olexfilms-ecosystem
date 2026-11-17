@@ -42,6 +42,7 @@ import { useCart } from './cart';
 import { LinePlotter, OrderLinesEditor } from './order-edit';
 import { creatorOf, liveTryAmount } from './order-summary';
 import { OrderTimeline, useActivityText, useAmountText } from './order-timeline';
+import { BackorderRows, DiscrepancySection, ReceiptCheckSheet } from './discrepancy';
 import { canStartSupplement, orderSubtitle, supplementParentOf } from './supplement';
 
 type ListOp = paths['/v1/orders']['get'];
@@ -190,6 +191,8 @@ export function OrderDetailScreen() {
   const prices = usePricesVisible();
   const amountText = useAmountText();
   const [editing, setEditing] = useState(false);
+  // TEC-1227: receive with a check (missing / damaged units).
+  const [checking, setChecking] = useState(false);
   // TEC-1222: "Add supplementary shipment" fills the cart for a new order of the same dealer.
   const pathname = usePathname();
   const canOrder = useCanOrder();
@@ -241,8 +244,16 @@ export function OrderDetailScreen() {
   const onBehalf = (status: OrderStatus) => status === 'received' && !!o?.receive_on_behalf;
   const actionLabel = (status: OrderStatus) => t(onBehalf(status) ? 'orders.action.received_on_behalf' : `orders.action.${status}`);
 
+  const storeOrder = (data: NonNullable<typeof o>) => {
+    qc.setQueryData(['orders', 'detail', uuid], data);
+    void qc.invalidateQueries({ queryKey: ['orders', 'list'] });
+  };
+
   const confirm = (status: OrderStatus) =>
-    Alert.alert(t(onBehalf(status) ? 'orders.confirm.received_on_behalf' : `orders.confirm.${status}`), o?.order_no, [
+    // TEC-1227: the buyer receives through the check sheet (missing / damaged units).
+    status === 'received' && !onBehalf(status) && o?.role === 'buyer'
+      ? setChecking(true)
+      : Alert.alert(t(onBehalf(status) ? 'orders.confirm.received_on_behalf' : `orders.confirm.${status}`), o?.order_no, [
       { text: t('common:cancel'), style: 'cancel' },
       {
         text: actionLabel(status),
@@ -300,6 +311,9 @@ export function OrderDetailScreen() {
                 ))}
               </View>
             ) : null}
+
+            <BackorderRows order={o} />
+            <DiscrepancySection order={o} onUpdated={storeOrder} />
 
             <List>
               {o.parent_order ? (
@@ -422,6 +436,7 @@ export function OrderDetailScreen() {
               </>
             ) : null}
             <OrderLinesEditor order={o} visible={editing} onClose={() => setEditing(false)} />
+            {checking ? <ReceiptCheckSheet order={o} onClose={() => setChecking(false)} onDone={storeOrder} /> : null}
           </>
         )}
       </Screen>

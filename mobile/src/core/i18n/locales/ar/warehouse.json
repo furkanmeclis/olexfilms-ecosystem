@@ -739,5 +739,16 @@
   "stock.credits.short": "الرصيد {{value}}",
   "stock.credits.taken": "{{value}} رصيد",
   "stock.credits.title": "أرصدة الاستخدام",
-  "stock.credits.used": "استُخدم في خدمات"
+  "stock.credits.used": "استُخدم في خدمات",
+  "discrepancy.complete_missing": "تم تحديد {{n}} سطرًا كغير واصل. يكتمل النقل؛ وتبقى هذه الوحدات قيد النقل وتُتابَع في المحضر كتحقيق فقدان.",
+  "discrepancy.kind.missing": "مفقود",
+  "discrepancy.kind.surplus": "فائض",
+  "discrepancy.mark_missing": "لم تصل",
+  "discrepancy.card_count": "محضر الفروقات ({{n}} مفتوحة)",
+  "discrepancy.resolution.found": "وُجدت",
+  "discrepancy.resolution.returned_to_source": "أُعيدت إلى المصدر",
+  "discrepancy.resolution.closed": "مغلق",
+  "discrepancy.resolve.found": "وُجدت، رتّبها",
+  "discrepancy.resolve.returned_to_source": "أُعيدت إلى المصدر",
+  "discrepancy.resolve.closed": "إغلاق"
 }

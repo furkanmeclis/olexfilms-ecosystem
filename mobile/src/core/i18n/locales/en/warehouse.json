@@ -739,5 +739,16 @@
   "entry.activity.created": "Created",
   "entry.activity.header_updated": "Edited the delivery details",
   "entry.activity.confirmed": "Confirmed",
-  "entry.activity.cancelled": "Cancelled"
+  "entry.activity.cancelled": "Cancelled",
+  "discrepancy.complete_missing": "{{n}} lines are marked as not arrived. The transfer completes; these units stay in transit and are tracked on the record as a loss investigation.",
+  "discrepancy.kind.missing": "Missing",
+  "discrepancy.kind.surplus": "Surplus",
+  "discrepancy.mark_missing": "Not arrived",
+  "discrepancy.card_count": "Discrepancy record ({{n}} open)",
+  "discrepancy.resolution.found": "Found",
+  "discrepancy.resolution.returned_to_source": "Returned to source",
+  "discrepancy.resolution.closed": "Closed",
+  "discrepancy.resolve.found": "Found, place it",
+  "discrepancy.resolve.returned_to_source": "Returned to source",
+  "discrepancy.resolve.closed": "Close"
 }

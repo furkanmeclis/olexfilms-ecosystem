@@ -739,5 +739,16 @@
   "stock.credits.short": "Guthaben {{value}}",
   "stock.credits.taken": "{{value}} Guthaben",
   "stock.credits.title": "Nutzungsguthaben",
-  "stock.credits.used": "Verwendet in Aufträgen"
+  "stock.credits.used": "Verwendet in Aufträgen",
+  "discrepancy.complete_missing": "{{n}} Zeilen sind als nicht angekommen markiert. Der Transfer wird abgeschlossen; diese Einheiten bleiben unterwegs und werden im Protokoll als Verlustklärung geführt.",
+  "discrepancy.kind.missing": "Fehlt",
+  "discrepancy.kind.surplus": "Überschuss",
+  "discrepancy.mark_missing": "Nicht angekommen",
+  "discrepancy.card_count": "Abweichungsprotokoll ({{n}} offen)",
+  "discrepancy.resolution.found": "Gefunden",
+  "discrepancy.resolution.returned_to_source": "Zur Quelle zurück",
+  "discrepancy.resolution.closed": "Geschlossen",
+  "discrepancy.resolve.found": "Gefunden, einlagern",
+  "discrepancy.resolve.returned_to_source": "Zur Quelle zurück",
+  "discrepancy.resolve.closed": "Schließen"
 }

@@ -739,5 +739,16 @@
   "stock.credits.short": "Kredit {{value}}",
   "stock.credits.taken": "{{value}} kredit",
   "stock.credits.title": "İstifadə krediti",
-  "stock.credits.used": "İstifadə olunduğu xidmət sayı"
+  "stock.credits.used": "İstifadə olunduğu xidmət sayı",
+  "discrepancy.complete_missing": "{{n}} sətir gəlmədi kimi işarələnib. Transfer tamamlanır; bu vahidlər yolda qalır və aktda itki araşdırması kimi izlənir.",
+  "discrepancy.kind.missing": "Əskik",
+  "discrepancy.kind.surplus": "Artıq",
+  "discrepancy.mark_missing": "Gəlmədi",
+  "discrepancy.card_count": "Fərq aktı ({{n}} açıq)",
+  "discrepancy.resolution.found": "Tapıldı",
+  "discrepancy.resolution.returned_to_source": "Mənbəyə qaytarıldı",
+  "discrepancy.resolution.closed": "Bağlandı",
+  "discrepancy.resolve.found": "Tapıldı, yerləşdir",
+  "discrepancy.resolve.returned_to_source": "Mənbəyə qaytarıldı",
+  "discrepancy.resolve.closed": "Bağla"
 }

@@ -739,5 +739,16 @@
   "stock.credits.short": "Кредити {{value}}",
   "stock.credits.taken": "{{value}} кредита",
   "stock.credits.title": "Кредити за използване",
-  "stock.credits.used": "Използван в услуги"
+  "stock.credits.used": "Използван в услуги",
+  "discrepancy.complete_missing": "{{n}} реда са отбелязани като непристигнали. Трансферът приключва; тези единици остават в транзит и се следят в протокола като разследване за загуба.",
+  "discrepancy.kind.missing": "Липсва",
+  "discrepancy.kind.surplus": "Излишък",
+  "discrepancy.mark_missing": "Не е пристигнала",
+  "discrepancy.card_count": "Протокол за несъответствия ({{n}} отворени)",
+  "discrepancy.resolution.found": "Намерена",
+  "discrepancy.resolution.returned_to_source": "Върната към източника",
+  "discrepancy.resolution.closed": "Затворено",
+  "discrepancy.resolve.found": "Намерена, разположи",
+  "discrepancy.resolve.returned_to_source": "Върната към източника",
+  "discrepancy.resolve.closed": "Затвори"
 }
