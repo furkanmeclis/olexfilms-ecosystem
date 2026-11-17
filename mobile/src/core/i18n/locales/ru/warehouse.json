@@ -739,5 +739,16 @@
   "stock.credits.short": "Кредиты {{value}}",
   "stock.credits.taken": "{{value}} кредитов",
   "stock.credits.title": "Кредиты использования",
-  "stock.credits.used": "Использован в услугах"
+  "stock.credits.used": "Использован в услугах",
+  "discrepancy.complete_missing": "Строк, отмеченных как не прибывшие: {{n}}. Перемещение завершается; эти единицы остаются в пути и отслеживаются в акте как расследование потери.",
+  "discrepancy.kind.missing": "Недостача",
+  "discrepancy.kind.surplus": "Излишек",
+  "discrepancy.mark_missing": "Не прибыла",
+  "discrepancy.card_count": "Акт расхождений (открыто: {{n}})",
+  "discrepancy.resolution.found": "Найдена",
+  "discrepancy.resolution.returned_to_source": "Возвращена в источник",
+  "discrepancy.resolution.closed": "Закрыто",
+  "discrepancy.resolve.found": "Найдена, разместить",
+  "discrepancy.resolve.returned_to_source": "Возвращена в источник",
+  "discrepancy.resolve.closed": "Закрыть"
 }

@@ -739,5 +739,16 @@
   "stock.credits.short": "Πιστώσεις {{value}}",
   "stock.credits.taken": "{{value}} πιστώσεις",
   "stock.credits.title": "Πιστώσεις χρήσης",
-  "stock.credits.used": "Χρησιμοποιήθηκε σε υπηρεσίες"
+  "stock.credits.used": "Χρησιμοποιήθηκε σε υπηρεσίες",
+  "discrepancy.complete_missing": "{{n}} γραμμές σημειώθηκαν ως μη αφιχθείσες. Η μεταφορά ολοκληρώνεται· αυτές οι μονάδες μένουν σε μεταφορά και παρακολουθούνται στο πρακτικό ως έρευνα απώλειας.",
+  "discrepancy.kind.missing": "Λείπει",
+  "discrepancy.kind.surplus": "Πλεόνασμα",
+  "discrepancy.mark_missing": "Δεν έφτασε",
+  "discrepancy.card_count": "Πρακτικό αποκλίσεων ({{n}} ανοιχτές)",
+  "discrepancy.resolution.found": "Βρέθηκε",
+  "discrepancy.resolution.returned_to_source": "Επέστρεψε στην πηγή",
+  "discrepancy.resolution.closed": "Κλειστή",
+  "discrepancy.resolve.found": "Βρέθηκε, τοποθέτηση",
+  "discrepancy.resolve.returned_to_source": "Επέστρεψε στην πηγή",
+  "discrepancy.resolve.closed": "Κλείσιμο"
 }

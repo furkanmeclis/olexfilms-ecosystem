@@ -739,5 +739,16 @@
   "entry.activity.created": "Oluşturdu",
   "entry.activity.header_updated": "Teslimat bilgisini düzenledi",
   "entry.activity.confirmed": "Onayladı",
-  "entry.activity.cancelled": "İptal etti"
+  "entry.activity.cancelled": "İptal etti",
+  "discrepancy.complete_missing": "{{n}} satır gelmedi olarak işaretli. Transfer tamamlanır, bu birimler yolda kalır ve tutanakta kayıp araştırması olarak izlenir.",
+  "discrepancy.kind.missing": "Eksik",
+  "discrepancy.kind.surplus": "Fazla",
+  "discrepancy.mark_missing": "Gelmedi",
+  "discrepancy.card_count": "Fark tutanağı ({{n}} açık)",
+  "discrepancy.resolution.found": "Bulundu",
+  "discrepancy.resolution.returned_to_source": "Kaynağa döndü",
+  "discrepancy.resolution.closed": "Kapatıldı",
+  "discrepancy.resolve.found": "Bulundu, yerleştir",
+  "discrepancy.resolve.returned_to_source": "Kaynağa döndü",
+  "discrepancy.resolve.closed": "Kapat"
 }

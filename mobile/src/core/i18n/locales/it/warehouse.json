@@ -739,5 +739,16 @@
   "stock.credits.short": "Crediti {{value}}",
   "stock.credits.taken": "{{value}} crediti",
   "stock.credits.title": "Crediti di utilizzo",
-  "stock.credits.used": "Usato in servizi"
+  "stock.credits.used": "Usato in servizi",
+  "discrepancy.complete_missing": "{{n}} righe sono segnate come non arrivate. Il trasferimento si chiude; queste unità restano in transito e sono seguite nel verbale come indagine di perdita.",
+  "discrepancy.kind.missing": "Mancante",
+  "discrepancy.kind.surplus": "Eccedenza",
+  "discrepancy.mark_missing": "Non arrivata",
+  "discrepancy.card_count": "Verbale differenze ({{n}} aperte)",
+  "discrepancy.resolution.found": "Trovata",
+  "discrepancy.resolution.returned_to_source": "Tornata all'origine",
+  "discrepancy.resolution.closed": "Chiusa",
+  "discrepancy.resolve.found": "Trovata, colloca",
+  "discrepancy.resolve.returned_to_source": "Tornata all'origine",
+  "discrepancy.resolve.closed": "Chiudi"
 }

@@ -135,6 +135,14 @@ export const transferApi = {
     ),
   cancel: (uuid: string) =>
     unwrap(api.POST('/v1/mobile/warehouse/transfers/{uuid}/cancel', { params: { ...mobile, path: { uuid } } })),
+  /** TEC-1227: resolve a row of a completed transfer's discrepancy record. */
+  resolveDiscrepancy: (uuid: string, discrepancy: string, body: S['WarehouseTransferDiscrepancyResolveInput']) =>
+    unwrap(
+      api.POST('/v1/mobile/warehouse/transfers/{uuid}/discrepancies/{discrepancy_uuid}/resolve', {
+        params: { ...mobile, path: { uuid, discrepancy_uuid: discrepancy } },
+        body,
+      }),
+    ),
 };
 
 // --- counts --------------------------------------------------------------------
