@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScannerInput } from '@/features/scanner/input-mode';
+import { WedgeInput } from '@/features/scanner/wedge-input';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -44,6 +46,8 @@ export function WarehouseScan() {
   const { warehouse } = useCurrentWarehouse();
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [torch, setTorch] = useState(false);
+  // TEC-1230: a hardware reader (keyboard wedge) instead of the camera.
+  const wedge = useScannerInput((s) => s.mode) === 'wedge';
   const [typing, setTyping] = useState(false);
   const [manual, setManual] = useState('');
   const [acting, setActing] = useState<string | null>(null);
@@ -140,7 +144,9 @@ export function WarehouseScan() {
 
   return (
     <View className="flex-1 bg-black">
-      {focused ? (
+      {wedge ? (
+        focused ? <WedgeInput paused={typing} onCode={(c) => void onCode(c)} /> : null
+      ) : focused ? (
         <CameraView
           style={{ flex: 1 }}
           facing="back"
@@ -154,13 +160,15 @@ export function WarehouseScan() {
         <View className="flex-1 flex-row">
           <WarehouseChip />
         </View>
-        <OverlayButton label={t('m.torch')} active={torch} onPress={() => setTorch((v) => !v)} icon="flashlight" />
+        {wedge ? null : (
+          <OverlayButton label={t('m.torch')} active={torch} onPress={() => setTorch((v) => !v)} icon="flashlight" />
+        )}
         <OverlayButton label={t('m.type_code')} active={typing} onPress={() => setTyping((v) => !v)} icon="keyboard" />
       </View>
 
       {state.kind === 'idle' && !typing ? (
         <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
-          <View className="h-44 w-72 rounded-2xl border-[3px] border-white/90" />
+          {wedge ? null : <View className="h-44 w-72 rounded-2xl border-[3px] border-white/90" />}
           <Text variant="callout" className="mt-5 px-8 text-center text-white/90">
             {t('scan.description')}
           </Text>

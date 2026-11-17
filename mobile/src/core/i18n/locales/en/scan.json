@@ -14,5 +14,12 @@
   "open_warranty": "Open warranty",
   "next_hint.unit": "You are not allowed to see this stock unit.",
   "next_hint.location": "Warehouse locations are scanned in the warehouse screens.",
-  "next_hint.unknown": "This code is not recognized. Scan the barcode on the product label or the QR code on the warranty certificate."
+  "next_hint.unknown": "This code is not recognized. Scan the barcode on the product label or the QR code on the warranty certificate.",
+  "input.section": "Code reading",
+  "input.camera": "Camera",
+  "input.camera_hint": "Scan with the phone camera.",
+  "input.wedge": "Hardware reader",
+  "input.wedge_hint": "Bluetooth/USB scanner or handheld terminal (keyboard mode, ends with Enter).",
+  "input.ready": "Reader ready, scan a code",
+  "input.ready_hint": "On Zebra/Honeywell terminals set the DataWedge profile to keystroke output."
 }

@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScannerInput } from '@/features/scanner/input-mode';
+import { WedgeInput } from '@/features/scanner/wedge-input';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
@@ -28,15 +30,17 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
+  // TEC-1230: a hardware reader (keyboard wedge) needs no camera.
+  const wedge = useScannerInput((s) => s.mode) === 'wedge';
   const [result, setResult] = useState<ScannedCode | null>(null);
   const busy = useRef(false);
   const pathname = usePathname();
   const canStock = useCan('stock.read');
   const action = result ? scanAction(result, { space: pathname.startsWith('/admin') ? 'admin' : 'bayi', canStock }) : null;
 
-  if (!permission) return <View className="flex-1 bg-black" />;
+  if (!wedge && !permission) return <View className="flex-1 bg-black" />;
 
-  if (!permission.granted) {
+  if (!wedge && !permission?.granted) {
     return (
       <View className="flex-1 justify-center bg-background">
         <EmptyState
@@ -44,7 +48,7 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
           title={t('permission_title')}
           body={t('permission_body')}
           action={
-            permission.canAskAgain
+            permission?.canAskAgain
               ? { title: t('permission_button'), onPress: () => void requestPermission() }
               : { title: t('open_settings'), onPress: () => void Linking.openSettings() }
           }
@@ -70,7 +74,9 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
 
   return (
     <View className="flex-1 bg-black">
-      {focused ? (
+      {wedge ? (
+        focused ? <WedgeInput paused={!!result} onCode={(data) => onScanned({ data })} /> : null
+      ) : focused ? (
         <CameraView
           style={{ flex: 1 }}
           facing="back"
@@ -79,9 +85,9 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
         />
       ) : null}
       <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
-        <View className="size-64 rounded-2xl border-[3px] border-white/90" />
+        {wedge ? null : <View className="size-64 rounded-2xl border-[3px] border-white/90" />}
         <Text variant="callout" className="mt-5 text-white/90">
-          {t('hint')}
+          {t(wedge ? 'input.ready' : 'hint')}
         </Text>
       </View>
       {result ? (

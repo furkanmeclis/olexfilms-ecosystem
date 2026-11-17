@@ -14,5 +14,12 @@
   "open_warranty": "Garantie öffnen",
   "next_hint.unit": "Sie dürfen diese Lagereinheit nicht ansehen.",
   "next_hint.location": "Lagerplätze werden in den Lagerbildschirmen gescannt.",
-  "next_hint.unknown": "Dieser Code wurde nicht erkannt. Scannen Sie den Barcode auf dem Produktetikett oder den QR-Code auf dem Garantiezertifikat."
+  "next_hint.unknown": "Dieser Code wurde nicht erkannt. Scannen Sie den Barcode auf dem Produktetikett oder den QR-Code auf dem Garantiezertifikat.",
+  "input.section": "Code-Erfassung",
+  "input.camera": "Kamera",
+  "input.camera_hint": "Mit der Handykamera scannen.",
+  "input.wedge": "Hardware-Scanner",
+  "input.wedge_hint": "Bluetooth-/USB-Scanner oder Handterminal (Tastaturmodus, endet mit Enter).",
+  "input.ready": "Scanner bereit, Code scannen",
+  "input.ready_hint": "Auf Zebra/Honeywell-Terminals das DataWedge-Profil auf Tastatureingabe stellen."
 }

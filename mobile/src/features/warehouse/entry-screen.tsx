@@ -1,9 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -19,11 +20,16 @@ import { PullRefresh } from '@/ui/pull-refresh';
 import { entryApi, resolveScan, type StockEntry, useEntry, wk } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, entryTone, formatDate, formatNumber, isCode, whError } from './format';
+import { useLabelPrint } from './label-print';
 import { Card, ErrorState, Field, IconButton, ListSkeleton } from './parts';
+import { QtyStepper } from './qty-stepper';
 import { ReserveSheet } from './reserve-sheet';
 import { arrivalChecked, isIsoDate, timelineDetail } from './receiving';
 import { ArrivalCard, DeliveryCard, ReceiptCard, ReceivingSheet, UndoCard } from './receiving-ui';
 import { useDocAction } from './use-action';
+
+/** Server limit of one label sheet. */
+const MAX_LABELS = 1000;
 
 /**
  * Stock entry (goods receipt): scan a bin QR, then the printed labels of the
@@ -40,6 +46,9 @@ export function EntryScreen() {
   const [scanning, setScanning] = useState(false);
   const [bin, setBin] = useState<{ uuid: string; code: string } | null>(null);
   const [reserving, setReserving] = useState(false);
+  // TEC-1230: pieces of a fixed barcode added per scan (was always 1).
+  const [qty, setQty] = useState(1);
+  const labels = useLabelPrint(() => void q.refetch());
   // TEC-1225: discrepancy record sheet; lot and production date of new lines.
   const [receiving, setReceiving] = useState(false);
   const [lot, setLot] = useState('');
@@ -53,6 +62,22 @@ export function EntryScreen() {
   const lines = (x?.lines ?? []).filter((l) => !l.undone);
   const unplaced = lines.filter((l) => !l.location);
   const store = (next: StockEntry) => qc.setQueryData(wk.entry(uuid), next);
+  // TEC-1230: bins that already hold the products, then empty bins.
+  const suggestions = useQuery({
+    queryKey: [...wk.entry(uuid), 'placement-suggestions', unplaced.length],
+    enabled: write && x?.status === 'draft' && unplaced.length > 0,
+    staleTime: 30_000,
+    queryFn: () =>
+      unwrap(api.GET('/v1/warehouse/stock-entries/{uuid}/placement-suggestions', { params: { path: { uuid } } })),
+  });
+  const suggested = suggestions.data
+    ? [
+        ...suggestions.data.products.flatMap((p) =>
+          p.locations.map((l) => ({ ...l, hint: t('entry.suggestions.same_product', { product: p.product.name }) })),
+        ),
+        ...suggestions.data.empty_locations.map((l) => ({ ...l, hint: t('entry.suggestions.empty') })),
+      ]
+    : [];
 
   const onCode = async (code: string): Promise<ScanOutcome> => {
     if (!x?.warehouse) return { ok: false, title: t('entries.no_warehouse') };
@@ -71,18 +96,28 @@ export function EntryScreen() {
       }
       if (r?.status === 'ok' && r.type === 'product') return { ok: false, title: t('m.scan_unit_not_product') };
       const barcode = r?.unit?.barcode ?? code;
-      const onEntry = lines.some((l) => l.barcode === barcode);
+      const onEntry = lines.some((l) => l.barcode.toUpperCase() === barcode.toUpperCase());
+      const fixed = r?.unit?.unit_kind === 'fixed';
       if (onEntry) {
         // Already a line (reserved or scanned before): only its shelf changes.
         if (!bin) return { ok: false, title: t('order_place.scan_location_first') };
         store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
       } else {
         if (x.mode === 'generate_new') return { ok: false, title: t('m.not_on_entry', { barcode }) };
-        let next = await entryApi.addLines(uuid, { barcodes: [barcode], ...lineDetails });
+        let next = await entryApi.addLines(uuid, {
+          barcodes: [barcode],
+          ...lineDetails,
+          ...(fixed ? { fixed_quantity: qty } : {}),
+        });
         if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
         store(next);
       }
-      return { ok: true, title: r?.product?.name ?? barcode, detail: bin ? `→ ${bin.code}` : t('entry.unplaced') };
+      const name = r?.product?.name ?? barcode;
+      return {
+        ok: true,
+        title: fixed && !onEntry ? `${name} × ${formatNumber(qty)}` : name,
+        detail: bin ? `→ ${bin.code}` : t('entry.unplaced'),
+      };
     } catch (e) {
       return { ok: false, title: whError(e) };
     }
@@ -202,6 +237,44 @@ export function EntryScreen() {
           </View>
         ) : null}
 
+        {write && draft && unplaced.length > 0 && suggested.length > 0 ? (
+          <Card>
+            <View className="flex-row items-center gap-2 pb-1">
+              <Icon name="location" tone="primary" size={18} />
+              <Text variant="headline" className="flex-1">
+                {t('entry.suggestions.title')}
+              </Text>
+            </View>
+            {suggested.map((l, i) => (
+              <Button
+                key={`${l.uuid}-${i}`}
+                variant="secondary"
+                title={`${l.full_code ?? l.code}${l.quantity != null ? ` (${formatNumber(l.quantity)})` : ''} · ${l.hint}`}
+                loading={busy === `sug:${l.uuid}`}
+                onPress={() => {
+                  setBin({ uuid: l.uuid, code: l.full_code ?? l.code });
+                  void run(`sug:${l.uuid}`, () =>
+                    entryApi.place(uuid, { line_uuids: unplaced.map((u) => u.uuid), location_uuid: l.uuid }),
+                  );
+                }}
+              />
+            ))}
+          </Card>
+        ) : null}
+
+        {lines.length > 0 ? (
+          <Button
+            variant="outline"
+            title={t('labels.print_entry', { count: Math.min(lines.length, MAX_LABELS) })}
+            icon={<Icon name="share" tone="primary" />}
+            loading={labels.busy}
+            onPress={() => {
+              const barcodes = lines.slice(0, MAX_LABELS).map((l) => l.barcode);
+              labels.open({ path: '/v1/stock/labels/units.pdf', query: { barcode: barcodes }, name: `entry-${barcodes.length}`, barcodes });
+            }}
+          />
+        ) : null}
+
         <SectionHeader title={`${t('entry.lines')} (${lines.length})`} />
         {lines.length === 0 ? (
           <Text variant="callout" tone="muted" className="px-4">
@@ -281,7 +354,9 @@ export function EntryScreen() {
         hint={t('entry.scan_barcode_hint')}
         onCode={onCode}
         footer={
-          <View className="gap-2 rounded-lg bg-card p-3">
+          <View className="gap-2">
+            {x.mode === 'generate_new' ? null : <QtyStepper label={t('m.fixed_qty')} value={qty} onChange={setQty} />}
+            <View className="gap-2 rounded-lg bg-card p-3">
             <Text variant="callout" className="font-semibold">
               {bin ? t('m.target_bin', { location: bin.code }) : t('m.entry_no_bin')}
             </Text>
@@ -295,9 +370,11 @@ export function EntryScreen() {
                 }
               />
             ) : null}
+            </View>
           </View>
         }
       />
+      {labels.sheet}
     </>
   );
 }
