@@ -1,1 +1,1 @@
-export { AdjustDetailScreen as default } from "@/features/warehouse/adjust-screen";
+export { AdjustDetailScreen as default } from '@/features/warehouse/adjust-screen';
