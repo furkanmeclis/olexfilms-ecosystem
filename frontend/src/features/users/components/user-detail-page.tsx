@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { UserSetPasswordDialog } from "@/features/users/components/user-set-password-dialog";
+import { UserActivitySection } from "@/features/users/components/user-activity-section";
 import { UserAuthMethodsIcons } from "@/features/users/components/user-auth-methods";
 import { UserOverviewCards } from "@/features/users/components/user-overview-cards";
 import { StartConversationButton } from "@/features/conversations/components/start-conversation-button";
@@ -348,6 +349,11 @@ export function UserDetailPage({ uuid }: UserDetailPageProps) {
               </div>
             )}
           </EntitySectionCard>
+
+          {/* TEC-1218: what this user did (activity log, actor filter). */}
+          <PermissionGuard permission={permissions.activity.read}>
+            <UserActivitySection uuid={user.uuid} />
+          </PermissionGuard>
         </div>
       ) : null}
 

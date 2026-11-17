@@ -120,5 +120,8 @@
   "overview.realm.panel": "Panel",
   "overview.realm.portal": "Müşteri portalı",
   "overview.realm.mobile": "Mobil uygulama",
-  "overview.error": "Kullanıcı özeti yüklenemedi."
+  "overview.error": "Kullanıcı özeti yüklenemedi.",
+  "detail.activity": "Etkinlik",
+  "detail.activity_empty_title": "Etkinlik yok",
+  "detail.activity_empty_description": "Bu kullanıcının filtrelere uyan bir işlemi yok."
 }

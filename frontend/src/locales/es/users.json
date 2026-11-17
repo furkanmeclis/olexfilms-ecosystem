@@ -120,5 +120,8 @@
   "overview.realm.panel": "Panel",
   "overview.realm.portal": "Portal de clientes",
   "overview.realm.mobile": "Aplicación móvil",
-  "overview.error": "No se pudo cargar el resumen del usuario."
+  "overview.error": "No se pudo cargar el resumen del usuario.",
+  "detail.activity": "Actividad",
+  "detail.activity_empty_title": "Sin actividad",
+  "detail.activity_empty_description": "Este usuario no tiene acciones que coincidan con los filtros."
 }

@@ -271,5 +271,15 @@
   "billing.fields.address": "Διεύθυνση τιμολόγησης",
   "billing.fields.email": "Email τιμολογίων",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Αντισυμβαλλόμενος"
+  "cari.counterparty": "Αντισυμβαλλόμενος",
+  "entry_detail.title": "Εγγραφή λογιστικού βιβλίου",
+  "entry_detail.not_found": "Η εγγραφή δεν βρέθηκε.",
+  "entry_detail.summary": "Εγγραφή",
+  "entry_detail.related": "Σχετικές εγγραφές",
+  "entry_detail.source_record": "Εγγραφή προέλευσης",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Αντισυμβαλλόμενος οργανισμός",
+  "entry_detail.revision": "Αναθεώρηση",
+  "entry_detail.reversal_of": "Αντιλογίζει την εγγραφή",
+  "entry_detail.reversed_by": "Αντιλογίστηκε από την εγγραφή"
 }

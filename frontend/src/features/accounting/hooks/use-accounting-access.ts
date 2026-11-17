@@ -41,6 +41,8 @@ export const accountingKeys = {
     ["accounting", org, "cari-detail", uuid] as const,
   entries: (org: string, params: unknown) =>
     ["accounting", org, "entries", params] as const,
+  entry: (org: string, uuid: string) =>
+    ["accounting", org, "entry", uuid] as const,
   statement: (org: string, cari: string, params: unknown) =>
     ["accounting", org, "statement", cari, params] as const,
   exportJob: (org: string, uuid: string) =>

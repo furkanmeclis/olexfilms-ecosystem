@@ -120,5 +120,8 @@
   "overview.realm.panel": "Panel",
   "overview.realm.portal": "Müştəri portalı",
   "overview.realm.mobile": "Mobil tətbiq",
-  "overview.error": "İstifadəçi xülasəsi yüklənmədi."
+  "overview.error": "İstifadəçi xülasəsi yüklənmədi.",
+  "detail.activity": "Fəaliyyət",
+  "detail.activity_empty_title": "Fəaliyyət yoxdur",
+  "detail.activity_empty_description": "Bu istifadəçinin filtrlərə uyğun əməliyyatı yoxdur."
 }

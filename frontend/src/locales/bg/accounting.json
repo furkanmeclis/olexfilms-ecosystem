@@ -271,5 +271,15 @@
   "billing.fields.address": "Адрес за фактуриране",
   "billing.fields.email": "Имейл за фактури",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Контрагент"
+  "cari.counterparty": "Контрагент",
+  "entry_detail.title": "Счетоводен запис",
+  "entry_detail.not_found": "Записът не е намерен.",
+  "entry_detail.summary": "Запис",
+  "entry_detail.related": "Свързани записи",
+  "entry_detail.source_record": "Изходен запис",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Насрещна организация",
+  "entry_detail.revision": "Ревизия",
+  "entry_detail.reversal_of": "Сторнира запис",
+  "entry_detail.reversed_by": "Сторниран със запис"
 }

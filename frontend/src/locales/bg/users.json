@@ -120,5 +120,8 @@
   "overview.realm.panel": "Панел",
   "overview.realm.portal": "Клиентски портал",
   "overview.realm.mobile": "Мобилно приложение",
-  "overview.error": "Прегледът на потребителя не можа да се зареди."
+  "overview.error": "Прегледът на потребителя не можа да се зареди.",
+  "detail.activity": "Активност",
+  "detail.activity_empty_title": "Няма активност",
+  "detail.activity_empty_description": "Този потребител няма действия, отговарящи на филтрите."
 }

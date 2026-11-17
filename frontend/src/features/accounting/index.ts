@@ -4,6 +4,7 @@ export { CariPage } from "@/features/accounting/components/cari-page";
 export { DisputeDetailPage } from "@/features/accounting/components/dispute-detail-page";
 export { DisputesPage } from "@/features/accounting/components/disputes-page";
 export { EntriesPage } from "@/features/accounting/components/entries-page";
+export { EntryDetailPage } from "@/features/accounting/components/entry-detail-page";
 export { StatementPage } from "@/features/accounting/components/statement-page";
 export { resolveAccountingAccess } from "@/features/accounting/lib/access";
 export {

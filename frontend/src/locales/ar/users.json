@@ -120,5 +120,8 @@
   "overview.realm.panel": "اللوحة",
   "overview.realm.portal": "بوابة العملاء",
   "overview.realm.mobile": "تطبيق الجوال",
-  "overview.error": "تعذّر تحميل نظرة المستخدم العامة."
+  "overview.error": "تعذّر تحميل نظرة المستخدم العامة.",
+  "detail.activity": "النشاط",
+  "detail.activity_empty_title": "لا يوجد نشاط",
+  "detail.activity_empty_description": "لا توجد إجراءات لهذا المستخدم تطابق عوامل التصفية."
 }

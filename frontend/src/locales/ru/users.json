@@ -120,5 +120,8 @@
   "overview.realm.panel": "Панель",
   "overview.realm.portal": "Портал клиента",
   "overview.realm.mobile": "Мобильное приложение",
-  "overview.error": "Не удалось загрузить обзор пользователя."
+  "overview.error": "Не удалось загрузить обзор пользователя.",
+  "detail.activity": "Активность",
+  "detail.activity_empty_title": "Нет активности",
+  "detail.activity_empty_description": "У этого пользователя нет действий, соответствующих фильтрам."
 }

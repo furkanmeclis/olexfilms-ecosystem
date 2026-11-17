@@ -271,5 +271,15 @@
   "billing.fields.address": "Adresse de facturation",
   "billing.fields.email": "E-mail de facturation",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Contrepartie"
+  "cari.counterparty": "Contrepartie",
+  "entry_detail.title": "Écriture comptable",
+  "entry_detail.not_found": "Écriture introuvable.",
+  "entry_detail.summary": "Écriture",
+  "entry_detail.related": "Enregistrements liés",
+  "entry_detail.source_record": "Enregistrement source",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Organisation contrepartie",
+  "entry_detail.revision": "Révision",
+  "entry_detail.reversal_of": "Contrepasse l'écriture",
+  "entry_detail.reversed_by": "Contrepassée par l'écriture"
 }

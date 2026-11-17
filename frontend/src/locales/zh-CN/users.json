@@ -120,5 +120,8 @@
   "overview.realm.panel": "面板",
   "overview.realm.portal": "客户门户",
   "overview.realm.mobile": "移动应用",
-  "overview.error": "无法加载用户概览。"
+  "overview.error": "无法加载用户概览。",
+  "detail.activity": "活动",
+  "detail.activity_empty_title": "暂无活动",
+  "detail.activity_empty_description": "该用户没有符合筛选条件的操作。"
 }

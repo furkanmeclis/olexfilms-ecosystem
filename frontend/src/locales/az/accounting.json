@@ -271,5 +271,15 @@
   "billing.fields.address": "Faktura ünvanı",
   "billing.fields.email": "Faktura e-poçtu",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Qarşı tərəf"
+  "cari.counterparty": "Qarşı tərəf",
+  "entry_detail.title": "Kitab qeydi",
+  "entry_detail.not_found": "Qeyd tapılmadı.",
+  "entry_detail.summary": "Qeyd",
+  "entry_detail.related": "Əlaqəli qeydlər",
+  "entry_detail.source_record": "Mənbə qeydi",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Qarşı tərəf təşkilatı",
+  "entry_detail.revision": "Revizyon",
+  "entry_detail.reversal_of": "Ləğv etdiyi qeyd",
+  "entry_detail.reversed_by": "Ləğv edən qeyd"
 }

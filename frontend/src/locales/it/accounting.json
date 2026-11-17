@@ -271,5 +271,15 @@
   "billing.fields.address": "Indirizzo di fatturazione",
   "billing.fields.email": "E-mail di fatturazione",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Controparte"
+  "cari.counterparty": "Controparte",
+  "entry_detail.title": "Registrazione contabile",
+  "entry_detail.not_found": "Registrazione non trovata.",
+  "entry_detail.summary": "Registrazione",
+  "entry_detail.related": "Record collegati",
+  "entry_detail.source_record": "Record di origine",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Organizzazione controparte",
+  "entry_detail.revision": "Revisione",
+  "entry_detail.reversal_of": "Storna la registrazione",
+  "entry_detail.reversed_by": "Stornata dalla registrazione"
 }

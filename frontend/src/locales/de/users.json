@@ -120,5 +120,8 @@
   "overview.realm.panel": "Panel",
   "overview.realm.portal": "Kundenportal",
   "overview.realm.mobile": "Mobile App",
-  "overview.error": "Die Benutzerübersicht konnte nicht geladen werden."
+  "overview.error": "Die Benutzerübersicht konnte nicht geladen werden.",
+  "detail.activity": "Aktivität",
+  "detail.activity_empty_title": "Keine Aktivität",
+  "detail.activity_empty_description": "Dieser Benutzer hat keine Aktionen, die den Filtern entsprechen."
 }

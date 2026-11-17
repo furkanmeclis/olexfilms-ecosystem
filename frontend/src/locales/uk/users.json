@@ -120,5 +120,8 @@
   "overview.realm.panel": "Панель",
   "overview.realm.portal": "Портал клієнта",
   "overview.realm.mobile": "Мобільний застосунок",
-  "overview.error": "Не вдалося завантажити огляд користувача."
+  "overview.error": "Не вдалося завантажити огляд користувача.",
+  "detail.activity": "Активність",
+  "detail.activity_empty_title": "Немає активності",
+  "detail.activity_empty_description": "Цей користувач не має дій, що відповідають фільтрам."
 }

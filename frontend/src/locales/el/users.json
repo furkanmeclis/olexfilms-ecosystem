@@ -120,5 +120,8 @@
   "overview.realm.panel": "Πίνακας",
   "overview.realm.portal": "Πύλη πελατών",
   "overview.realm.mobile": "Εφαρμογή κινητού",
-  "overview.error": "Δεν ήταν δυνατή η φόρτωση της επισκόπησης χρήστη."
+  "overview.error": "Δεν ήταν δυνατή η φόρτωση της επισκόπησης χρήστη.",
+  "detail.activity": "Δραστηριότητα",
+  "detail.activity_empty_title": "Καμία δραστηριότητα",
+  "detail.activity_empty_description": "Αυτός ο χρήστης δεν έχει ενέργειες που ταιριάζουν με τα φίλτρα."
 }

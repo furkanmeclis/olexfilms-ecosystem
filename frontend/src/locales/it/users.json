@@ -120,5 +120,8 @@
   "overview.realm.panel": "Pannello",
   "overview.realm.portal": "Portale clienti",
   "overview.realm.mobile": "App mobile",
-  "overview.error": "Impossibile caricare la panoramica dell'utente."
+  "overview.error": "Impossibile caricare la panoramica dell'utente.",
+  "detail.activity": "Attività",
+  "detail.activity_empty_title": "Nessuna attività",
+  "detail.activity_empty_description": "Questo utente non ha azioni corrispondenti ai filtri."
 }

@@ -271,5 +271,15 @@
   "billing.fields.address": "Fatura adresi",
   "billing.fields.email": "Fatura e-postası",
   "billing.fields.iban": "IBAN",
-  "cari.counterparty": "Karşı taraf"
+  "cari.counterparty": "Karşı taraf",
+  "entry_detail.title": "Defter kaydı",
+  "entry_detail.not_found": "Kayıt bulunamadı.",
+  "entry_detail.summary": "Kayıt",
+  "entry_detail.related": "İlgili kayıtlar",
+  "entry_detail.source_record": "Kaynak kayıt",
+  "entry_detail.source_ref": "{{source}} #{{id}}",
+  "entry_detail.counterparty": "Karşı kuruluş",
+  "entry_detail.revision": "Revizyon",
+  "entry_detail.reversal_of": "Ters çevirdiği kayıt",
+  "entry_detail.reversed_by": "Ters kaydı"
 }
