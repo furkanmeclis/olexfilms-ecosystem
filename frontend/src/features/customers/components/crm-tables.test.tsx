@@ -495,7 +495,7 @@ describe("LeadsListPage (TEC-372)", () => {
       { id: "target_type", value: ["dealer_candidate"] },
       { id: "source", value: ["whatsapp", "website"] },
       { id: "temperature", value: ["hot"] },
-      { id: "assignee", value: ["none", "7"] },
+      { id: "assignee", value: ["none", "user-7"] },
       { id: "created_at", value: ["2026-09-01", "2026-09-30"] },
     ]);
     await setSort("temperature", true);
@@ -510,7 +510,7 @@ describe("LeadsListPage (TEC-372)", () => {
       target_type: "dealer_candidate",
       source: "whatsapp,website",
       temperature: "hot",
-      assignee_user_id: "none,7",
+      assignee_uuid: "none,user-7",
       created_from: "2026-09-01",
       created_to: "2026-09-30",
     };
@@ -524,7 +524,7 @@ describe("LeadsListPage (TEC-372)", () => {
     // A chosen assignee stays among the options.
     expect(
       column("assignee")?.meta?.filterOptions?.map((o) => o.value),
-    ).toEqual(["none", "7"]);
+    ).toEqual(["none", "user-7"]);
 
     const exportProps = captured.exports[captured.exports.length - 1];
     expect(exportProps?.exportPath).toBe("/v1/leads/export");
