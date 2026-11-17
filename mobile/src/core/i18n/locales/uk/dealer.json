@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "напр. Клієнт передумав",
   "placeholder_quantity": "1 шт.",
   "placeholder_meters": "1,5 м",
-  "applied_by": "Наніс"
+  "applied_by": "Наніс",
+  "related.warranties": "Гарантії",
+  "related.appointments": "Записи",
+  "related.measurements": "Заміри"
 }

@@ -25,5 +25,6 @@
   "barcode_serial": "Uno por unidad",
   "description": "Descripción",
   "unit_type.piece": "Pieza",
-  "unit_type.roll_meter": "Rollo (metros)"
+  "unit_type.roll_meter": "Rollo (metros)",
+  "stock_units": "Unidades en stock"
 }

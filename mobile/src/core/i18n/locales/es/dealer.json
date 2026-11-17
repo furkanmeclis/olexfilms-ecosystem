@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "p. ej. El cliente cambió de opinión",
   "placeholder_quantity": "1 ud.",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Aplicado por"
+  "applied_by": "Aplicado por",
+  "related.warranties": "Garantías",
+  "related.appointments": "Citas",
+  "related.measurements": "Mediciones"
 }

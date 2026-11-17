@@ -25,5 +25,6 @@
   "barcode_serial": "По един на единица",
   "description": "Описание",
   "unit_type.piece": "Брой",
-  "unit_type.roll_meter": "Ролка (метри)"
+  "unit_type.roll_meter": "Ролка (метри)",
+  "stock_units": "Единици в наличност"
 }

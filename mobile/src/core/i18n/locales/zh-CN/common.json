@@ -69,5 +69,7 @@
   "placeholder_plate": "34 ABC 123",
   "placeholder_vin": "17 位 VIN",
   "placeholder_year": "2024",
-  "placeholder_km": "45000 公里"
+  "placeholder_km": "45000 公里",
+  "related_empty": "暂无记录",
+  "related_more": "还有 {{count}} 条"
 }

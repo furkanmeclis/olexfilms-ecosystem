@@ -69,5 +69,7 @@
   "placeholder_plate": "34 ABC 123",
   "placeholder_vin": "VIN من 17 حرفًا",
   "placeholder_year": "2024",
-  "placeholder_km": "45000 كم"
+  "placeholder_km": "45000 كم",
+  "related_empty": "لا توجد سجلات",
+  "related_more": "{{count}} أخرى"
 }

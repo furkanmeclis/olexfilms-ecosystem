@@ -25,5 +25,6 @@
   "barcode_serial": "Hər vahidə bir",
   "description": "Təsvir",
   "unit_type.piece": "Ədəd",
-  "unit_type.roll_meter": "Rulon (metr)"
+  "unit_type.roll_meter": "Rulon (metr)",
+  "stock_units": "Stok vahidləri"
 }

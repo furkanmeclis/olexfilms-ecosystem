@@ -69,5 +69,7 @@
   "placeholder_plate": "34 ABC 123",
   "placeholder_vin": "17 simvollu VIN",
   "placeholder_year": "2024",
-  "placeholder_km": "45000 km"
+  "placeholder_km": "45000 km",
+  "related_empty": "Qeyd yoxdur",
+  "related_more": "Daha {{count}}"
 }

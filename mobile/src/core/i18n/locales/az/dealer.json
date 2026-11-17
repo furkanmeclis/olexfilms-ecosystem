@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "məs. Müştəri fikrini dəyişdi",
   "placeholder_quantity": "1 əd.",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Tətbiq edən"
+  "applied_by": "Tətbiq edən",
+  "related.warranties": "Zəmanətlər",
+  "related.appointments": "Randevular",
+  "related.measurements": "Ölçmələr"
 }

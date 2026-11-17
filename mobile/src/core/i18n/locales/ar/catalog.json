@@ -25,5 +25,6 @@
   "barcode_serial": "واحد لكل وحدة",
   "description": "الوصف",
   "unit_type.piece": "قطعة",
-  "unit_type.roll_meter": "لفة (بالمتر)"
+  "unit_type.roll_meter": "لفة (بالمتر)",
+  "stock_units": "وحدات المخزون"
 }

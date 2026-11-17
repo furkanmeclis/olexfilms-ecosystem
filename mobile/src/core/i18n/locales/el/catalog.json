@@ -25,5 +25,6 @@
   "barcode_serial": "Ένα ανά μονάδα",
   "description": "Περιγραφή",
   "unit_type.piece": "Τεμάχιο",
-  "unit_type.roll_meter": "Ρολό (μέτρα)"
+  "unit_type.roll_meter": "Ρολό (μέτρα)",
+  "stock_units": "Μονάδες αποθέματος"
 }

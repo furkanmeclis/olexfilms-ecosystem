@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "напр. Клиентът се отказа",
   "placeholder_quantity": "1 бр.",
   "placeholder_meters": "1,5 м",
-  "applied_by": "Положено от"
+  "applied_by": "Положено от",
+  "related.warranties": "Гаранции",
+  "related.appointments": "Часове",
+  "related.measurements": "Измервания"
 }

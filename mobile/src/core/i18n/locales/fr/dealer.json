@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "ex. Le client a changé d'avis",
   "placeholder_quantity": "1 pce",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Posé par"
+  "applied_by": "Posé par",
+  "related.warranties": "Garanties",
+  "related.appointments": "Rendez-vous",
+  "related.measurements": "Mesures"
 }

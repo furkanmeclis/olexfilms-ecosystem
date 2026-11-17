@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "z. B. Kunde hat es sich anders überlegt",
   "placeholder_quantity": "1 Stk.",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Angebracht von"
+  "applied_by": "Angebracht von",
+  "related.warranties": "Garantien",
+  "related.appointments": "Termine",
+  "related.measurements": "Messungen"
 }

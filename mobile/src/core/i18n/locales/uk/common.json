@@ -69,5 +69,7 @@
   "placeholder_plate": "34 ABC 123",
   "placeholder_vin": "VIN із 17 символів",
   "placeholder_year": "2024",
-  "placeholder_km": "45000 км"
+  "placeholder_km": "45000 км",
+  "related_empty": "Немає записів",
+  "related_more": "Ще {{count}}"
 }

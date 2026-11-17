@@ -25,5 +25,6 @@
   "barcode_serial": "每件一个",
   "description": "描述",
   "unit_type.piece": "件",
-  "unit_type.roll_meter": "卷（米）"
+  "unit_type.roll_meter": "卷（米）",
+  "stock_units": "库存单元"
 }

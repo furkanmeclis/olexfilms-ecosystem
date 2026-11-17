@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "例如：客户改变主意了",
   "placeholder_quantity": "1 件",
   "placeholder_meters": "1.5 米",
-  "applied_by": "施工人"
+  "applied_by": "施工人",
+  "related.warranties": "质保",
+  "related.appointments": "预约",
+  "related.measurements": "测量"
 }

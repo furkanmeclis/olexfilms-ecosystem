@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "es. Il cliente ha cambiato idea",
   "placeholder_quantity": "1 pz",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Applicato da"
+  "applied_by": "Applicato da",
+  "related.warranties": "Garanzie",
+  "related.appointments": "Appuntamenti",
+  "related.measurements": "Misurazioni"
 }

@@ -290,5 +290,8 @@
   "placeholder_cancel_reason": "π.χ. Ο πελάτης άλλαξε γνώμη",
   "placeholder_quantity": "1 τεμ.",
   "placeholder_meters": "1,5 m",
-  "applied_by": "Εφαρμόστηκε από"
+  "applied_by": "Εφαρμόστηκε από",
+  "related.warranties": "Εγγυήσεις",
+  "related.appointments": "Ραντεβού",
+  "related.measurements": "Μετρήσεις"
 }

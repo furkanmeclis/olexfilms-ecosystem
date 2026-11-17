@@ -25,5 +25,6 @@
   "barcode_serial": "Uno per unità",
   "description": "Descrizione",
   "unit_type.piece": "Pezzo",
-  "unit_type.roll_meter": "Rotolo (metri)"
+  "unit_type.roll_meter": "Rotolo (metri)",
+  "stock_units": "Unità in magazzino"
 }
