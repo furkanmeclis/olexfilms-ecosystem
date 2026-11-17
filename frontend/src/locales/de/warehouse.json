@@ -751,6 +751,7 @@
   "receiving.add_photo": "Foto hinzufügen",
   "receiving.pending": "{{count}} Position(en) ohne Entscheidung.",
   "receiving.confirm_with_record": "Mit Protokoll bestätigen",
+  "receiving.report_damage": "Mit Schaden bestätigen",
   "receiving.attachments": "Dokumente und Fotos",
   "receiving.attachment_kind_label": "Dokumentart",
   "receiving.attachment_kind.waybill": "Lieferschein",

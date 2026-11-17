@@ -751,6 +751,7 @@
   "receiving.add_photo": "Ajouter une photo",
   "receiving.pending": "{{count}} élément(s) sans décision.",
   "receiving.confirm_with_record": "Confirmer avec PV",
+  "receiving.report_damage": "Confirmer avec dommages",
   "receiving.attachments": "Documents et photos",
   "receiving.attachment_kind_label": "Type de document",
   "receiving.attachment_kind.waybill": "Bon de livraison",

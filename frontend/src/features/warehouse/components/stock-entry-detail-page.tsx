@@ -380,6 +380,17 @@ export function StockEntryDetailPage({
               <XCircle className="size-4" />
               {t("warehouse.entry.cancel")}
             </Button>
+            {!arrivalChecked(entry) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReceivingOpen(true)}
+                disabled={finish.isPending || !canConfirm(entry)}
+                data-testid="entry-confirm-record"
+              >
+                {t("warehouse.receiving.report_damage")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               onClick={() => void askFinish("confirm")}

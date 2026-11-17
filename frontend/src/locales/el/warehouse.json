@@ -734,6 +734,7 @@
   "receiving.add_photo": "Προσθήκη φωτογραφίας",
   "receiving.pending": "Χωρίς απόφαση: {{count}}.",
   "receiving.confirm_with_record": "Επιβεβαίωση με πρωτόκολλο",
+  "receiving.report_damage": "Επιβεβαίωση με ζημιές",
   "receiving.attachments": "Έγγραφα και φωτογραφίες",
   "receiving.attachment_kind_label": "Τύπος εγγράφου",
   "receiving.attachment_kind.waybill": "Δελτίο αποστολής",

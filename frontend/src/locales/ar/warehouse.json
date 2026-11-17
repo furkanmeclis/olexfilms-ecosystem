@@ -734,6 +734,7 @@
   "receiving.add_photo": "إضافة صورة",
   "receiving.pending": "{{count}} بند بلا قرار.",
   "receiving.confirm_with_record": "التأكيد مع المحضر",
+  "receiving.report_damage": "التأكيد مع التلف",
   "receiving.attachments": "المستندات والصور",
   "receiving.attachment_kind_label": "نوع المستند",
   "receiving.attachment_kind.waybill": "بوليصة الشحن",

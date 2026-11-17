@@ -751,6 +751,7 @@
   "receiving.add_photo": "Добавить фото",
   "receiving.pending": "Без решения: {{count}}.",
   "receiving.confirm_with_record": "Подтвердить с актом",
+  "receiving.report_damage": "Подтвердить с повреждениями",
   "receiving.attachments": "Документы и фото",
   "receiving.attachment_kind_label": "Тип документа",
   "receiving.attachment_kind.waybill": "Накладная",

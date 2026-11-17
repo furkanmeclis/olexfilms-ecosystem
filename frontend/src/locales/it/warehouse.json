@@ -751,6 +751,7 @@
   "receiving.add_photo": "Aggiungi foto",
   "receiving.pending": "{{count}} voce/i senza decisione.",
   "receiving.confirm_with_record": "Conferma con verbale",
+  "receiving.report_damage": "Conferma con danni",
   "receiving.attachments": "Documenti e foto",
   "receiving.attachment_kind_label": "Tipo di documento",
   "receiving.attachment_kind.waybill": "DDT",

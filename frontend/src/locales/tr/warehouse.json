@@ -751,6 +751,7 @@
   "receiving.add_photo": "Fotoğraf ekle",
   "receiving.pending": "{{count}} kalem için karar eksik.",
   "receiving.confirm_with_record": "Tutanakla onayla",
+  "receiving.report_damage": "Hasarla onayla",
   "receiving.attachments": "Belgeler ve fotoğraflar",
   "receiving.attachment_kind_label": "Belge türü",
   "receiving.attachment_kind.waybill": "İrsaliye",

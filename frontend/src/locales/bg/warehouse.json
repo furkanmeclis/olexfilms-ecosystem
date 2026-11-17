@@ -734,6 +734,7 @@
   "receiving.add_photo": "Добави снимка",
   "receiving.pending": "Без решение: {{count}}.",
   "receiving.confirm_with_record": "Потвърди с протокол",
+  "receiving.report_damage": "Потвърди с повреди",
   "receiving.attachments": "Документи и снимки",
   "receiving.attachment_kind_label": "Вид документ",
   "receiving.attachment_kind.waybill": "Товарителница",

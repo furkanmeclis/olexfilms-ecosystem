@@ -734,6 +734,7 @@
   "receiving.add_photo": "添加照片",
   "receiving.pending": "还有 {{count}} 项未处理。",
   "receiving.confirm_with_record": "确认并记录",
+  "receiving.report_damage": "按损坏确认",
   "receiving.attachments": "文件和照片",
   "receiving.attachment_kind_label": "文件类型",
   "receiving.attachment_kind.waybill": "运单",

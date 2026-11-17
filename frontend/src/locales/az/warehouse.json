@@ -734,6 +734,7 @@
   "receiving.add_photo": "Foto əlavə et",
   "receiving.pending": "{{count}} bənd üçün qərar yoxdur.",
   "receiving.confirm_with_record": "Aktla təsdiqlə",
+  "receiving.report_damage": "Zədə ilə təsdiqlə",
   "receiving.attachments": "Sənədlər və fotolar",
   "receiving.attachment_kind_label": "Sənəd növü",
   "receiving.attachment_kind.waybill": "Qaimə",

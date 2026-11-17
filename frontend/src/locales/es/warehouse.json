@@ -751,6 +751,7 @@
   "receiving.add_photo": "Añadir foto",
   "receiving.pending": "{{count}} elemento(s) sin decisión.",
   "receiving.confirm_with_record": "Confirmar con acta",
+  "receiving.report_damage": "Confirmar con daños",
   "receiving.attachments": "Documentos y fotos",
   "receiving.attachment_kind_label": "Tipo de documento",
   "receiving.attachment_kind.waybill": "Albarán",

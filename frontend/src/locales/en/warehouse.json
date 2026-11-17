@@ -751,6 +751,7 @@
   "receiving.add_photo": "Add photo",
   "receiving.pending": "{{count}} item(s) still need a decision.",
   "receiving.confirm_with_record": "Confirm with record",
+  "receiving.report_damage": "Confirm with damage",
   "receiving.attachments": "Documents and photos",
   "receiving.attachment_kind_label": "Document type",
   "receiving.attachment_kind.waybill": "Waybill",
