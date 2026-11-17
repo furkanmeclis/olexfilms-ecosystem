@@ -214,6 +214,7 @@ type Querier interface {
 	CountConnectionLocationMaps(ctx context.Context, arg CountConnectionLocationMapsParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
+	CountContractInstancesPanel(ctx context.Context, arg CountContractInstancesPanelParams) (int64, error)
 	// TEC-397 (F4-02e): WhatsApp visitor flow — abuse limits, the KVKK notice
 	// before a lead, the 30 day lead window and the address of a visitor lead.
 	// AI runs of a conversation since a time that called the model (a fixed
@@ -1895,6 +1896,13 @@ type Querier interface {
 	// org_ids is the caller's scope (empty = no organization).
 	ListContractInstances(ctx context.Context, arg ListContractInstancesParams) ([]ContractInstance, error)
 	ListContractInstancesBySubject(ctx context.Context, arg ListContractInstancesBySubjectParams) ([]ContractInstance, error)
+	// TEC-1216: panel contract list (GET /v1/contracts, docs/list-contract.md).
+	// brand_id / org_ids is the contracts.read scope (NULL = no restriction);
+	// actor_user_id narrows own / assigned scopes to the services the user
+	// opened and the subscriptions the user assigned. customer_uuid matches
+	// the service customer or the customer signer. Sort keys from contracts
+	// usecase.ListSort; id is the tiebreak.
+	ListContractInstancesPanel(ctx context.Context, arg ListContractInstancesPanelParams) ([]ListContractInstancesPanelRow, error)
 	ListContractMedia(ctx context.Context, instanceID int64) ([]ContractMedium, error)
 	ListContractPDFSigners(ctx context.Context, instanceID int64) ([]ListContractPDFSignersRow, error)
 	// ---------------------------------------------------------------------------
@@ -3512,6 +3520,14 @@ type Querier interface {
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
+	// TEC-1216 (cross-record refs): detail summaries of records that had no
+	// tenant detail endpoint. Callers authorize first (organizations.read /
+	// members.read scope) and show a counter only when the caller holds that
+	// module's read permission.
+	// Counters of one organization: its members, direct children, customers,
+	// services, warranties, orders (as seller or buyer), open tasks about it,
+	// leads and warehouses.
+	OrganizationSummaryCounts(ctx context.Context, organizationID int64) (OrganizationSummaryCountsRow, error)
 	OverviewRecentCompletedServices(ctx context.Context, arg OverviewRecentCompletedServicesParams) ([]OverviewRecentCompletedServicesRow, error)
 	// TEC-868: home overview of one organization (dealer home "Analiz"). Only
 	// the services of org_id (the active organization), inside the domain brand
@@ -4031,6 +4047,14 @@ type Querier interface {
 	SupplierOf(ctx context.Context, id int64) (Organization, error)
 	// The target takes over the phone / e-mail it does not have yet.
 	TakeOverMergedIdentity(ctx context.Context, arg TakeOverMergedIdentityParams) error
+	// What a staff user did inside the brand and org_ids (NULL = brand).
+	TenantMemberCounts(ctx context.Context, arg TenantMemberCountsParams) (TenantMemberCountsRow, error)
+	// The memberships of a user inside the brand and org_ids (NULL = brand),
+	// with organization roles and warehouse memberships.
+	TenantMemberMemberships(ctx context.Context, arg TenantMemberMembershipsParams) ([]TenantMemberMembershipsRow, error)
+	// A staff user who is a member of at least one organization of the brand
+	// inside org_ids (NULL = the whole brand).
+	TenantMemberUser(ctx context.Context, arg TenantMemberUserParams) (TenantMemberUserRow, error)
 	// TEC-151 (F1-09c): top-10 car brands / models by completed services of one
 	// domain brand. Both queries read idx_services_brand_car
 	// (brand_id, car_brand_id, car_model_id, completed_at). completed_at is set

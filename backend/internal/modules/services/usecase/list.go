@@ -33,11 +33,16 @@ const (
 	QueryOrganizationUUID = "organization_uuid"
 	QueryCustomerUUID     = "customer_uuid"
 	QueryVehicleUUID      = "vehicle_uuid"
+	// TEC-1216 reverse relation filters (RelatedList).
+	QueryCreatedByUUID = "created_by_uuid"
+	QueryPerformerUUID = "performer_uuid"
+	QueryProductUUID   = "product_uuid"
 )
 
 // listKeys are the list parameters an export job carries.
 var listKeys = []string{
 	"q", "sort", QueryStatus, QueryOrganizationUUID, QueryCustomerUUID, QueryVehicleUUID,
+	QueryCreatedByUUID, QueryPerformerUUID, QueryProductUUID,
 	"created_from", "created_to", "completed_from", "completed_to",
 }
 
@@ -68,6 +73,13 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 	}
 	if f.OrganizationUUIDs, err = UUIDList(values, QueryOrganizationUUID); err != nil {
 		return f, err
+	}
+	for key, dst := range map[string]*pgtype.UUID{
+		QueryCreatedByUUID: &f.CreatedByUUID, QueryPerformerUUID: &f.PerformerUUID, QueryProductUUID: &f.ProductUUID,
+	} {
+		if *dst, err = OptUUID(values, key); err != nil {
+			return f, err
+		}
 	}
 	created, err := apiquery.DateRange(values, "created")
 	if err != nil {
@@ -101,11 +113,27 @@ func UUIDList(values url.Values, key string) ([]uuid.UUID, error) {
 	return out, nil
 }
 
+// OptUUID reads one optional uuid query value (400 on a bad value).
+func OptUUID(values url.Values, key string) (pgtype.UUID, error) {
+	raw := strings.TrimSpace(values.Get(key))
+	if raw == "" {
+		return pgtype.UUID{}, nil
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return pgtype.UUID{}, &apiquery.ValidationError{Details: []apiquery.Detail{{
+			Field: key, Message: "must be a uuid", Code: "invalid",
+		}}}
+	}
+	return pgtype.UUID{Bytes: id, Valid: true}, nil
+}
+
 // sqlOnly reports whether the filter uses a parameter the services index
 // cannot answer (TEC-209 keeps q on the index otherwise).
 func (f ListFilter) sqlOnly() bool {
 	return f.SortExplicit || f.CreatedFrom != nil || f.CreatedTo != nil ||
-		f.CompletedFrom != nil || f.CompletedTo != nil || len(f.OrganizationUUIDs) > 0
+		f.CompletedFrom != nil || f.CompletedTo != nil || len(f.OrganizationUUIDs) > 0 ||
+		f.CreatedByUUID.Valid || f.PerformerUUID.Valid || f.ProductUUID.Valid
 }
 
 // sortArgs is the resolved sort (the default when the filter has none).

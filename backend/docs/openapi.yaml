@@ -6234,6 +6234,69 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/tenant/organizations/{uuid}/summary:
+    get:
+      tags: [Tenant]
+      operationId: getTenantOrganizationSummary
+      summary: Organization detail summary with counters (TEC-1216)
+      description: >-
+        The organization (as GET /v1/tenant/organizations/{uuid}), its Ref
+        and parent Ref and counters, inside the caller's organizations.read
+        scope (404 outside it). A counter is null when the caller does not
+        hold that module's read permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Organization summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrganizationSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tenant/users/{uuid}/summary:
+    get:
+      tags: [Tenant]
+      operationId: getTenantMemberSummary
+      summary: Staff user detail summary (TEC-1216)
+      description: >-
+        A staff user who is a member of an organization inside the caller's
+        members.read scope (404 otherwise, also for customer only
+        accounts): identity, memberships in the scope with roles and
+        warehouses (Refs), and what the user did there. A counter is null
+        when the caller does not hold that module's read permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Member summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMemberSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/tenant/members:
     post:
       tags: [Tenant]
@@ -7495,6 +7558,64 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/contracts:
+    get:
+      tags: [Contracts]
+      operationId: listContracts
+      summary: Contracts inside the contracts.read scope (TEC-1216)
+      description: >-
+        Panel contract list (docs/list-contract.md). Every relation is a Ref
+        (docs/refs.md): subject (kind service or subscription), customer,
+        organization. Own / assigned scopes see the contracts of the
+        services they opened and the subscriptions they assigned. `sort` is
+        one of created_at, contract_no, status; default `-created_at`, id
+        tiebreak.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Sort"
+        - name: customer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): the service
+            customer or the customer signer.
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          description: Comma separated statuses (draft, pending, executed, voided).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [draft, pending, executed, voided] }
+        - name: kind
+          in: query
+          description: Comma separated kinds (vehicle_intake, service_sale).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [vehicle_intake, service_sale] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Contracts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContractListPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/contracts/{uuid}:
     get:
@@ -18052,6 +18173,11 @@ paths:
           in: query
           schema: { type: boolean }
           description: true for results linked to a service, false for unlinked results.
+        - name: customer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): measurements whose linked service customer or vehicle owner is the customer.
+          schema: { type: string, format: uuid }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -23069,6 +23195,11 @@ paths:
             Upper bound of end_at: a YYYY-MM-DD day in UTC covers the whole
             day, an RFC3339 value that instant. Must not be before end_from.
           schema: { type: string }
+        - name: customer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): warranties held by the customer (holder, the current owner after a vehicle transfer).
+          schema: { type: string, format: uuid }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -23834,6 +23965,21 @@ paths:
             Upper bound of completed_at: a YYYY-MM-DD day in UTC covers the whole
             day, an RFC3339 value that instant. Must not be before completed_from.
           schema: { type: string }
+        - name: created_by_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): services the user opened.
+          schema: { type: string, format: uuid }
+        - name: performer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): services the user performed (performed_by, else created_by).
+          schema: { type: string, format: uuid }
+        - name: product_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): services with an item of the product. Like every filter it only narrows the scoped set.
+          schema: { type: string, format: uuid }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -25651,6 +25797,25 @@ paths:
           in: query
           description: Inclusive upper bound of the order total.
           schema: { type: number }
+        - name: organization_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): comma separated organizations; an order matches when one of them is the seller or the buyer. It only narrows the scoped set.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: product_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): orders with a line of the product.
+          schema: { type: string, format: uuid }
+        - name: created_by_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): orders the user opened.
+          schema: { type: string, format: uuid }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -27097,6 +27262,11 @@ paths:
         - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - name: customer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): leads of the customer.
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Leads
@@ -28030,8 +28200,14 @@ paths:
       summary: List appointments
       security: [{ bearerAuth: [] }]
       parameters:
-        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
-        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+        - name: from
+          in: query
+          description: Required unless customer_uuid is given (TEC-1216).
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          description: Required unless customer_uuid is given (TEC-1216).
+          schema: { type: string, format: date-time }
         - { name: status, in: query, schema: { $ref: "#/components/schemas/AppointmentStatus" } }
         - name: organization_uuid
           in: query
@@ -28041,6 +28217,11 @@ paths:
           schema: { type: string }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+        - name: customer_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): one customer's appointments. With customer_uuid, from and to are optional (default: all time).
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Appointments
@@ -28292,6 +28473,20 @@ paths:
         - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - name: organization_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): alias of subject_organization_uuid (comma separated).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: assignee_uuid
+          in: query
+          description: >-
+            TEC-1216 reverse relation filter (RelatedList): alias of assignee_user_uuid.
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Tasks
@@ -47451,6 +47646,144 @@ components:
               items: { $ref: "#/components/schemas/PortalWarrantyClaimStatus" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    RefKind:
+      type: string
+      description: Record kind of a Ref (docs/refs.md); the same vocabulary as report row _link.kind.
+      enum: [service, warranty, warranty_claim, customer, vehicle, order, product, stock_unit, transfer,
+        organization, user, lead, appointment, task, measurement, contract, invoice, cari, announcement,
+        warehouse, subscription]
+    Ref:
+      type: object
+      description: >-
+        TEC-1216 cross-record reference. Clients map kind + uuid to a detail
+        route (web entityHref, mobile useEntityHref). sub is an optional
+        second line (organization type, product SKU, warehouse code).
+      required: [kind, uuid, name]
+      properties:
+        kind: { $ref: "#/components/schemas/RefKind" }
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        sub: { type: string }
+    ContractListItem:
+      type: object
+      required: [uuid, contract_no, kind, status, subject_type, subject, customer, organization, customer_anonymized, created_at, executed_at, voided_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        contract_no: { type: integer, format: int64 }
+        kind: { type: string, enum: [vehicle_intake, service_sale] }
+        status: { type: string, enum: [draft, pending, executed, voided] }
+        subject_type: { type: string, enum: [service, service_subscription] }
+        subject:
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        customer:
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        organization: { $ref: "#/components/schemas/Ref" }
+        customer_anonymized:
+          type: boolean
+          description: The customer is anonymized (K19); the customer name is empty.
+        created_at: { type: string, format: date-time }
+        executed_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+    EnvelopeContractListPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ContractListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    OrganizationSummary:
+      type: object
+      required: [organization, ref, parent, counts]
+      properties:
+        organization: { $ref: "#/components/schemas/Organization" }
+        ref: { $ref: "#/components/schemas/Ref" }
+        parent:
+          oneOf:
+            - $ref: "#/components/schemas/Ref"
+            - type: "null"
+        counts:
+          type: object
+          description: Null when the caller may not read that module.
+          required: [members, children, customers, services, warranties, orders, open_tasks, leads, warehouses]
+          properties:
+            members: { type: [integer, "null"], format: int64 }
+            children: { type: [integer, "null"], format: int64 }
+            customers: { type: [integer, "null"], format: int64 }
+            services: { type: [integer, "null"], format: int64 }
+            warranties: { type: [integer, "null"], format: int64 }
+            orders: { type: [integer, "null"], format: int64 }
+            open_tasks: { type: [integer, "null"], format: int64 }
+            leads: { type: [integer, "null"], format: int64 }
+            warehouses: { type: [integer, "null"], format: int64 }
+    EnvelopeOrganizationSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OrganizationSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    MemberSummary:
+      type: object
+      required: [user, ref, memberships, counts]
+      properties:
+        user:
+          type: object
+          required: [uuid, name, surname, email, phone_e164, status, last_login_at, created_at]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+            surname: { type: string }
+            email: { type: [string, "null"] }
+            phone_e164: { type: [string, "null"] }
+            status: { type: string }
+            last_login_at: { type: [string, "null"], format: date-time }
+            created_at: { type: [string, "null"], format: date-time }
+        ref: { $ref: "#/components/schemas/Ref" }
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [organization, role, role_slugs, warehouses, created_at]
+            properties:
+              organization: { $ref: "#/components/schemas/Ref" }
+              role: { type: string, enum: [owner, staff] }
+              role_slugs:
+                type: array
+                items: { type: string }
+              warehouses:
+                type: array
+                items: { $ref: "#/components/schemas/Ref" }
+              created_at: { type: [string, "null"], format: date-time }
+        counts:
+          type: object
+          description: Null when the caller may not read that module.
+          required: [services_created, services_performed, orders_created, open_tasks, leads_assigned]
+          properties:
+            services_created: { type: [integer, "null"], format: int64 }
+            services_performed: { type: [integer, "null"], format: int64 }
+            orders_created: { type: [integer, "null"], format: int64 }
+            open_tasks: { type: [integer, "null"], format: int64 }
+            leads_assigned: { type: [integer, "null"], format: int64 }
+    EnvelopeMemberSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MemberSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     EnvelopeServicePage:
       type: object
       required: [success, data, meta]

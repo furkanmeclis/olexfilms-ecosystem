@@ -1075,39 +1075,43 @@ WHERE mr.brand_id = $1
   AND (COALESCE(cardinality($4::uuid[]), 0) = 0 OR md.uuid = ANY($4::uuid[]))
   AND (COALESCE(cardinality($5::text[]), 0) = 0 OR mr.status = ANY($5::text[]))
   AND ($6::boolean IS NULL OR (sm.id IS NOT NULL) = $6::boolean)
-  AND ($7::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < $8::timestamptz)
-  AND ($9::text IS NULL
-       OR mr.vin ILIKE '%' || $9::text || '%'
-       OR v.plate ILIKE '%' || $9::text || '%'
-       OR COALESCE(md.serial, mr.device_serial) ILIKE '%' || $9::text || '%')
+  AND ($7::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM users cu WHERE cu.uuid = $7::uuid
+      AND (cu.id = vs.customer_user_id OR cu.id = v.user_id)
+  ))
+  AND ($8::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < $9::timestamptz)
+  AND ($10::text IS NULL
+       OR mr.vin ILIKE '%' || $10::text || '%'
+       OR v.plate ILIKE '%' || $10::text || '%'
+       OR COALESCE(md.serial, mr.device_serial) ILIKE '%' || $10::text || '%')
 ORDER BY
   -- time columns (NOT NULL)
-  CASE WHEN NOT $10::bool THEN
-    CASE $11::text
+  CASE WHEN NOT $11::bool THEN
+    CASE $12::text
       WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
       WHEN 'created_at' THEN mr.created_at
     END
   END ASC,
-  CASE WHEN $10::bool THEN
-    CASE $11::text
+  CASE WHEN $11::bool THEN
+    CASE $12::text
       WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
       WHEN 'created_at' THEN mr.created_at
     END
   END DESC,
   -- status (NOT NULL)
-  CASE WHEN NOT $10::bool AND $11::text = 'status' THEN mr.status::text END ASC,
-  CASE WHEN $10::bool AND $11::text = 'status' THEN mr.status::text END DESC,
+  CASE WHEN NOT $11::bool AND $12::text = 'status' THEN mr.status::text END ASC,
+  CASE WHEN $11::bool AND $12::text = 'status' THEN mr.status::text END DESC,
   -- nullable text columns: blanks last in both directions
-  CASE WHEN NOT $10::bool THEN
-    CASE $11::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  CASE WHEN NOT $11::bool THEN
+    CASE $12::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
   END ASC NULLS LAST,
-  CASE WHEN $10::bool THEN
-    CASE $11::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  CASE WHEN $11::bool THEN
+    CASE $12::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
   END DESC NULLS LAST,
-  CASE WHEN $10::bool THEN mr.id END DESC,
+  CASE WHEN $11::bool THEN mr.id END DESC,
   mr.id ASC
-LIMIT $13 OFFSET $12
+LIMIT $14 OFFSET $13
 `
 
 type ListMeasurementResultsPanelParams struct {
@@ -1117,6 +1121,7 @@ type ListMeasurementResultsPanelParams struct {
 	DeviceUuids  []uuid.UUID        `json:"device_uuids"`
 	Statuses     []string           `json:"statuses"`
 	Linked       pgtype.Bool        `json:"linked"`
+	CustomerUuid pgtype.UUID        `json:"customer_uuid"`
 	MeasuredFrom pgtype.Timestamptz `json:"measured_from"`
 	MeasuredTo   pgtype.Timestamptz `json:"measured_to"`
 	Q            pgtype.Text        `json:"q"`
@@ -1179,6 +1184,7 @@ func (q *Queries) ListMeasurementResultsPanel(ctx context.Context, arg ListMeasu
 		arg.DeviceUuids,
 		arg.Statuses,
 		arg.Linked,
+		arg.CustomerUuid,
 		arg.MeasuredFrom,
 		arg.MeasuredTo,
 		arg.Q,

@@ -190,21 +190,22 @@ WHERE brand_id = $1
     OR assignee_user_id = ANY($7::bigint[])
     OR ($8::boolean AND assignee_user_id IS NULL)
   )
-  AND ($9::timestamptz IS NULL OR created_at >= $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR created_at < $10::timestamptz)
-  AND ($11::text IS NULL OR (
-       candidate_company_name ILIKE '%' || $11::text || '%'
-       OR candidate_contact_name ILIKE '%' || $11::text || '%'
-       OR candidate_phone_e164 ILIKE '%' || $11::text || '%'
-       OR candidate_email ILIKE '%' || $11::text || '%'
-       OR notes ILIKE '%' || $11::text || '%'
+  AND ($9::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $9::uuid))
+  AND ($10::timestamptz IS NULL OR created_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR created_at < $11::timestamptz)
+  AND ($12::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $12::text || '%'
+       OR candidate_contact_name ILIKE '%' || $12::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $12::text || '%'
+       OR candidate_email ILIKE '%' || $12::text || '%'
+       OR notes ILIKE '%' || $12::text || '%'
   ))
-  AND (NOT $12::boolean OR (
+  AND (NOT $13::boolean OR (
        status IN ('new', 'contacted', 'quoted')
        AND follow_up_date IS NOT NULL
-       AND (assignee_user_id IS NULL OR assignee_user_id = $13::bigint)
-       AND ($14::timestamptz IS NULL OR follow_up_date >= $14::timestamptz)
-       AND ($15::timestamptz IS NULL OR follow_up_date < $15::timestamptz)
+       AND (assignee_user_id IS NULL OR assignee_user_id = $14::bigint)
+       AND ($15::timestamptz IS NULL OR follow_up_date >= $15::timestamptz)
+       AND ($16::timestamptz IS NULL OR follow_up_date < $16::timestamptz)
   ))
 `
 
@@ -217,6 +218,7 @@ type CountLeadsInScopeParams struct {
 	Temperatures    []string           `json:"temperatures"`
 	AssigneeIds     []int64            `json:"assignee_ids"`
 	Unassigned      bool               `json:"unassigned"`
+	CustomerUuid    pgtype.UUID        `json:"customer_uuid"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
 	Q               pgtype.Text        `json:"q"`
@@ -236,6 +238,7 @@ func (q *Queries) CountLeadsInScope(ctx context.Context, arg CountLeadsInScopePa
 		arg.Temperatures,
 		arg.AssigneeIds,
 		arg.Unassigned,
+		arg.CustomerUuid,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,
@@ -1382,49 +1385,50 @@ WHERE brand_id = $1
     OR assignee_user_id = ANY($7::bigint[])
     OR ($8::boolean AND assignee_user_id IS NULL)
   )
-  AND ($9::timestamptz IS NULL OR created_at >= $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR created_at < $10::timestamptz)
-  AND ($11::text IS NULL OR (
-       candidate_company_name ILIKE '%' || $11::text || '%'
-       OR candidate_contact_name ILIKE '%' || $11::text || '%'
-       OR candidate_phone_e164 ILIKE '%' || $11::text || '%'
-       OR candidate_email ILIKE '%' || $11::text || '%'
-       OR notes ILIKE '%' || $11::text || '%'
+  AND ($9::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $9::uuid))
+  AND ($10::timestamptz IS NULL OR created_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR created_at < $11::timestamptz)
+  AND ($12::text IS NULL OR (
+       candidate_company_name ILIKE '%' || $12::text || '%'
+       OR candidate_contact_name ILIKE '%' || $12::text || '%'
+       OR candidate_phone_e164 ILIKE '%' || $12::text || '%'
+       OR candidate_email ILIKE '%' || $12::text || '%'
+       OR notes ILIKE '%' || $12::text || '%'
   ))
-  AND ($12::uuid[] IS NULL OR uuid = ANY($12::uuid[]))
-  AND (NOT $13::boolean OR (
+  AND ($13::uuid[] IS NULL OR uuid = ANY($13::uuid[]))
+  AND (NOT $14::boolean OR (
        status IN ('new', 'contacted', 'quoted')
        AND follow_up_date IS NOT NULL
-       AND (assignee_user_id IS NULL OR assignee_user_id = $14::bigint)
-       AND ($15::timestamptz IS NULL OR follow_up_date >= $15::timestamptz)
-       AND ($16::timestamptz IS NULL OR follow_up_date < $16::timestamptz)
+       AND (assignee_user_id IS NULL OR assignee_user_id = $15::bigint)
+       AND ($16::timestamptz IS NULL OR follow_up_date >= $16::timestamptz)
+       AND ($17::timestamptz IS NULL OR follow_up_date < $17::timestamptz)
   ))
 ORDER BY
-  CASE WHEN NOT $17::bool AND $18::text = 'created_at' THEN created_at END ASC,
-  CASE WHEN $17::bool AND $18::text = 'created_at' THEN created_at END DESC,
-  CASE WHEN NOT $17::bool AND $18::text = 'follow_up_date' THEN follow_up_date END ASC NULLS LAST,
-  CASE WHEN $17::bool AND $18::text = 'follow_up_date' THEN follow_up_date END DESC NULLS LAST,
-  CASE WHEN NOT $17::bool THEN
-    CASE $18::text
+  CASE WHEN NOT $18::bool AND $19::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN $18::bool AND $19::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN NOT $18::bool AND $19::text = 'follow_up_date' THEN follow_up_date END ASC NULLS LAST,
+  CASE WHEN $18::bool AND $19::text = 'follow_up_date' THEN follow_up_date END DESC NULLS LAST,
+  CASE WHEN NOT $18::bool THEN
+    CASE $19::text
       WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
       WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
     END
   END ASC,
-  CASE WHEN $17::bool THEN
-    CASE $18::text
+  CASE WHEN $18::bool THEN
+    CASE $19::text
       WHEN 'status' THEN CASE status WHEN 'new' THEN 1 WHEN 'contacted' THEN 2 WHEN 'quoted' THEN 3 WHEN 'won' THEN 4 ELSE 5 END
       WHEN 'temperature' THEN CASE temperature WHEN 'cold' THEN 1 WHEN 'warm' THEN 2 ELSE 3 END
     END
   END DESC,
-  CASE WHEN NOT $17::bool AND $18::text = 'name' THEN
+  CASE WHEN NOT $18::bool AND $19::text = 'name' THEN
     lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
   END ASC NULLS LAST,
-  CASE WHEN $17::bool AND $18::text = 'name' THEN
+  CASE WHEN $18::bool AND $19::text = 'name' THEN
     lower(COALESCE(NULLIF(btrim(candidate_company_name), ''), NULLIF(btrim(candidate_contact_name), '')))
   END DESC NULLS LAST,
-  CASE WHEN $17::bool THEN id END DESC,
+  CASE WHEN $18::bool THEN id END DESC,
   id ASC
-LIMIT $20 OFFSET $19
+LIMIT $21 OFFSET $20
 `
 
 type ListLeadsInScopeParams struct {
@@ -1436,6 +1440,7 @@ type ListLeadsInScopeParams struct {
 	Temperatures    []string           `json:"temperatures"`
 	AssigneeIds     []int64            `json:"assignee_ids"`
 	Unassigned      bool               `json:"unassigned"`
+	CustomerUuid    pgtype.UUID        `json:"customer_uuid"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
 	Q               pgtype.Text        `json:"q"`
@@ -1464,6 +1469,7 @@ func (q *Queries) ListLeadsInScope(ctx context.Context, arg ListLeadsInScopePara
 		arg.Temperatures,
 		arg.AssigneeIds,
 		arg.Unassigned,
+		arg.CustomerUuid,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,

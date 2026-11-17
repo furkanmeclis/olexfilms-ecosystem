@@ -442,3 +442,64 @@ JOIN units u ON u.id = si.unit_id AND u.brand_id = si.brand_id
 WHERE si.service_id = sqlc.arg(service_id)
   AND si.organization_id = sqlc.arg(organization_id)
 ORDER BY si.id;
+
+-- TEC-1216: panel contract list (GET /v1/contracts, docs/list-contract.md).
+-- brand_id / org_ids is the contracts.read scope (NULL = no restriction);
+-- actor_user_id narrows own / assigned scopes to the services the user
+-- opened and the subscriptions the user assigned. customer_uuid matches
+-- the service customer or the customer signer. Sort keys from contracts
+-- usecase.ListSort; id is the tiebreak.
+-- name: ListContractInstancesPanel :many
+SELECT ci.id, ci.uuid, ci.contract_no, ci.kind, ci.status, ci.subject_type,
+       ci.created_at, ci.executed_at, ci.voided_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       s.uuid AS service_uuid, s.service_no AS service_no,
+       ss.uuid AS subscription_uuid, sci.name AS subscription_item_name,
+       cu.uuid AS customer_uuid, cu.name AS customer_name, cu.surname AS customer_surname,
+       cu.status AS customer_status
+FROM contract_instances ci
+JOIN organizations o ON o.id = ci.organization_id
+LEFT JOIN services s ON ci.subject_type = 'service' AND s.id = ci.subject_id
+LEFT JOIN service_subscriptions ss ON ci.subject_type = 'service_subscription' AND ss.id = ci.subject_id
+LEFT JOIN service_catalog_items sci ON sci.id = ss.item_id
+LEFT JOIN users cu ON cu.id = s.customer_user_id
+WHERE (sqlc.narg(brand_id)::bigint IS NULL OR ci.brand_id = sqlc.narg(brand_id)::bigint)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR ci.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(actor_user_id)::bigint IS NULL
+       OR s.created_by_user_id = sqlc.narg(actor_user_id)::bigint
+       OR ss.assigned_by_user_id = sqlc.narg(actor_user_id)::bigint)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL
+       OR cu.uuid = sqlc.narg(customer_uuid)::uuid
+       OR EXISTS (SELECT 1 FROM contract_signers cs JOIN users su ON su.id = cs.user_id
+                  WHERE cs.instance_id = ci.id AND cs.role = 'customer' AND su.uuid = sqlc.narg(customer_uuid)::uuid))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR ci.status = ANY(sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR ci.kind = ANY(sqlc.narg(kinds)::text[]))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN ci.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN ci.created_at END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'contract_no' THEN ci.contract_no END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'contract_no' THEN ci.contract_no END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE ci.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'executed' THEN 2 ELSE 3 END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE ci.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'executed' THEN 2 ELSE 3 END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN ci.id END DESC,
+  ci.id ASC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountContractInstancesPanel :one
+SELECT COUNT(*) FROM contract_instances ci
+LEFT JOIN services s ON ci.subject_type = 'service' AND s.id = ci.subject_id
+LEFT JOIN service_subscriptions ss ON ci.subject_type = 'service_subscription' AND ss.id = ci.subject_id
+LEFT JOIN users cu ON cu.id = s.customer_user_id
+WHERE (sqlc.narg(brand_id)::bigint IS NULL OR ci.brand_id = sqlc.narg(brand_id)::bigint)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR ci.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(actor_user_id)::bigint IS NULL
+       OR s.created_by_user_id = sqlc.narg(actor_user_id)::bigint
+       OR ss.assigned_by_user_id = sqlc.narg(actor_user_id)::bigint)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL
+       OR cu.uuid = sqlc.narg(customer_uuid)::uuid
+       OR EXISTS (SELECT 1 FROM contract_signers cs JOIN users su ON su.id = cs.user_id
+                  WHERE cs.instance_id = ci.id AND cs.role = 'customer' AND su.uuid = sqlc.narg(customer_uuid)::uuid))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR ci.status = ANY(sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR ci.kind = ANY(sqlc.narg(kinds)::text[]));

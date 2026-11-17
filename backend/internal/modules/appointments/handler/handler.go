@@ -73,6 +73,12 @@ func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return id, true
 }
 
+// allTimeFrom / allTimeTo bound an open appointment window.
+var (
+	allTimeFrom = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	allTimeTo   = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
+)
+
 func parseTimeParam(w http.ResponseWriter, r *http.Request, name string) (time.Time, bool) {
 	raw := strings.TrimSpace(r.URL.Query().Get(name))
 	if raw == "" {
@@ -277,14 +283,32 @@ func (h *Handler) PortalCancel(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// List is the calendar list (from / to required). TEC-1216: with
+// customer_uuid (a customer's appointments, RelatedList) from / to are
+// optional and default to all time.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	from, ok := parseTimeParam(w, r, "from")
+	customers, ok := queryUUIDs(w, r, "customer_uuid")
 	if !ok {
 		return
 	}
-	to, ok := parseTimeParam(w, r, "to")
-	if !ok {
+	if len(customers) > 1 {
+		response.ValidationError(w, r, []response.Detail{{Field: "customer_uuid", Message: "must be a single UUID"}})
 		return
+	}
+	var customer *uuid.UUID
+	if len(customers) == 1 {
+		customer = &customers[0]
+	}
+	from, to := allTimeFrom, allTimeTo
+	if customer == nil || strings.TrimSpace(r.URL.Query().Get("from")) != "" {
+		if from, ok = parseTimeParam(w, r, "from"); !ok {
+			return
+		}
+	}
+	if customer == nil || strings.TrimSpace(r.URL.Query().Get("to")) != "" {
+		if to, ok = parseTimeParam(w, r, "to"); !ok {
+			return
+		}
 	}
 	orgs, ok := queryUUIDs(w, r, "organization_uuid")
 	if !ok {
@@ -292,7 +316,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	q := apiquery.Parse(r.URL.Query())
 	items, total, err := h.svc.List(r.Context(), caller(r), usecase.ListFilter{
-		From: from, To: to, Status: r.URL.Query().Get("status"), OrganizationUUIDs: orgs, Limit: q.Limit, Offset: q.Offset,
+		From: from, To: to, Status: r.URL.Query().Get("status"), OrganizationUUIDs: orgs,
+		CustomerUUID: customer, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
 		writeError(w, r, err)

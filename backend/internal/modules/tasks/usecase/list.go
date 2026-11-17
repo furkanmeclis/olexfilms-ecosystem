@@ -46,6 +46,11 @@ const (
 	QuerySubjectOrgUUID = "subject_organization_uuid"
 	QueryAssigneeUUID   = "assignee_user_uuid"
 	QueryMine           = "mine"
+	// TEC-1216 contract names of the same filters (RelatedList):
+	// organization_uuid = subject_organization_uuid, assignee_uuid =
+	// assignee_user_uuid. Both spellings are accepted.
+	QueryOrganizationUUID = "organization_uuid"
+	QueryAssigneeAlias    = "assignee_uuid"
 )
 
 // ParseListFilter reads status (CSV, "active" = open + in_progress),
@@ -75,19 +80,26 @@ func ParseListFilter(values url.Values, me *uuid.UUID) (Filter, error) {
 	if f.Sources, err = apiquery.EnumList(values, QuerySource, Sources...); err != nil {
 		return f, err
 	}
-	for _, raw := range apiquery.CSVValues(values, QuerySubjectOrgUUID) {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return f, listInvalid(QuerySubjectOrgUUID, "must be a list of UUIDs")
+	for _, key := range []string{QuerySubjectOrgUUID, QueryOrganizationUUID} {
+		for _, raw := range apiquery.CSVValues(values, key) {
+			id, err := uuid.Parse(raw)
+			if err != nil {
+				return f, listInvalid(key, "must be a list of UUIDs")
+			}
+			f.SubjectOrgUUIDs = append(f.SubjectOrgUUIDs, id)
 		}
-		f.SubjectOrgUUIDs = append(f.SubjectOrgUUIDs, id)
 	}
-	if raw := strings.TrimSpace(values.Get(QueryAssigneeUUID)); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return f, listInvalid(QueryAssigneeUUID, "must be a UUID")
+	for _, key := range []string{QueryAssigneeUUID, QueryAssigneeAlias} {
+		if raw := strings.TrimSpace(values.Get(key)); raw != "" {
+			id, err := uuid.Parse(raw)
+			if err != nil {
+				return f, listInvalid(key, "must be a UUID")
+			}
+			if f.AssigneeUUID != nil && *f.AssigneeUUID != id {
+				return f, listInvalid(key, "conflicts with "+QueryAssigneeUUID)
+			}
+			f.AssigneeUUID = &id
 		}
-		f.AssigneeUUID = &id
 	}
 	mine, err := apiquery.Bool(values, QueryMine)
 	if err != nil {

@@ -104,6 +104,11 @@ func RegisterRoutes(
 	}
 	mux.Handle("GET /v1/tenant/organizations", orgsInScope(h.TenantListOrganizations))
 	mux.Handle("GET /v1/tenant/organizations/{uuid}", orgsInScope(h.TenantGetOrganization))
+	// TEC-1216: detail summaries (counters gated by each module's read
+	// permission) for the organization and staff user detail pages.
+	mux.Handle("GET /v1/tenant/organizations/{uuid}/summary", orgsInScope(h.TenantOrganizationSummary))
+	mux.Handle("GET /v1/tenant/users/{uuid}/summary", middleware.Chain(http.HandlerFunc(h.TenantMemberSummary), authn,
+		requireOrg, middleware.RequireScope(q, rbac.PermMembersRead)))
 	// Phone-first account opening: staff of the active organization
 	// (members.write) and a dealer with its owner under it
 	// (organizations.write; center or distributor).

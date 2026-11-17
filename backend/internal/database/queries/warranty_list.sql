@@ -48,6 +48,7 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(end_before)::timestamptz IS NULL OR w.end_at < sqlc.narg(end_before)::timestamptz)
   AND (sqlc.narg(product_id)::bigint IS NULL OR w.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR w.vehicle_id = sqlc.narg(vehicle_id)::bigint)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL OR w.holder_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = sqlc.narg(customer_uuid)::uuid))
   AND (sqlc.narg(ends_after)::timestamptz IS NULL OR w.end_at > sqlc.narg(ends_after)::timestamptz)
   AND (sqlc.narg(ends_before)::timestamptz IS NULL OR w.end_at <= sqlc.narg(ends_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
@@ -121,6 +122,7 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
   AND (sqlc.narg(end_before)::timestamptz IS NULL OR w.end_at < sqlc.narg(end_before)::timestamptz)
   AND (sqlc.narg(product_id)::bigint IS NULL OR w.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR w.vehicle_id = sqlc.narg(vehicle_id)::bigint)
+  AND (sqlc.narg(customer_uuid)::uuid IS NULL OR w.holder_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = sqlc.narg(customer_uuid)::uuid))
   AND (sqlc.narg(ends_after)::timestamptz IS NULL OR w.end_at > sqlc.narg(ends_after)::timestamptz)
   AND (sqlc.narg(ends_before)::timestamptz IS NULL OR w.end_at <= sqlc.narg(ends_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL

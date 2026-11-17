@@ -38,13 +38,16 @@ const (
 	QueryOrganizationUUID = "organization_uuid"
 	QueryProductUUID      = "product_uuid"
 	QueryVehicleUUID      = "vehicle_uuid"
-	QueryDaysLeftMin      = "days_left_min"
-	QueryDaysLeftMax      = "days_left_max"
+	// QueryCustomerUUID is the holder (current customer) of the warranty
+	// (TEC-1216 reverse relation filter).
+	QueryCustomerUUID = "customer_uuid"
+	QueryDaysLeftMin  = "days_left_min"
+	QueryDaysLeftMax  = "days_left_max"
 )
 
 // listKeys are the list parameters an export job carries.
 var listKeys = []string{
-	"q", "sort", QueryStatus, QueryOrganizationUUID, QueryProductUUID, QueryVehicleUUID,
+	"q", "sort", QueryStatus, QueryOrganizationUUID, QueryProductUUID, QueryVehicleUUID, QueryCustomerUUID,
 	QueryDaysLeftMin, QueryDaysLeftMax, "start_from", "start_to", "end_from", "end_to",
 }
 
@@ -81,6 +84,13 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 			}}}
 		}
 		f.OrganizationUUIDs = append(f.OrganizationUUIDs, id)
+	}
+	if raw := strings.TrimSpace(values.Get(QueryCustomerUUID)); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return f, invalidField(QueryCustomerUUID, "invalid uuid")
+		}
+		f.CustomerUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 	if f.DaysLeftMin, err = optInt(values.Get(QueryDaysLeftMin), QueryDaysLeftMin); err != nil {
 		return f, err
@@ -121,7 +131,7 @@ func optInt(raw, field string) (*int, error) {
 // cannot answer.
 func (f ListFilter) sqlOnly() bool {
 	return f.SortExplicit || len(f.OrganizationUUIDs) > 0 || f.StartFrom != nil || f.StartBefore != nil ||
-		f.EndFrom != nil || f.EndBefore != nil
+		f.EndFrom != nil || f.EndBefore != nil || f.CustomerUUID.Valid
 }
 
 // sortArgs is the resolved sort (the default when the filter has none).

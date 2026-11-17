@@ -37,6 +37,10 @@ TEC-960: `campaigns`, `consents` ve `/v1/ai` altından yalnızca `ai/status`,
 (onay kuyruğu). `ai/usage` ve diğer `ai/*` yolları kapalıdır; portal aynası
 (`/v1/mobile/portal/*`) `ai`'yı reddetmeye devam eder.
 
+TEC-1216 (çapraz kayıt): `tenant/users` (yalnız `GET tenant/users/{uuid}/summary`,
+`members.read` kapsamı). Organizasyon özeti `tenant/organizations/{uuid}/summary`
+ve sözleşme listesi `GET contracts` mevcut önekler altında açıktır.
+
 Önek ve alt yolları tam segment sınırında eşleşir (`ordersx` eşleşmez).
 Diğer tüm önekler 404 `NOT_FOUND` döndürür; `auth`, `platform`, `portal`,
 `public`, `mobile`, `oauth`, `realtime`, `ai`, `impersonation` ve yukarıdakiler dışındaki

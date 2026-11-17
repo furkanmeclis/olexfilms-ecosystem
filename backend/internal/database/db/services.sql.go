@@ -263,23 +263,29 @@ WHERE services.brand_id = $1
   AND ($4::bigint IS NULL OR services.created_by_user_id = $4)
   AND ($5::bigint IS NULL OR services.customer_user_id = $5)
   AND ($6::bigint IS NULL OR services.vehicle_id = $6)
-  AND (COALESCE(cardinality($7::text[]), 0) = 0 OR services.status = ANY ($7::text[]))
-  AND ($8::timestamptz IS NULL OR services.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR services.created_at < $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR services.completed_at >= $10::timestamptz)
-  AND ($11::timestamptz IS NULL OR services.completed_at < $11::timestamptz)
+  AND ($7::uuid IS NULL OR services.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = $7::uuid))
+  AND ($8::uuid IS NULL OR COALESCE(services.performed_by_user_id, services.created_by_user_id) = (SELECT fu.id FROM users fu WHERE fu.uuid = $8::uuid))
+  AND ($9::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM service_items fsi JOIN products fp ON fp.id = fsi.product_id
+    WHERE fsi.service_id = services.id AND fp.uuid = $9::uuid
+  ))
+  AND (COALESCE(cardinality($10::text[]), 0) = 0 OR services.status = ANY ($10::text[]))
+  AND ($11::timestamptz IS NULL OR services.created_at >= $11::timestamptz)
+  AND ($12::timestamptz IS NULL OR services.created_at < $12::timestamptz)
+  AND ($13::timestamptz IS NULL OR services.completed_at >= $13::timestamptz)
+  AND ($14::timestamptz IS NULL OR services.completed_at < $14::timestamptz)
   AND (
-    $12::text IS NULL
-    OR services.service_no ILIKE '%' || $12 || '%'
-    OR services.plate ILIKE '%' || $12 || '%'
-    OR services.vin ILIKE '%' || $12 || '%'
+    $15::text IS NULL
+    OR services.service_no ILIKE '%' || $15 || '%'
+    OR services.plate ILIKE '%' || $15 || '%'
+    OR services.vin ILIKE '%' || $15 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $12 || '%'
-          OR cu.phone_e164 LIKE '%' || $12 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $15 || '%'
+          OR cu.phone_e164 LIKE '%' || $15 || '%'
         )
     )
   )
@@ -292,6 +298,9 @@ type CountServicesInScopeParams struct {
 	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
 	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
 	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CreatedByUuid     pgtype.UUID        `json:"created_by_uuid"`
+	PerformerUuid     pgtype.UUID        `json:"performer_uuid"`
+	ProductUuid       pgtype.UUID        `json:"product_uuid"`
 	Statuses          []string           `json:"statuses"`
 	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
 	CreatedTo         pgtype.Timestamptz `json:"created_to"`
@@ -308,6 +317,9 @@ func (q *Queries) CountServicesInScope(ctx context.Context, arg CountServicesInS
 		arg.CreatedByUserID,
 		arg.CustomerUserID,
 		arg.VehicleID,
+		arg.CreatedByUuid,
+		arg.PerformerUuid,
+		arg.ProductUuid,
 		arg.Statuses,
 		arg.CreatedFrom,
 		arg.CreatedTo,
@@ -1641,61 +1653,67 @@ WHERE services.brand_id = $1
   AND ($4::bigint IS NULL OR services.created_by_user_id = $4)
   AND ($5::bigint IS NULL OR services.customer_user_id = $5)
   AND ($6::bigint IS NULL OR services.vehicle_id = $6)
-  AND (COALESCE(cardinality($7::text[]), 0) = 0 OR services.status = ANY ($7::text[]))
-  AND ($8::timestamptz IS NULL OR services.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR services.created_at < $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR services.completed_at >= $10::timestamptz)
-  AND ($11::timestamptz IS NULL OR services.completed_at < $11::timestamptz)
-  AND ($12::uuid[] IS NULL OR services.uuid = ANY ($12::uuid[]))
+  AND ($7::uuid IS NULL OR services.created_by_user_id = (SELECT fu.id FROM users fu WHERE fu.uuid = $7::uuid))
+  AND ($8::uuid IS NULL OR COALESCE(services.performed_by_user_id, services.created_by_user_id) = (SELECT fu.id FROM users fu WHERE fu.uuid = $8::uuid))
+  AND ($9::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM service_items fsi JOIN products fp ON fp.id = fsi.product_id
+    WHERE fsi.service_id = services.id AND fp.uuid = $9::uuid
+  ))
+  AND (COALESCE(cardinality($10::text[]), 0) = 0 OR services.status = ANY ($10::text[]))
+  AND ($11::timestamptz IS NULL OR services.created_at >= $11::timestamptz)
+  AND ($12::timestamptz IS NULL OR services.created_at < $12::timestamptz)
+  AND ($13::timestamptz IS NULL OR services.completed_at >= $13::timestamptz)
+  AND ($14::timestamptz IS NULL OR services.completed_at < $14::timestamptz)
+  AND ($15::uuid[] IS NULL OR services.uuid = ANY ($15::uuid[]))
   AND (
-    $13::text IS NULL
-    OR services.service_no ILIKE '%' || $13 || '%'
-    OR services.plate ILIKE '%' || $13 || '%'
-    OR services.vin ILIKE '%' || $13 || '%'
+    $16::text IS NULL
+    OR services.service_no ILIKE '%' || $16 || '%'
+    OR services.plate ILIKE '%' || $16 || '%'
+    OR services.vin ILIKE '%' || $16 || '%'
     OR EXISTS (
       SELECT 1 FROM users cu
       WHERE cu.id = services.customer_user_id
         AND cu.status <> 'anonymized'
         AND (
-          (cu.name || ' ' || cu.surname) ILIKE '%' || $13 || '%'
-          OR cu.phone_e164 LIKE '%' || $13 || '%'
+          (cu.name || ' ' || cu.surname) ILIKE '%' || $16 || '%'
+          OR cu.phone_e164 LIKE '%' || $16 || '%'
         )
     )
   )
 ORDER BY
-  CASE WHEN NOT $14::bool THEN
-    CASE $15::text
+  CASE WHEN NOT $17::bool THEN
+    CASE $18::text
       WHEN 'service_no' THEN services.service_no::text
       WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
     END
   END ASC,
-  CASE WHEN $14::bool THEN
-    CASE $15::text
+  CASE WHEN $17::bool THEN
+    CASE $18::text
       WHEN 'service_no' THEN services.service_no::text
       WHEN 'organization' THEN (SELECT so.name FROM organizations so WHERE so.id = services.organization_id)::text
     END
   END DESC,
-  CASE WHEN NOT $14::bool AND $15::text = 'status' THEN
+  CASE WHEN NOT $17::bool AND $18::text = 'status' THEN
     CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
       WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
   END ASC,
-  CASE WHEN $14::bool AND $15::text = 'status' THEN
+  CASE WHEN $17::bool AND $18::text = 'status' THEN
     CASE services.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
       WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
   END DESC,
-  CASE WHEN NOT $14::bool THEN
-    CASE $15::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  CASE WHEN NOT $17::bool THEN
+    CASE $18::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
   END ASC,
-  CASE WHEN $14::bool THEN
-    CASE $15::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
+  CASE WHEN $17::bool THEN
+    CASE $18::text WHEN 'created_at' THEN services.created_at WHEN 'updated_at' THEN services.updated_at END
   END DESC,
-  CASE WHEN NOT $14::bool AND $15::text = 'completed_at' THEN services.completed_at END ASC NULLS LAST,
-  CASE WHEN $14::bool AND $15::text = 'completed_at' THEN services.completed_at END DESC NULLS LAST,
-  CASE WHEN NOT $14::bool AND $15::text = 'plate' THEN services.plate::text END ASC NULLS LAST,
-  CASE WHEN $14::bool AND $15::text = 'plate' THEN services.plate::text END DESC NULLS LAST,
-  CASE WHEN $14::bool THEN services.id END DESC,
+  CASE WHEN NOT $17::bool AND $18::text = 'completed_at' THEN services.completed_at END ASC NULLS LAST,
+  CASE WHEN $17::bool AND $18::text = 'completed_at' THEN services.completed_at END DESC NULLS LAST,
+  CASE WHEN NOT $17::bool AND $18::text = 'plate' THEN services.plate::text END ASC NULLS LAST,
+  CASE WHEN $17::bool AND $18::text = 'plate' THEN services.plate::text END DESC NULLS LAST,
+  CASE WHEN $17::bool THEN services.id END DESC,
   services.id ASC
-LIMIT $17 OFFSET $16
+LIMIT $20 OFFSET $19
 `
 
 type ListServicesInScopeParams struct {
@@ -1705,6 +1723,9 @@ type ListServicesInScopeParams struct {
 	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
 	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
 	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CreatedByUuid     pgtype.UUID        `json:"created_by_uuid"`
+	PerformerUuid     pgtype.UUID        `json:"performer_uuid"`
+	ProductUuid       pgtype.UUID        `json:"product_uuid"`
 	Statuses          []string           `json:"statuses"`
 	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
 	CreatedTo         pgtype.Timestamptz `json:"created_to"`
@@ -1735,6 +1756,9 @@ func (q *Queries) ListServicesInScope(ctx context.Context, arg ListServicesInSco
 		arg.CreatedByUserID,
 		arg.CustomerUserID,
 		arg.VehicleID,
+		arg.CreatedByUuid,
+		arg.PerformerUuid,
+		arg.ProductUuid,
 		arg.Statuses,
 		arg.CreatedFrom,
 		arg.CreatedTo,

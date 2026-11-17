@@ -19,6 +19,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // LeadsSortSpec is the sort whitelist of GET /v1/leads.
@@ -43,7 +45,7 @@ const AssigneeNone = "none"
 
 // listKeys are the list parameters an export or a query bulk run carries.
 var listKeys = []string{"q", "status", "target_type", "source", "temperature", "assignee_user_id",
-	"created_from", "created_to", "follow_up", "sort"}
+	"created_from", "created_to", "follow_up", "sort", "customer_uuid"}
 
 // ParseListFilter reads the GET /v1/leads filters: q, status /
 // target_type / source / temperature CSV, assignee_user_id CSV (user ids or
@@ -76,6 +78,16 @@ func ParseListFilter(values url.Values) (ListFilter, error) {
 			}}}
 		}
 		f.AssigneeIDs = append(f.AssigneeIDs, id)
+	}
+	// TEC-1216: one customer's leads (RelatedList).
+	if raw := strings.TrimSpace(values.Get("customer_uuid")); raw != "" {
+		id, perr := uuid.Parse(raw)
+		if perr != nil {
+			return f, &apiquery.ValidationError{Details: []apiquery.Detail{{
+				Field: "customer_uuid", Message: "must be a uuid", Code: "invalid",
+			}}}
+		}
+		f.CustomerUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 	if f.Created, err = apiquery.DateRange(values, "created"); err != nil {
 		return f, err

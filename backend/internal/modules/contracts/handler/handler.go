@@ -380,6 +380,31 @@ func (h *Handler) Void(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, item)
 }
 
+// ListContracts (GET /v1/contracts, TEC-1216): contracts inside the
+// contracts.read scope; customer_uuid feeds the customer detail tab.
+func (h *Handler) ListContracts(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseContractListFilter(r.URL.Query())
+	if err != nil {
+		var ve *apiquery.ValidationError
+		if errors.As(err, &ve) {
+			details := make([]response.Detail, 0, len(ve.Details))
+			for _, d := range ve.Details {
+				details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+			}
+			response.ValidationError(w, r, details)
+			return
+		}
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListContracts(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
 func caller(r *http.Request) usecase.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	org := orgctx.MustScope(r.Context())

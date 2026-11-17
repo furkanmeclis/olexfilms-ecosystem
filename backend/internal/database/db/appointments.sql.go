@@ -293,6 +293,7 @@ WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND starts_at >= $3::timestamptz
   AND starts_at < $4::timestamptz
   AND ($5::varchar IS NULL OR status = $5::varchar)
+  AND ($6::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $6::uuid))
 `
 
 type CountAppointmentsByOrganizationsParams struct {
@@ -301,6 +302,7 @@ type CountAppointmentsByOrganizationsParams struct {
 	FromTime        pgtype.Timestamptz `json:"from_time"`
 	ToTime          pgtype.Timestamptz `json:"to_time"`
 	Status          pgtype.Text        `json:"status"`
+	CustomerUuid    pgtype.UUID        `json:"customer_uuid"`
 }
 
 func (q *Queries) CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error) {
@@ -310,6 +312,7 @@ func (q *Queries) CountAppointmentsByOrganizations(ctx context.Context, arg Coun
 		arg.FromTime,
 		arg.ToTime,
 		arg.Status,
+		arg.CustomerUuid,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -1082,8 +1085,9 @@ WHERE ($1::bigint[] IS NULL OR organization_id = ANY($1::bigint[]))
   AND starts_at >= $3::timestamptz
   AND starts_at < $4::timestamptz
   AND ($5::varchar IS NULL OR status = $5::varchar)
+  AND ($6::uuid IS NULL OR customer_user_id = (SELECT cu.id FROM users cu WHERE cu.uuid = $6::uuid))
 ORDER BY starts_at, id
-LIMIT $7 OFFSET $6
+LIMIT $8 OFFSET $7
 `
 
 type ListAppointmentsByOrganizationsParams struct {
@@ -1092,6 +1096,7 @@ type ListAppointmentsByOrganizationsParams struct {
 	FromTime        pgtype.Timestamptz `json:"from_time"`
 	ToTime          pgtype.Timestamptz `json:"to_time"`
 	Status          pgtype.Text        `json:"status"`
+	CustomerUuid    pgtype.UUID        `json:"customer_uuid"`
 	PageOffset      int32              `json:"page_offset"`
 	PageLimit       int32              `json:"page_limit"`
 }
@@ -1103,6 +1108,7 @@ func (q *Queries) ListAppointmentsByOrganizations(ctx context.Context, arg ListA
 		arg.FromTime,
 		arg.ToTime,
 		arg.Status,
+		arg.CustomerUuid,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
