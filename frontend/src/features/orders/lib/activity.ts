@@ -74,10 +74,8 @@ export function orderTimelineSteps(
             : "orders.plotter.marked_off",
         ),
       );
-      // TEC-1221: the credits set with the mark (not in the typed schema
-      // of the timeline entry yet, so read defensively).
-      const credits = (e as { plotter_credits?: number | null })
-        .plotter_credits;
+      // TEC-1221: the credits set with the mark.
+      const credits = e.plotter_credits;
       if (e.plotter_cut && credits != null) {
         parts.push(
           t("orders.plotter.credits_value", {
