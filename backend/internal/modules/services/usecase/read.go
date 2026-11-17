@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	refkit "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 	"time"
 
@@ -155,7 +156,16 @@ type ServiceView struct {
 	// AppliedBy names who applied the service (TEC-1075): the center's
 	// service point name for the center's own services, else
 	// the organization name.
-	AppliedBy        string           `json:"applied_by"`
+	AppliedBy string `json:"applied_by"`
+	// TEC-1216 user refs (kind user): who opened, performed (performed_by,
+	// else created_by), completed and cancelled the service. applied_by
+	// above stays as the display name of the applying organization.
+	CreatedBy   *refkit.Ref `json:"created_by"`
+	PerformedBy *refkit.Ref `json:"performed_by"`
+	CompletedBy *refkit.Ref `json:"completed_by"`
+	CancelledBy *refkit.Ref `json:"cancelled_by"`
+	// Vehicle is the vehicle ref (name: plate, else VIN).
+	Vehicle          refkit.Ref       `json:"vehicle"`
 	Customer         CustomerRef      `json:"customer"`
 	VehicleUUID      uuid.UUID        `json:"vehicle_uuid"`
 	CarBrand         Ref              `json:"car_brand"`
@@ -228,6 +238,26 @@ func customerRef(refs db.GetServiceRefsRow, loc i18n.Locale) CustomerRef {
 	return ref
 }
 
+// userRef is an optional user ref from a LEFT JOIN (TEC-1216).
+func userRef(id pgtype.UUID, name, surname pgtype.Text) *refkit.Ref {
+	if !id.Valid {
+		return nil
+	}
+	r := refkit.UserRef(id.Bytes, refkit.FullName(name.String, surname.String))
+	return &r
+}
+
+// vehicleName is the display name of the service vehicle: the plate, else
+// the VIN (the service's copy first, then the vehicle's).
+func vehicleName(svc db.Service, r db.GetServiceRefsRow) string {
+	for _, v := range []pgtype.Text{svc.Plate, r.VehiclePlate, svc.Vin, r.VehicleVin} {
+		if v.Valid && v.String != "" {
+			return v.String
+		}
+	}
+	return ""
+}
+
 func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.Service, gate *contractGate) (ServiceView, error) {
 	refs, err := q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
@@ -261,6 +291,11 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		AvailableTransitions: availableTransitions(c, svc),
 		ItemCategories:       []string{}, // filled by the caller (one query per page)
 		IsWarrantyReapply:    svc.WarrantyClaimID.Valid,
+		CreatedBy:            userRef(refs.CreatedByUuid, refs.CreatedByName, refs.CreatedBySurname),
+		PerformedBy:          userRef(refs.PerformedByUuid, refs.PerformedByName, refs.PerformedBySurname),
+		CompletedBy:          userRef(refs.CompletedByUuid, refs.CompletedByName, refs.CompletedBySurname),
+		CancelledBy:          userRef(refs.CancelledByUuid, refs.CancelledByName, refs.CancelledBySurname),
+		Vehicle:              refkit.New(refkit.KindVehicle, refs.VehicleUuid, vehicleName(svc, refs)),
 	}
 	if svc.ModelYear.Valid {
 		y := svc.ModelYear.Int16

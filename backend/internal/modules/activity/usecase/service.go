@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -24,8 +25,11 @@ func New(q *db.Queries) *Service {
 
 // Event is API projection.
 type Event struct {
-	UUID         uuid.UUID      `json:"uuid"`
-	ActorUserID  *int64         `json:"actor_user_id,omitempty"`
+	UUID uuid.UUID `json:"uuid"`
+	// ActorUserID is deprecated (TEC-1216, internal id); use Actor.
+	ActorUserID *int64 `json:"actor_user_id,omitempty"`
+	// Actor is the acting user ref (TEC-1216).
+	Actor        *refs.Ref      `json:"actor,omitempty"`
 	Action       string         `json:"action"`
 	Resource     string         `json:"resource"`
 	ResourceUUID *uuid.UUID     `json:"resource_uuid,omitempty"`
@@ -49,8 +53,21 @@ func (s *Service) List(ctx context.Context, params db.ListActivityEventsParams, 
 		return nil, 0, err
 	}
 	out := make([]Event, 0, len(rows))
+	res := refs.NewResolver(s.q)
+	actors := map[int64]*refs.Ref{}
 	for _, row := range rows {
-		out = append(out, mapEvent(row))
+		ev := mapEvent(row)
+		if ev.ActorUserID != nil {
+			ref, ok := actors[*ev.ActorUserID]
+			if !ok {
+				if ref, err = res.User(ctx, ev.ActorUserID); err != nil {
+					return nil, 0, err
+				}
+				actors[*ev.ActorUserID] = ref
+			}
+			ev.Actor = ref
+		}
+		out = append(out, ev)
 	}
 	return out, total, nil
 }

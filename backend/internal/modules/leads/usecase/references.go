@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -187,6 +188,38 @@ func (s *Service) leadReferences(ctx context.Context, lead Lead) (Lead, error) {
 		}
 		if err == nil {
 			lead.VehicleUUID = &vehicle.Uuid
+		}
+	}
+	return s.leadRefs(ctx, lead)
+}
+
+// leadRefs fills the TEC-1216 refs of a lead.
+func (s *Service) leadRefs(ctx context.Context, lead Lead) (Lead, error) {
+	r := refs.NewResolver(s.q)
+	var err error
+	if lead.Customer, err = r.Customer(ctx, lead.CustomerUserID); err != nil {
+		return Lead{}, err
+	}
+	if lead.Vehicle, err = r.Vehicle(ctx, lead.VehicleID); err != nil {
+		return Lead{}, err
+	}
+	if lead.Assignee, err = r.User(ctx, lead.AssigneeUserID); err != nil {
+		return Lead{}, err
+	}
+	if lead.CreatedBy, err = r.User(ctx, lead.CreatedByUserID); err != nil {
+		return Lead{}, err
+	}
+	if lead.WonRefType != nil {
+		switch *lead.WonRefType {
+		case "service":
+			lead.WonRef, err = r.Service(ctx, lead.WonRefID)
+		case "appointment":
+			lead.WonRef, err = r.Appointment(ctx, lead.WonRefID)
+		case "organization":
+			lead.WonRef, err = r.Organization(ctx, lead.WonRefID)
+		}
+		if err != nil {
+			return Lead{}, err
 		}
 	}
 	return lead, nil

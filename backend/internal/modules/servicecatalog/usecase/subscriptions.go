@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"math/big"
 	"strings"
 	"time"
@@ -107,24 +108,29 @@ type DecisionInput struct {
 }
 
 type SubscriptionView struct {
-	UUID             uuid.UUID          `json:"uuid"`
-	OrganizationUUID uuid.UUID          `json:"organization_uuid"`
-	ItemUUID         uuid.UUID          `json:"item_uuid"`
-	AssignedByOrgID  int64              `json:"assigned_by_org_id"`
-	StartsOn         string             `json:"starts_on"`
-	EndsOn           string             `json:"ends_on"`
-	Recurrence       string             `json:"recurrence"`
-	Price            string             `json:"price"`
-	Currency         string             `json:"currency"`
-	RateSnapshot     json.RawMessage    `json:"rate_snapshot"`
-	CancellationFee  string             `json:"cancellation_fee"`
-	Status           string             `json:"status"`
-	Contract         *ContractSummary   `json:"contract,omitempty"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UUID             uuid.UUID `json:"uuid"`
+	OrganizationUUID uuid.UUID `json:"organization_uuid"`
+	ItemUUID         uuid.UUID `json:"item_uuid"`
+	// AssignedByOrgID is internal (TEC-1216); AssignedByOrg is the ref.
+	AssignedByOrgID int64              `json:"-"`
+	StartsOn        string             `json:"starts_on"`
+	EndsOn          string             `json:"ends_on"`
+	Recurrence      string             `json:"recurrence"`
+	Price           string             `json:"price"`
+	Currency        string             `json:"currency"`
+	RateSnapshot    json.RawMessage    `json:"rate_snapshot"`
+	CancellationFee string             `json:"cancellation_fee"`
+	Status          string             `json:"status"`
+	Contract        *ContractSummary   `json:"contract,omitempty"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	// TEC-311: display names for the subscription screens.
 	OrganizationName string `json:"organization_name"`
 	ItemName         string `json:"item_name"`
 	ItemCategory     string `json:"item_category"`
+	// TEC-1216 refs: the subscribed organization and the organization that
+	// assigned the subscription.
+	Organization  refs.Ref  `json:"organization"`
+	AssignedByOrg *refs.Ref `json:"assigned_by_org"`
 
 	contractID pgtype.Int8
 }
@@ -584,6 +590,15 @@ func (s *Service) subscriptionRowView(ctx context.Context, row db.ListServiceSub
 }
 
 func (s *Service) withContract(ctx context.Context, view SubscriptionView) (SubscriptionView, error) {
+	view.Organization = refs.New(refs.KindOrganization, view.OrganizationUUID, view.OrganizationName)
+	if view.AssignedByOrgID != 0 {
+		org, err := s.q.GetOrganizationByID(ctx, view.AssignedByOrgID)
+		if err != nil {
+			return SubscriptionView{}, err
+		}
+		ref := refs.OrgRef(org.Uuid, org.Name, org.Type)
+		view.AssignedByOrg = &ref
+	}
 	if view.contractID.Valid {
 		inst, err := s.q.GetContractInstanceByID(ctx, view.contractID.Int64)
 		if err != nil {

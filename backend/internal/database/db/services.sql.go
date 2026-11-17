@@ -1050,9 +1050,14 @@ SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organ
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
        u.phone_e164 AS customer_phone, u.status AS customer_status,
        cp.company_name AS customer_company_name,
-       v.uuid AS vehicle_uuid,
+       v.uuid AS vehicle_uuid, v.plate AS vehicle_plate, v.vin AS vehicle_vin,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
-       cm.uuid AS car_model_uuid, cm.name AS car_model_name
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       -- TEC-1216: user refs (performed_by falls back to created_by).
+       cbu.uuid AS created_by_uuid, cbu.name AS created_by_name, cbu.surname AS created_by_surname,
+       pbu.uuid AS performed_by_uuid, pbu.name AS performed_by_name, pbu.surname AS performed_by_surname,
+       cpu.uuid AS completed_by_uuid, cpu.name AS completed_by_name, cpu.surname AS completed_by_surname,
+       cxu.uuid AS cancelled_by_uuid, cxu.name AS cancelled_by_name, cxu.surname AS cancelled_by_surname
 FROM services s
 JOIN organizations o ON o.id = s.organization_id
 JOIN users u ON u.id = s.customer_user_id
@@ -1060,6 +1065,10 @@ LEFT JOIN customer_profiles cp ON cp.user_id = u.id AND cp.type = 'corporate'
 JOIN vehicles v ON v.id = s.vehicle_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id
+LEFT JOIN users cbu ON cbu.id = s.created_by_user_id
+LEFT JOIN users pbu ON pbu.id = COALESCE(s.performed_by_user_id, s.created_by_user_id)
+LEFT JOIN users cpu ON cpu.id = s.completed_by_user_id
+LEFT JOIN users cxu ON cxu.id = s.cancelled_by_user_id
 WHERE s.id = $1
 `
 
@@ -1075,10 +1084,24 @@ type GetServiceRefsRow struct {
 	CustomerStatus      string      `json:"customer_status"`
 	CustomerCompanyName pgtype.Text `json:"customer_company_name"`
 	VehicleUuid         uuid.UUID   `json:"vehicle_uuid"`
+	VehiclePlate        pgtype.Text `json:"vehicle_plate"`
+	VehicleVin          pgtype.Text `json:"vehicle_vin"`
 	CarBrandUuid        uuid.UUID   `json:"car_brand_uuid"`
 	CarBrandName        string      `json:"car_brand_name"`
 	CarModelUuid        uuid.UUID   `json:"car_model_uuid"`
 	CarModelName        string      `json:"car_model_name"`
+	CreatedByUuid       pgtype.UUID `json:"created_by_uuid"`
+	CreatedByName       pgtype.Text `json:"created_by_name"`
+	CreatedBySurname    pgtype.Text `json:"created_by_surname"`
+	PerformedByUuid     pgtype.UUID `json:"performed_by_uuid"`
+	PerformedByName     pgtype.Text `json:"performed_by_name"`
+	PerformedBySurname  pgtype.Text `json:"performed_by_surname"`
+	CompletedByUuid     pgtype.UUID `json:"completed_by_uuid"`
+	CompletedByName     pgtype.Text `json:"completed_by_name"`
+	CompletedBySurname  pgtype.Text `json:"completed_by_surname"`
+	CancelledByUuid     pgtype.UUID `json:"cancelled_by_uuid"`
+	CancelledByName     pgtype.Text `json:"cancelled_by_name"`
+	CancelledBySurname  pgtype.Text `json:"cancelled_by_surname"`
 }
 
 // Display references of one service (organization, customer, vehicle and
@@ -1098,10 +1121,24 @@ func (q *Queries) GetServiceRefs(ctx context.Context, id int64) (GetServiceRefsR
 		&i.CustomerStatus,
 		&i.CustomerCompanyName,
 		&i.VehicleUuid,
+		&i.VehiclePlate,
+		&i.VehicleVin,
 		&i.CarBrandUuid,
 		&i.CarBrandName,
 		&i.CarModelUuid,
 		&i.CarModelName,
+		&i.CreatedByUuid,
+		&i.CreatedByName,
+		&i.CreatedBySurname,
+		&i.PerformedByUuid,
+		&i.PerformedByName,
+		&i.PerformedBySurname,
+		&i.CompletedByUuid,
+		&i.CompletedByName,
+		&i.CompletedBySurname,
+		&i.CancelledByUuid,
+		&i.CancelledByName,
+		&i.CancelledBySurname,
 	)
 	return i, err
 }

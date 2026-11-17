@@ -405,3 +405,84 @@ func TestIntegrationCrossRefSummaries(t *testing.T) {
 	// The distributor sees the staff of its dealers.
 	it.accDo("GET", upath, n.tokD, nil, http.StatusOK)
 }
+
+// TEC-1216 (PR-2): detail responses carry refs for every foreign key and no
+// longer expose the internal ids that had no client.
+func TestIntegrationCrossRefDetailRefs(t *testing.T) {
+	n := newCrossRefNet(t)
+	it := n.it
+	type ref struct {
+		Kind string `json:"kind"`
+		UUID string `json:"uuid"`
+		Name string `json:"name"`
+	}
+	check := func(what string, got *ref, kind, id string) {
+		t.Helper()
+		if got == nil || got.Kind != kind || got.UUID != id || got.Name == "" {
+			t.Fatalf("%s ref = %+v, want %s %s", what, got, kind, id)
+		}
+	}
+	raw := func(path, tok string) map[string]json.RawMessage {
+		t.Helper()
+		code, env := it.do("GET", path, hostOlex, tok, nil)
+		if code != http.StatusOK {
+			t.Fatalf("GET %s = %d %s", path, code, errCode(env))
+		}
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(env.Data, &m); err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	refOf := func(m map[string]json.RawMessage, key string) *ref {
+		t.Helper()
+		var r *ref
+		if v, ok := m[key]; ok {
+			if err := json.Unmarshal(v, &r); err != nil {
+				t.Fatalf("%s: %v", key, err)
+			}
+		}
+		return r
+	}
+
+	svc := raw("/v1/services/"+n.svcA, n.tokA)
+	check("service.created_by", refOf(svc, "created_by"), "user", n.staffA1.Uuid.String())
+	check("service.performed_by", refOf(svc, "performed_by"), "user", n.staffA2.Uuid.String())
+	check("service.vehicle", refOf(svc, "vehicle"), "vehicle", n.vehA.Uuid.String())
+	svc2 := raw("/v1/services/"+n.svcA2, n.tokA)
+	check("service2.performed_by (fallback)", refOf(svc2, "performed_by"), "user", n.staffA2.Uuid.String())
+
+	veh := raw("/v1/vehicles/"+n.vehA.Uuid.String(), n.tokA)
+	check("vehicle.customer", refOf(veh, "customer"), "customer", n.custA.Uuid.String())
+
+	lead := raw("/v1/leads/"+n.leadA, n.tokA)
+	check("lead.customer", refOf(lead, "customer"), "customer", n.custA.Uuid.String())
+	for _, gone := range []string{"won_ref_id", "created_by_user_id"} {
+		if _, ok := lead[gone]; ok {
+			t.Fatalf("lead still exposes %s", gone)
+		}
+	}
+
+	appt := raw("/v1/appointments/"+n.apptA, n.tokA)
+	check("appointment.customer", refOf(appt, "customer"), "customer", n.custA.Uuid.String())
+	check("appointment.vehicle", refOf(appt, "vehicle"), "vehicle", n.vehA.Uuid.String())
+	check("appointment.organization", refOf(appt, "organization"), "organization", n.dA.Uuid.String())
+	for _, gone := range []string{"lead_id", "created_by_user_id", "plan_id"} {
+		if _, ok := appt[gone]; ok {
+			t.Fatalf("appointment still exposes %s", gone)
+		}
+	}
+
+	contract := raw("/v1/contracts/"+n.contractA, n.tokA)
+	check("contract.subject", refOf(contract, "subject"), "service", n.svcA)
+
+	// Leads: assignee_uuid filter (uuid form of the deprecated
+	// assignee_user_id).
+	it.exec("UPDATE leads SET assignee_user_id = $1 WHERE uuid = $2", n.staffA1.ID, n.leadA)
+	n.expect(n.tokA, "/v1/leads", qv("assignee_uuid", n.staffA1.Uuid.String()), n.leadA)
+	n.expect(n.tokA, "/v1/leads", qv("assignee_uuid", uuid.NewString()))
+	n.expect(n.tokA, "/v1/leads", qv("assignee_uuid", "none"))
+	n.expect400(n.tokA, "/v1/leads", qv("assignee_uuid", "x"), "assignee_uuid")
+	lead = raw("/v1/leads/"+n.leadA, n.tokA)
+	check("lead.assignee", refOf(lead, "assignee"), "user", n.staffA1.Uuid.String())
+}

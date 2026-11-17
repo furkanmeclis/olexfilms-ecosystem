@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -128,10 +129,12 @@ type SubjectRef struct {
 
 // Task is one task as the API shows it.
 type Task struct {
-	UUID         uuid.UUID  `json:"uuid"`
-	Title        string     `json:"title"`
-	Description  string     `json:"description"`
-	Subject      SubjectRef `json:"subject_organization"`
+	UUID        uuid.UUID  `json:"uuid"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Subject     SubjectRef `json:"subject_organization"`
+	// SubjectRef is the subject as a TEC-1216 ref (kind organization).
+	SubjectRef   refs.Ref   `json:"subject"`
 	Assignee     *Ref       `json:"assignee"`
 	CreatedBy    *Ref       `json:"created_by"`
 	Priority     string     `json:"priority"`
@@ -162,10 +165,11 @@ func timePtr(t pgtype.Timestamptz) *time.Time {
 func taskOf(r db.ListTasksRow) Task {
 	return Task{
 		UUID: r.Uuid, Title: r.Title, Description: r.Description,
-		Subject:   SubjectRef{UUID: r.SubjectUuid, Name: r.SubjectName, Type: r.SubjectType},
-		Assignee:  userRef(r.AssigneeUuid, r.AssigneeName, r.AssigneeSurname),
-		CreatedBy: userRef(r.CreatorUuid, r.CreatorName, r.CreatorSurname),
-		Priority:  r.Priority, Status: r.Status, Source: r.Source,
+		Subject:    SubjectRef{UUID: r.SubjectUuid, Name: r.SubjectName, Type: r.SubjectType},
+		SubjectRef: refs.OrgRef(r.SubjectUuid, r.SubjectName, r.SubjectType),
+		Assignee:   userRef(r.AssigneeUuid, r.AssigneeName, r.AssigneeSurname),
+		CreatedBy:  userRef(r.CreatorUuid, r.CreatorName, r.CreatorSurname),
+		Priority:   r.Priority, Status: r.Status, Source: r.Source,
 		DueAt: timePtr(r.DueAt), ClosedAt: timePtr(r.ClosedAt),
 		CommentCount: r.CommentCount,
 		CreatedAt:    r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,

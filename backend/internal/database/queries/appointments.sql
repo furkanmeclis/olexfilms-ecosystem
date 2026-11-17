@@ -332,11 +332,20 @@ SELECT a.id,
        v.plate AS vehicle_plate,
        cb.name AS car_brand,
        cm.name AS car_model,
-       s.uuid AS service_uuid
+       s.uuid AS service_uuid,
+       -- TEC-1216 refs.
+       u.status AS customer_status, v.vin AS vehicle_vin, s.service_no AS service_no,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       l.uuid AS lead_uuid,
+       COALESCE(NULLIF(l.candidate_company_name, ''), NULLIF(l.candidate_contact_name, ''), '')::text AS lead_name,
+       cbu.uuid AS created_by_uuid, cbu.name AS created_by_name, cbu.surname AS created_by_surname
 FROM appointments a
 JOIN users u ON u.id = a.customer_user_id
+JOIN organizations o ON o.id = a.organization_id
 LEFT JOIN vehicles v ON v.id = a.vehicle_id
 LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
 LEFT JOIN car_models cm ON cm.id = v.car_model_id
 LEFT JOIN services s ON s.id = a.service_id
+LEFT JOIN leads l ON l.id = a.lead_id
+LEFT JOIN users cbu ON cbu.id = a.created_by_user_id
 WHERE a.id = ANY(sqlc.arg(ids)::bigint[]);

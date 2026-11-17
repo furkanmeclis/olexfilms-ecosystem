@@ -18816,6 +18816,10 @@ export interface components {
             /** Format: date-time */
             updated_at?: string;
             audiences?: components["schemas"]["AnnouncementAudience"][];
+            /** @description TEC-1216 author (detail only). */
+            author?: components["schemas"]["Ref"];
+            /** @description TEC-1216 author organization (detail only). */
+            author_organization?: components["schemas"]["Ref"];
         };
         AnnouncementUnreadCount: {
             /** Format: int64 */
@@ -19116,6 +19120,8 @@ export interface components {
             updated_at: string;
             /** @description After a write, vin_duplicate / plate_duplicate when another vehicle of the brand has the same value. */
             warnings: ("vin_duplicate" | "plate_duplicate")[];
+            /** @description TEC-1216 owner ref (kind customer; empty name when anonymized). */
+            customer?: components["schemas"]["Ref"];
         };
         VehicleCreateInput: {
             /** Format: uuid */
@@ -21179,7 +21185,11 @@ export interface components {
         ActivityEvent: {
             /** Format: uuid */
             uuid: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             actor_user_id?: number;
             action: string;
             resource: string;
@@ -21190,6 +21200,8 @@ export interface components {
             };
             /** Format: date-time */
             created_at: string;
+            /** @description TEC-1216 acting user. */
+            actor?: components["schemas"]["Ref"];
         };
         EnvelopeActivityEventPage: {
             /** @enum {boolean} */
@@ -22060,7 +22072,11 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             role: components["schemas"]["ContractSignerRole"];
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             user_id?: number | null;
             name: string;
             phone_e164?: string | null;
@@ -22069,6 +22085,8 @@ export interface components {
             /** Format: date-time */
             signed_at?: string | null;
             signature?: components["schemas"]["ContractSignature"] | null;
+            /** @description TEC-1216 signer account: kind customer for the customer signer, user for staff. */
+            user?: components["schemas"]["Ref"] | null;
         };
         ContractMedia: {
             /** Format: uuid */
@@ -22091,7 +22109,11 @@ export interface components {
             contract_no: number;
             /** @enum {string} */
             subject_type: "service" | "service_subscription";
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             subject_id: number;
             kind: components["schemas"]["ContractTemplateKind"];
             /** @example tr */
@@ -22115,6 +22137,8 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** @description TEC-1216 service or subscription the contract belongs to. */
+            subject?: components["schemas"]["Ref"];
         };
         CreateServiceContractRequest: {
             /** Format: uuid */
@@ -23849,6 +23873,8 @@ export interface components {
                 };
                 unresolved: number;
             };
+            /** @description TEC-1216 creator ref (detail only). */
+            created_by?: components["schemas"]["Ref"];
         };
         StockCountScanInput: {
             /** @description Location QR, unit barcode / QR, SKU or short code (TEC-203). */
@@ -25901,8 +25927,6 @@ export interface components {
             organization_uuid: string;
             /** Format: uuid */
             item_uuid: string;
-            /** Format: int64 */
-            assigned_by_org_id?: number;
             /** Format: date */
             starts_on: string;
             /** Format: date */
@@ -25922,6 +25946,10 @@ export interface components {
             organization_name?: string;
             item_name?: string;
             item_category?: components["schemas"]["ServiceCatalogCategory"];
+            /** @description TEC-1216 subscribed organization. */
+            organization?: components["schemas"]["Ref"];
+            /** @description TEC-1216 organization that assigned the subscription. */
+            assigned_by_org?: components["schemas"]["Ref"] | null;
         };
         ServiceSubscriptionCancelInput: {
             reason: string;
@@ -27257,6 +27285,16 @@ export interface components {
             images?: components["schemas"]["ServiceImage"][];
             status_logs?: components["schemas"]["ServiceStatusLog"][];
             warranties?: components["schemas"]["ServiceWarranty"][];
+            /** @description TEC-1216 user who opened the service. */
+            created_by?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 user who performed it (performed_by, else created_by). */
+            performed_by?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 user who completed it. */
+            completed_by?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 user who cancelled it. */
+            cancelled_by?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 vehicle ref (plate, else VIN). */
+            vehicle?: components["schemas"]["Ref"];
         };
         ServiceCreateInput: {
             /**
@@ -29208,11 +29246,19 @@ export interface components {
             /** Format: uuid */
             organization_uuid: string;
             target_type: components["schemas"]["LeadTargetType"];
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             customer_user_id?: number;
             /** Format: uuid */
             customer_uuid?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             vehicle_id?: number;
             /** Format: uuid */
             vehicle_uuid?: string;
@@ -29233,21 +29279,31 @@ export interface components {
             lost_reason?: string;
             /** Format: date-time */
             follow_up_date?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             assignee_user_id?: number;
             /** Format: uuid */
             assignee_user_uuid?: string;
             notes: string;
             /** @enum {string} */
             won_ref_type?: "service" | "appointment" | "organization";
-            /** Format: int64 */
-            won_ref_id?: number;
-            /** Format: int64 */
-            created_by_user_id?: number;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** @description TEC-1216 customer ref (kind customer). */
+            customer?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 vehicle ref. */
+            vehicle?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 assignee ref (kind user). */
+            assignee?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 creator ref (kind user). */
+            created_by?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 record the lead was won with (kind service, appointment or organization). */
+            won_ref?: components["schemas"]["Ref"] | null;
         };
         LeadCreateInput: {
             target_type: components["schemas"]["LeadTargetType"];
@@ -29393,10 +29449,10 @@ export interface components {
             payload: {
                 [key: string]: unknown;
             };
-            /** Format: int64 */
-            actor_user_id?: number;
             /** Format: date-time */
             created_at: string;
+            /** @description TEC-1216 acting user. */
+            actor?: components["schemas"]["Ref"];
         };
         LeadFollowUpCount: {
             /** Format: int64 */
@@ -29643,11 +29699,23 @@ export interface components {
         Appointment: {
             /** Format: uuid */
             uuid: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             organization_id: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             customer_user_id: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             vehicle_id?: number | null;
             /** Format: date-time */
             starts_at: string;
@@ -29657,13 +29725,13 @@ export interface components {
             source: components["schemas"]["AppointmentSource"];
             status: components["schemas"]["AppointmentStatus"];
             cancel_reason?: string | null;
-            /** Format: int64 */
-            lead_id?: number | null;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @deprecated
+             * @description Deprecated (TEC-1216): internal id; use the ref.
+             */
             service_id?: number | null;
             note: string;
-            /** Format: int64 */
-            created_by_user_id?: number | null;
             /** Format: date-time */
             created_at?: string | null;
             /** Format: date-time */
@@ -29685,6 +29753,18 @@ export interface components {
              * @description Draft service opened by start-intake
              */
             service_uuid?: string | null;
+            /** @description TEC-1216 organization ref. */
+            organization?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 customer ref. */
+            customer?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 vehicle ref. */
+            vehicle?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 linked service ref. */
+            service?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 linked lead ref. */
+            lead?: components["schemas"]["Ref"] | null;
+            /** @description TEC-1216 creator ref (kind user). */
+            created_by?: components["schemas"]["Ref"] | null;
         };
         AppointmentStatusInput: {
             status: components["schemas"]["AppointmentStatus"];
@@ -29824,6 +29904,8 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** @description TEC-1216 subject organization as a ref. */
+            subject?: components["schemas"]["Ref"];
         };
         TaskCreateInput: {
             /**
@@ -58216,8 +58298,13 @@ export interface operations {
                 source?: string;
                 /** @description CSV of cold, warm, hot. */
                 temperature?: string;
-                /** @description CSV of assignee user ids; `none` matches unassigned leads. */
+                /**
+                 * @deprecated
+                 * @description Deprecated (TEC-1216): CSV of internal assignee user ids; `none` matches unassigned leads. Use assignee_uuid.
+                 */
                 assignee_user_id?: string;
+                /** @description TEC-1216: CSV of assignee user uuids; `none` matches unassigned leads. An unknown uuid matches nothing. */
+                assignee_uuid?: string;
                 /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
                 created_from?: components["parameters"]["CreatedFrom"];
                 /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */

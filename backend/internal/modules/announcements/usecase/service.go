@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/refs"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -139,6 +140,24 @@ type Announcement struct {
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 	Audiences     []Audience `json:"audiences,omitempty"`
+	// TEC-1216 (detail only): the author and the author organization.
+	Author             *refs.Ref `json:"author,omitempty"`
+	AuthorOrganization *refs.Ref `json:"author_organization,omitempty"`
+}
+
+// withAuthor fills the author refs of a detail view.
+func (s *Service) withAuthor(ctx context.Context, a *Announcement, row db.Announcement) error {
+	r := refs.NewResolver(s.q)
+	var err error
+	if row.AuthorUserID.Valid {
+		id := row.AuthorUserID.Int64
+		if a.Author, err = r.User(ctx, &id); err != nil {
+			return err
+		}
+	}
+	orgID := row.OrganizationID
+	a.AuthorOrganization, err = r.Organization(ctx, &orgID)
+	return err
 }
 
 // ReadReport is the author read receipt view.
@@ -570,6 +589,9 @@ func (s *Service) GetVisible(ctx context.Context, c Caller, id uuid.UUID, locale
 				return Announcement{}, err
 			}
 			a.ReadAt = ptrTime(read.ReadAt)
+			if err := s.withAuthor(ctx, &a, row); err != nil {
+				return Announcement{}, err
+			}
 			return a, nil
 		}
 	}
@@ -600,6 +622,9 @@ func (s *Service) GetAuthor(ctx context.Context, c Caller, id uuid.UUID) (Announ
 			}
 		}
 		out.Audiences = append(out.Audiences, item)
+	}
+	if err := s.withAuthor(ctx, &out, a); err != nil {
+		return Announcement{}, err
 	}
 	return out, nil
 }

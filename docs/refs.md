@@ -103,3 +103,37 @@ Kullanıcı sayaçları (çağıranın kapsamındaki organizasyonlarda):
 
 Mobil ayna (`/v1/mobile/panel/*`): `tenant/organizations`, `contracts`, `appointments`,
 `announcements`, `warehouse`, `tasks` zaten açık; `tenant/users` TEC-1216 ile eklendi.
+
+## 5. Yanıtlardaki ref alanları (TEC-1216 PR-2)
+
+Yeni alanlar OpenAPI'de isteğe bağlıdır (eski istemciler kırılmasın); backend her zaman doldurur
+(ilişki yoksa `null`).
+
+| Kaynak | Yeni ref alanları |
+|---|---|
+| Hizmet (`Service`) | `created_by`, `performed_by` (yoksa `created_by`), `completed_by`, `cancelled_by` (kind `user`), `vehicle`. `applied_by` metni geriye dönük kalır. |
+| Araç (`Vehicle`) | `customer` (kind `customer`) |
+| Lead (`Lead`) | `customer`, `vehicle`, `assignee`, `created_by`, `won_ref` (kind `service` / `appointment` / `organization`) |
+| Lead olayı (`LeadEvent`) | `actor` |
+| Randevu (`Appointment`) | `organization`, `customer`, `vehicle`, `service`, `lead`, `created_by` |
+| Sözleşme (`Contract`) | `subject` (kind `service` / `subscription`); imzacıda `user` (müşteri imzacı: kind `customer`) |
+| Duyuru (`Announcement`, yalnız detay) | `author`, `author_organization` |
+| Abonelik (`ServiceSubscription`) | `organization`, `assigned_by_org` |
+| Depo sayımı (`StockCount`, yalnız detay) | `created_by` |
+| Görev (`Task`) | `subject` (kind `organization`; `subject_organization` geriye dönük kalır) |
+| Etkinlik (`ActivityEvent`) | `actor` |
+
+Lead listesi: `assignee_uuid` (CSV uuid veya `none`) eklendi; `assignee_user_id` deprecated.
+
+### İç id alanları
+
+Kaldırılanlar (hiçbir istemci kullanmıyordu): `Lead.won_ref_id`, `Lead.created_by_user_id`,
+`LeadEvent.actor_user_id`, `Appointment.lead_id`, `Appointment.created_by_user_id`,
+`Appointment.plan_id`, `ServiceSubscription.assigned_by_org_id`.
+
+Deprecated olanlar (web/mobil hâlâ okuyor; istemciler ref'e geçince kaldırılacak):
+`Lead.customer_user_id`, `Lead.vehicle_id`, `Lead.assignee_user_id`,
+`Appointment.organization_id`, `Appointment.customer_user_id`, `Appointment.vehicle_id`,
+`Appointment.service_id`, `Contract.subject_id`, `ContractSigner.user_id`,
+`ActivityEvent.actor_user_id`, lead listesi `assignee_user_id` filtresi.
+Randevu ayarları/kapanışlarındaki `organization_id` de aynı durumda (web testleri okuyor).
