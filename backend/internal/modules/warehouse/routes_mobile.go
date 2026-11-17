@@ -60,6 +60,7 @@ func RegisterMobileRoutes(
 	mux.Handle("GET "+p+"/stock-entries", read(h.Entries.List))
 	mux.Handle("POST "+p+"/stock-entries", write(h.Entries.CreateMobile))
 	mux.Handle("GET "+p+"/stock-entries/{uuid}", read(h.Entries.Get))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}/placement-suggestions", read(h.Entries.PlacementSuggestions))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/lines", write(h.Entries.AddLines))
 	mux.Handle("DELETE "+p+"/stock-entries/{uuid}/lines/{line_uuid}", write(h.Entries.DeleteLine))
 	mux.Handle("POST "+p+"/stock-entries/{uuid}/place", write(h.Entries.Place))

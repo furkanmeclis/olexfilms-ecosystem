@@ -172,6 +172,20 @@ func (h *Entries) Get(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// PlacementSuggestions (GET /v1/warehouse/stock-entries/{uuid}/placement-suggestions, TEC-1230).
+func (h *Entries) PlacementSuggestions(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.PlacementSuggestions(r.Context(), entryCaller(r), id)
+	if err != nil {
+		writeEntryError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 // AddLines (POST /v1/warehouse/stock-entries/{uuid}/lines).
 func (h *Entries) AddLines(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r)

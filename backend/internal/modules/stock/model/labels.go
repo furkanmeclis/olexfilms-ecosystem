@@ -22,6 +22,8 @@ type LabelTemplate struct {
 	ShowCodeText bool      `json:"show_code_text"`
 	IsDefault    bool      `json:"is_default"`
 	Active       bool      `json:"active"`
+	// OutputFormat: sheet (A4 grid), single (one label per page) or zpl.
+	OutputFormat string    `json:"output_format"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

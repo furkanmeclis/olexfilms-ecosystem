@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulon bu təşkilatın stokunda deyil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulon açıq xidmətdə və ya sifarişdə istifadə olunur.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu əməliyyat açarı başqa bölmə üçün istifadə olunub.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "Kəsim məhsulun minimum kəsim uzunluğundan qısadır. Rulonun qalanının hamısını götürün və ya daha uzun kəsin.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "Kəsim məhsulun minimum kəsim uzunluğundan qısadır. Rulonun qalanının hamısını istifadə edin və ya daha uzun kəsin.",
   "codes.LEADS_MODULE_DISABLED": "Potensial müştəri modulu sistem üzrə bağlıdır; əvvəlcə modulu açın.",
   "codes.FLEET_ALREADY_EXISTS": "Bu vergi nömrəsi ilə avtopark artıq mövcuddur; ona əlaqə sorğusu göndərin.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Vergi nömrəsi etibarsızdır (VKN və ya TCKN yoxlaması uyğun gəlmir).",

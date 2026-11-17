@@ -198,7 +198,8 @@ ORDER BY u.product_id, u.barcode;
 -- TEC-373 (DT-BE-5): statuses is any-of (empty: available + placed),
 -- barcode exact or barcode_prefix (LIKE, the caller escapes % and _),
 -- location_uuids any-of (fixed barcodes have no single location and drop
--- out), updated_from / updated_before (exclusive) on the holding's last
+-- out), remnant (TEC-1230: rolls under the product's minimum cut, or not),
+-- updated_from / updated_before (exclusive) on the holding's last
 -- change. sort_key: product, barcode, status (unit flow rank), quantity,
 -- meters (remaining, empty last), updated_at; id is the tiebreak.
 
@@ -222,6 +223,9 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        held.quantity, held.updated_at,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
+       -- TEC-1230: a roll with less left than the product's minimum cut.
+       (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+        AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters)::bool AS remnant,
        c.uuid AS category_uuid, c.name AS category_name,
        l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name,
        -- TEC-1221: credits of a serial piece unit (-1: none), uses so far.
@@ -246,6 +250,9 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
        OR l.uuid = ANY (sqlc.narg(location_uuids)::uuid[]))
   AND (sqlc.narg(updated_from)::timestamptz IS NULL OR held.updated_at >= sqlc.narg(updated_from)::timestamptz)
   AND (sqlc.narg(updated_before)::timestamptz IS NULL OR held.updated_at < sqlc.narg(updated_before)::timestamptz)
+  AND (sqlc.narg(remnant)::bool IS NULL
+       OR (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+           AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters) = sqlc.narg(remnant)::bool)
   AND (sqlc.narg(uuids)::uuid[] IS NULL OR u.uuid = ANY (sqlc.narg(uuids)::uuid[]))
   AND (
     sqlc.narg(q)::text IS NULL
@@ -302,6 +309,9 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
        OR l.uuid = ANY (sqlc.narg(location_uuids)::uuid[]))
   AND (sqlc.narg(updated_from)::timestamptz IS NULL OR held.updated_at >= sqlc.narg(updated_from)::timestamptz)
   AND (sqlc.narg(updated_before)::timestamptz IS NULL OR held.updated_at < sqlc.narg(updated_before)::timestamptz)
+  AND (sqlc.narg(remnant)::bool IS NULL
+       OR (u.remaining_meters IS NOT NULL AND p.min_cut_meters IS NOT NULL
+           AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters) = sqlc.narg(remnant)::bool)
   AND (
     sqlc.narg(q)::text IS NULL
     OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'

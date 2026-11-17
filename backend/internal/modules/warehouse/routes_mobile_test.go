@@ -30,6 +30,7 @@ var mobileWarehouseRoutes = []struct{ method, path string }{
 	{"GET", "/v1/mobile/warehouse/stock-entries"},
 	{"POST", "/v1/mobile/warehouse/stock-entries"},
 	{"GET", "/v1/mobile/warehouse/stock-entries/" + someUUID},
+	{"GET", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/placement-suggestions"},
 	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/lines"},
 	{"DELETE", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/lines/" + someUUID},
 	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/place"},

@@ -112,6 +112,7 @@ func RegisterEntryRoutes(
 	mux.Handle("GET /v1/warehouse/stock-entries", read(h.List))
 	mux.Handle("POST /v1/warehouse/stock-entries", write(h.Create))
 	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}", read(h.Get))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/placement-suggestions", read(h.PlacementSuggestions))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/lines", write(h.AddLines))
 	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}", write(h.DeleteLine))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/place", write(h.Place))

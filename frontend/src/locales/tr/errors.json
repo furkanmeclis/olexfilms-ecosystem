@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulo bu kuruluşun stokunda değil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulo açık bir hizmette veya siparişte kullanılıyor.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu işlem anahtarı başka bir bölme için kullanıldı.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "Kesim, ürünün en kısa kesim boyundan kısa. Rulonun kalanının tamamını alabilir ya da daha uzun kesebilirsiniz.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "Kesim, ürünün en kısa kesim boyundan kısa. Rulonun kalanının tamamını kullanabilir ya da daha uzun kesebilirsiniz.",
   "codes.LEADS_MODULE_DISABLED": "Lead modülü sistem genelinde kapalı; önce modülü açın.",
   "codes.FLEET_ALREADY_EXISTS": "Bu vergi numarasıyla bir filo zaten var; filoya bağlantı isteği gönderin.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Vergi numarası geçersiz (VKN veya TCKN doğrulaması tutmuyor).",

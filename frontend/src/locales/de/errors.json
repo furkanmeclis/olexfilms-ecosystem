@@ -130,6 +130,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Die Rolle ist nicht im Bestand dieser Organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Die Rolle wird in einem offenen Service oder Auftrag verwendet.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet.",
+  "codes.STOCK_SPLIT_BELOW_MIN_CUT": "Der Schnitt ist kürzer als der Mindestzuschnitt des Produkts. Nehmen Sie den ganzen Rest der Rolle oder schneiden Sie länger.",
+  "codes.SERVICE_ITEM_BELOW_MIN_CUT": "Der Schnitt ist kürzer als der Mindestzuschnitt des Produkts. Verwenden Sie den ganzen Rest der Rolle oder schneiden Sie länger.",
   "codes.LEADS_MODULE_DISABLED": "Das Lead-Modul ist systemweit deaktiviert; aktivieren Sie zuerst das Modul.",
   "codes.FLEET_ALREADY_EXISTS": "Eine Flotte mit dieser Steuernummer existiert bereits; senden Sie eine Verknüpfungsanfrage.",
   "codes.FLEET_INVALID_TAX_NUMBER": "Die Steuernummer ist ungültig (Prüfziffer von VKN oder TCKN stimmt nicht).",

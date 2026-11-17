@@ -197,15 +197,16 @@ func (q *Queries) CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams
 const createLabelTemplate = `-- name: CreateLabelTemplate :one
 INSERT INTO label_templates (
     organization_id, name, kind, symbology, logo_mode, logo_text, logo_image,
-    width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active
+    width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, output_format
 )
 VALUES (
     $1, $2, $3, $4,
     $5, $6, $7,
     $8, $9, $10,
-    $11, $12, $13, $14
+    $11, $12, $13, $14,
+    $15
 )
-RETURNING id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at
+RETURNING id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format
 `
 
 type CreateLabelTemplateParams struct {
@@ -223,6 +224,7 @@ type CreateLabelTemplateParams struct {
 	ShowCodeText   bool           `json:"show_code_text"`
 	IsDefault      bool           `json:"is_default"`
 	Active         bool           `json:"active"`
+	OutputFormat   string         `json:"output_format"`
 }
 
 func (q *Queries) CreateLabelTemplate(ctx context.Context, arg CreateLabelTemplateParams) (LabelTemplate, error) {
@@ -241,6 +243,7 @@ func (q *Queries) CreateLabelTemplate(ctx context.Context, arg CreateLabelTempla
 		arg.ShowCodeText,
 		arg.IsDefault,
 		arg.Active,
+		arg.OutputFormat,
 	)
 	var i LabelTemplate
 	err := row.Scan(
@@ -262,6 +265,7 @@ func (q *Queries) CreateLabelTemplate(ctx context.Context, arg CreateLabelTempla
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OutputFormat,
 	)
 	return i, err
 }
@@ -318,7 +322,7 @@ func (q *Queries) GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatch
 }
 
 const getDefaultLabelTemplate = `-- name: GetDefaultLabelTemplate :one
-SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at FROM label_templates
+SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format FROM label_templates
 WHERE organization_id = $1 AND kind = $2 AND is_default AND active
 `
 
@@ -349,12 +353,13 @@ func (q *Queries) GetDefaultLabelTemplate(ctx context.Context, arg GetDefaultLab
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OutputFormat,
 	)
 	return i, err
 }
 
 const getLabelTemplateByID = `-- name: GetLabelTemplateByID :one
-SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at FROM label_templates WHERE id = $1
+SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format FROM label_templates WHERE id = $1
 `
 
 func (q *Queries) GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error) {
@@ -379,12 +384,13 @@ func (q *Queries) GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemp
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OutputFormat,
 	)
 	return i, err
 }
 
 const getLabelTemplateByUUID = `-- name: GetLabelTemplateByUUID :one
-SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at FROM label_templates
+SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format FROM label_templates
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -415,6 +421,7 @@ func (q *Queries) GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTempla
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OutputFormat,
 	)
 	return i, err
 }
@@ -513,7 +520,7 @@ func (q *Queries) ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatches
 const listLabelTemplates = `-- name: ListLabelTemplates :many
 
 
-SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at FROM label_templates
+SELECT id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format FROM label_templates
 WHERE organization_id = $1
   AND ($2::text IS NULL OR kind = $2::text)
 ORDER BY kind, name, id
@@ -555,6 +562,7 @@ func (q *Queries) ListLabelTemplates(ctx context.Context, arg ListLabelTemplates
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OutputFormat,
 		); err != nil {
 			return nil, err
 		}
@@ -814,9 +822,10 @@ SET name = $1,
     show_name = $9,
     show_code_text = $10,
     is_default = $11,
-    active = $12
-WHERE id = $13 AND organization_id = $14
-RETURNING id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at
+    active = $12,
+    output_format = $13
+WHERE id = $14 AND organization_id = $15
+RETURNING id, uuid, organization_id, name, kind, symbology, logo_mode, logo_text, logo_image, width_mm, height_mm, grid_columns, show_name, show_code_text, is_default, active, created_at, updated_at, output_format
 `
 
 type UpdateLabelTemplateParams struct {
@@ -832,6 +841,7 @@ type UpdateLabelTemplateParams struct {
 	ShowCodeText   bool           `json:"show_code_text"`
 	IsDefault      bool           `json:"is_default"`
 	Active         bool           `json:"active"`
+	OutputFormat   string         `json:"output_format"`
 	ID             int64          `json:"id"`
 	OrganizationID int64          `json:"organization_id"`
 }
@@ -850,6 +860,7 @@ func (q *Queries) UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTempla
 		arg.ShowCodeText,
 		arg.IsDefault,
 		arg.Active,
+		arg.OutputFormat,
 		arg.ID,
 		arg.OrganizationID,
 	)
@@ -873,6 +884,7 @@ func (q *Queries) UpdateLabelTemplate(ctx context.Context, arg UpdateLabelTempla
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OutputFormat,
 	)
 	return i, err
 }
