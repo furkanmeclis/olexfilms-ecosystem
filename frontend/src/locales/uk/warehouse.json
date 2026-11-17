@@ -756,5 +756,8 @@
   "detail.updated_at": "Останнє оновлення",
   "detail.transfers_out": "Вихідні переміщення",
   "detail.transfers_in": "Вхідні переміщення",
-  "detail.open": "Деталі"
+  "detail.open": "Деталі",
+  "entry.suggestions.title": "Запропоновані місця",
+  "entry.suggestions.same_product": "{{product}} тут:",
+  "entry.suggestions.empty": "Порожні місця:"
 }

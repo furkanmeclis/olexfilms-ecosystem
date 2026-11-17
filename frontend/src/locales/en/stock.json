@@ -390,5 +390,15 @@
   "credits.reason_required": "A reason is required (at most 1000 characters).",
   "credits.submit": "Add",
   "credits.increased": "Credits added.",
-  "credits.increase_failed": "The credits could not be added."
+  "credits.increase_failed": "The credits could not be added.",
+  "label_templates.fields.output_format": "Output",
+  "label_templates.output_format.sheet": "A4 sheet (grid)",
+  "label_templates.output_format.single": "Single label PDF (thermal)",
+  "label_templates.output_format.zpl": "ZPL (Zebra)",
+  "label_templates.output_format_hint.sheet": "Labels are laid out on an A4 page as a grid.",
+  "label_templates.output_format_hint.single": "Each page is one label, the page size is the label size. Print to a thermal printer from the system print dialog.",
+  "label_templates.output_format_hint.zpl": "A .zpl file for Zebra printers (203 dpi). An image logo is not printed.",
+  "label_templates.form.thermal_sizes": "Common sizes:",
+  "columns.remnant": "Remnant",
+  "remnant.badge": "Remnant"
 }

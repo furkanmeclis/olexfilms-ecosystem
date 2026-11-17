@@ -726,5 +726,8 @@
   "detail.updated_at": "Τελευταία ενημέρωση",
   "detail.transfers_out": "Εξερχόμενες μεταφορές",
   "detail.transfers_in": "Εισερχόμενες μεταφορές",
-  "detail.open": "Λεπτομέρειες"
+  "detail.open": "Λεπτομέρειες",
+  "entry.suggestions.title": "Προτεινόμενες θέσεις",
+  "entry.suggestions.same_product": "Το {{product}} βρίσκεται εδώ:",
+  "entry.suggestions.empty": "Κενές θέσεις:"
 }

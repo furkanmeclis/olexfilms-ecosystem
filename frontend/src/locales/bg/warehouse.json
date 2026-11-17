@@ -726,5 +726,8 @@
   "detail.updated_at": "Последна промяна",
   "detail.transfers_out": "Изходящи трансфери",
   "detail.transfers_in": "Входящи трансфери",
-  "detail.open": "Детайли"
+  "detail.open": "Детайли",
+  "entry.suggestions.title": "Предложени места",
+  "entry.suggestions.same_product": "{{product}} е тук:",
+  "entry.suggestions.empty": "Празни места:"
 }

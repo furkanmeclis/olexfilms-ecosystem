@@ -20,8 +20,10 @@ import {
   LOGO_MODES,
   logoImageError,
   labelTemplateSchema,
+  OUTPUT_FORMATS,
   SYMBOLOGIES,
   TEMPLATE_KINDS,
+  THERMAL_SIZES,
   type LabelTemplateValues,
 } from "@/features/stock/lib/label-templates";
 import type { LabelTemplateKind } from "@/features/stock/services/label-templates.service";
@@ -136,6 +138,7 @@ function TemplateFields({ mode }: { mode: "create" | "edit" }) {
   const { setValue, control } = useFormContext<LabelTemplateValues>();
   const kind = useWatch({ control, name: "kind" });
   const logoMode = useWatch({ control, name: "logo_mode" });
+  const outputFormat = useWatch({ control, name: "output_format" });
 
   // A new template of another kind starts from that kind's defaults.
   const lastKind = useRef<LabelTemplateKind>(kind);
@@ -189,6 +192,48 @@ function TemplateFields({ mode }: { mode: "create" | "edit" }) {
           testId="label-template-symbology"
         />
       </div>
+      <AppSelect
+        name="output_format"
+        label={t("stock.label_templates.fields.output_format")}
+        description={t(
+          `stock.label_templates.output_format_hint.${outputFormat ?? "sheet"}`,
+        )}
+        options={OUTPUT_FORMATS.map((f) => ({
+          value: f,
+          label: t(`stock.label_templates.output_format.${f}`),
+        }))}
+        testId="label-template-output-format"
+      />
+      {outputFormat && outputFormat !== "sheet" ? (
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-testid="label-template-thermal-sizes"
+        >
+          <span className="text-muted-foreground text-xs">
+            {t("stock.label_templates.form.thermal_sizes")}
+          </span>
+          {THERMAL_SIZES.map((size) => (
+            <Button
+              key={`${size.width_mm}x${size.height_mm}`}
+              type="button"
+              size="sm"
+              variant="outline"
+              dir="ltr"
+              onClick={() => {
+                setValue("width_mm", size.width_mm, { shouldValidate: true });
+                setValue("height_mm", size.height_mm, {
+                  shouldValidate: true,
+                });
+              }}
+            >
+              {t("stock.label_templates.size_value", {
+                width: size.width_mm,
+                height: size.height_mm,
+              })}
+            </Button>
+          ))}
+        </div>
+      ) : null}
       <div className="grid grid-cols-3 gap-4">
         <AppInput
           name="width_mm"

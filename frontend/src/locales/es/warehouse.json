@@ -756,5 +756,8 @@
   "detail.updated_at": "Última actualización",
   "detail.transfers_out": "Transferencias salientes",
   "detail.transfers_in": "Transferencias entrantes",
-  "detail.open": "Detalles"
+  "detail.open": "Detalles",
+  "entry.suggestions.title": "Ubicaciones sugeridas",
+  "entry.suggestions.same_product": "{{product}} está aquí:",
+  "entry.suggestions.empty": "Ubicaciones vacías:"
 }

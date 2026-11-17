@@ -8,6 +8,7 @@ export type LabelTemplateInput = Schemas["LabelTemplateInput"];
 export type LabelTemplateKind = Schemas["LabelTemplateKind"];
 export type LabelSymbology = Schemas["LabelSymbology"];
 export type LabelLogoMode = Schemas["LabelLogoMode"];
+export type LabelOutputFormat = Schemas["LabelOutputFormat"];
 
 const enc = encodeURIComponent;
 

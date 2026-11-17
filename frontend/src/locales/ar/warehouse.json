@@ -726,5 +726,8 @@
   "detail.updated_at": "آخر تحديث",
   "detail.transfers_out": "التحويلات الصادرة",
   "detail.transfers_in": "التحويلات الواردة",
-  "detail.open": "التفاصيل"
+  "detail.open": "التفاصيل",
+  "entry.suggestions.title": "المواقع المقترحة",
+  "entry.suggestions.same_product": "{{product}} موجود هنا:",
+  "entry.suggestions.empty": "مواقع فارغة:"
 }

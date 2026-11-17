@@ -50,6 +50,7 @@ import {
   useEntryImportTemplates,
 } from "@/features/warehouse/components/container-entry";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
+import { EntryPlacementSuggestions } from "@/features/warehouse/components/entry-placement-suggestions";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
@@ -626,6 +627,14 @@ export function StockEntryDetailPage({
                     {t("warehouse.entry.place")}
                   </Button>
                 </div>
+                <EntryPlacementSuggestions
+                  entryUuid={entry.uuid}
+                  unplaced={unplaced}
+                  busy={place.isPending}
+                  onPick={(location) =>
+                    place.mutate(placeBody({ location_uuid: location }))
+                  }
+                />
                 {placeError ? (
                   <p
                     role="alert"

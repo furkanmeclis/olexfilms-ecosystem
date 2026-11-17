@@ -756,5 +756,8 @@
   "detail.updated_at": "Последнее обновление",
   "detail.transfers_out": "Исходящие перемещения",
   "detail.transfers_in": "Входящие перемещения",
-  "detail.open": "Подробнее"
+  "detail.open": "Подробнее",
+  "entry.suggestions.title": "Предлагаемые места",
+  "entry.suggestions.same_product": "{{product}} здесь:",
+  "entry.suggestions.empty": "Пустые места:"
 }

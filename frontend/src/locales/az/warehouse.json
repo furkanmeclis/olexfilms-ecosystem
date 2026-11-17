@@ -726,5 +726,8 @@
   "detail.updated_at": "Son yeniləmə",
   "detail.transfers_out": "Gedən transferlər",
   "detail.transfers_in": "Gələn transferlər",
-  "detail.open": "Təfərrüat"
+  "detail.open": "Təfərrüat",
+  "entry.suggestions.title": "Təklif olunan gözlər",
+  "entry.suggestions.same_product": "{{product}} buradadır:",
+  "entry.suggestions.empty": "Boş gözlər:"
 }

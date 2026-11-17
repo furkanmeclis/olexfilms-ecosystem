@@ -726,5 +726,8 @@
   "detail.updated_at": "最后更新",
   "detail.transfers_out": "调出",
   "detail.transfers_in": "调入",
-  "detail.open": "详情"
+  "detail.open": "详情",
+  "entry.suggestions.title": "建议库位",
+  "entry.suggestions.same_product": "{{product}} 位于：",
+  "entry.suggestions.empty": "空库位："
 }
