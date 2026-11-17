@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "活动名称",
+  "filter_all": "全部",
+  "count_results": "结果：{{count}}",
+  "empty_filtered": "没有符合筛选条件的活动",
+  "empty_mobile": "活动在网页后台通过向导创建；您可以在这里跟进和审批。",
+  "recipients_count": "{{count}} 位接收人",
+  "scheduled_on": "已安排：{{date}}",
+  "submit_body": "提交活动审批？审批通过后即可安排发送。",
+  "cancel_body": "取消活动？此操作无法撤销。",
+  "detail.summary": "概要",
+  "detail.not_scheduled": "未安排",
+  "detail.started_at": "开始时间",
+  "detail.finished_at": "结束时间",
+  "detail.timezone": "时区",
+  "detail.delivery": "发送",
+  "detail.contents": "内容",
+  "approvals.reason_placeholder": "填写您的决定理由"
 }

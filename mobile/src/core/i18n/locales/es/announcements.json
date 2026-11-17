@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Anuncios",
+  "empty": "Aún no hay anuncios",
+  "empty_unread": "Lo has leído todo",
+  "filter.all": "Todos",
+  "filter.unread": "No leídos",
+  "filter.unread_count": "No leídos ({{count}})",
+  "pinned": "Fijado",
+  "expires": "Válido hasta {{date}}"
+}

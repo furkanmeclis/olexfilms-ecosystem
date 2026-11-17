@@ -57,5 +57,22 @@
   "approvals.preview_description": "Tüm diller ve kitle özetiyle kontrol edin.",
   "approvals.reason": "Sebep",
   "approvals.submit": "Kararı gönder",
-  "approvals.toast_decided": "Karar kaydedildi."
+  "approvals.toast_decided": "Karar kaydedildi.",
+  "search": "Όνομα καμπάνιας",
+  "filter_all": "Όλες",
+  "count_results": "Αποτελέσματα: {{count}}",
+  "empty_filtered": "Καμία καμπάνια δεν ταιριάζει με το φίλτρο",
+  "empty_mobile": "Οι καμπάνιες δημιουργούνται με τον οδηγό στο web panel· εδώ τις παρακολουθείτε και τις εγκρίνετε.",
+  "recipients_count": "{{count}} παραλήπτες",
+  "scheduled_on": "Προγραμματισμένη: {{date}}",
+  "submit_body": "Αποστολή της καμπάνιας για έγκριση; Μετά την έγκριση μπορεί να προγραμματιστεί.",
+  "cancel_body": "Ακύρωση της καμπάνιας; Δεν μπορεί να αναιρεθεί.",
+  "detail.summary": "Σύνοψη",
+  "detail.not_scheduled": "Μη προγραμματισμένη",
+  "detail.started_at": "Ξεκίνησε",
+  "detail.finished_at": "Ολοκληρώθηκε",
+  "detail.timezone": "Ζώνη ώρας",
+  "detail.delivery": "Αποστολή",
+  "detail.contents": "Περιεχόμενα",
+  "approvals.reason_placeholder": "Γράψτε την αιτία της απόφασής σας"
 }

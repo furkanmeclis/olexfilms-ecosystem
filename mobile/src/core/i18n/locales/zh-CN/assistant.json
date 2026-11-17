@@ -114,5 +114,13 @@
   "source.mcp": "MCP 客户端",
   "source.panel": "面板对话",
   "source.portal": "门户对话",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "YYYY-MM-DD",
+  "card.placeholder_time": "HH:MM",
+  "card.placeholder_value": "输入数值",
+  "history.delete_hint": "长按删除",
+  "history.messages": "{{count}} 条消息",
+  "approvals.filter_all": "全部",
+  "approvals.confirm_body": "建议的更改将以您的名义执行。",
+  "approvals.reject_body": "该建议将被拒绝，不会保存任何内容。"
 }

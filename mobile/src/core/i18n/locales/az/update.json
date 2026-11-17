@@ -1,5 +1,8 @@
 {
   "title": "Yeniləmə tələb olunur",
   "body": "Bu versiya artıq dəstəklənmir. Davam etmək üçün tətbiqi yeniləyin.",
-  "button": "Mağazanı aç"
+  "button": "Mağazanı aç",
+  "ota_ready": "Yeni versiya hazırdır",
+  "ota_restart": "Yenidən başlat",
+  "ota_later": "Sonra"
 }

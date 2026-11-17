@@ -23,5 +23,10 @@
   "digits": "Dígitos",
   "digits.arab": "Dígitos arábigo-índicos (٠١٢٣)",
   "digits.latn": "Dígitos latinos (0123)",
-  "switch_organization": "Cambiar de organización"
+  "switch_organization": "Cambiar de organización",
+  "ota_channel": "Canal de actualización",
+  "ota_runtime": "Versión de runtime",
+  "ota_update_id": "ID de actualización",
+  "ota_embedded": "Incluida en la app",
+  "ota_off": "Desactivado (desarrollo)"
 }

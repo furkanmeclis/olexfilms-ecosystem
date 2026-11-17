@@ -63,5 +63,11 @@
   "picker.empty": "Ничего не найдено",
   "leave_title": "Есть несохранённые изменения",
   "leave_body": "Если выйти, введённые данные пропадут.",
-  "leave_discard": "Выйти"
+  "leave_discard": "Выйти",
+  "placeholder_email": "name@company.ru",
+  "placeholder_phone": "532 123 45 67",
+  "placeholder_plate": "34 ABC 123",
+  "placeholder_vin": "VIN из 17 символов",
+  "placeholder_year": "2024",
+  "placeholder_km": "45000 км"
 }

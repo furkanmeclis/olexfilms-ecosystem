@@ -122,5 +122,20 @@
   "supplement.hint": "Rivenditore e magazzino provengono dall'ordine principale. Aggiungi prodotti dal catalogo; sono ammesse righe omaggio.",
   "supplement.leave": "Esci dalla spedizione integrativa",
   "supplement.replace_cart_title": "Svuotare il carrello?",
-  "supplement.replace_cart_body": "Il carrello contiene {{n}} prodotti. Una spedizione integrativa inizia con il carrello vuoto."
+  "supplement.replace_cart_body": "Il carrello contiene {{n}} prodotti. Una spedizione integrativa inizia con il carrello vuoto.",
+  "new_title": "Nuovo ordine",
+  "lines": "Prodotti: {{count}}",
+  "browse_catalog": "Sfoglia il catalogo",
+  "cart_empty_title": "Il carrello è vuoto",
+  "cart_empty_body": "Aggiungi prodotti dal catalogo, poi invia l'ordine al tuo fornitore.",
+  "note": "Nota",
+  "note_placeholder": "Nota di consegna o imballaggio (facoltativa)",
+  "price_rule": "I prezzi provengono dal listino del tuo fornitore e compaiono sull'ordine una volta salvato; vengono bloccati quando l'ordine è approvato.",
+  "submit": "Invia ordine",
+  "save_draft": "Salva come bozza",
+  "save_failed": "Impossibile salvare l'ordine",
+  "clear": "Svuota",
+  "clear_title": "Svuotare il carrello?",
+  "draft_kept": "La bozza è stata salvata; un nuovo invio ritenta solo la trasmissione.",
+  "card.created_by": "Effettuato da {{name}}"
 }

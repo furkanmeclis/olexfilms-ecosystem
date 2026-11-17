@@ -28,5 +28,18 @@
   "group.other": "Digər",
   "group.account": "Hesab və ayarlar",
   "measure": "Ölçmə",
-  "accounting_queue": "Mühasibat növbəsi"
+  "accounting_queue": "Mühasibat növbəsi",
+  "catalog": "Kataloq",
+  "transfers": "Transferlər",
+  "certificates": "Sertifikatlar",
+  "pricing": "Qiymətlər",
+  "occupancy": "Görüş doluluğu",
+  "performance": "Performans",
+  "measurements": "Ölçmələr",
+  "fleets": "Avtoparklar",
+  "service_subscriptions": "Xidmət abunələri",
+  "staff": "İşçilər",
+  "quick_sale": "Sürətli satış",
+  "sale_prices": "Satış qiymətlərim",
+  "purchases": "Alışlar"
 }

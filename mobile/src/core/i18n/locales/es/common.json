@@ -63,5 +63,11 @@
   "picker.empty": "Sin resultados",
   "leave_title": "Hay cambios sin guardar",
   "leave_body": "Si sales, se pierde lo que has escrito.",
-  "leave_discard": "Salir"
+  "leave_discard": "Salir",
+  "placeholder_email": "nombre@empresa.com",
+  "placeholder_phone": "532 123 45 67",
+  "placeholder_plate": "34 ABC 123",
+  "placeholder_vin": "VIN de 17 caracteres",
+  "placeholder_year": "2024",
+  "placeholder_km": "45000 km"
 }

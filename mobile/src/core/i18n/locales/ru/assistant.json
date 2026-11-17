@@ -114,5 +114,13 @@
   "source.mcp": "MCP-клиент",
   "source.panel": "Чат в панели",
   "source.portal": "Чат на портале",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "ГГГГ-ММ-ДД",
+  "card.placeholder_time": "ЧЧ:ММ",
+  "card.placeholder_value": "Введите значение",
+  "history.delete_hint": "Нажмите и удерживайте, чтобы удалить",
+  "history.messages": "Сообщений: {{count}}",
+  "approvals.filter_all": "Все",
+  "approvals.confirm_body": "Предложенное изменение будет применено от вашего имени.",
+  "approvals.reject_body": "Предложение будет отклонено, ничего не сохранится."
 }

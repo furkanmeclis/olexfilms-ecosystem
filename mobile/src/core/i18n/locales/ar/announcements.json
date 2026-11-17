@@ -1,1 +1,10 @@
-{}
+{
+  "title": "الإعلانات",
+  "empty": "لا توجد إعلانات بعد",
+  "empty_unread": "لقد قرأت كل شيء",
+  "filter.all": "الكل",
+  "filter.unread": "غير المقروءة",
+  "filter.unread_count": "غير المقروءة ({{count}})",
+  "pinned": "مثبّت",
+  "expires": "صالح حتى {{date}}"
+}

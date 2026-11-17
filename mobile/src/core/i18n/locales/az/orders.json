@@ -122,5 +122,20 @@
   "supplement.hint": "Diler və anbar əsas sifarişdən gəlir. Məhsulları kataloqdan əlavə edin; hədiyyə sətirləri mümkündür.",
   "supplement.leave": "Əlavə göndərişdən çıx",
   "supplement.replace_cart_title": "Səbət boşaldılsın?",
-  "supplement.replace_cart_body": "Səbətdə {{n}} məhsul var. Əlavə göndəriş boş səbətlə başlayır."
+  "supplement.replace_cart_body": "Səbətdə {{n}} məhsul var. Əlavə göndəriş boş səbətlə başlayır.",
+  "new_title": "Yeni sifariş",
+  "lines": "Məhsullar: {{count}}",
+  "browse_catalog": "Kataloqa bax",
+  "cart_empty_title": "Səbətiniz boşdur",
+  "cart_empty_body": "Kataloqdan məhsul əlavə edin, sonra sifarişi təchizatçınıza göndərin.",
+  "note": "Qeyd",
+  "note_placeholder": "Çatdırılma və ya qablaşdırma qeydi (istəyə bağlı)",
+  "price_rule": "Qiymətlər təchizatçınızın qiymət siyahısından gəlir və sifariş saxlanıldıqdan sonra göstərilir; sifariş təsdiqləndikdə sabitlənir.",
+  "submit": "Sifarişi göndər",
+  "save_draft": "Qaralama kimi saxla",
+  "save_failed": "Sifariş saxlanmadı",
+  "clear": "Təmizlə",
+  "clear_title": "Səbət boşaldılsın?",
+  "draft_kept": "Qaralama saxlanıldı; yenidən göndərmə yalnız təqdimatı təkrarlayır.",
+  "card.created_by": "Verən: {{name}}"
 }

@@ -63,5 +63,11 @@
   "picker.empty": "Κανένα αποτέλεσμα",
   "leave_title": "Υπάρχουν μη αποθηκευμένες αλλαγές",
   "leave_body": "Αν φύγετε, ό,τι καταχωρίσατε θα χαθεί.",
-  "leave_discard": "Έξοδος"
+  "leave_discard": "Έξοδος",
+  "placeholder_email": "name@company.gr",
+  "placeholder_phone": "532 123 45 67",
+  "placeholder_plate": "34 ABC 123",
+  "placeholder_vin": "VIN 17 χαρακτήρων",
+  "placeholder_year": "2024",
+  "placeholder_km": "45000 km"
 }

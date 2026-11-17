@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Elanlar",
+  "empty": "Hələ elan yoxdur",
+  "empty_unread": "Hamısını oxumusunuz",
+  "filter.all": "Hamısı",
+  "filter.unread": "Oxunmamış",
+  "filter.unread_count": "Oxunmamış ({{count}})",
+  "pinned": "Bərkidilib",
+  "expires": "{{date}} tarixinədək etibarlıdır"
+}

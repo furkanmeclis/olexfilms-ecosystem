@@ -23,5 +23,10 @@
   "digits": "الأرقام",
   "digits.arab": "أرقام عربية مشرقية (٠١٢٣)",
   "digits.latn": "أرقام لاتينية (0123)",
-  "switch_organization": "تبديل المؤسسة"
+  "switch_organization": "تبديل المؤسسة",
+  "ota_channel": "قناة التحديث",
+  "ota_runtime": "إصدار وقت التشغيل",
+  "ota_update_id": "معرّف التحديث",
+  "ota_embedded": "مضمّن في التطبيق",
+  "ota_off": "متوقف (تطوير)"
 }

@@ -1,1 +1,10 @@
-{}
+{
+  "title": "公告",
+  "empty": "暂无公告",
+  "empty_unread": "您已全部读完",
+  "filter.all": "全部",
+  "filter.unread": "未读",
+  "filter.unread_count": "未读（{{count}}）",
+  "pinned": "已置顶",
+  "expires": "有效期至 {{date}}"
+}

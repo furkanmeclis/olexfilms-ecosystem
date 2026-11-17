@@ -28,5 +28,18 @@
   "group.other": "أخرى",
   "group.account": "الحساب والإعدادات",
   "measure": "القياس",
-  "accounting_queue": "قائمة انتظار المحاسبة"
+  "accounting_queue": "قائمة انتظار المحاسبة",
+  "catalog": "الكتالوج",
+  "transfers": "التحويلات",
+  "certificates": "الشهادات",
+  "pricing": "التسعير",
+  "occupancy": "إشغال المواعيد",
+  "performance": "الأداء",
+  "measurements": "القياسات",
+  "fleets": "الأساطيل",
+  "service_subscriptions": "اشتراكات الخدمات",
+  "staff": "الموظفون",
+  "quick_sale": "بيع سريع",
+  "sale_prices": "أسعار البيع الخاصة بي",
+  "purchases": "المشتريات"
 }

@@ -23,5 +23,10 @@
   "digits": "数字",
   "digits.arab": "阿拉伯-印度数字 (٠١٢٣)",
   "digits.latn": "拉丁数字 (0123)",
-  "switch_organization": "切换组织"
+  "switch_organization": "切换组织",
+  "ota_channel": "更新渠道",
+  "ota_runtime": "运行时版本",
+  "ota_update_id": "更新 ID",
+  "ota_embedded": "随应用内置",
+  "ota_off": "关闭（开发）"
 }

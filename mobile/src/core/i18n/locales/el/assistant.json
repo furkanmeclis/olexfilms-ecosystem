@@ -114,5 +114,13 @@
   "source.mcp": "Πελάτης MCP",
   "source.panel": "Συνομιλία πίνακα",
   "source.portal": "Συνομιλία πύλης",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "ΕΕΕΕ-ΜΜ-ΗΗ",
+  "card.placeholder_time": "ΩΩ:ΛΛ",
+  "card.placeholder_value": "Εισαγάγετε μια τιμή",
+  "history.delete_hint": "Πατήστε παρατεταμένα για διαγραφή",
+  "history.messages": "{{count}} μηνύματα",
+  "approvals.filter_all": "Όλες",
+  "approvals.confirm_body": "Η προτεινόμενη αλλαγή θα εφαρμοστεί για λογαριασμό σας.",
+  "approvals.reject_body": "Η πρόταση θα απορριφθεί και δεν θα αποθηκευτεί τίποτα."
 }

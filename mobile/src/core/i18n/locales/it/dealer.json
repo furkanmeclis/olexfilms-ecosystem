@@ -280,5 +280,15 @@
   "contract.sign_hint": "Il codice cliente e le due firme si fanno per ora nel pannello web. Apri il link o scansiona il codice QR con un tablet.",
   "contract.qr_hint": "Scansionalo su un tablet con accesso al pannello; si apre il passaggio del contratto.",
   "contract.required_title": "Contratto richiesto",
-  "contract.required_body": "Il contratto di accettazione deve essere firmato da cliente e personale prima che il servizio prosegua. Usa la scheda del contratto nel dettaglio del servizio."
+  "contract.required_body": "Il contratto di accettazione deve essere firmato da cliente e personale prima che il servizio prosegua. Usa la scheda del contratto nel dettaglio del servizio.",
+  "phone_none": "Nessun numero di telefono registrato",
+  "placeholder_first_name": "Mario",
+  "placeholder_surname": "Rossi",
+  "placeholder_company_name": "Auto Esempio S.r.l.",
+  "placeholder_tax_office": "Centro",
+  "placeholder_notes": "Una nota sul veicolo o sul lavoro",
+  "placeholder_cancel_reason": "es. Il cliente ha cambiato idea",
+  "placeholder_quantity": "1 pz",
+  "placeholder_meters": "1,5 m",
+  "applied_by": "Applicato da"
 }

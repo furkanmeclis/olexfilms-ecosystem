@@ -28,5 +28,18 @@
   "group.other": "Інше",
   "group.account": "Обліковий запис і налаштування",
   "measure": "Вимірювання",
-  "accounting_queue": "Черга бухгалтерії"
+  "accounting_queue": "Черга бухгалтерії",
+  "catalog": "Каталог",
+  "transfers": "Переміщення",
+  "certificates": "Сертифікати",
+  "pricing": "Ціни",
+  "occupancy": "Завантаженість записів",
+  "performance": "Ефективність",
+  "measurements": "Заміри",
+  "fleets": "Автопарки",
+  "service_subscriptions": "Підписки на послуги",
+  "staff": "Персонал",
+  "quick_sale": "Швидкий продаж",
+  "sale_prices": "Мої ціни продажу",
+  "purchases": "Закупівлі"
 }

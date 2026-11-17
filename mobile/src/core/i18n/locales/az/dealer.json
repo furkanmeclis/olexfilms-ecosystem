@@ -280,5 +280,15 @@
   "contract.sign_hint": "Müştəri kodu və iki imza hələlik veb paneldə atılır. Linki açın və ya QR kodu planşetlə oxudun.",
   "contract.qr_hint": "Panelə daxil olmuş planşetdə oxudun; müqavilə addımı açılır.",
   "contract.required_title": "Müqavilə tələb olunur",
-  "contract.required_body": "Xidmət davam etməzdən əvvəl qəbul müqaviləsi müştəri və işçi tərəfindən imzalanmalıdır. Xidmət detalındakı müqavilə kartından istifadə edin."
+  "contract.required_body": "Xidmət davam etməzdən əvvəl qəbul müqaviləsi müştəri və işçi tərəfindən imzalanmalıdır. Xidmət detalındakı müqavilə kartından istifadə edin.",
+  "phone_none": "Qeydə alınmış telefon nömrəsi yoxdur",
+  "placeholder_first_name": "Əli",
+  "placeholder_surname": "Məmmədov",
+  "placeholder_company_name": "Nümunə Avto MMC",
+  "placeholder_tax_office": "Mərkəz",
+  "placeholder_notes": "Avtomobil və ya iş haqqında qeyd",
+  "placeholder_cancel_reason": "məs. Müştəri fikrini dəyişdi",
+  "placeholder_quantity": "1 əd.",
+  "placeholder_meters": "1,5 m",
+  "applied_by": "Tətbiq edən"
 }

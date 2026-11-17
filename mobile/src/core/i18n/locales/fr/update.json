@@ -1,5 +1,8 @@
 {
   "title": "Mise à jour requise",
   "body": "Cette version n'est plus prise en charge. Mettez à jour l'application pour continuer.",
-  "button": "Ouvrir le Store"
+  "button": "Ouvrir le Store",
+  "ota_ready": "Une nouvelle version est prête",
+  "ota_restart": "Redémarrer",
+  "ota_later": "Plus tard"
 }

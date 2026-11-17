@@ -23,5 +23,10 @@
   "digits": "Rəqəmlər",
   "digits.arab": "Ərəb-hind rəqəmləri (٠١٢٣)",
   "digits.latn": "Latın rəqəmləri (0123)",
-  "switch_organization": "Təşkilatı dəyiş"
+  "switch_organization": "Təşkilatı dəyiş",
+  "ota_channel": "Yeniləmə kanalı",
+  "ota_runtime": "Runtime versiyası",
+  "ota_update_id": "Yeniləmə ID-si",
+  "ota_embedded": "Tətbiqlə birlikdə",
+  "ota_off": "Söndürülüb (inkişaf)"
 }

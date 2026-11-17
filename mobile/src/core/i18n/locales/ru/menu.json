@@ -28,5 +28,18 @@
   "group.other": "Другое",
   "group.account": "Аккаунт и настройки",
   "measure": "Измерение",
-  "accounting_queue": "Очередь бухгалтерии"
+  "accounting_queue": "Очередь бухгалтерии",
+  "catalog": "Каталог",
+  "transfers": "Перемещения",
+  "certificates": "Сертификаты",
+  "pricing": "Цены",
+  "occupancy": "Загрузка записей",
+  "performance": "Эффективность",
+  "measurements": "Замеры",
+  "fleets": "Автопарки",
+  "service_subscriptions": "Подписки на услуги",
+  "staff": "Персонал",
+  "quick_sale": "Быстрая продажа",
+  "sale_prices": "Мои цены продажи",
+  "purchases": "Закупки"
 }

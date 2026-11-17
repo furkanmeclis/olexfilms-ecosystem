@@ -63,5 +63,11 @@
   "picker.empty": "Nəticə yoxdur",
   "leave_title": "Yadda saxlanmamış dəyişikliklər var",
   "leave_body": "Çıxsanız, daxil etdikləriniz silinəcək.",
-  "leave_discard": "Çıx"
+  "leave_discard": "Çıx",
+  "placeholder_email": "ad@sirket.az",
+  "placeholder_phone": "532 123 45 67",
+  "placeholder_plate": "34 ABC 123",
+  "placeholder_vin": "17 simvollu VIN",
+  "placeholder_year": "2024",
+  "placeholder_km": "45000 km"
 }

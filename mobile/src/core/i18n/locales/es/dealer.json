@@ -280,5 +280,15 @@
   "contract.sign_hint": "El código del cliente y las dos firmas se hacen por ahora en el panel web. Abra el enlace o escanee el código QR con una tableta.",
   "contract.qr_hint": "Escanéelo en una tableta con sesión en el panel; se abre el paso del contrato.",
   "contract.required_title": "Contrato obligatorio",
-  "contract.required_body": "El contrato de recepción debe firmarlo el cliente y el personal antes de que el servicio avance. Use la tarjeta del contrato en el detalle del servicio."
+  "contract.required_body": "El contrato de recepción debe firmarlo el cliente y el personal antes de que el servicio avance. Use la tarjeta del contrato en el detalle del servicio.",
+  "phone_none": "No hay número de teléfono registrado",
+  "placeholder_first_name": "Juan",
+  "placeholder_surname": "García",
+  "placeholder_company_name": "Autos Ejemplo S.L.",
+  "placeholder_tax_office": "Centro",
+  "placeholder_notes": "Una nota sobre el vehículo o el trabajo",
+  "placeholder_cancel_reason": "p. ej. El cliente cambió de opinión",
+  "placeholder_quantity": "1 ud.",
+  "placeholder_meters": "1,5 m",
+  "applied_by": "Aplicado por"
 }

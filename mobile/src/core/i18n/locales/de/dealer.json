@@ -280,5 +280,15 @@
   "contract.sign_hint": "Kundencode und beide Unterschriften laufen vorerst im Webpanel. Öffnen Sie den Link oder scannen Sie den QR-Code mit einem Tablet.",
   "contract.qr_hint": "Auf einem im Panel angemeldeten Tablet scannen; der Vertragsschritt öffnet sich.",
   "contract.required_title": "Vertrag erforderlich",
-  "contract.required_body": "Der Annahmevertrag muss von Kunde und Personal unterschrieben sein, bevor der Service weitergeht. Nutzen Sie die Vertragskarte im Servicedetail."
+  "contract.required_body": "Der Annahmevertrag muss von Kunde und Personal unterschrieben sein, bevor der Service weitergeht. Nutzen Sie die Vertragskarte im Servicedetail.",
+  "phone_none": "Keine Telefonnummer hinterlegt",
+  "placeholder_first_name": "Max",
+  "placeholder_surname": "Mustermann",
+  "placeholder_company_name": "Muster Auto GmbH",
+  "placeholder_tax_office": "Innenstadt",
+  "placeholder_notes": "Eine Notiz zum Fahrzeug oder Auftrag",
+  "placeholder_cancel_reason": "z. B. Kunde hat es sich anders überlegt",
+  "placeholder_quantity": "1 Stk.",
+  "placeholder_meters": "1,5 m",
+  "applied_by": "Angebracht von"
 }

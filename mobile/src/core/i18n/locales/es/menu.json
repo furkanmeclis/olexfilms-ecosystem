@@ -28,5 +28,18 @@
   "group.other": "Otros",
   "group.account": "Cuenta y ajustes",
   "measure": "Medición",
-  "accounting_queue": "Cola contable"
+  "accounting_queue": "Cola contable",
+  "catalog": "Catálogo",
+  "transfers": "Transferencias",
+  "certificates": "Certificados",
+  "pricing": "Precios",
+  "occupancy": "Ocupación de citas",
+  "performance": "Rendimiento",
+  "measurements": "Mediciones",
+  "fleets": "Flotas",
+  "service_subscriptions": "Suscripciones de servicio",
+  "staff": "Personal",
+  "quick_sale": "Venta rápida",
+  "sale_prices": "Mis precios de venta",
+  "purchases": "Compras"
 }

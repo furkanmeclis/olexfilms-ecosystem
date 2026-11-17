@@ -28,5 +28,18 @@
   "group.other": "其他",
   "group.account": "账户与设置",
   "measure": "测量",
-  "accounting_queue": "财务队列"
+  "accounting_queue": "财务队列",
+  "catalog": "产品目录",
+  "transfers": "调拨",
+  "certificates": "证书",
+  "pricing": "定价",
+  "occupancy": "预约占用率",
+  "performance": "绩效",
+  "measurements": "测量记录",
+  "fleets": "车队",
+  "service_subscriptions": "服务订阅",
+  "staff": "员工",
+  "quick_sale": "快速销售",
+  "sale_prices": "我的售价",
+  "purchases": "采购"
 }

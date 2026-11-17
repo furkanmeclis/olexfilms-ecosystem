@@ -122,5 +122,20 @@
   "supplement.hint": "Le revendeur et l'entrepôt viennent de la commande principale. Ajoutez des produits depuis le catalogue ; les lignes cadeau sont possibles.",
   "supplement.leave": "Quitter l'envoi complémentaire",
   "supplement.replace_cart_title": "Vider le panier ?",
-  "supplement.replace_cart_body": "Le panier contient {{n}} produits. Un envoi complémentaire commence avec un panier vide."
+  "supplement.replace_cart_body": "Le panier contient {{n}} produits. Un envoi complémentaire commence avec un panier vide.",
+  "new_title": "Nouvelle commande",
+  "lines": "Produits : {{count}}",
+  "browse_catalog": "Parcourir le catalogue",
+  "cart_empty_title": "Votre panier est vide",
+  "cart_empty_body": "Ajoutez des produits depuis le catalogue, puis envoyez la commande à votre fournisseur.",
+  "note": "Note",
+  "note_placeholder": "Note de livraison ou d'emballage (facultatif)",
+  "price_rule": "Les prix proviennent de la liste de prix de votre fournisseur et s'affichent sur la commande une fois enregistrée ; ils sont figés à l'approbation de la commande.",
+  "submit": "Envoyer la commande",
+  "save_draft": "Enregistrer comme brouillon",
+  "save_failed": "La commande n'a pas pu être enregistrée",
+  "clear": "Vider",
+  "clear_title": "Vider le panier ?",
+  "draft_kept": "Le brouillon a été enregistré ; un nouvel envoi ne fait que relancer la soumission.",
+  "card.created_by": "Passée par {{name}}"
 }

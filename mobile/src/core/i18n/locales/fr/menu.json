@@ -28,5 +28,18 @@
   "group.other": "Autres",
   "group.account": "Compte et paramètres",
   "measure": "Mesure",
-  "accounting_queue": "File comptable"
+  "accounting_queue": "File comptable",
+  "catalog": "Catalogue",
+  "transfers": "Transferts",
+  "certificates": "Certificats",
+  "pricing": "Tarifs",
+  "occupancy": "Occupation des rendez-vous",
+  "performance": "Performance",
+  "measurements": "Mesures",
+  "fleets": "Flottes",
+  "service_subscriptions": "Abonnements de services",
+  "staff": "Personnel",
+  "quick_sale": "Vente rapide",
+  "sale_prices": "Mes prix de vente",
+  "purchases": "Achats"
 }

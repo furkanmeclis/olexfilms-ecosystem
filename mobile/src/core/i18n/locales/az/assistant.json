@@ -114,5 +114,13 @@
   "source.mcp": "MCP klienti",
   "source.panel": "Panel söhbəti",
   "source.portal": "Portal söhbəti",
-  "source.whatsapp": "WhatsApp"
+  "source.whatsapp": "WhatsApp",
+  "card.placeholder_date": "İİİİ-AA-GG",
+  "card.placeholder_time": "SS:DD",
+  "card.placeholder_value": "Dəyər daxil edin",
+  "history.delete_hint": "Silmək üçün basıb saxlayın",
+  "history.messages": "{{count}} mesaj",
+  "approvals.filter_all": "Hamısı",
+  "approvals.confirm_body": "Təklif olunan dəyişiklik sizin adınızdan tətbiq ediləcək.",
+  "approvals.reject_body": "Təklif rədd ediləcək və heç nə saxlanmayacaq."
 }

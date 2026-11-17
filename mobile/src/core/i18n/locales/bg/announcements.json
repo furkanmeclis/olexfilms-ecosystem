@@ -1,1 +1,10 @@
-{}
+{
+  "title": "Съобщения",
+  "empty": "Все още няма съобщения",
+  "empty_unread": "Прочетохте всичко",
+  "filter.all": "Всички",
+  "filter.unread": "Непрочетени",
+  "filter.unread_count": "Непрочетени ({{count}})",
+  "pinned": "Закачено",
+  "expires": "Валидно до {{date}}"
+}
