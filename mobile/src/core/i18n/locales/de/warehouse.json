@@ -486,6 +486,7 @@
   "stock.status.reserved": "Reserviert",
   "stock.status.used": "Verbraucht",
   "stock.status.void": "Ungültig",
+  "stock.status.quarantine": "Prüfung ausstehend",
   "stock.unit.holder": "Inhaber",
   "stock.unit.holdings": "Bestände",
   "stock.unit.kind": "Barcode-Typ",

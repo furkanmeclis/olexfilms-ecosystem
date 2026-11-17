@@ -486,6 +486,7 @@
   "stock.status.reserved": "Riservata",
   "stock.status.used": "Usata",
   "stock.status.void": "Annullata",
+  "stock.status.quarantine": "In attesa di controllo",
   "stock.unit.holder": "Detentore",
   "stock.unit.holdings": "Giacenze",
   "stock.unit.kind": "Tipo di codice a barre",

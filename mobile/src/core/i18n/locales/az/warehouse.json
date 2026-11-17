@@ -486,6 +486,7 @@
   "stock.status.reserved": "Rezerv",
   "stock.status.used": "İstifadə olunub",
   "stock.status.void": "Ləğv",
+  "stock.status.quarantine": "Yoxlama gözləyir",
   "stock.unit.holder": "Sahib müəssisə",
   "stock.unit.holdings": "Əldəki miqdarlar",
   "stock.unit.kind": "Barkod tipi",

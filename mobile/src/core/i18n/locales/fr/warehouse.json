@@ -486,6 +486,7 @@
   "stock.status.reserved": "Réservée",
   "stock.status.used": "Utilisée",
   "stock.status.void": "Annulée",
+  "stock.status.quarantine": "En attente de contrôle",
   "stock.unit.holder": "Détenteur",
   "stock.unit.holdings": "Quantités détenues",
   "stock.unit.kind": "Type de code-barres",

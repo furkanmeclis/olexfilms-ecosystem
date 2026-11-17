@@ -42856,7 +42856,7 @@ components:
         location_uuids: { type: array, items: { type: string, format: uuid } }
         statuses:
           type: array
-          items: { type: string, enum: [reserved, printed, available, placed, in_transit, used, void] }
+          items: { type: string, enum: [reserved, printed, available, placed, in_transit, used, void, quarantine] }
         created_from: { type: string, format: date-time }
         created_to: { type: string, format: date-time }
         lot: { type: string }
@@ -42888,7 +42888,7 @@ components:
             at_other_organization, used_in_service, consumed, in_transit,
             reserved_by_order, not_in_stock, fixed_barcode, already_roll,
             no_meters, same_product, unit_type_mismatch, already_there,
-            changed_since, previously_unplaced, roll_cut
+            changed_since, previously_unplaced, roll_cut, quarantine
         meters: { type: [string, "null"] }
         unit_meters: { type: [string, "null"] }
         lot: { type: [string, "null"] }
@@ -43143,7 +43143,7 @@ components:
 
     StockUnitStatus:
       type: string
-      enum: [reserved, printed, available, placed, in_transit, used, void]
+      enum: [reserved, printed, available, placed, in_transit, used, void, quarantine]
 
     StockOrgRef:
       type: object
@@ -43226,7 +43226,8 @@ components:
           type: string
           enum: [entry, placement, transfer_out, transfer_in, transfer_cancel_restore, order_out,
             order_cancel_restore, received, consumption, partial_consumption, return,
-            reclassification, count_adjustment, void, external_outbound, split]
+            reclassification, count_adjustment, void, external_outbound, split,
+            quarantine, quarantine_release, found]
         quantity_delta: { type: integer }
         meters_delta: { type: string, description: "Decimal string, 2 places" }
         from_status:

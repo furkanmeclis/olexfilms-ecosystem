@@ -486,6 +486,7 @@
   "stock.status.reserved": "Δεσμευμένη",
   "stock.status.used": "Χρησιμοποιημένη",
   "stock.status.void": "Άκυρη",
+  "stock.status.quarantine": "Αναμένει έλεγχο",
   "stock.unit.holder": "Κάτοχος",
   "stock.unit.holdings": "Διαθέσιμα",
   "stock.unit.kind": "Τύπος barcode",

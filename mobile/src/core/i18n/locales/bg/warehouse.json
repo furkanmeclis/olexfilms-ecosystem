@@ -486,6 +486,7 @@
   "stock.status.reserved": "Резервирана",
   "stock.status.used": "Използвана",
   "stock.status.void": "Анулирана",
+  "stock.status.quarantine": "Очаква проверка",
   "stock.unit.holder": "Притежател",
   "stock.unit.holdings": "Наличности",
   "stock.unit.kind": "Тип баркод",

@@ -87,6 +87,10 @@ var eodGroupOf = map[string]string{
 	"reclassification":        EODGroupAdjustment,
 	"void":                    EODGroupDisposal,
 	"external_outbound":       EODGroupDisposal,
+	// TEC-1226: return inspection and adjustment documents.
+	"quarantine":         EODGroupReturn,
+	"quarantine_release": EODGroupReturn,
+	"found":              EODGroupAdjustment,
 }
 
 // EODGroupOf returns the group of a movement type (unknown types fall in

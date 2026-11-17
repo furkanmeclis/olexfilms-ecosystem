@@ -502,6 +502,7 @@
   "stock.status.reserved": "Reserved",
   "stock.status.used": "Used",
   "stock.status.void": "Void",
+  "stock.status.quarantine": "Awaiting inspection",
   "stock.unit.holder": "Holder",
   "stock.unit.holdings": "Holdings",
   "stock.unit.kind": "Barcode type",

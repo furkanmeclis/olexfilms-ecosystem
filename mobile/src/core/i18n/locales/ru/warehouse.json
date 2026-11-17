@@ -486,6 +486,7 @@
   "stock.status.reserved": "Зарезервирована",
   "stock.status.used": "Использована",
   "stock.status.void": "Аннулирована",
+  "stock.status.quarantine": "Ожидает проверки",
   "stock.unit.holder": "Владелец",
   "stock.unit.holdings": "Остатки",
   "stock.unit.kind": "Тип штрихкода",

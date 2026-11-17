@@ -23719,7 +23719,7 @@ export interface components {
             /** Format: uuid */
             warehouse_uuid?: string;
             location_uuids?: string[];
-            statuses?: ("reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void")[];
+            statuses?: ("reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void" | "quarantine")[];
             /** Format: date-time */
             created_from?: string;
             /** Format: date-time */
@@ -23746,7 +23746,7 @@ export interface components {
             unit_status: string;
             /** @enum {string} */
             status: "eligible" | "excluded" | "applied" | "failed" | "reverted" | "revert_skipped";
-            /** @description at_other_organization, used_in_service, consumed, in_transit, reserved_by_order, not_in_stock, fixed_barcode, already_roll, no_meters, same_product, unit_type_mismatch, already_there, changed_since, previously_unplaced, roll_cut */
+            /** @description at_other_organization, used_in_service, consumed, in_transit, reserved_by_order, not_in_stock, fixed_barcode, already_roll, no_meters, same_product, unit_type_mismatch, already_there, changed_since, previously_unplaced, roll_cut, quarantine */
             reason: string | null;
             meters: string | null;
             unit_meters: string | null;
@@ -23897,7 +23897,7 @@ export interface components {
         /** @enum {string} */
         StockOwnerType: "warehouse_location" | "organization" | "service" | "trash";
         /** @enum {string} */
-        StockUnitStatus: "reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void";
+        StockUnitStatus: "reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void" | "quarantine";
         StockOrgRef: {
             /** Format: uuid */
             uuid: string;
@@ -23957,7 +23957,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             /** @enum {string} */
-            type: "entry" | "placement" | "transfer_out" | "transfer_in" | "transfer_cancel_restore" | "order_out" | "order_cancel_restore" | "received" | "consumption" | "partial_consumption" | "return" | "reclassification" | "count_adjustment" | "void" | "external_outbound" | "split";
+            type: "entry" | "placement" | "transfer_out" | "transfer_in" | "transfer_cancel_restore" | "order_out" | "order_cancel_restore" | "received" | "consumption" | "partial_consumption" | "return" | "reclassification" | "count_adjustment" | "void" | "external_outbound" | "split" | "quarantine" | "quarantine_release" | "found";
             quantity_delta: number;
             /** @description Decimal string, 2 places */
             meters_delta: string;

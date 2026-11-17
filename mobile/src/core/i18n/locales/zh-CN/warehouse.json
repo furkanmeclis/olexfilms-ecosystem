@@ -486,6 +486,7 @@
   "stock.status.reserved": "已预留",
   "stock.status.used": "已使用",
   "stock.status.void": "已作废",
+  "stock.status.quarantine": "待检验",
   "stock.unit.holder": "持有方",
   "stock.unit.holdings": "持有数量",
   "stock.unit.kind": "条码类型",

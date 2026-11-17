@@ -502,6 +502,7 @@
   "stock.status.reserved": "Rezerve",
   "stock.status.used": "Kullanıldı",
   "stock.status.void": "İptal",
+  "stock.status.quarantine": "Kontrol bekliyor",
   "stock.unit.holder": "Sahip işletme",
   "stock.unit.holdings": "Eldeki miktarlar",
   "stock.unit.kind": "Barkod tipi",
