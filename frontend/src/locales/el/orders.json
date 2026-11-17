@@ -326,5 +326,13 @@
   "plotter.marked_off": "Η σήμανση κοπής plotter αφαιρέθηκε",
   "plotter.change_on": "{{product}}: κοπή plotter",
   "plotter.change_off": "{{product}}: η κοπή plotter αφαιρέθηκε",
-  "activity.plotter_marked": "Άλλαξε τη σήμανση plotter"
+  "activity.plotter_marked": "Άλλαξε τη σήμανση plotter",
+  "supplements.add": "Προσθήκη συμπληρωματικής αποστολής",
+  "supplements.badge": "Συμπληρωματική αποστολή",
+  "supplements.title": "Νέα συμπληρωματική αποστολή",
+  "supplements.title_list": "Συμπληρωματικές αποστολές",
+  "supplements.parent": "Κύρια παραγγελία",
+  "supplements.create": "Δημιουργία συμπληρωματικής αποστολής",
+  "supplements.created": "Η συμπληρωματική αποστολή {{no}} δημιουργήθηκε.",
+  "supplements.forbidden": "Συμπληρωματική αποστολή προστίθεται μόνο σε απεσταλμένη ή παραδομένη παραγγελία, από χρήστη που μπορεί να επεξεργάζεται ή να αποστέλλει παραγγελίες."
 }

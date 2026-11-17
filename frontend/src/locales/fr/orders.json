@@ -365,5 +365,13 @@
   "plotter.marked_off": "Marque découpe plotter retirée",
   "plotter.change_on": "{{product}} : découpe plotter",
   "plotter.change_off": "{{product}} : découpe plotter retirée",
-  "activity.plotter_marked": "A modifié la marque plotter"
+  "activity.plotter_marked": "A modifié la marque plotter",
+  "supplements.add": "Ajouter un envoi complémentaire",
+  "supplements.badge": "Envoi complémentaire",
+  "supplements.title": "Nouvel envoi complémentaire",
+  "supplements.title_list": "Envois complémentaires",
+  "supplements.parent": "Commande principale",
+  "supplements.create": "Créer l'envoi complémentaire",
+  "supplements.created": "Envoi complémentaire {{no}} créé.",
+  "supplements.forbidden": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée ou livrée, par un utilisateur pouvant modifier ou expédier les commandes."
 }

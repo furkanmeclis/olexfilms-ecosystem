@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ import {
 import {
   orderKeys,
   ordersService,
+  type Order,
   type OrderQuoteItem,
 } from "@/features/orders/services/orders.service";
 import {
@@ -76,22 +78,32 @@ import { usePermission } from "@/providers/permission-provider";
  * price and the line total; the summary shows the total in the order
  * currency and at the current rate in TRY. A line can be a gift (0). The
  * server recomputes every amount.
+ *
+ * TEC-1222: with `parent` the form opens a supplementary order of that
+ * shipped or delivered order: the dealer is the main order's buyer (fixed),
+ * its warehouse is preselected and the lines start empty.
  */
 export function CenterOrderForm({
   slug,
   centerUuid,
+  parent,
 }: {
   slug: string;
   centerUuid: string;
+  parent?: Order;
 }) {
   const { t, format } = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
-  const [dealer, setDealer] = useState<ComboboxOption | null>(null);
+  const [dealer, setDealer] = useState<ComboboxOption | null>(
+    parent ? { value: parent.buyer.uuid, label: parent.buyer.name } : null,
+  );
   const [newRecipient, setNewRecipient] = useState(false); // TEC-1062
   const [lines, setLines] = useState<OrderFormLine[]>([]);
   const [note, setNote] = useState("");
-  const [warehouse, setWarehouse] = useState<string | null>(null);
+  const [warehouse, setWarehouse] = useState<string | null>(
+    parent?.seller_warehouse?.uuid ?? null,
+  );
   // TEC-1052: the creator prepares the order himself (orders.ship): no
   // warehouse staff is notified.
   const { can } = usePermission();
@@ -206,19 +218,30 @@ export function CenterOrderForm({
   );
 
   const create = useMutation({
-    mutationFn: () =>
-      ordersService.create({
-        buyer_org_uuid: dealer?.value ?? "",
+    mutationFn: () => {
+      const common = {
         ...(warehouseValue ? { seller_warehouse_uuid: warehouseValue } : {}),
         ...(canShip && selfPrepare ? { self_prepare: true } : {}),
         items: toItemInputs(lines, true),
         ...(note.trim() ? { note: note.trim() } : {}),
-      }),
+      };
+      return parent
+        ? ordersService.createSupplement(parent.uuid, common)
+        : ordersService.create({
+            buyer_org_uuid: dealer?.value ?? "",
+            ...common,
+          });
+    },
     onSuccess: (order) => {
       qc.setQueryData(orderKeys.detail(order.uuid), order);
       void qc.invalidateQueries({ queryKey: ["orders", "list"] });
       void qc.invalidateQueries({ queryKey: ["orders", "quote"] });
-      toast.success(t("orders.center_form.created", { no: order.order_no }));
+      toast.success(
+        t(
+          parent ? "orders.supplements.created" : "orders.center_form.created",
+          { no: order.order_no },
+        ),
+      );
       if ((order.items ?? []).some((i) => i.price_missing)) {
         toast.warning(t("orders.center_form.price_missing_warning"));
       }
@@ -260,39 +283,61 @@ export function CenterOrderForm({
               <Label htmlFor="center-order-dealer">
                 {t("orders.center_form.dealer")}
               </Label>
-              <AsyncCombobox
-                id="center-order-dealer"
-                data-testid="center-order-dealer"
-                value={dealer?.value}
-                initialOptions={dealer ? [dealer] : undefined}
-                loadOptions={loadDealers}
-                placeholder={t("orders.center_form.dealer_placeholder")}
-                searchPlaceholder={t("orders.center_form.dealer_search")}
-                emptyText={t("orders.center_form.dealer_none")}
-                aria-invalid={(touched && dealer === null) || undefined}
-                onValueChange={(value) =>
-                  setDealer(
-                    value
-                      ? { value, label: names.current.get(value) ?? value }
-                      : null,
-                  )
-                }
-              />
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="h-auto px-0"
-                data-testid="center-order-new-recipient"
-                onClick={() => setNewRecipient(true)}
-              >
-                {t("organizations.recipients.new")}
-              </Button>
-              <NewRecipientDialog
-                open={newRecipient}
-                onOpenChange={setNewRecipient}
-                onCreated={(r) => setDealer({ value: r.uuid, label: r.name })}
-              />
+              {parent ? (
+                <div className="space-y-1" data-testid="supplement-parent">
+                  <p className="font-medium" data-testid="center-order-dealer">
+                    {parent.buyer.name}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("orders.supplements.parent")}:{" "}
+                    <Link
+                      href={routes.tenant.orders.detail(slug, parent.uuid)}
+                      className="font-mono hover:underline"
+                      dir="ltr"
+                    >
+                      {parent.order_no}
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <AsyncCombobox
+                    id="center-order-dealer"
+                    data-testid="center-order-dealer"
+                    value={dealer?.value}
+                    initialOptions={dealer ? [dealer] : undefined}
+                    loadOptions={loadDealers}
+                    placeholder={t("orders.center_form.dealer_placeholder")}
+                    searchPlaceholder={t("orders.center_form.dealer_search")}
+                    emptyText={t("orders.center_form.dealer_none")}
+                    aria-invalid={(touched && dealer === null) || undefined}
+                    onValueChange={(value) =>
+                      setDealer(
+                        value
+                          ? { value, label: names.current.get(value) ?? value }
+                          : null,
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0"
+                    data-testid="center-order-new-recipient"
+                    onClick={() => setNewRecipient(true)}
+                  >
+                    {t("organizations.recipients.new")}
+                  </Button>
+                  <NewRecipientDialog
+                    open={newRecipient}
+                    onOpenChange={setNewRecipient}
+                    onCreated={(r) =>
+                      setDealer({ value: r.uuid, label: r.name })
+                    }
+                  />
+                </>
+              )}
               {touched && dealer === null ? (
                 <p
                   className="text-destructive text-xs"
@@ -446,7 +491,9 @@ export function CenterOrderForm({
                   if (valid) create.mutate();
                 }}
               >
-                {t("orders.center_form.create")}
+                {parent
+                  ? t("orders.supplements.create")
+                  : t("orders.center_form.create")}
               </Button>
             </CardContent>
           </Card>

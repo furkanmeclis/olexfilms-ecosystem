@@ -326,5 +326,13 @@
   "plotter.marked_off": "Plotter kəsimi işarəsi götürüldü",
   "plotter.change_on": "{{product}}: plotter kəsimi",
   "plotter.change_off": "{{product}}: plotter kəsimi götürüldü",
-  "activity.plotter_marked": "Plotter işarəsini dəyişdi"
+  "activity.plotter_marked": "Plotter işarəsini dəyişdi",
+  "supplements.add": "Əlavə göndəriş əlavə et",
+  "supplements.badge": "Əlavə göndəriş",
+  "supplements.title": "Yeni əlavə göndəriş",
+  "supplements.title_list": "Əlavə göndərişlər",
+  "supplements.parent": "Əsas sifariş",
+  "supplements.create": "Əlavə göndərişi yarat",
+  "supplements.created": "{{no}} əlavə göndərişi yaradıldı.",
+  "supplements.forbidden": "Əlavə göndəriş yalnız göndərilmiş və ya çatdırılmış sifarişə, sifarişləri redaktə və ya göndərmə səlahiyyəti olan istifadəçi tərəfindən əlavə edilə bilər."
 }

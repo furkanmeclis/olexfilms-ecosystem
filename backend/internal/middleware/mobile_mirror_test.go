@@ -479,3 +479,20 @@ func TestMobilePanelMirrorTEC1220Allowed(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1222: the supplementary order route rides the "orders" prefix.
+func TestMobilePanelMirrorOrderSupplements(t *testing.T) {
+	const path = "orders/0b7a1c1e-3f1d-4a52-9f53-2f4a3c9c1d10/supplements"
+	req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
+	req.Header.Set(MobileAPIVersionHeader, "1")
+	called := false
+	MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.URL.Path != "/v1/"+path || r.Method != http.MethodPost {
+			t.Errorf("rewrite = %s %s", r.Method, r.URL.Path)
+		}
+	})).ServeHTTP(httptest.NewRecorder(), req)
+	if !called {
+		t.Errorf("%s was not allowed", path)
+	}
+}

@@ -23,6 +23,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { OrderActionDialog } from "@/features/orders/components/order-action-dialog";
 import { OrderQueueChips } from "@/features/orders/components/order-queue-chips";
+import { SupplementBadge } from "@/features/orders/components/order-supplements";
 import {
   activeOrderSide,
   canEditDraft,
@@ -167,16 +168,19 @@ export function OrdersListPage({ slug }: { slug: string }) {
           enableSorting: true,
           gridPrimary: true,
           cell: ({ row }) => (
-            <Link
-              href={routes.tenant.orders.detail(slug, row.original.uuid)}
-              className="font-mono font-medium hover:underline"
-              dir="ltr"
-              data-testid="order-row"
-              data-uuid={row.original.uuid}
-              onClick={(event) => event.stopPropagation()}
-            >
-              {row.original.order_no}
-            </Link>
+            <span className="inline-flex items-center gap-2">
+              <Link
+                href={routes.tenant.orders.detail(slug, row.original.uuid)}
+                className="font-mono font-medium hover:underline"
+                dir="ltr"
+                data-testid="order-row"
+                data-uuid={row.original.uuid}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {row.original.order_no}
+              </Link>
+              <SupplementBadge order={row.original} />
+            </span>
           ),
         }),
         createColumn<Order>({
@@ -576,6 +580,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
               >
                 {order.order_no}
               </Link>
+              <SupplementBadge order={order} />
               <StatusChip
                 label={order.status_label}
                 tone={orderStatusTone(order.status)}

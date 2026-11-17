@@ -326,5 +326,13 @@
   "plotter.marked_off": "Отметката за плотерно рязане е премахната",
   "plotter.change_on": "{{product}}: плотерно рязане",
   "plotter.change_off": "{{product}}: плотерното рязане е премахнато",
-  "activity.plotter_marked": "Промени отметката за плотер"
+  "activity.plotter_marked": "Промени отметката за плотер",
+  "supplements.add": "Добави допълнителна пратка",
+  "supplements.badge": "Допълнителна пратка",
+  "supplements.title": "Нова допълнителна пратка",
+  "supplements.title_list": "Допълнителни пратки",
+  "supplements.parent": "Основна поръчка",
+  "supplements.create": "Създай допълнителна пратка",
+  "supplements.created": "Допълнителна пратка {{no}} е създадена.",
+  "supplements.forbidden": "Допълнителна пратка може да се добави само към изпратена или доставена поръчка от потребител с право да редактира или изпраща поръчки."
 }

@@ -12,15 +12,21 @@ INSERT INTO orders (
     organization_id, brand_id, seller_org_id, buyer_org_id,
     seller_warehouse_location_id, buyer_warehouse_location_id,
     currency, delivery_mode, external_reference, note, created_by_user_id,
-    created_by_seller
+    created_by_seller, parent_order_id
 )
 VALUES (
     sqlc.arg(seller_org_id), sqlc.arg(brand_id), sqlc.arg(seller_org_id), sqlc.arg(buyer_org_id),
     sqlc.narg(seller_warehouse_location_id), sqlc.narg(buyer_warehouse_location_id),
     sqlc.arg(currency), sqlc.narg(delivery_mode), sqlc.narg(external_reference), sqlc.narg(note),
-    sqlc.narg(created_by_user_id), sqlc.arg(created_by_seller)
+    sqlc.narg(created_by_user_id), sqlc.arg(created_by_seller), sqlc.narg(parent_order_id)
 )
 RETURNING *;
+
+-- name: ListOrderSupplements :many
+-- TEC-1222: the supplementary orders of a main order, oldest first.
+SELECT * FROM orders
+WHERE parent_order_id = sqlc.arg(parent_order_id) AND brand_id = sqlc.arg(brand_id)
+ORDER BY created_at, id;
 
 -- name: GetOrder :one
 SELECT * FROM orders

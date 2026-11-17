@@ -1,10 +1,17 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
 import { OrderFormPage } from "@/features/orders";
 
 export default function Page() {
   const params = useParams<{ slug: string }>();
-  return <OrderFormPage slug={String(params.slug ?? "")} />;
+  // TEC-1222: ?supplement_of=<uuid> opens a supplementary order.
+  const search = useSearchParams();
+  return (
+    <OrderFormPage
+      slug={String(params.slug ?? "")}
+      supplementOf={search.get("supplement_of") ?? undefined}
+    />
+  );
 }

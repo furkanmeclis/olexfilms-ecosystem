@@ -179,5 +179,6 @@
   "codes.ORDER_NOTHING_TO_INVOICE": "Toutes les lignes de la commande sont déjà facturées.",
   "codes.ORDER_INVOICE_NO_TAKEN": "Ce numéro de facture est déjà enregistré pour la commande.",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "La nouvelle quantité est inférieure aux codes-barres attribués ; retirez d'abord l'attribution.",
-  "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture."
+  "codes.ORDER_INVOICED": "Une commande facturée ne peut pas être annulée ; supprimez d'abord l'enregistrement de facture.",
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "Un envoi complémentaire ne peut être ajouté qu'à une commande expédiée, livrée ou réceptionnée."
 }

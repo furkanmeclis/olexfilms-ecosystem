@@ -155,9 +155,18 @@ type OrderView struct {
 	ReceiveOnBehalf bool `json:"receive_on_behalf,omitempty"`
 	// CanEditItems: the caller may change the lines now (PUT items): the
 	// buyer its draft, the seller before ready (TEC-1056).
-	CanEditItems bool          `json:"can_edit_items"`
-	Items        []ItemView    `json:"items,omitempty"`
-	History      []HistoryView `json:"history,omitempty"`
+	CanEditItems bool `json:"can_edit_items"`
+	// IsSupplement: a supplementary order of a shipped or delivered order
+	// (TEC-1222); list rows carry it too.
+	IsSupplement bool `json:"is_supplement"`
+	// ParentOrder: the main order of a supplement; Supplements: the
+	// supplements of a main order; CanAddSupplement: the caller may open
+	// one now (detail only, TEC-1222).
+	ParentOrder      *OrderLink    `json:"parent_order,omitempty"`
+	Supplements      []OrderLink   `json:"supplements,omitempty"`
+	CanAddSupplement bool          `json:"can_add_supplement,omitempty"`
+	Items            []ItemView    `json:"items,omitempty"`
+	History          []HistoryView `json:"history,omitempty"`
 	// Timeline: every recorded step with its user (detail only, TEC-1060).
 	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Invoices are the manual invoice records (detail only, TEC-1030).
@@ -267,6 +276,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		CreatedAt:           o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
 		AvailableTransitions: invoicedGuard(o, availableTransitions(o.Status, party, c.can)),
 		CanEditItems:         canEditItems(c, o),
+		IsSupplement:         o.ParentOrderID.Valid,
 	}
 	if o.DeliveryMethodID.Valid {
 		m, err := q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)
@@ -316,6 +326,9 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		return OrderView{}, err
 	}
 	v = views[0]
+	if err := s.withSupplements(ctx, q, c, o, &v); err != nil {
+		return OrderView{}, err
+	}
 	items, err := q.ListOrderItems(ctx, o.ID)
 	if err != nil {
 		return OrderView{}, fmt.Errorf("orders: lines: %w", err)

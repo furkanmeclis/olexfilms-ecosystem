@@ -14,6 +14,8 @@ export type OrderItem = Schemas["OrderItem"];
 export type OrderHistoryEntry = Schemas["OrderHistoryEntry"];
 export type OrderItemInput = Schemas["OrderItemInput"];
 export type OrderCreateInput = Schemas["OrderCreateInput"];
+export type OrderSupplementInput = Schemas["OrderSupplementInput"];
+export type OrderLink = Schemas["OrderLink"];
 export type OrderUnitAssignInput = Schemas["OrderUnitAssignInput"];
 export type OrderRateSnapshot = Schemas["OrderRateSnapshot"];
 export type OrderSuggestions = Schemas["OrderSuggestions"];
@@ -122,6 +124,17 @@ export const ordersService = {
   },
   create(body: OrderCreateInput) {
     return platformRequest<Order>("POST", "/v1/orders", { body });
+  },
+  /**
+   * TEC-1222: a supplementary order of a shipped or delivered order;
+   * seller, buyer and warehouse come from the main order.
+   */
+  createSupplement(parentUuid: string, body: OrderSupplementInput) {
+    return platformRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(parentUuid)}/supplements`,
+      { body },
+    );
   },
   /**
    * TEC-1064: price preview of a new order — list price, the dealer's

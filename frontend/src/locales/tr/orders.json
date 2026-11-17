@@ -365,5 +365,13 @@
   "plotter.marked_off": "Plotter kesim işareti kaldırıldı",
   "plotter.change_on": "{{product}}: plotter kesim",
   "plotter.change_off": "{{product}}: plotter kesim kaldırıldı",
-  "activity.plotter_marked": "Plotter işaretini değiştirdi"
+  "activity.plotter_marked": "Plotter işaretini değiştirdi",
+  "supplements.add": "Ek gönderim ekle",
+  "supplements.badge": "Ek gönderim",
+  "supplements.title": "Yeni ek gönderim",
+  "supplements.title_list": "Ek gönderimler",
+  "supplements.parent": "Ana sipariş",
+  "supplements.create": "Ek gönderimi oluştur",
+  "supplements.created": "{{no}} ek gönderimi oluşturuldu.",
+  "supplements.forbidden": "Ek gönderim yalnızca sevk edilmiş veya teslim edilmiş siparişe, sipariş düzenleme veya sevk yetkisiyle eklenebilir."
 }

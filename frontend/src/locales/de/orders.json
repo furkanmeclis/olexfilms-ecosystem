@@ -365,5 +365,13 @@
   "plotter.marked_off": "Plotterschnitt-Markierung entfernt",
   "plotter.change_on": "{{product}}: Plotterschnitt",
   "plotter.change_off": "{{product}}: Plotterschnitt entfernt",
-  "activity.plotter_marked": "Plotter-Markierung geändert"
+  "activity.plotter_marked": "Plotter-Markierung geändert",
+  "supplements.add": "Zusatzlieferung hinzufügen",
+  "supplements.badge": "Zusatzlieferung",
+  "supplements.title": "Neue Zusatzlieferung",
+  "supplements.title_list": "Zusatzlieferungen",
+  "supplements.parent": "Hauptauftrag",
+  "supplements.create": "Zusatzlieferung anlegen",
+  "supplements.created": "Zusatzlieferung {{no}} angelegt.",
+  "supplements.forbidden": "Eine Zusatzlieferung kann nur zu einem versendeten oder zugestellten Auftrag hinzugefügt werden, von einem Benutzer, der Aufträge bearbeiten oder versenden darf."
 }

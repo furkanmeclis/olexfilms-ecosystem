@@ -326,5 +326,13 @@
   "plotter.marked_off": "أُزيلت علامة القص بالبلوتر",
   "plotter.change_on": "{{product}}: قص بالبلوتر",
   "plotter.change_off": "{{product}}: أُزيل القص بالبلوتر",
-  "activity.plotter_marked": "غيّر علامة البلوتر"
+  "activity.plotter_marked": "غيّر علامة البلوتر",
+  "supplements.add": "إضافة شحنة تكميلية",
+  "supplements.badge": "شحنة تكميلية",
+  "supplements.title": "شحنة تكميلية جديدة",
+  "supplements.title_list": "الشحنات التكميلية",
+  "supplements.parent": "الطلب الرئيسي",
+  "supplements.create": "إنشاء الشحنة التكميلية",
+  "supplements.created": "تم إنشاء الشحنة التكميلية {{no}}.",
+  "supplements.forbidden": "لا يمكن إضافة شحنة تكميلية إلا إلى طلب مشحون أو مُسلَّم، من قِبل مستخدم يمكنه تعديل الطلبات أو شحنها."
 }

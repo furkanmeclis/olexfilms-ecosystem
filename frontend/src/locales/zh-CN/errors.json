@@ -176,5 +176,6 @@
   "page_forbidden_body": "您无权查看此页面。",
   "codes.ORDER_LINE_BELOW_ASSIGNED": "新数量低于已分配的条码;请先取消分配。",
   "codes.ORDER_NOT_INVOICEABLE": "只有已发货、已送达或已收货的订单才能标记为已开票。",
-  "codes.ORDER_INVOICED": "已开票的订单不能取消；请先删除发票记录。"
+  "codes.ORDER_INVOICED": "已开票的订单不能取消；请先删除发票记录。",
+  "codes.ORDER_NOT_SUPPLEMENTABLE": "只能为已发货、已送达或已签收的订单添加补充发货。"
 }
