@@ -44,6 +44,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -126,6 +127,9 @@ type StockEntries struct {
 	q        *db.Queries
 	ledger   *ledger.Ledger
 	barcodes *stockusecase.Barcodes
+	// TEC-1225: attachments (object storage) and the discrepancy record PDF.
+	store platstorage.Driver
+	pdf   PDFRenderer
 }
 
 // NewStockEntries builds the use case; ledger events go to out.
@@ -181,6 +185,8 @@ type EntryLine struct {
 	Lot       *string    `json:"lot"`
 	Meters    *string    `json:"meters"`
 	ScannedAt *time.Time `json:"scanned_at"`
+	// TEC-1225: production date of the goods (YYYY-MM-DD).
+	ProductionDate *string `json:"production_date"`
 }
 
 // StockEntry is the entry document.
@@ -212,6 +218,11 @@ type StockEntry struct {
 	CreatedAt   time.Time   `json:"created_at"`
 	ConfirmedAt *time.Time  `json:"confirmed_at"`
 	CancelledAt *time.Time  `json:"cancelled_at"`
+	// TEC-1225: attachments, discrepancy record and undo (detail).
+	Attachments   []EntryAttachment  `json:"attachments,omitempty"`
+	Discrepancies []EntryDiscrepancy `json:"discrepancies,omitempty"`
+	UndoneAt      *time.Time         `json:"undone_at"`
+	UndoReason    *string            `json:"undo_reason"`
 }
 
 // --- inputs ------------------------------------------------------------------
@@ -240,6 +251,9 @@ type EntryLinesInput struct {
 	Prefix        string
 	TemplateUUID  string
 	FixedQuantity *int32
+	// TEC-1225: lot and production date (YYYY-MM-DD) of every added line.
+	Lot            string
+	ProductionDate string
 }
 
 // PlaceInput places lines on one location. Lines: LineUUIDs, or the lines
@@ -385,6 +399,14 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 	if in.FixedQuantity != nil && *in.FixedQuantity < 1 {
 		return StockEntry{}, invalid("fixed_quantity", "must be at least 1")
 	}
+	lot, err := normLot(in.Lot)
+	if err != nil {
+		return StockEntry{}, err
+	}
+	prodDate, err := parseProductionDate(in.ProductionDate)
+	if err != nil {
+		return StockEntry{}, err
+	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
@@ -429,7 +451,10 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 				return err
 			}
 		}
-		return nil
+		if err := applyLineDetails(ctx, q, e, units, lot, prodDate); err != nil {
+			return err
+		}
+		return audit(ctx, q, c, AuditStockEntryLinesAdded, e, map[string]any{"count": len(units), "barcode": firstBarcode(units)})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -534,6 +559,18 @@ func (s *StockEntries) DeleteLine(ctx context.Context, c EntryCaller, id, lineID
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
+		var barcode string
+		lines, err := q.ListStockEntryLines(ctx, e.ID)
+		if err != nil {
+			return err
+		}
+		for _, l := range lines {
+			if l.Uuid == lineID {
+				if u, err := q.GetUnit(ctx, l.UnitID); err == nil {
+					barcode = u.Barcode
+				}
+			}
+		}
 		n, err := q.DeleteStockEntryLine(ctx, db.DeleteStockEntryLineParams{Uuid: lineID, EntryID: e.ID})
 		if err != nil {
 			return err
@@ -541,7 +578,7 @@ func (s *StockEntries) DeleteLine(ctx context.Context, c EntryCaller, id, lineID
 		if n == 0 {
 			return ErrEntryLineNotFound
 		}
-		return nil
+		return audit(ctx, q, c, AuditStockEntryLineDeleted, e, map[string]any{"barcode": barcode})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -586,10 +623,16 @@ func (s *StockEntries) Place(ctx context.Context, c EntryCaller, id uuid.UUID, i
 		if len(ids) == 0 {
 			return ErrEntryEmpty
 		}
-		_, err = q.SetStockEntryLineLocation(ctx, db.SetStockEntryLineLocationParams{
+		if _, err = q.SetStockEntryLineLocation(ctx, db.SetStockEntryLineLocationParams{
 			LocationID: pgtype.Int8{Int64: loc.ID, Valid: true}, Ids: ids, EntryID: e.ID,
-		})
-		return err
+		}); err != nil {
+			return err
+		}
+		locCode := loc.Code
+		if loc.FullCode.Valid {
+			locCode = loc.FullCode.String
+		}
+		return audit(ctx, q, c, AuditStockEntryPlaced, e, map[string]any{"count": len(ids), "location": locCode})
 	})
 	if err != nil {
 		return StockEntry{}, err
@@ -682,6 +725,13 @@ func pickLines(ctx context.Context, q *db.Queries, lines []db.StockEntryLine, uu
 // transaction and closes the entry. A confirmed entry is refused
 // (ErrEntryNotDraft); nothing is written twice.
 func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID) (StockEntry, error) {
+	return s.ConfirmWith(ctx, c, id, ConfirmInput{})
+}
+
+// ConfirmWith confirms with the decisions of the discrepancy record
+// (TEC-1225): a missing line or an extra without a decision refuses the
+// confirm (DiscrepancyRequiredError).
+func (s *StockEntries) ConfirmWith(ctx context.Context, c EntryCaller, id uuid.UUID, in ConfirmInput) (StockEntry, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return StockEntry{}, err
@@ -689,6 +739,9 @@ func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID)
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
+			return err
+		}
+		if err := s.applyDecisions(ctx, q, c, e, in); err != nil {
 			return err
 		}
 		lines, err := q.ListStockEntryLines(ctx, e.ID)
@@ -956,6 +1009,7 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 	out := StockEntry{
 		UUID: e.Uuid, Mode: e.Mode, Status: e.Status, Note: textPtr(e.Note),
 		CreatedAt: ts(e.CreatedAt), ConfirmedAt: tsPtr(e.ConfirmedAt), CancelledAt: tsPtr(e.CancelledAt),
+		UndoneAt: tsPtr(e.UndoneAt), UndoReason: textPtr(e.UndoReason),
 	}
 	if err := s.viewHeader(ctx, q, e, &out); err != nil {
 		return out, err
@@ -994,6 +1048,12 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		return out, err
 	}
 	out.Timeline = timeline
+	if out.Attachments, err = s.listAttachments(ctx, q, e); err != nil {
+		return out, err
+	}
+	if out.Discrepancies, err = s.discrepancies(ctx, q, e); err != nil {
+		return out, err
+	}
 	lines, err := q.ListStockEntryLines(ctx, e.ID)
 	if err != nil {
 		return out, err
@@ -1023,6 +1083,10 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 			LabelURL: stockusecase.UnitLabelPath(u.Barcode), Undone: l.UndoMovementID.Valid,
 			BoxNo: textPtr(l.BoxNo), Lot: textPtr(u.Lot), Meters: numericString(u.InitialMeters),
 			ScannedAt: tsPtr(l.ScannedAt),
+		}
+		if l.ProductionDate.Valid {
+			d := l.ProductionDate.Time.Format(time.DateOnly)
+			line.ProductionDate = &d
 		}
 		if l.ScannedAt.Valid {
 			scanned++
@@ -1069,4 +1133,11 @@ func movementUUID(ctx context.Context, q *db.Queries, id pgtype.Int8) (*uuid.UUI
 	}
 	u := m.Uuid
 	return &u, nil
+}
+
+func firstBarcode(units []db.Unit) string {
+	if len(units) == 0 {
+		return ""
+	}
+	return units[0].Barcode
 }

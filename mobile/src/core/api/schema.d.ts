@@ -7312,6 +7312,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/stock-entries/{uuid}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discrepancy record ('kabul tutanağı') of an entry (TEC-1225)
+         * @description Needs `warehouse.read`. Supplier, delivery, warehouse, the decisions taken at confirm (missing left out, extras added or rejected, damaged accepted or excluded with reason and photos) and their counts. Never carries a price.
+         */
+        get: operations["getStockEntryReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/receipt.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discrepancy record PDF (TEC-1225)
+         * @description Needs `warehouse.read`. Rendered synchronously in `locale` (default: the request locale). 503 STORAGE_UNAVAILABLE when PDF rendering is not configured.
+         */
+        get: operations["getStockEntryReceiptPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach a waybill, invoice, photo or other file (TEC-1225)
+         * @description Needs `warehouse.write` and warehouse membership. Any entry that is not cancelled (409 STOCK_ENTRY_CANCELLED). JPEG, PNG, WebP or PDF, at most 15 MB, at most 50 per entry. A `photo` must be an image; damage decisions name photos by uuid.
+         */
+        post: operations["addStockEntryAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download an attachment (TEC-1225)
+         * @description Needs `warehouse.read`. Streams the stored file inline.
+         */
+        get: operations["getStockEntryAttachment"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove an attachment (TEC-1225)
+         * @description Needs `warehouse.write`. 409 STOCK_ENTRY_ATTACHMENT_IN_USE when the file is damage evidence of the discrepancy record.
+         */
+        delete: operations["deleteStockEntryAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/label-prints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a label print on the entry timeline (TEC-1225)
+         * @description Needs `warehouse.write`. Adds a `labels_printed` step (count of labels; 0 = every line). Does not change any unit status.
+         */
+        post: operations["recordStockEntryLabelPrint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/undo-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Can a confirmed entry be undone? (TEC-1225)
+         * @description Needs `warehouse.read`. `allowed` false with `reason` not_confirmed, import (undo through the import job) or moved; `blockers` lists the units that moved after the entry (shipment, service, transfer, placement...).
+         */
+        get: operations["getStockEntryUndoCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a confirmed manual entry (TEC-1225)
+         * @description Needs `warehouse.write`, `stock.adjust` (403 STOCK_ADJUST_REQUIRED) and a recent step-up (403 STEP_UP_REQUIRED). Every line gets a `void` movement through the ledger (idempotency key `stock_entry_undo:stock_entry_line:<line id>:void:<barcode>`); the entry becomes `undone` with the reason. 409 STOCK_ENTRY_UNDO_BLOCKED (error data `blockers`) when a unit moved after the entry; STOCK_ENTRY_NOT_CONFIRMED; STOCK_ENTRY_UNDO_IMPORT for import entries.
+         */
+        post: operations["undoStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/suppliers": {
         parameters: {
             query?: never;
@@ -7454,7 +7598,11 @@ export interface paths {
         delete: operations["deleteStockEntryLine"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change the lot, production date or box number of a draft line (TEC-1225)
+         * @description Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse. A null field keeps the value, an empty string clears it. The lot is written on the unit while it is still a printed label; `production_date` (YYYY-MM-DD, not in the future) stays on the line. 409 STOCK_ENTRY_NOT_DRAFT after confirm or cancel.
+         */
+        patch: operations["updateStockEntryLine"];
         trace?: never;
     };
     "/v1/warehouse/stock-entries/{uuid}/place": {
@@ -7488,7 +7636,7 @@ export interface paths {
         put?: never;
         /**
          * Confirm a stock entry (ledger entry + placement)
-         * @description Needs `warehouse.write`. In one transaction every line is posted through the stock ledger with the idempotency key `stock_entry:stock_entry_line:<line id>:<type>:<barcode>`: serial units get an `entry` into the organization and a `placement` on their location; fixed barcodes an `entry` straight into their location. Printed -> entry happens at a center only (403 STOCK_ENTRY_CENTER_ONLY, K14). 409 STOCK_ENTRY_NOT_DRAFT when the entry is already confirmed (a second confirm writes nothing), STOCK_ENTRY_EMPTY without lines, STOCK_ENTRY_UNPLACED while a line has no location, STOCK_ENTRY_LEDGER_REFUSED when the ledger refuses a movement (nothing is written).
+         * @description Needs `warehouse.write`. In one transaction every line is posted through the stock ledger with the idempotency key `stock_entry:stock_entry_line:<line id>:<type>:<barcode>`: serial units get an `entry` into the organization and a `placement` on their location; fixed barcodes an `entry` straight into their location. Printed -> entry happens at a center only (403 STOCK_ENTRY_CENTER_ONLY, K14). 409 STOCK_ENTRY_NOT_DRAFT when the entry is already confirmed (a second confirm writes nothing), STOCK_ENTRY_EMPTY without lines, STOCK_ENTRY_UNPLACED while a line has no location, STOCK_ENTRY_LEDGER_REFUSED when the ledger refuses a movement (nothing is written). TEC-1225: the optional body carries the discrepancy decisions. When the arrival check applies (container entry or arrival scan used) every unscanned line needs a `missing` decision and every extra scan an `extra` decision, else 409 STOCK_ENTRY_DISCREPANCY_REQUIRED with error data `missing` and `extras` (barcodes). Damaged lines need a reason and a photo attachment.
          */
         post: operations["confirmStockEntry"];
         delete?: never;
@@ -10632,7 +10780,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Mobile: Change the delivery of a draft entry (TEC-1007)
+         * @description Mobile mirror (TEC-1225) of `PATCH /v1/warehouse/stock-entries/{uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Supplier, container / waybill number, arrival date, default bin and note of a draft.
+         */
+        patch: operations["mobileUpdateStockEntryHeader"];
         trace?: never;
     };
     "/v1/mobile/warehouse/stock-entries/{uuid}/lines": {
@@ -10672,7 +10824,11 @@ export interface paths {
         delete: operations["mobileDeleteStockEntryLine"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Mobile: Change the lot, production date or box number of a draft line (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `PATCH /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse. A null field keeps the value, an empty string clears it. The lot is written on the unit while it is still a printed label; `production_date` (YYYY-MM-DD, not in the future) stays on the line. 409 STOCK_ENTRY_NOT_DRAFT after confirm or cancel.
+         */
+        patch: operations["mobileUpdateStockEntryLine"];
         trace?: never;
     };
     "/v1/mobile/warehouse/stock-entries/{uuid}/place": {
@@ -10706,7 +10862,7 @@ export interface paths {
         put?: never;
         /**
          * Mobile: Confirm a stock entry (TEC-769)
-         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14).
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14). TEC-1225: optional discrepancy decisions (see the panel endpoint).
          */
         post: operations["mobileConfirmStockEntry"];
         delete?: never;
@@ -10729,6 +10885,214 @@ export interface paths {
          * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/cancel`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
          */
         post: operations["mobileCancelStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Discrepancy record ('kabul tutanağı') of an entry (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/receipt`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Supplier, delivery, warehouse, the decisions taken at confirm (missing left out, extras added or rejected, damaged accepted or excluded with reason and photos) and their counts. Never carries a price.
+         */
+        get: operations["mobileGetStockEntryReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/receipt.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Discrepancy record PDF (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/receipt.pdf`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Rendered synchronously in `locale` (default: the request locale). 503 STORAGE_UNAVAILABLE when PDF rendering is not configured.
+         */
+        get: operations["mobileGetStockEntryReceiptPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Attach a waybill, invoice, photo or other file (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/attachments`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and warehouse membership. Any entry that is not cancelled (409 STOCK_ENTRY_CANCELLED). JPEG, PNG, WebP or PDF, at most 15 MB, at most 50 per entry. A `photo` must be an image; damage decisions name photos by uuid.
+         */
+        post: operations["mobileAddStockEntryAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Download an attachment (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Streams the stored file inline.
+         */
+        get: operations["mobileGetStockEntryAttachment"];
+        put?: never;
+        post?: never;
+        /**
+         * Mobile: Remove an attachment (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `DELETE /v1/warehouse/stock-entries/{uuid}/attachments/{attachment_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. 409 STOCK_ENTRY_ATTACHMENT_IN_USE when the file is damage evidence of the discrepancy record.
+         */
+        delete: operations["mobileDeleteStockEntryAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/label-prints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Record a label print on the entry timeline (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/label-prints`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Adds a `labels_printed` step (count of labels; 0 = every line). Does not change any unit status.
+         */
+        post: operations["mobileRecordStockEntryLabelPrint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/undo-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Can a confirmed entry be undone? (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/undo-check`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. `allowed` false with `reason` not_confirmed, import (undo through the import job) or moved; `blockers` lists the units that moved after the entry (shipment, service, transfer, placement...).
+         */
+        get: operations["mobileGetStockEntryUndoCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Undo a confirmed manual entry (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/undo`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`, `stock.adjust` (403 STOCK_ADJUST_REQUIRED) and a recent step-up (403 STEP_UP_REQUIRED). Every line gets a `void` movement through the ledger (idempotency key `stock_entry_undo:stock_entry_line:<line id>:void:<barcode>`); the entry becomes `undone` with the reason. 409 STOCK_ENTRY_UNDO_BLOCKED (error data `blockers`) when a unit moved after the entry; STOCK_ENTRY_NOT_CONFIRMED; STOCK_ENTRY_UNDO_IMPORT for import entries.
+         */
+        post: operations["mobileUndoStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/arrival-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Check one arrived barcode against a draft entry (TEC-1007)
+         * @description Mobile mirror (TEC-1225) of `POST /v1/warehouse/stock-entries/{uuid}/arrival-scans`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. matched / already / extra with running counts.
+         */
+        post: operations["mobileScanStockEntryArrival"];
+        /**
+         * Mobile: Take back one arrival scan (TEC-1007)
+         * @description Mobile mirror (TEC-1225) of `DELETE /v1/warehouse/stock-entries/{uuid}/arrival-scans`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+         */
+        delete: operations["mobileUnscanStockEntryArrival"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/arrival-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Expected vs received of the arrival scan (TEC-1007)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/stock-entries/{uuid}/arrival-report`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`.
+         */
+        get: operations["mobileGetStockEntryArrivalReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: Active suppliers for stock entries (TEC-1225)
+         * @description Mobile mirror (TEC-1225) of `GET /v1/warehouse/suppliers`. Needs `warehouse.read`.
+         */
+        get: operations["mobileListWarehouseSuppliers"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -24717,6 +25081,13 @@ export interface components {
             template_uuid?: string;
             /** @description Stock quantity of each fixed barcode (default 1). */
             fixed_quantity?: number | null;
+            /** @description TEC-1225: lot of every added label. */
+            lot?: string;
+            /**
+             * Format: date
+             * @description TEC-1225: production date of every added line (not in the future).
+             */
+            production_date?: string;
         };
         StockEntryPlaceInput: {
             line_uuids?: string[];
@@ -24781,6 +25152,11 @@ export interface components {
              * @description TEC-1007 arrival scan.
              */
             scanned_at: string | null;
+            /**
+             * Format: date
+             * @description TEC-1225 production date of the goods.
+             */
+            production_date?: string | null;
         };
         StockEntry: {
             /** Format: uuid */
@@ -24830,13 +25206,176 @@ export interface components {
             confirmed_at: string | null;
             /** Format: date-time */
             cancelled_at: string | null;
+            /** @description TEC-1225. Waybill, invoice, photo and other files. Detail responses only. */
+            attachments?: components["schemas"]["StockEntryAttachment"][];
+            /** @description TEC-1225. The discrepancy record decisions. Detail responses only. */
+            discrepancies?: components["schemas"]["StockEntryDiscrepancy"][];
+            /**
+             * Format: date-time
+             * @description TEC-1225 undo of a manual entry.
+             */
+            undone_at?: string | null;
+            undo_reason?: string | null;
         };
         StockEntryTimelineStep: {
-            /** @example confirmed */
+            /**
+             * @description created, header_updated, confirmed, cancelled; TEC-1225: lines_added, line_deleted, line_updated, placed, scanned, unscanned, labels_printed, discrepancies_recorded, attachment_added, attachment_removed, undone. Consecutive scans of one user are one step (details.count).
+             * @example confirmed
+             */
             action: string;
             /** Format: date-time */
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
+            /** @description TEC-1225: barcode, count, location, result, kind, filename, reason, lines (when recorded). */
+            details?: {
+                barcode?: string;
+                count?: number;
+                location?: string;
+                result?: string;
+                kind?: string;
+                filename?: string;
+                reason?: string;
+                lines?: number;
+            };
+        };
+        StockEntryLineDetailsInput: {
+            lot?: string | null;
+            /** @description YYYY-MM-DD; empty string clears. */
+            production_date?: string | null;
+            box_no?: string | null;
+        };
+        StockEntryDiscrepancyDecisionInput: {
+            barcode: string;
+            /** @enum {string} */
+            kind: "missing" | "extra" | "damaged";
+            /**
+             * @description missing: left_out; extra: added | rejected; damaged: accepted | excluded.
+             * @enum {string}
+             */
+            decision: "left_out" | "added" | "rejected" | "accepted" | "excluded";
+            /** @description Required for damaged. */
+            reason?: string;
+            /** @description Damaged - at least one photo attachment of the entry. */
+            attachment_uuids?: string[];
+            /**
+             * Format: uuid
+             * @description Added extra: bin (default: the entry's default bin).
+             */
+            location_uuid?: string | null;
+        };
+        StockEntryConfirmInput: {
+            decisions?: components["schemas"]["StockEntryDiscrepancyDecisionInput"][];
+        };
+        StockEntryAttachment: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "waybill" | "invoice" | "photo" | "other";
+            filename: string;
+            mime_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** @description Download path of the file. */
+            url: string;
+            uploaded_by: components["schemas"]["OrderUserRef"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockEntryDiscrepancy: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "missing" | "extra" | "damaged";
+            /** @enum {string} */
+            decision: "left_out" | "added" | "rejected" | "accepted" | "excluded";
+            barcode: string;
+            product: null | components["schemas"]["StockEntryProduct"];
+            quantity: number;
+            reason: string | null;
+            attachments: components["schemas"]["StockEntryAttachment"][];
+            user: components["schemas"]["OrderUserRef"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        StockEntryReceiptSupplier: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            tax_no: string | null;
+            phone: string | null;
+            email: string | null;
+        };
+        StockEntryReceipt: {
+            /** Format: uuid */
+            entry_uuid: string;
+            status: components["schemas"]["StockEntryStatus"];
+            warehouse: null | components["schemas"]["StockEntryWarehouse"];
+            supplier: null | components["schemas"]["StockEntryReceiptSupplier"];
+            container_no: string | null;
+            waybill_no: string | null;
+            /** Format: date */
+            arrival_date: string | null;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            confirmed_by: components["schemas"]["OrderUserRef"] | null;
+            summary: {
+                /** Format: int64 */
+                entered: number;
+                /** Format: int64 */
+                missing: number;
+                /** Format: int64 */
+                extras_added: number;
+                /** Format: int64 */
+                extras_rejected: number;
+                /** Format: int64 */
+                damaged_accepted: number;
+                /** Format: int64 */
+                damaged_excluded: number;
+            };
+            items: components["schemas"]["StockEntryDiscrepancy"][];
+            pdf_url: string;
+        };
+        EnvelopeStockEntryReceipt: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntryReceipt"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockEntryAttachment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntryAttachment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockEntryUndoBlocker: {
+            barcode: string;
+            product: components["schemas"]["StockEntryProduct"];
+            /** @description The first stock movement after the entry (order_out, consumption, transfer_out, placement...). */
+            movement_type: string;
+            /** Format: uuid */
+            movement_uuid: string;
+            /** Format: date-time */
+            at: string;
+        };
+        StockEntryUndoCheck: {
+            allowed: boolean;
+            /** @enum {string|null} */
+            reason: "not_confirmed" | "import" | "moved" | null;
+            lines: number;
+            blockers: components["schemas"]["StockEntryUndoBlocker"][];
+        };
+        EnvelopeStockEntryUndoCheck: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntryUndoCheck"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockEntryUndoInput: {
+            reason: string;
+        };
+        StockEntryLabelPrintInput: {
+            /** @description Labels printed (0 = every line). */
+            count?: number;
         };
         StockEntrySuggestedLocation: {
             /** Format: uuid */
@@ -46933,6 +47472,259 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getStockEntryReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryReceipt"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getStockEntryReceiptPdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    addStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default other
+                     * @enum {string}
+                     */
+                    kind?: "waybill" | "invoice" | "photo" | "other";
+                };
+            };
+        };
+        responses: {
+            /** @description Attachment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryAttachment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                attachment_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                attachment_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    recordStockEntryLabelPrint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLabelPrintInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getStockEntryUndoCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryUndoCheck"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undoStockEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryUndoInput"];
+            };
+        };
+        responses: {
+            /** @description Undone entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     listWarehouseSuppliers: {
         parameters: {
             query?: {
@@ -47197,6 +47989,39 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    updateStockEntryLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLineDetailsInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     placeStockEntryLines: {
         parameters: {
             query?: never;
@@ -47239,7 +48064,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockEntryConfirmInput"];
+            };
+        };
         responses: {
             /** @description Confirmed entry */
             200: {
@@ -52644,6 +53473,42 @@ export interface operations {
             426: components["responses"]["MobileApiVersionUnsupported"];
         };
     };
+    mobileUpdateStockEntryHeader: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryHeaderInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
     mobileAddStockEntryLines: {
         parameters: {
             query?: never;
@@ -52728,6 +53593,43 @@ export interface operations {
             426: components["responses"]["MobileApiVersionUnsupported"];
         };
     };
+    mobileUpdateStockEntryLine: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLineDetailsInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
     mobilePlaceStockEntryLines: {
         parameters: {
             query?: never;
@@ -52785,7 +53687,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StockEntryConfirmInput"];
+            };
+        };
         responses: {
             /** @description Confirmed entry */
             200: {
@@ -52847,6 +53753,421 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntryReceipt: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryReceipt"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntryReceiptPdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            /** @description STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    mobileAddStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default other
+                     * @enum {string}
+                     */
+                    kind?: "waybill" | "invoice" | "photo" | "other";
+                };
+            };
+        };
+        responses: {
+            /** @description Attachment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryAttachment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            /** @description STORAGE_UNAVAILABLE - file storage or PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    mobileGetStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                attachment_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileDeleteStockEntryAttachment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                attachment_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileRecordStockEntryLabelPrint: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLabelPrintInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntryUndoCheck: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryUndoCheck"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileUndoStockEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryUndoInput"];
+            };
+        };
+        responses: {
+            /** @description Undone entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileScanStockEntryArrival: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryArrivalScanInput"];
+            };
+        };
+        responses: {
+            /** @description Scan result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalScan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileUnscanStockEntryArrival: {
+        parameters: {
+            query: {
+                barcode: string;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Running counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalScan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntryArrivalReport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileListWarehouseSuppliers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                limit?: number;
+                offset?: number;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suppliers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseSupplierPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             426: components["responses"]["MobileApiVersionUnsupported"];
         };
     };

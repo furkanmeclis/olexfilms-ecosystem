@@ -3380,6 +3380,43 @@ type StockEntry struct {
 	WaybillNo         pgtype.Text        `json:"waybill_no"`
 	ArrivalDate       pgtype.Date        `json:"arrival_date"`
 	DefaultLocationID pgtype.Int8        `json:"default_location_id"`
+	UndoneAt          pgtype.Timestamptz `json:"undone_at"`
+	UndoneByUserID    pgtype.Int8        `json:"undone_by_user_id"`
+	UndoReason        pgtype.Text        `json:"undo_reason"`
+}
+
+type StockEntryAttachment struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	EntryID          int64              `json:"entry_id"`
+	Kind             string             `json:"kind"`
+	StorageKey       string             `json:"storage_key"`
+	Filename         string             `json:"filename"`
+	MimeType         string             `json:"mime_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type StockEntryDiscrepancy struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	EntryID         int64              `json:"entry_id"`
+	Kind            string             `json:"kind"`
+	Decision        string             `json:"decision"`
+	Barcode         string             `json:"barcode"`
+	UnitID          pgtype.Int8        `json:"unit_id"`
+	ProductID       pgtype.Int8        `json:"product_id"`
+	Quantity        int32              `json:"quantity"`
+	Reason          pgtype.Text        `json:"reason"`
+	AttachmentIds   []int64            `json:"attachment_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type StockEntryLine struct {
@@ -3396,6 +3433,7 @@ type StockEntryLine struct {
 	BoxNo               pgtype.Text        `json:"box_no"`
 	ScannedAt           pgtype.Timestamptz `json:"scanned_at"`
 	ScannedBy           pgtype.Int8        `json:"scanned_by"`
+	ProductionDate      pgtype.Date        `json:"production_date"`
 }
 
 type StockEntryScan struct {
