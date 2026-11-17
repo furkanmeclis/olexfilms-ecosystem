@@ -36,4 +36,5 @@ func RegisterExportRoutes(
 	mux.Handle("POST /v1/warehouse/transfers/summary/export", read(h.TransferSummary))
 	mux.Handle("POST /v1/warehouse/locations/export", read(h.Locations))
 	mux.Handle("POST /v1/warehouse/eod-reports/export", read(h.EODReports))
+	mux.Handle("POST /v1/warehouse/adjustments/export", read(h.Adjustments))
 }

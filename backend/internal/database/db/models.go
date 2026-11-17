@@ -2851,6 +2851,23 @@ type ReportLayout struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ReturnInspection struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	UnitID          int64              `json:"unit_id"`
+	TransferItemID  pgtype.Int8        `json:"transfer_item_id"`
+	Decision        string             `json:"decision"`
+	ReturnReason    string             `json:"return_reason"`
+	Note            pgtype.Text        `json:"note"`
+	LocationID      pgtype.Int8        `json:"location_id"`
+	AdjustmentID    pgtype.Int8        `json:"adjustment_id"`
+	MovementID      pgtype.Int8        `json:"movement_id"`
+	DecidedByUserID pgtype.Int8        `json:"decided_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type ReviewQuestion struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`
@@ -3262,6 +3279,69 @@ type StepupSetting struct {
 	PasswordLoginTotpRequired bool               `json:"password_login_totp_required"`
 	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockAdjustment struct {
+	ID                     int64              `json:"id"`
+	Uuid                   uuid.UUID          `json:"uuid"`
+	OrganizationID         int64              `json:"organization_id"`
+	BrandID                int64              `json:"brand_id"`
+	AdjustmentNo           string             `json:"adjustment_no"`
+	WarehouseID            pgtype.Int8        `json:"warehouse_id"`
+	Type                   string             `json:"type"`
+	ReasonCode             pgtype.Text        `json:"reason_code"`
+	Note                   pgtype.Text        `json:"note"`
+	Source                 string             `json:"source"`
+	Status                 string             `json:"status"`
+	TotalQuantity          int32              `json:"total_quantity"`
+	TotalMeters            pgtype.Numeric     `json:"total_meters"`
+	RequiresSecondApproval bool               `json:"requires_second_approval"`
+	CreatedByUserID        pgtype.Int8        `json:"created_by_user_id"`
+	SubmittedByUserID      pgtype.Int8        `json:"submitted_by_user_id"`
+	SubmittedAt            pgtype.Timestamptz `json:"submitted_at"`
+	ApprovedByUserID       pgtype.Int8        `json:"approved_by_user_id"`
+	PostedAt               pgtype.Timestamptz `json:"posted_at"`
+	CancelledByUserID      pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelledAt            pgtype.Timestamptz `json:"cancelled_at"`
+	CancelReason           pgtype.Text        `json:"cancel_reason"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockAdjustmentLine struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	AdjustmentID   int64              `json:"adjustment_id"`
+	OrganizationID int64              `json:"organization_id"`
+	UnitID         int64              `json:"unit_id"`
+	ProductID      int64              `json:"product_id"`
+	Kind           string             `json:"kind"`
+	Quantity       pgtype.Int4        `json:"quantity"`
+	Meters         pgtype.Numeric     `json:"meters"`
+	RollMeters     pgtype.Numeric     `json:"roll_meters"`
+	LocationID     pgtype.Int8        `json:"location_id"`
+	MovementID     pgtype.Int8        `json:"movement_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockAdjustmentPhoto struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	AdjustmentID     int64              `json:"adjustment_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	ObjectKey        string             `json:"object_key"`
+	ContentType      string             `json:"content_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	UploadedByUserID pgtype.Int8        `json:"uploaded_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockAdjustmentSetting struct {
+	OrganizationID    int64              `json:"organization_id"`
+	ThresholdQuantity int32              `json:"threshold_quantity"`
+	ThresholdMeters   pgtype.Numeric     `json:"threshold_meters"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type StockBulkJob struct {

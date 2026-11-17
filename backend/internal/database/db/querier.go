@@ -94,6 +94,7 @@ type Querier interface {
 	// never had a ledger row, and a cancelled salary frees its period.
 	CancelPlannedStaffPayment(ctx context.Context, arg CancelPlannedStaffPaymentParams) (StaffPayment, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
+	CancelStockAdjustment(ctx context.Context, arg CancelStockAdjustmentParams) (StockAdjustment, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
 	CancelStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
@@ -286,6 +287,9 @@ type Querier interface {
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
+	// Lines of draft or pending documents holding the unit (another document
+	// may not adjust it meanwhile).
+	CountOpenAdjustmentLinesByUnit(ctx context.Context, arg CountOpenAdjustmentLinesByUnitParams) (int64, error)
 	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
 	CountOpenOrderReceiptDiscrepancies(ctx context.Context, orderID int64) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
@@ -335,6 +339,7 @@ type Querier interface {
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountPurchases(ctx context.Context, arg CountPurchasesParams) (int64, error)
 	CountPurchasesPage(ctx context.Context, arg CountPurchasesPageParams) (int64, error)
+	CountQuarantinedUnits(ctx context.Context, arg CountQuarantinedUnitsParams) (int64, error)
 	CountRoles(ctx context.Context, arg CountRolesParams) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
@@ -350,6 +355,9 @@ type Querier interface {
 	// matching amounts (the "upcoming payments" total of the planned view).
 	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (CountStaffPaymentsRow, error)
 	CountStaffProfiles(ctx context.Context, arg CountStaffProfilesParams) (int64, error)
+	CountStockAdjustmentLines(ctx context.Context, adjustmentID int64) (int64, error)
+	CountStockAdjustmentPhotos(ctx context.Context, adjustmentID int64) (int64, error)
+	CountStockAdjustments(ctx context.Context, arg CountStockAdjustmentsParams) (int64, error)
 	CountStockBulkJobItems(ctx context.Context, arg CountStockBulkJobItemsParams) (int64, error)
 	CountStockBulkJobItemsByReason(ctx context.Context, jobID int64) ([]CountStockBulkJobItemsByReasonRow, error)
 	CountStockBulkJobs(ctx context.Context, arg CountStockBulkJobsParams) (int64, error)
@@ -602,6 +610,7 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Staff.
 	CreateStaffProfile(ctx context.Context, arg CreateStaffProfileParams) (StaffProfile, error)
+	CreateStockAdjustment(ctx context.Context, arg CreateStockAdjustmentParams) (StockAdjustment, error)
 	CreateStockBulkJob(ctx context.Context, arg CreateStockBulkJobParams) (StockBulkJob, error)
 	// TEC-206: stock counts (000068). Every query is bound to one organization;
 	// the warehouse side is brand-independent (K20).
@@ -786,6 +795,8 @@ type Querier interface {
 	DeleteServicePriceOverride(ctx context.Context, arg DeleteServicePriceOverrideParams) (int64, error)
 	DeleteStaffTarget(ctx context.Context, arg DeleteStaffTargetParams) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
+	DeleteStockAdjustmentLine(ctx context.Context, arg DeleteStockAdjustmentLineParams) (int64, error)
+	DeleteStockAdjustmentPhoto(ctx context.Context, id int64) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
 	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
 	DeleteStockEntryLineByID(ctx context.Context, arg DeleteStockEntryLineByIDParams) (int64, error)
@@ -1162,6 +1173,7 @@ type Querier interface {
 	GetIntegrationSyncRunByID(ctx context.Context, id int64) (IntegrationSyncRun, error)
 	GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error)
 	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
+	GetLastReturnItemForUnit(ctx context.Context, arg GetLastReturnItemForUnitParams) (StockTransferRequestItem, error)
 	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
 	GetLatestContractSignature(ctx context.Context, signerID int64) (ContractSignature, error)
 	// The current calibration of a serial: the latest one of the organization.
@@ -1428,6 +1440,11 @@ type Querier interface {
 	GetStaffProfileByUserID(ctx context.Context, arg GetStaffProfileByUserIDParams) (StaffProfile, error)
 	GetStaffTarget(ctx context.Context, arg GetStaffTargetParams) (StaffTarget, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
+	GetStockAdjustmentByUUID(ctx context.Context, arg GetStockAdjustmentByUUIDParams) (StockAdjustment, error)
+	GetStockAdjustmentPhoto(ctx context.Context, arg GetStockAdjustmentPhotoParams) (StockAdjustmentPhoto, error)
+	// TEC-1226: stock adjustment documents, their settings and photos, and the
+	// return inspection queue.
+	GetStockAdjustmentSettings(ctx context.Context, organizationID int64) (StockAdjustmentSetting, error)
 	GetStockBulkJob(ctx context.Context, arg GetStockBulkJobParams) (StockBulkJob, error)
 	GetStockBulkJobByID(ctx context.Context, id int64) (StockBulkJob, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
@@ -1680,6 +1697,7 @@ type Querier interface {
 	// message id handed to the provider.
 	InsertQueuedMessage(ctx context.Context, arg InsertQueuedMessageParams) (Message, error)
 	InsertRecommendedPriceVersion(ctx context.Context, arg InsertRecommendedPriceVersionParams) (RecommendedPriceVersion, error)
+	InsertReturnInspection(ctx context.Context, arg InsertReturnInspectionParams) (ReturnInspection, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	// ---------------------------------------------------------------------------
 	// Status log (append-only).
@@ -1688,6 +1706,8 @@ type Querier interface {
 	InsertServiceSubscriptionPeriod(ctx context.Context, arg InsertServiceSubscriptionPeriodParams) (ServiceSubscriptionPeriod, error)
 	// Idempotent: a reminder already sent returns no row.
 	InsertServiceSubscriptionReminder(ctx context.Context, arg InsertServiceSubscriptionReminderParams) (ServiceSubscriptionReminder, error)
+	InsertStockAdjustmentLine(ctx context.Context, arg InsertStockAdjustmentLineParams) (StockAdjustmentLine, error)
+	InsertStockAdjustmentPhoto(ctx context.Context, arg InsertStockAdjustmentPhotoParams) (StockAdjustmentPhoto, error)
 	InsertStockBulkJobItems(ctx context.Context, arg InsertStockBulkJobItemsParams) error
 	// ---------------------------------------------------------------------------
 	// Lines.
@@ -2690,6 +2710,9 @@ type Querier interface {
 	// Purchases with the supplier name and the (single) line description.
 	ListPurchasesPage(ctx context.Context, arg ListPurchasesPageParams) ([]ListPurchasesPageRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
+	// Units of the organization waiting for inspection, newest first.
+	// q: barcode, product name or SKU.
+	ListQuarantinedUnits(ctx context.Context, arg ListQuarantinedUnitsParams) ([]ListQuarantinedUnitsRow, error)
 	ListQuoteDeliveries(ctx context.Context, quoteID int64) ([]QuoteDelivery, error)
 	ListQuoteLines(ctx context.Context, quoteID int64) ([]QuoteLine, error)
 	ListQuotesByLead(ctx context.Context, arg ListQuotesByLeadParams) ([]Quote, error)
@@ -2724,6 +2747,8 @@ type Querier interface {
 	// with their users, oldest first; the timeline of a detail page
 	// (activity_events_resource_uuid_idx).
 	ListResourceActivityEvents(ctx context.Context, arg ListResourceActivityEventsParams) ([]ListResourceActivityEventsRow, error)
+	// The last received return line of each unit to the organization.
+	ListReturnInfoForUnits(ctx context.Context, arg ListReturnInfoForUnitsParams) ([]ListReturnInfoForUnitsRow, error)
 	// TEC-1085: orders a return of buyer to seller may refer to (seller sold
 	// them to buyer, not draft or cancelled), newest first; q matches order_no.
 	ListReturnOrders(ctx context.Context, arg ListReturnOrdersParams) ([]ListReturnOrdersRow, error)
@@ -2875,6 +2900,11 @@ type Querier interface {
 	// the lines of the orders a statement shows (source "order"), restricted to
 	// orders the book is a party of (seller or buyer), in order/line order.
 	ListStatementOrderItems(ctx context.Context, arg ListStatementOrderItemsParams) ([]ListStatementOrderItemsRow, error)
+	ListStockAdjustmentLines(ctx context.Context, adjustmentID int64) ([]ListStockAdjustmentLinesRow, error)
+	ListStockAdjustmentPhotos(ctx context.Context, adjustmentID int64) ([]StockAdjustmentPhoto, error)
+	// docs/list-contract.md; keys from warehouse usecase AdjustmentSort. status
+	// sorts by flow rank. q: number, note or reason code.
+	ListStockAdjustments(ctx context.Context, arg ListStockAdjustmentsParams) ([]StockAdjustment, error)
 	// TEC-1008: bulk barcode operations.
 	// Units issued by the organization that match the selection, with what the
 	// eligibility rules need. row_limit is the job limit + 1.
@@ -3265,6 +3295,7 @@ type Querier interface {
 	LockServiceSubscription(ctx context.Context, arg LockServiceSubscriptionParams) (ServiceSubscription, error)
 	// LockStaffPayment reads a payment for a status change (edit, cancel, post).
 	LockStaffPayment(ctx context.Context, arg LockStaffPaymentParams) (StaffPayment, error)
+	LockStockAdjustmentByUUID(ctx context.Context, arg LockStockAdjustmentByUUIDParams) (StockAdjustment, error)
 	LockStockBulkJob(ctx context.Context, id int64) (StockBulkJob, error)
 	LockStockCountByUUID(ctx context.Context, arg LockStockCountByUUIDParams) (StockCount, error)
 	LockStockEntryByUUID(ctx context.Context, arg LockStockEntryByUUIDParams) (StockEntry, error)
@@ -3714,6 +3745,7 @@ type Querier interface {
 	// Service side reads idx_services_brand_car / idx_services_org_status.
 	PopularityCarBrandCounts(ctx context.Context, arg PopularityCarBrandCountsParams) ([]PopularityCarBrandCountsRow, error)
 	PopularityCarModelCounts(ctx context.Context, arg PopularityCarModelCountsParams) ([]PopularityCarModelCountsRow, error)
+	PostStockAdjustment(ctx context.Context, arg PostStockAdjustmentParams) (StockAdjustment, error)
 	// Country x currency summary of one snapshot day in the caller's scope
 	// (org_ids NULL = whole brand): average / median deviation and the
 	// organizations with at least one product over the threshold.
@@ -4096,6 +4128,7 @@ type Querier interface {
 	// Marks (processed = true) or clears the accounting mark of a received
 	// return to the book. No row: not found, not a received return of the book.
 	SetReturnAccountingProcessed(ctx context.Context, arg SetReturnAccountingProcessedParams) (uuid.UUID, error)
+	SetReturnInspectionMovement(ctx context.Context, arg SetReturnInspectionMovementParams) error
 	SetReviewQuestionActive(ctx context.Context, arg SetReviewQuestionActiveParams) (ReviewQuestion, error)
 	SetRolePermissions(ctx context.Context, roleID int64) error
 	SetRoomSortOrder(ctx context.Context, arg SetRoomSortOrderParams) (int64, error)
@@ -4119,6 +4152,7 @@ type Querier interface {
 	// SetStaffPaymentFinanceEntry links the ledger row of a payment and marks
 	// it posted (TEC-381: a planned payment is booked on its paid_on).
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)
+	SetStockAdjustmentLineMovement(ctx context.Context, arg SetStockAdjustmentLineMovementParams) error
 	SetStockBulkJobStatus(ctx context.Context, arg SetStockBulkJobStatusParams) (StockBulkJob, error)
 	// TEC-1007: stock entry from a container list. The delivery on the entry
 	// header, the arrival scan (expected vs received), remembered supplier
@@ -4198,6 +4232,7 @@ type Querier interface {
 	// CAS from_status → pending_review (approval on). No row when the status
 	// moved meanwhile.
 	SubmitDealerShowcase(ctx context.Context, arg SubmitDealerShowcaseParams) (DealerShowcase, error)
+	SubmitStockAdjustment(ctx context.Context, arg SubmitStockAdjustmentParams) (StockAdjustment, error)
 	SubscriptionRefByID(ctx context.Context, id int64) (SubscriptionRefByIDRow, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
 	// organization, checked against what that organization holds by the use
@@ -4208,6 +4243,9 @@ type Querier interface {
 	// What the seller holds of a product without a location: serial units in
 	// stock owned by the organization and fixed quantities on the organization.
 	SumProductUnlocatedStock(ctx context.Context, arg SumProductUnlocatedStockParams) (SumProductUnlocatedStockRow, error)
+	// Quarantined pieces and roll meters per product of the organization (the
+	// stock views show them apart from the counted stock).
+	SumQuarantineByProduct(ctx context.Context, organizationID int64) ([]SumQuarantineByProductRow, error)
 	// Period summary: per staff and type, the paid total of a period (voided
 	// payments excluded).
 	SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaymentsByPeriodParams) ([]SumStaffPaymentsByPeriodRow, error)
@@ -4387,6 +4425,9 @@ type Querier interface {
 	UpdateServiceStatus(ctx context.Context, arg UpdateServiceStatusParams) (Service, error)
 	UpdateStaffProfile(ctx context.Context, arg UpdateStaffProfileParams) (StaffProfile, error)
 	UpdateStepupSettings(ctx context.Context, arg UpdateStepupSettingsParams) (StepupSetting, error)
+	UpdateStockAdjustmentDraft(ctx context.Context, arg UpdateStockAdjustmentDraftParams) (StockAdjustment, error)
+	// Live totals of a draft (the threshold preview); frozen by the submit.
+	UpdateStockAdjustmentTotals(ctx context.Context, arg UpdateStockAdjustmentTotalsParams) (StockAdjustment, error)
 	UpdateStockBulkJobItem(ctx context.Context, arg UpdateStockBulkJobItemParams) error
 	UpdateStockImportBatchStatus(ctx context.Context, arg UpdateStockImportBatchStatusParams) (StockImportBatch, error)
 	UpdateStockImportRowResult(ctx context.Context, arg UpdateStockImportRowResultParams) (StockImportRow, error)
@@ -4508,6 +4549,7 @@ type Querier interface {
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error)
+	UpsertStockAdjustmentSettings(ctx context.Context, arg UpsertStockAdjustmentSettingsParams) (StockAdjustmentSetting, error)
 	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
 	// demand. Worker/API layers arrive in F5-04b/c; these queries are the
 	// repository contract for daily snapshots and list screens.
