@@ -1,4 +1,5 @@
 import { type ComponentRef, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TextInput } from 'react-native';
 
 import { splitWedgeInput, WEDGE_IDLE_MS, WEDGE_MIN_LENGTH } from './wedge';
@@ -11,6 +12,7 @@ import { splitWedgeInput, WEDGE_IDLE_MS, WEDGE_MIN_LENGTH } from './wedge';
  * focus back to the screen (manual entry, a dialog).
  */
 export function WedgeInput({ onCode, paused }: { onCode: (code: string) => void; paused?: boolean }) {
+  const { t } = useTranslation('scan');
   const ref = useRef<ComponentRef<typeof TextInput>>(null);
   const [value, setValue] = useState('');
   const buffer = useRef('');
@@ -47,6 +49,7 @@ export function WedgeInput({ onCode, paused }: { onCode: (code: string) => void;
     <TextInput
       ref={ref}
       value={value}
+      placeholder={t('input.ready')}
       autoFocus={!paused}
       showSoftInputOnFocus={false}
       caretHidden
