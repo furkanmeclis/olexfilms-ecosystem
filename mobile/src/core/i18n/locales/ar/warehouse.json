@@ -911,5 +911,20 @@
   "shipment.package_count_placeholder": "1",
   "shipment.desi_placeholder": "0,00",
   "shipment.weight_kg_placeholder": "0,00",
-  "cancel_reason_placeholder": "شرح موجز"
+  "cancel_reason_placeholder": "شرح موجز",
+  "m.balance_available": "متاح: {{count}}",
+  "m.balance_reserved": "محجوز: {{count}}",
+  "m.balance_incoming": "في الطريق: {{count}}",
+  "m.critical_stock": "المخزون الحرج",
+  "m.forecasts": "توقع المخزون",
+  "m.critical_empty": "لا يوجد مخزون حرج.",
+  "m.forecasts_empty": "لا توجد توقعات.",
+  "m.reorder_thresholds": "أدنى {{min}} · نقطة {{point}} · أقصى {{max}}",
+  "m.level_ok": "كافٍ",
+  "m.level_reorder": "أعد الطلب",
+  "m.level_below_min": "أقل من الحد الأدنى",
+  "m.level_days_low": "أيام قليلة متبقية",
+  "m.suggested": "مقترح: {{count}}",
+  "m.days_left": "{{days}} يومًا",
+  "m.on_hand": "المتوفر: {{count}}"
 }

@@ -37,6 +37,7 @@ const (
 	ResourceTransferSummaryExport = "warehouse.transfer_summary"
 	ResourceLocationsExport       = "warehouse.locations"
 	ResourceEODListExport         = "warehouse.eod_reports"
+	ResourceAdjustmentsExport     = "warehouse.stock_adjustments" // TEC-1226
 )
 
 // Export query keys. QueryExportUUIDs is the client's row selection (CSV);
@@ -59,6 +60,8 @@ type Exporter struct {
 	entries   *StockEntries
 	transfers *WarehouseTransfers
 	eod       *EOD
+	// TEC-1226: stock adjustment documents.
+	adjustments *Adjustments
 }
 
 // NewExporter builds the exporter (read only: no outbox, no scanner).
@@ -66,6 +69,7 @@ func NewExporter(pool TxBeginner, q *db.Queries) *Exporter {
 	return &Exporter{
 		q: q, counts: NewCounts(pool, q, nil, nil), entries: NewStockEntries(pool, q, nil),
 		transfers: NewWarehouseTransfers(pool, q, nil), eod: NewEOD(pool, q),
+		adjustments: NewAdjustments(pool, q, nil, nil),
 	}
 }
 
@@ -132,6 +136,8 @@ func validateExportValues(resource string, values url.Values) error {
 		_, err = parseLocationExportFilter(values)
 	case ResourceEODListExport:
 		_, err = ParseEODListInput(values)
+	case ResourceAdjustmentsExport:
+		_, err = ParseAdjustmentListFilter(values)
 	default:
 		err = ErrExportResource
 	}
@@ -237,6 +243,7 @@ func (x *Exporter) Adapters() []ioengine.ResourceAdapter {
 		&exportAdapter{resource: ResourceTransferSummaryExport, columns: transferSummaryColumns, build: x.transferSummary, x: x},
 		&exportAdapter{resource: ResourceLocationsExport, columns: locationColumns, build: x.locationList, x: x},
 		&exportAdapter{resource: ResourceEODListExport, columns: eodListColumns, build: x.eodList, x: x},
+		&exportAdapter{resource: ResourceAdjustmentsExport, columns: adjustmentColumns, build: x.adjustmentList, x: x},
 	}
 }
 

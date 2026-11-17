@@ -7085,6 +7085,304 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock adjustment documents of the active organization
+         * @description TEC-1226. Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). No price or amount. List contract (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), adjustment_no, type, status (flow rank), total_quantity, total_meters with an id tiebreak; `status`, `type`, `source`, `warehouse_uuid` and `uuid` are comma separated any-of filters; `q` matches the number, note and reason code.
+         */
+        get: operations["listStockAdjustments"];
+        put?: never;
+        /**
+         * Open a stock adjustment draft
+         * @description TEC-1226. `warehouse.write`. Types: waste, damage, scrap, loss, found, other. The optional warehouse limits who may edit it (warehouse membership, TEC-769).
+         */
+        post: operations["createStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a stock adjustment list export
+         * @description TEC-1226. warehouse.read. `query` holds the list parameters (status, type, source, warehouse_uuid, created_from, created_to, q, sort) and optionally `uuid` (selected documents). Resource `warehouse.stock_adjustments`: number, type, status, source, warehouse, pieces, meters, reason code, people and dates; no price.
+         */
+        post: operations["requestStockAdjustmentListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A stock adjustment document with its lines and photos
+         * @description TEC-1226. `warehouse.read`. `can_approve` tells whether the caller may approve it now.
+         */
+        get: operations["getStockAdjustment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a draft's header
+         * @description TEC-1226. `warehouse.write`, draft only (409 ADJUSTMENT_INVALID_STATUS). Switching between found and a loss type needs an empty document.
+         */
+        patch: operations["updateStockAdjustment"];
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a unit to a draft
+         * @description TEC-1226. `warehouse.write`, draft only. The barcode must be a unit the organization holds (found: a unit voided into its trash). A serial unit is adjusted whole; a roll by `meters` (loss: less than the remaining meters; found: up to the initial length); a fixed barcode by `quantity`. `location_uuid` is the bin a found unit goes to, or the bin a fixed quantity is taken from. 422 ADJUSTMENT_UNIT_NOT_ALLOWED when the unit cannot be adjusted; 409 ADJUSTMENT_UNIT_BUSY when another open document, an order reservation or an open warehouse transfer holds it.
+         */
+        post: operations["addStockAdjustmentLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/lines/{line_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a line of a draft
+         * @description TEC-1226. `warehouse.write`, draft only.
+         */
+        delete: operations["deleteStockAdjustmentLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a photo to a draft or pending document
+         * @description TEC-1226. `warehouse.write`. Multipart field `file`: JPEG, PNG or WebP up to 10 MB; at most 10 photos. A damage document needs at least one photo before submit. 503 STORAGE_UNAVAILABLE without the file storage.
+         */
+        post: operations["addStockAdjustmentPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/photos/{photo_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                photo_uuid: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download a photo
+         * @description TEC-1226. `warehouse.read`. The image bytes (inline).
+         */
+        get: operations["getStockAdjustmentPhoto"];
+        put?: never;
+        post?: never;
+        /**
+         * Remove a photo of a draft
+         * @description TEC-1226. `warehouse.write`, draft only.
+         */
+        delete: operations["deleteStockAdjustmentPhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a draft for approval
+         * @description TEC-1226. `warehouse.write`. Freezes the totals (pieces: whole pieces and fixed quantities; meters: roll meters and whole rolls) and sets `requires_second_approval` when either is above the organization's threshold. 422 ADJUSTMENT_EMPTY without lines, 422 ADJUSTMENT_PHOTO_REQUIRED for a damage document without a photo.
+         */
+        post: operations["submitStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve and post a pending document
+         * @description TEC-1226. `warehouse.write` and `stock.adjust` (403 ADJUSTMENT_ADJUST_FORBIDDEN). Above the threshold the creator and the submitter cannot approve (403 ADJUSTMENT_SELF_APPROVAL). In one transaction through the stock ledger with the keys `stock_adjustment:stock_adjustment_line:<line>:<type>:<barcode>`: whole unit -> void (found: found), roll meters and fixed quantity -> count_adjustment. 409 ADJUSTMENT_STALE (nothing posted) when the stock changed since the line was added.
+         */
+        post: operations["approveStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustments/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a draft or pending document
+         * @description TEC-1226. `warehouse.write`. Nothing was posted; an optional reason is kept.
+         */
+        post: operations["cancelStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/adjustment-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Second approval thresholds of the organization
+         * @description TEC-1226. `warehouse.read`. Defaults (5 pieces, 25 m) while none are saved. An adjustment above either threshold needs a second person.
+         */
+        get: operations["getStockAdjustmentSettings"];
+        /**
+         * Save the second approval thresholds
+         * @description TEC-1226. `warehouse.write` and `stock.adjust` (403 ADJUSTMENT_ADJUST_FORBIDDEN).
+         */
+        put: operations["updateStockAdjustmentSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/return-inspections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returned units waiting for inspection
+         * @description TEC-1226. `warehouse.read`. Serial units of the organization in quarantine (a received return), newest first, with the return they came back on. Not counted as stock, not pickable or usable until inspected. `q` matches the barcode, product name or SKU. No price.
+         */
+        get: operations["listQuarantinedUnits"];
+        put?: never;
+        /**
+         * Record an inspection decision
+         * @description TEC-1226. `warehouse.write`. restock: quarantine_release, then a placement into `location_uuid` when given; scrap: a scrap adjustment document (source return_inspection, submitted) that voids the unit when approved; supplier_return: external_outbound (also needs `stock.adjust`). The return reason is recorded. 404 UNIT_NOT_QUARANTINED when the unit is not waiting for inspection here; 409 ADJUSTMENT_UNIT_BUSY while a scrap document waits.
+         */
+        post: operations["inspectReturnedUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/return-inspections/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quarantined pieces and meters per product
+         * @description TEC-1226. `warehouse.read`. Shown apart from the counted stock.
+         */
+        get: operations["getQuarantineSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/stock-counts": {
         parameters: {
             query?: never;
@@ -24936,6 +25234,212 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseGenerateResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        StockAdjustmentType: "waste" | "damage" | "scrap" | "loss" | "found" | "other";
+        /** @enum {string} */
+        StockAdjustmentStatus: "draft" | "pending_approval" | "posted" | "cancelled";
+        StockAdjustmentPerson: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        StockAdjustmentLocation: {
+            /** Format: uuid */
+            uuid: string;
+            full_code: string;
+        };
+        StockAdjustmentUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            is_roll: boolean;
+        };
+        StockAdjustmentLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "whole" | "meters" | "quantity";
+            unit: components["schemas"]["StockAdjustmentUnit"];
+            product: components["schemas"]["StockCountProduct"];
+            quantity: number | null;
+            /** @description Decimal string, 2 places */
+            meters: string | null;
+            /** @description Remaining meters of a whole roll when added */
+            roll_meters: string | null;
+            location: components["schemas"]["StockAdjustmentLocation"] | null;
+            posted: boolean;
+        };
+        StockAdjustmentPhoto: {
+            /** Format: uuid */
+            uuid: string;
+            content_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description TEC-1226 stock adjustment document. No price or amount. */
+        StockAdjustment: {
+            /** Format: uuid */
+            uuid: string;
+            adjustment_no: string;
+            type: components["schemas"]["StockAdjustmentType"];
+            reason_code: string | null;
+            note: string | null;
+            /** @enum {string} */
+            source: "manual" | "return_inspection";
+            status: components["schemas"]["StockAdjustmentStatus"];
+            warehouse: components["schemas"]["StockCountRef"] | null;
+            total_quantity: number;
+            /** @description Decimal string, 2 places */
+            total_meters: string;
+            requires_second_approval: boolean;
+            created_by: components["schemas"]["StockAdjustmentPerson"] | null;
+            submitted_by: components["schemas"]["StockAdjustmentPerson"] | null;
+            approved_by: components["schemas"]["StockAdjustmentPerson"] | null;
+            cancelled_by: components["schemas"]["StockAdjustmentPerson"] | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            posted_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            cancel_reason: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Detail only. */
+            lines?: components["schemas"]["StockAdjustmentLine"][];
+            /** @description Detail only. */
+            photos?: components["schemas"]["StockAdjustmentPhoto"][];
+            /** @description Detail only: the caller may approve it now. */
+            can_approve?: boolean;
+        };
+        StockAdjustmentInput: {
+            type: components["schemas"]["StockAdjustmentType"];
+            reason_code?: string | null;
+            note?: string | null;
+            /** Format: uuid */
+            warehouse_uuid?: string | null;
+        };
+        StockAdjustmentLineInput: {
+            barcode: string;
+            quantity?: number | null;
+            /** @description Roll meters, 2 decimals */
+            meters?: string | null;
+            /** Format: uuid */
+            location_uuid?: string | null;
+        };
+        StockAdjustmentSettings: {
+            threshold_quantity: number;
+            /** @description Decimal string, 2 places */
+            threshold_meters: string;
+        };
+        QuarantineReturn: {
+            /** Format: uuid */
+            transfer_uuid: string;
+            transfer_no: string;
+            /** Format: uuid */
+            from_org_uuid: string;
+            from_org_name: string;
+            note: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+        };
+        QuarantineItem: {
+            unit: components["schemas"]["StockAdjustmentUnit"];
+            product: components["schemas"]["StockCountProduct"];
+            remaining_meters: string | null;
+            location: components["schemas"]["StockAdjustmentLocation"] | null;
+            /** Format: date-time */
+            quarantined_at: string;
+            return: components["schemas"]["QuarantineReturn"] | null;
+            pending_scrap: boolean;
+        };
+        QuarantineProduct: {
+            product: components["schemas"]["StockCountProduct"];
+            /** Format: int64 */
+            units: number;
+            meters: string;
+        };
+        ReturnInspectionInput: {
+            /** @description The unit's barcode (or unit_uuid). */
+            barcode?: string;
+            /** Format: uuid */
+            unit_uuid?: string | null;
+            /** @enum {string} */
+            decision: "restock" | "scrap" | "supplier_return";
+            /** @enum {string} */
+            return_reason: "defective" | "damaged" | "wrong_product" | "excess" | "customer_return" | "other";
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description restock only: the bin to shelve it in.
+             */
+            location_uuid?: string | null;
+        };
+        ReturnInspectionResult: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            decision: "restock" | "scrap" | "supplier_return";
+            unit: components["schemas"]["StockAdjustmentUnit"];
+            status: components["schemas"]["StockUnitStatus"];
+            adjustment: components["schemas"]["StockAdjustment"] | null;
+        };
+        EnvelopeStockAdjustment: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockAdjustment"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockAdjustmentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockAdjustment"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockAdjustmentSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockAdjustmentSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQuarantineItemPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["QuarantineItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQuarantineSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["QuarantineProduct"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeReturnInspectionResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReturnInspectionResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -47501,6 +48005,516 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listStockAdjustments: {
+        parameters: {
+            query?: {
+                /** @description Comma separated StockAdjustmentStatus values. */
+                status?: string;
+                /** @description Comma separated StockAdjustmentType values. */
+                type?: string;
+                /** @description Comma separated sources (manual, return_inspection). */
+                source?: string;
+                /** @description Comma separated warehouse uuids. */
+                warehouse_uuid?: string;
+                /** @description Comma separated document uuids. */
+                uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of adjustment documents (no lines) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustmentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustmentInput"];
+            };
+        };
+        responses: {
+            /** @description Draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestStockAdjustmentListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustmentInput"];
+            };
+        };
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addStockAdjustmentLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustmentLineInput"];
+            };
+        };
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    deleteStockAdjustmentLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addStockAdjustmentPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getStockAdjustmentPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                photo_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteStockAdjustmentPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                photo_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    submitStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    approveStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Posted document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Cancelled document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getStockAdjustmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustmentSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateStockAdjustmentSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustmentSettings"];
+            };
+        };
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockAdjustmentSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listQuarantinedUnits: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of quarantined units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuarantineItemPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    inspectReturnedUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnInspectionInput"];
+            };
+        };
+        responses: {
+            /** @description Decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReturnInspectionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getQuarantineSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuarantineSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listStockCounts: {

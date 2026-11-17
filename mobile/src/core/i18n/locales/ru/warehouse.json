@@ -911,5 +911,20 @@
   "shipment.package_count_placeholder": "1",
   "shipment.desi_placeholder": "0,00",
   "shipment.weight_kg_placeholder": "0,00",
-  "cancel_reason_placeholder": "Краткое пояснение"
+  "cancel_reason_placeholder": "Краткое пояснение",
+  "m.balance_available": "Доступно: {{count}}",
+  "m.balance_reserved": "Зарезервировано: {{count}}",
+  "m.balance_incoming": "В пути: {{count}}",
+  "m.critical_stock": "Критический запас",
+  "m.forecasts": "Прогноз запасов",
+  "m.critical_empty": "Критических запасов нет.",
+  "m.forecasts_empty": "Прогнозов нет.",
+  "m.reorder_thresholds": "Мин. {{min}} · точка {{point}} · макс. {{max}}",
+  "m.level_ok": "Достаточно",
+  "m.level_reorder": "Дозаказать",
+  "m.level_below_min": "Ниже минимума",
+  "m.level_days_low": "Осталось мало дней",
+  "m.suggested": "Рекомендовано: {{count}}",
+  "m.days_left": "{{days}} дн.",
+  "m.on_hand": "В наличии: {{count}}"
 }

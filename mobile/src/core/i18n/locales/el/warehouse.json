@@ -911,5 +911,20 @@
   "shipment.package_count_placeholder": "1",
   "shipment.desi_placeholder": "0,00",
   "shipment.weight_kg_placeholder": "0,00",
-  "cancel_reason_placeholder": "Σύντομη εξήγηση"
+  "cancel_reason_placeholder": "Σύντομη εξήγηση",
+  "m.balance_available": "Διαθέσιμο: {{count}}",
+  "m.balance_reserved": "Δεσμευμένο: {{count}}",
+  "m.balance_incoming": "Σε μεταφορά: {{count}}",
+  "m.critical_stock": "Κρίσιμο απόθεμα",
+  "m.forecasts": "Πρόβλεψη αποθέματος",
+  "m.critical_empty": "Δεν υπάρχει κρίσιμο απόθεμα.",
+  "m.forecasts_empty": "Δεν υπάρχουν προβλέψεις.",
+  "m.reorder_thresholds": "Ελάχ. {{min}} · σημείο {{point}} · μέγ. {{max}}",
+  "m.level_ok": "Επαρκές",
+  "m.level_reorder": "Επαναπαραγγελία",
+  "m.level_below_min": "Κάτω από το ελάχιστο",
+  "m.level_days_low": "Λίγες ημέρες απομένουν",
+  "m.suggested": "Προτεινόμενο: {{count}}",
+  "m.days_left": "{{days}} ημέρες",
+  "m.on_hand": "Διαθέσιμο: {{count}}"
 }

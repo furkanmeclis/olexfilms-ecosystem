@@ -911,5 +911,20 @@
   "shipment.package_count_placeholder": "1",
   "shipment.desi_placeholder": "0,00",
   "shipment.weight_kg_placeholder": "0,00",
-  "cancel_reason_placeholder": "Breve spiegazione"
+  "cancel_reason_placeholder": "Breve spiegazione",
+  "m.balance_available": "Disponibile: {{count}}",
+  "m.balance_reserved": "Riservato: {{count}}",
+  "m.balance_incoming": "In arrivo: {{count}}",
+  "m.critical_stock": "Scorte critiche",
+  "m.forecasts": "Previsione scorte",
+  "m.critical_empty": "Nessuna scorta critica.",
+  "m.forecasts_empty": "Nessuna previsione.",
+  "m.reorder_thresholds": "Min {{min}} · punto {{point}} · max {{max}}",
+  "m.level_ok": "Sufficiente",
+  "m.level_reorder": "Da riordinare",
+  "m.level_below_min": "Sotto il minimo",
+  "m.level_days_low": "Pochi giorni rimasti",
+  "m.suggested": "Suggerito: {{count}}",
+  "m.days_left": "{{days}} giorni",
+  "m.on_hand": "Giacenza: {{count}}"
 }

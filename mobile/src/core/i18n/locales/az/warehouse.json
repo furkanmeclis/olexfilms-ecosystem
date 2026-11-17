@@ -911,5 +911,20 @@
   "shipment.package_count_placeholder": "1",
   "shipment.desi_placeholder": "0,00",
   "shipment.weight_kg_placeholder": "0,00",
-  "cancel_reason_placeholder": "Qısa izah"
+  "cancel_reason_placeholder": "Qısa izah",
+  "m.balance_available": "İstifadəyə yararlı: {{count}}",
+  "m.balance_reserved": "Rezerv: {{count}}",
+  "m.balance_incoming": "Yolda: {{count}}",
+  "m.critical_stock": "Kritik stok",
+  "m.forecasts": "Stok proqnozu",
+  "m.critical_empty": "Kritik stok yoxdur.",
+  "m.forecasts_empty": "Proqnoz yoxdur.",
+  "m.reorder_thresholds": "Min {{min}} · nöqtə {{point}} · maks {{max}}",
+  "m.level_ok": "Kifayətdir",
+  "m.level_reorder": "Sifariş ver",
+  "m.level_below_min": "Minimumdan aşağı",
+  "m.level_days_low": "Az gün qalıb",
+  "m.suggested": "Təklif: {{count}}",
+  "m.days_left": "{{days}} gün",
+  "m.on_hand": "Mövcud: {{count}}"
 }

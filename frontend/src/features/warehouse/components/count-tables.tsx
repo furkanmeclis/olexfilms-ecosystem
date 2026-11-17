@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
-import { ListChecks, Trash2 } from "lucide-react";
+import { CheckCheck, ListChecks, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
@@ -10,6 +10,7 @@ import {
   createSelectColumnDef,
   type DataTableBulkAction,
 } from "@/components/tables";
+import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   COUNT_RESULTS,
   COUNT_SCAN_KINDS,
   defaultResolution,
+  waitsForRecount,
 } from "@/features/warehouse/lib/counts";
 import type {
   StockCount,
@@ -283,11 +285,20 @@ export function CountLinesTable({
   canApprove,
   choices,
   onChoices,
+  onRequestRecount,
+  onRecountLine,
+  onPartialApprove,
 }: {
   lines: StockCountLine[];
   canApprove: boolean;
   choices: Record<string, StockCountResolution | undefined>;
   onChoices: (next: Record<string, StockCountResolution>) => void;
+  /** TEC-1229: send the selected difference lines back for a recount. */
+  onRequestRecount?: (lines: StockCountLine[]) => void;
+  /** TEC-1229: enter the recounted values of a line. */
+  onRecountLine?: (line: StockCountLine) => void;
+  /** TEC-1229: approve only the selected lines. */
+  onPartialApprove?: (lines: StockCountLine[]) => void;
 }) {
   const { t } = useLocale();
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -342,6 +353,20 @@ export function CountLinesTable({
           cell: ({ row }) => (
             <span className="font-mono text-xs" dir="ltr">
               {countLineText(row.original).counted}
+              {row.original.first_count ? (
+                <span
+                  className="text-muted-foreground block"
+                  data-testid="count-line-first"
+                >
+                  {t("warehouse.count.first_count", {
+                    value: `${row.original.first_count.counted_quantity}${
+                      row.original.first_count.counted_meters
+                        ? ` · ${row.original.first_count.counted_meters} m`
+                        : ""
+                    }`,
+                  })}
+                </span>
+              ) : null}
             </span>
           ),
         }),
@@ -352,7 +377,28 @@ export function CountLinesTable({
           enableSorting: false,
           cell: ({ row }) => {
             const l = row.original;
-            if (!canApprove) {
+            if (waitsForRecount(l)) {
+              return (
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusChip
+                    label={t("warehouse.count.recount_requested")}
+                    tone="warning"
+                  />
+                  {onRecountLine ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onRecountLine(l)}
+                      data-testid="count-recount-line"
+                    >
+                      {t("warehouse.count.recount_enter")}
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            }
+            if (!canApprove || l.resolved_at) {
               return l.resolution
                 ? t(`warehouse.count_resolution.${l.resolution}`)
                 : "—";
@@ -387,12 +433,12 @@ export function CountLinesTable({
           },
         }),
       ] as ColumnDef<StockCountLine, unknown>[],
-    [canApprove, choices, onChoices, t],
+    [canApprove, choices, onChoices, onRecountLine, t],
   );
 
   const bulkActions = useMemo<DataTableBulkAction<StockCountLine>[]>(
-    () =>
-      COUNT_RESOLUTIONS.map((resolution) => ({
+    () => [
+      ...COUNT_RESOLUTIONS.map((resolution) => ({
         id: `resolution-${resolution}`,
         label: t("bulk.actions.warehouse_count_lines.set_resolution", {
           resolution: t(`warehouse.count_resolution.${resolution}`),
@@ -405,7 +451,42 @@ export function CountLinesTable({
           setRowSelection({});
         },
       })),
-    [onChoices, t],
+      ...(onRequestRecount
+        ? [
+            {
+              id: "recount",
+              label: t("warehouse.count.recount_request"),
+              icon: RotateCcw,
+              disabled: (selected: StockCountLine[]) =>
+                !selected.some((l) => !l.resolved_at && !waitsForRecount(l)),
+              onClick: (selected: StockCountLine[]) => {
+                onRequestRecount(
+                  selected.filter((l) => !l.resolved_at && !waitsForRecount(l)),
+                );
+                setRowSelection({});
+              },
+            },
+          ]
+        : []),
+      ...(onPartialApprove
+        ? [
+            {
+              id: "partial-approve",
+              label: t("warehouse.count.partial_approve"),
+              icon: CheckCheck,
+              disabled: (selected: StockCountLine[]) =>
+                !selected.some((l) => !l.resolved_at && !waitsForRecount(l)),
+              onClick: (selected: StockCountLine[]) => {
+                onPartialApprove(
+                  selected.filter((l) => !l.resolved_at && !waitsForRecount(l)),
+                );
+                setRowSelection({});
+              },
+            },
+          ]
+        : []),
+    ],
+    [onChoices, onPartialApprove, onRequestRecount, t],
   );
 
   return (

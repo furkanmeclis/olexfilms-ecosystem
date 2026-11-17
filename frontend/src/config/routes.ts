@@ -358,10 +358,18 @@ export const routes = {
       count: (slug: string, uuid: string) =>
         `/t/${slug}/warehouse/counts/${uuid}`,
       endOfDay: (slug: string) => `/t/${slug}/warehouse/end-of-day`,
+      // TEC-1229: ledger movements and min / max (critical stock).
+      movements: (slug: string) => `/t/${slug}/warehouse/movements`,
+      reorder: (slug: string) => `/t/${slug}/warehouse/reorder`,
       endOfDayReport: (slug: string, uuid: string) =>
         `/t/${slug}/warehouse/end-of-day/${uuid}`,
       // TEC-769: organization warehouse settings (end-of-day cutoff).
       settings: (slug: string) => `/t/${slug}/warehouse/settings`,
+      // TEC-1226: stock adjustment documents and return inspection.
+      adjustments: (slug: string) => `/t/${slug}/warehouse/adjustments`,
+      adjustment: (slug: string, uuid: string) =>
+        `/t/${slug}/warehouse/adjustments/${uuid}`,
+      returns: (slug: string) => `/t/${slug}/warehouse/returns`,
     },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */
