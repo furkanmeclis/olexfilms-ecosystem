@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Оберіть валюту.",
   "form.assignee": "Відповідальний",
   "form.customer": "Клієнт",
-  "form.vehicle": "Автомобіль"
+  "form.vehicle": "Автомобіль",
+  "detail.created_by": "Створив",
+  "detail.won_ref": "Перетворено на"
 }

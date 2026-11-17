@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Seleccione una moneda.",
   "form.assignee": "Responsable",
   "form.customer": "Cliente",
-  "form.vehicle": "Vehículo"
+  "form.vehicle": "Vehículo",
+  "detail.created_by": "Creado por",
+  "detail.won_ref": "Convertido en"
 }

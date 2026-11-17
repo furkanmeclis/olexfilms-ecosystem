@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Valyuta seçin.",
   "form.assignee": "Məsul şəxs",
   "form.customer": "Müştəri",
-  "form.vehicle": "Nəqliyyat vasitəsi"
+  "form.vehicle": "Nəqliyyat vasitəsi",
+  "detail.created_by": "Yaradan",
+  "detail.won_ref": "Çevrildiyi qeyd"
 }

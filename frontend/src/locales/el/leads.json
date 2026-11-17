@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Επιλέξτε νόμισμα.",
   "form.assignee": "Υπεύθυνος",
   "form.customer": "Πελάτης",
-  "form.vehicle": "Όχημα"
+  "form.vehicle": "Όχημα",
+  "detail.created_by": "Δημιουργήθηκε από",
+  "detail.won_ref": "Μετατράπηκε σε"
 }

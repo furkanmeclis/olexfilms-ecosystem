@@ -104,7 +104,11 @@ export function leadFormOf(lead: Lead): LeadFormValues {
 
 export function leadName(lead: Lead) {
   if (lead.target_type === "customer") {
-    return lead.candidate_contact_name || `#${lead.customer_user_id ?? "—"}`;
+    return (
+      lead.candidate_contact_name ||
+      lead.customer?.name ||
+      `#${lead.customer_user_id ?? "—"}`
+    );
   }
   return lead.candidate_company_name || lead.candidate_contact_name || "—";
 }

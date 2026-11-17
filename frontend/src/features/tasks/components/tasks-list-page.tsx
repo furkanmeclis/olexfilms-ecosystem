@@ -23,9 +23,11 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
 import {
+  EntityLink,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -303,7 +305,10 @@ export function TasksListPage({ slug }: { slug: string }) {
           param: "subject_organization_uuid",
           cell: ({ row }) => (
             <div>
-              {row.original.subject_organization.name}
+              <EntityLink
+                kind="organization"
+                entity={row.original.subject_organization}
+              />
               <div className="text-muted-foreground text-xs">
                 {t(`tasks.org_type.${row.original.subject_organization.type}`)}
               </div>
@@ -319,12 +324,24 @@ export function TasksListPage({ slug }: { slug: string }) {
           filterOptions: assigneeOptions,
           enableColumnFilter: assigneeOptions.length > 0,
           param: "assignee_user_uuid",
-          cell: ({ row }) =>
-            row.original.assignee?.name ?? (
-              <span className="text-muted-foreground">
-                {t("tasks.form.unassigned")}
-              </span>
-            ),
+          cell: ({ row }) => (
+            <EntityLink
+              kind="user"
+              entity={row.original.assignee}
+              fallback={
+                <span className="text-muted-foreground">
+                  {t("tasks.form.unassigned")}
+                </span>
+              }
+            />
+          ),
+        }),
+        refColumn<Task>({
+          id: "created_by",
+          kind: "user",
+          getRef: (row) => row.created_by,
+          labelKey: "tasks.detail.created_by",
+          defaultHidden: true,
         }),
         createColumn<Task>({
           accessorKey: "due_at",

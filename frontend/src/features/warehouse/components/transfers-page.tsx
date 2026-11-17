@@ -16,6 +16,7 @@ import { useMemo, useRef, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
@@ -168,7 +169,9 @@ export function TransfersPage({ slug }: { slug: string }) {
         gridSecondary: true,
         cell: ({ row }) => (
           <span className="inline-flex items-center gap-1">
-            {row.original.from_warehouse.code}
+            <EntityLink kind="warehouse" entity={row.original.from_warehouse}>
+              {row.original.from_warehouse.code}
+            </EntityLink>
             <MoveRight className="text-muted-foreground size-3 rtl:rotate-180" />
           </span>
         ),
@@ -182,7 +185,11 @@ export function TransfersPage({ slug }: { slug: string }) {
         filterOptions: warehouseOptions,
         enableColumnFilter: warehouseOptions.length > 0,
         param: "to_warehouse_uuid",
-        cell: ({ row }) => row.original.to_warehouse.code,
+        cell: ({ row }) => (
+          <EntityLink kind="warehouse" entity={row.original.to_warehouse}>
+            {row.original.to_warehouse.code}
+          </EntityLink>
+        ),
       }),
       createColumn<WarehouseTransfer>({
         accessorKey: "status",

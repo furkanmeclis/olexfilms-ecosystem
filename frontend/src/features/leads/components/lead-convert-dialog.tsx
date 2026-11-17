@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { EntityLink } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -161,12 +162,16 @@ export function LeadConvertDialog({
 
         {allowed && kind === "customer" ? (
           <dl className="space-y-1" data-testid="lead-convert-customer">
-            <Row label={t("leads.form.customer_user_id")}>
-              {lead.customer_user_id ? `#${lead.customer_user_id}` : "—"}
+            <Row label={t("leads.form.customer")}>
+              <EntityLink kind="customer" entity={lead.customer} />
             </Row>
-            <Row label={t("leads.form.vehicle_id")}>
-              {lead.vehicle_id ? (
-                `#${lead.vehicle_id}`
+            <Row label={t("leads.form.vehicle")}>
+              {lead.vehicle_uuid || lead.vehicle_id ? (
+                <EntityLink
+                  kind="vehicle"
+                  entity={lead.vehicle}
+                  fallback={lead.vehicle_id ? `#${lead.vehicle_id}` : "—"}
+                />
               ) : (
                 <span className="text-destructive">
                   {t("leads.convert.vehicle_missing")}

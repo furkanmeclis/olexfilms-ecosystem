@@ -10,9 +10,11 @@ import { useMemo, useState } from "react";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -93,7 +95,9 @@ function OrderHandler({ order }: { order: Order }) {
   if (!last?.user) return <span className="text-muted-foreground">—</span>;
   return (
     <span className="flex flex-col">
-      <span className="whitespace-nowrap">{last.user.name}</span>
+      <span className="whitespace-nowrap">
+        <EntityLink kind="user" entity={last.user} />
+      </span>
       <span className="text-muted-foreground text-xs">
         {orderActivityLabel(t, last.action)}
       </span>
@@ -217,10 +221,14 @@ export function OrdersListPage({ slug }: { slug: string }) {
           filterOptions: partyOptions,
           enableColumnFilter: canFilterParty && partyOptions.length > 0,
           param: side === "seller" ? "buyer_org_uuid" : "seller_org_uuid",
-          cell: ({ row }) =>
-            side === "seller"
-              ? row.original.buyer.name
-              : row.original.seller.name,
+          cell: ({ row }) => (
+            <EntityLink
+              kind="organization"
+              entity={
+                side === "seller" ? row.original.buyer : row.original.seller
+              }
+            />
+          ),
         }),
         // TEC-1054: the seller warehouse is the seller's own business.
         ...(side === "seller"
@@ -256,6 +264,13 @@ export function OrdersListPage({ slug }: { slug: string }) {
           labelKey: "orders.list.columns.handled_by",
           enableSorting: false,
           cell: ({ row }) => <OrderHandler order={row.original} />,
+        }),
+        refColumn<Order>({
+          id: "created_by",
+          kind: "user",
+          getRef: (o) => o.created_by,
+          labelKey: "orders.detail.created_by",
+          defaultHidden: true,
         }),
         createColumn<Order>({
           accessorKey: "invoice_status",

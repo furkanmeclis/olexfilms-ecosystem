@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
+import { EntityLink } from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -454,11 +455,42 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
             <Field label={t("leads.columns.follow_up")}>
               {lead.follow_up_date ? format.dateTime(lead.follow_up_date) : "—"}
             </Field>
+            {lead.customer ? (
+              <Field label={t("leads.form.customer")}>
+                <EntityLink
+                  kind="customer"
+                  entity={lead.customer}
+                  slug={slug}
+                />
+              </Field>
+            ) : null}
+            {lead.vehicle ? (
+              <Field label={t("leads.form.vehicle")}>
+                <EntityLink kind="vehicle" entity={lead.vehicle} slug={slug} />
+              </Field>
+            ) : null}
             <Field label={t("leads.columns.assignee")}>
-              {lead.assignee_user_id
-                ? `#${lead.assignee_user_id}`
-                : t("leads.form.unassigned")}
+              <EntityLink
+                kind="user"
+                entity={lead.assignee}
+                slug={slug}
+                fallback={t("leads.form.unassigned")}
+              />
             </Field>
+            {lead.created_by ? (
+              <Field label={t("leads.detail.created_by")}>
+                <EntityLink kind="user" entity={lead.created_by} slug={slug} />
+              </Field>
+            ) : null}
+            {lead.won_ref ? (
+              <Field label={t("leads.detail.won_ref")}>
+                <EntityLink
+                  kind={lead.won_ref.kind}
+                  entity={lead.won_ref}
+                  slug={slug}
+                />
+              </Field>
+            ) : null}
             <Field label={t("leads.detail.created_at")}>
               {format.dateTime(lead.created_at)}
             </Field>

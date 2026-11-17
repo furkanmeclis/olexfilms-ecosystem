@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
+  EntityLink,
   EntityPage,
   EntityRowActions,
   EntityTable,
@@ -104,7 +105,15 @@ export function WarrantyClaimsListPage({ slug }: { slug: string }) {
           filterOptions: orgFilter.options,
           enableColumnFilter: orgFilter.enabled,
           param: "organization_uuid",
-          cell: ({ row }) => row.original.organization_name || "—",
+          cell: ({ row }) => (
+            <EntityLink
+              kind="organization"
+              entity={{
+                uuid: row.original.organization_uuid,
+                name: row.original.organization_name,
+              }}
+            />
+          ),
         }),
         createColumn<WarrantyClaim>({
           id: "warranty_no",
@@ -141,7 +150,13 @@ export function WarrantyClaimsListPage({ slug }: { slug: string }) {
           defaultHidden: true,
           cell: ({ row }) => (
             <span className="font-mono text-xs" dir="ltr">
-              {row.original.service_no || "—"}
+              <EntityLink
+                kind="service"
+                entity={{
+                  uuid: row.original.service_uuid,
+                  name: row.original.service_no,
+                }}
+              />
               {row.original.plate ? ` · ${row.original.plate}` : ""}
             </span>
           ),

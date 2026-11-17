@@ -18,7 +18,7 @@ export type LeadStatus = Schemas["LeadStatus"];
 
 /**
  * GET /v1/leads params (TEC-371): `status`, `target_type`, `source`,
- * `temperature` and `assignee_user_id` (user ids or `none`) are CSV,
+ * `temperature` and `assignee_uuid` (user uuids or `none`, TEC-1216) are CSV,
  * `created_from` / `created_to` dates, `follow_up` overdue | today, `sort`
  * one of created_at, follow_up_date, status, temperature, name.
  */
@@ -27,7 +27,7 @@ export type LeadListQuery = {
   target_type?: string;
   source?: string;
   temperature?: string;
-  assignee_user_id?: string;
+  assignee_uuid?: string;
   created_from?: string;
   created_to?: string;
   follow_up?: "overdue" | "today";

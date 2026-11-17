@@ -195,5 +195,7 @@
   "convert.errors.currency_required": "Para birimi seçin.",
   "form.assignee": "Sorumlu",
   "form.customer": "Müşteri",
-  "form.vehicle": "Araç"
+  "form.vehicle": "Araç",
+  "detail.created_by": "Oluşturan",
+  "detail.won_ref": "Dönüşen kayıt"
 }

@@ -11,10 +11,12 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
   EntityCreateButton,
+  EntityLink,
   EntityPage,
   EntityRowActions,
   EntityTable,
   EntityToolbar,
+  refColumn,
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
@@ -119,13 +121,15 @@ export function ServicesListPage({ slug }: { slug: string }) {
             />
           ),
         }),
-        createColumn<Service>({
+        refColumn<Service>({
           id: "customer",
-          accessorFn: (row) => customerName(row),
+          kind: "customer",
+          getRef: (row) => ({
+            uuid: row.customer.uuid,
+            name: customerName(row),
+          }),
           labelKey: "services.list.columns.customer",
-          enableSorting: false,
           gridSecondary: true,
-          cell: ({ row }) => customerName(row.original) || "—",
         }),
         createColumn<Service>({
           id: "plate",
@@ -134,7 +138,15 @@ export function ServicesListPage({ slug }: { slug: string }) {
           enableSorting: true,
           cell: ({ row }) => (
             <div className="min-w-0">
-              <div>{vehicleTitle(row.original) || "—"}</div>
+              <div>
+                <EntityLink
+                  kind="vehicle"
+                  entity={{
+                    uuid: row.original.vehicle_uuid,
+                    name: vehicleTitle(row.original),
+                  }}
+                />
+              </div>
               {row.original.plate ? (
                 <div
                   className="text-muted-foreground font-mono text-xs"
@@ -157,8 +169,25 @@ export function ServicesListPage({ slug }: { slug: string }) {
           filterOptions: orgFilter.options,
           enableColumnFilter: orgFilter.enabled,
           param: "organization_uuid",
-          cell: ({ row }) =>
-            row.original.applied_by || row.original.organization.name,
+          cell: ({ row }) => (
+            <EntityLink kind="organization" entity={row.original.organization}>
+              {row.original.applied_by || row.original.organization.name}
+            </EntityLink>
+          ),
+        }),
+        refColumn<Service>({
+          id: "created_by",
+          kind: "user",
+          getRef: (row) => row.created_by,
+          labelKey: "services.detail.created_by",
+          defaultHidden: true,
+        }),
+        refColumn<Service>({
+          id: "performed_by",
+          kind: "user",
+          getRef: (row) => row.performed_by,
+          labelKey: "services.detail.performed_by",
+          defaultHidden: true,
         }),
         createColumn<Service>({
           accessorKey: "package",
