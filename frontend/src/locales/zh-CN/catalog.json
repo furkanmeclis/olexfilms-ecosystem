@@ -301,5 +301,10 @@
   "discipline.fields.avg_sale_price": "实际均价（30 天）",
   "discipline.fields.sales_quantity": "销量（30 天）",
   "discipline.org_types.dealer": "经销商",
-  "discipline.org_types.distributor": "分销商"
+  "discipline.org_types.distributor": "分销商",
+  "related.tabs.stock": "库存单元",
+  "related.tabs.orders": "未结订单",
+  "related.tabs.warranties": "质保",
+  "related.tabs.prices": "价格历史",
+  "related.empty_stock": "该产品没有库存单元。"
 }

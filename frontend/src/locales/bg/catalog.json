@@ -301,5 +301,10 @@
   "discipline.fields.avg_sale_price": "Реализирана средна (30 дни)",
   "discipline.fields.sales_quantity": "Продадено количество (30 дни)",
   "discipline.org_types.dealer": "Дилър",
-  "discipline.org_types.distributor": "Дистрибутор"
+  "discipline.org_types.distributor": "Дистрибутор",
+  "related.tabs.stock": "Складови единици",
+  "related.tabs.orders": "Отворени поръчки",
+  "related.tabs.warranties": "Гаранции",
+  "related.tabs.prices": "История на цените",
+  "related.empty_stock": "Няма складови единици от този продукт."
 }

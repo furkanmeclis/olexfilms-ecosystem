@@ -311,5 +311,10 @@
   "roll.save": "Enregistrer",
   "roll.saved": "Enregistré.",
   "roll.failed": "Échec de l'enregistrement.",
-  "roll.invalid": "Saisissez un nombre."
+  "roll.invalid": "Saisissez un nombre.",
+  "related.tabs.stock": "Unités en stock",
+  "related.tabs.orders": "Commandes ouvertes",
+  "related.tabs.warranties": "Garanties",
+  "related.tabs.prices": "Historique des prix",
+  "related.empty_stock": "Aucune unité en stock pour ce produit."
 }

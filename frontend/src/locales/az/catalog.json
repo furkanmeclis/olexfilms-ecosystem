@@ -301,5 +301,10 @@
   "discipline.fields.avg_sale_price": "Faktiki orta (30 gün)",
   "discipline.fields.sales_quantity": "Satılan miqdar (30 gün)",
   "discipline.org_types.dealer": "Diler",
-  "discipline.org_types.distributor": "Distribyutor"
+  "discipline.org_types.distributor": "Distribyutor",
+  "related.tabs.stock": "Stok vahidləri",
+  "related.tabs.orders": "Açıq sifarişlər",
+  "related.tabs.warranties": "Zəmanətlər",
+  "related.tabs.prices": "Qiymət tarixçəsi",
+  "related.empty_stock": "Bu məhsulun stok vahidi yoxdur."
 }

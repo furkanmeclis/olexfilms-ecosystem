@@ -311,5 +311,10 @@
   "roll.save": "Save",
   "roll.saved": "Roll settings saved.",
   "roll.failed": "Could not save.",
-  "roll.invalid": "Enter a number."
+  "roll.invalid": "Enter a number.",
+  "related.tabs.stock": "Stock units",
+  "related.tabs.orders": "Open orders",
+  "related.tabs.warranties": "Warranties",
+  "related.tabs.prices": "Price history",
+  "related.empty_stock": "No stock units of this product."
 }

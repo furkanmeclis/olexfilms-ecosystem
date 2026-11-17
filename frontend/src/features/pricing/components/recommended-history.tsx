@@ -40,7 +40,12 @@ const SOURCES = ["publish", "price_list", "migration"] as const;
  * country (ISO2 CSV, `none` = currency-wide), currency, source, batch,
  * effective day range and q.
  */
-export function RecommendedHistory() {
+export function RecommendedHistory({
+  productUuid,
+}: {
+  /** TEC-1218: one product's history (product detail tab). */
+  productUuid?: string;
+} = {}) {
   const { t, format, locale } = useLocale();
   const countries = useCountries();
   // TEC-1214: active currencies (GET /v1/currencies) plus country defaults.
@@ -221,13 +226,36 @@ export function RecommendedHistory() {
       ] as ColumnDef<RecommendedPriceVersion, unknown>[],
     [countryOptions, currencyOptions, format, t],
   );
+  // TEC-1218: the product tab hides the product columns and keeps its own
+  // layout key.
+  const visibleColumns = useMemo(
+    () =>
+      productUuid
+        ? columns.filter(
+            (c) =>
+              !["product_name", "product_sku"].includes(
+                String((c as { accessorKey?: string }).accessorKey ?? c.id),
+              ),
+          )
+        : columns,
+    [columns, productUuid],
+  );
+  const persistKey = productUuid
+    ? `${RECOMMENDED_HISTORY_PERSIST_KEY}-product`
+    : RECOMMENDED_HISTORY_PERSIST_KEY;
 
   const listState = useServerListState({
-    columns,
+    columns: visibleColumns,
     initialSort: "-effective_from",
-    persistKey: RECOMMENDED_HISTORY_PERSIST_KEY,
+    persistKey,
   });
-  const params: ListQuery = listState.params;
+  const params: ListQuery = useMemo(
+    () =>
+      productUuid
+        ? { ...listState.params, product: productUuid }
+        : listState.params,
+    [listState.params, productUuid],
+  );
   const list = useQuery({
     queryKey: pricingKeys.versions(params),
     queryFn: () => recommendedService.versions(params),
@@ -235,7 +263,7 @@ export function RecommendedHistory() {
 
   return (
     <EntityTable
-      columns={columns}
+      columns={visibleColumns}
       data={list.data?.items ?? []}
       getRowId={(row) => row.uuid}
       isLoading={list.isLoading}
@@ -245,7 +273,7 @@ export function RecommendedHistory() {
       rowCount={list.data?.total ?? 0}
       state={listState.tableState}
       features={{
-        persistKey: RECOMMENDED_HISTORY_PERSIST_KEY,
+        persistKey,
         rowSelection: false,
         columnOrdering: true,
         columnPinning: true,

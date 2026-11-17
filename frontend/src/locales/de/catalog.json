@@ -311,5 +311,10 @@
   "roll.save": "Speichern",
   "roll.saved": "Gespeichert.",
   "roll.failed": "Speichern fehlgeschlagen.",
-  "roll.invalid": "Zahl eingeben."
+  "roll.invalid": "Zahl eingeben.",
+  "related.tabs.stock": "Lagereinheiten",
+  "related.tabs.orders": "Offene Bestellungen",
+  "related.tabs.warranties": "Garantien",
+  "related.tabs.prices": "Preisverlauf",
+  "related.empty_stock": "Keine Lagereinheiten dieses Produkts."
 }

@@ -301,5 +301,10 @@
   "discipline.fields.avg_sale_price": "Πραγματοποιηθείς μέσος όρος (30 ημέρες)",
   "discipline.fields.sales_quantity": "Πωληθείσα ποσότητα (30 ημέρες)",
   "discipline.org_types.dealer": "Αντιπρόσωπος",
-  "discipline.org_types.distributor": "Διανομέας"
+  "discipline.org_types.distributor": "Διανομέας",
+  "related.tabs.stock": "Μονάδες αποθέματος",
+  "related.tabs.orders": "Ανοιχτές παραγγελίες",
+  "related.tabs.warranties": "Εγγυήσεις",
+  "related.tabs.prices": "Ιστορικό τιμών",
+  "related.empty_stock": "Δεν υπάρχουν μονάδες αποθέματος αυτού του προϊόντος."
 }

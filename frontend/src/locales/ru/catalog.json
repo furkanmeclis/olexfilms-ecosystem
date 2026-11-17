@@ -311,5 +311,10 @@
   "roll.save": "Сохранить",
   "roll.saved": "Сохранено.",
   "roll.failed": "Не удалось сохранить.",
-  "roll.invalid": "Введите число."
+  "roll.invalid": "Введите число.",
+  "related.tabs.stock": "Складские единицы",
+  "related.tabs.orders": "Открытые заказы",
+  "related.tabs.warranties": "Гарантии",
+  "related.tabs.prices": "История цен",
+  "related.empty_stock": "Нет складских единиц этого товара."
 }

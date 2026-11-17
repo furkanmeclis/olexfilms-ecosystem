@@ -311,5 +311,10 @@
   "roll.save": "Зберегти",
   "roll.saved": "Збережено.",
   "roll.failed": "Не вдалося зберегти.",
-  "roll.invalid": "Введіть число."
+  "roll.invalid": "Введіть число.",
+  "related.tabs.stock": "Складські одиниці",
+  "related.tabs.orders": "Відкриті замовлення",
+  "related.tabs.warranties": "Гарантії",
+  "related.tabs.prices": "Історія цін",
+  "related.empty_stock": "Немає складських одиниць цього товару."
 }
