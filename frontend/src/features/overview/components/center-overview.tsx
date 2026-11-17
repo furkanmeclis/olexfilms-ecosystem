@@ -21,7 +21,8 @@ const TOP = { limit: 10 } as const;
 
 /**
  * TEC-1212: center overview. KPI strip (delta + sparkline), services and
- * orders against the previous period, the dealer rankings (most orders,
+ * orders against the previous period, the most serviced make-models and
+ * the most used products (TEC-1220, same period), the dealer rankings (most orders,
  * no orders, most services), the warehouse / stock summary and the latest
  * activity. Panels the member cannot open drop out; failures show a retry.
  */
@@ -49,6 +50,22 @@ export function CenterOverview({ slug }: { slug: string }) {
               reportKey="orders.trend"
               query={query}
               title={t("dashboard.role.orders_trend")}
+            />
+          </div>
+          <div className="grid gap-6 xl:grid-cols-2" data-testid="center-top">
+            <ReportRankPanel
+              slug={slug}
+              reportKey="services.top_models"
+              query={query}
+              extra={TOP}
+              title={t("dashboard.role.top_models")}
+            />
+            <ReportRankPanel
+              slug={slug}
+              reportKey="services.top_products"
+              query={query}
+              extra={TOP}
+              title={t("dashboard.role.top_products")}
             />
           </div>
           <OverviewSection
