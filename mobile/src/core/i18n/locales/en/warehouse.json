@@ -861,5 +861,20 @@
   "arrival.result.matched": "Received",
   "arrival.result.already": "Scanned before",
   "arrival.result.extra": "Not on the entry (extra)",
-  "fields.lot": "Lot"
+  "fields.lot": "Lot",
+  "m.balance_available": "Available: {{count}}",
+  "m.balance_reserved": "Reserved: {{count}}",
+  "m.balance_incoming": "Incoming: {{count}}",
+  "m.critical_stock": "Critical stock",
+  "m.forecasts": "Stock forecast",
+  "m.critical_empty": "No critical stock.",
+  "m.forecasts_empty": "No forecasts.",
+  "m.reorder_thresholds": "Min {{min}} · point {{point}} · max {{max}}",
+  "m.level_ok": "OK",
+  "m.level_reorder": "Reorder",
+  "m.level_below_min": "Below minimum",
+  "m.level_days_low": "Few days left",
+  "m.suggested": "Suggested: {{count}}",
+  "m.days_left": "{{days}} days",
+  "m.on_hand": "On hand: {{count}}"
 }

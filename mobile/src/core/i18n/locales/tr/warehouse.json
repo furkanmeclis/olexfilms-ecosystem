@@ -861,5 +861,20 @@
   "arrival.result.matched": "Teslim alındı",
   "arrival.result.already": "Daha önce okutuldu",
   "arrival.result.extra": "Girişte yok (fazla)",
-  "fields.lot": "Lot"
+  "fields.lot": "Lot",
+  "m.balance_available": "Kullanılabilir: {{count}}",
+  "m.balance_reserved": "Rezerve: {{count}}",
+  "m.balance_incoming": "Yolda: {{count}}",
+  "m.critical_stock": "Kritik stok",
+  "m.forecasts": "Stok tahmini",
+  "m.critical_empty": "Kritik stok yok.",
+  "m.forecasts_empty": "Tahmin yok.",
+  "m.reorder_thresholds": "Min {{min}} · nokta {{point}} · max {{max}}",
+  "m.level_ok": "Yeterli",
+  "m.level_reorder": "Sipariş ver",
+  "m.level_below_min": "Minimumun altında",
+  "m.level_days_low": "Az gün kaldı",
+  "m.suggested": "Önerilen: {{count}}",
+  "m.days_left": "{{days}} gün",
+  "m.on_hand": "Eldeki: {{count}}"
 }

@@ -861,5 +861,20 @@
   "arrival.result.matched": "تم الاستلام",
   "arrival.result.already": "مُسح من قبل",
   "arrival.result.extra": "غير موجود في الإدخال (زيادة)",
-  "fields.lot": "الدفعة"
+  "fields.lot": "الدفعة",
+  "m.balance_available": "متاح: {{count}}",
+  "m.balance_reserved": "محجوز: {{count}}",
+  "m.balance_incoming": "في الطريق: {{count}}",
+  "m.critical_stock": "المخزون الحرج",
+  "m.forecasts": "توقع المخزون",
+  "m.critical_empty": "لا يوجد مخزون حرج.",
+  "m.forecasts_empty": "لا توجد توقعات.",
+  "m.reorder_thresholds": "أدنى {{min}} · نقطة {{point}} · أقصى {{max}}",
+  "m.level_ok": "كافٍ",
+  "m.level_reorder": "أعد الطلب",
+  "m.level_below_min": "أقل من الحد الأدنى",
+  "m.level_days_low": "أيام قليلة متبقية",
+  "m.suggested": "مقترح: {{count}}",
+  "m.days_left": "{{days}} يومًا",
+  "m.on_hand": "المتوفر: {{count}}"
 }

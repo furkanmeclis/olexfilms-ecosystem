@@ -861,5 +861,20 @@
   "arrival.result.matched": "Получен",
   "arrival.result.already": "Сканиран преди",
   "arrival.result.extra": "Не е в заприхождаването (излишък)",
-  "fields.lot": "Партида"
+  "fields.lot": "Партида",
+  "m.balance_available": "Свободни: {{count}}",
+  "m.balance_reserved": "Резервирани: {{count}}",
+  "m.balance_incoming": "В път: {{count}}",
+  "m.critical_stock": "Критична наличност",
+  "m.forecasts": "Прогноза за наличност",
+  "m.critical_empty": "Няма критична наличност.",
+  "m.forecasts_empty": "Няма прогнози.",
+  "m.reorder_thresholds": "Мин. {{min}} · точка {{point}} · макс. {{max}}",
+  "m.level_ok": "Достатъчно",
+  "m.level_reorder": "За поръчка",
+  "m.level_below_min": "Под минимума",
+  "m.level_days_low": "Остават малко дни",
+  "m.suggested": "Предложено: {{count}}",
+  "m.days_left": "{{days}} дни",
+  "m.on_hand": "Налични: {{count}}"
 }

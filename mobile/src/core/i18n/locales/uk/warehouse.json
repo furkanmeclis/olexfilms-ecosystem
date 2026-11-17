@@ -861,5 +861,20 @@
   "arrival.result.matched": "Отримано",
   "arrival.result.already": "Уже відскановано",
   "arrival.result.extra": "Немає в приході (надлишок)",
-  "fields.lot": "Партія"
+  "fields.lot": "Партія",
+  "m.balance_available": "Доступно: {{count}}",
+  "m.balance_reserved": "Зарезервовано: {{count}}",
+  "m.balance_incoming": "В дорозі: {{count}}",
+  "m.critical_stock": "Критичний запас",
+  "m.forecasts": "Прогноз запасів",
+  "m.critical_empty": "Критичних запасів немає.",
+  "m.forecasts_empty": "Прогнозів немає.",
+  "m.reorder_thresholds": "Мін. {{min}} · точка {{point}} · макс. {{max}}",
+  "m.level_ok": "Достатньо",
+  "m.level_reorder": "Дозамовити",
+  "m.level_below_min": "Нижче мінімуму",
+  "m.level_days_low": "Залишилось мало днів",
+  "m.suggested": "Рекомендовано: {{count}}",
+  "m.days_left": "{{days}} дн.",
+  "m.on_hand": "В наявності: {{count}}"
 }

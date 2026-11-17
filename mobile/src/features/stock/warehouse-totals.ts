@@ -10,10 +10,21 @@
 export const WAREHOUSE_TOTALS_PAGE = 100;
 export const WAREHOUSE_TOTALS_MAX_PAGES = 50;
 
+/** TEC-1229 balance split of a stock row (eldeki / rezerve / kullanılabilir / yolda). */
+export type BalanceLike = {
+  reserved_quantity: number;
+  available_quantity: number;
+  incoming_quantity: number;
+  quarantine_quantity: number;
+  available_meters: string;
+  reserved_meters: string;
+};
+
 type WarehouseProductLike = {
   product: { uuid: string; sku: string; name: string; unit_type: string; category?: { name: string } | null };
   quantity: number;
   meters: string;
+  balance?: BalanceLike | null;
 };
 
 export type WarehouseProductTotal = {
@@ -23,6 +34,10 @@ export type WarehouseProductTotal = {
   units: number;
   /** Meters left on the rolls; null for products not sold by the meter. */
   meters: number | null;
+  /** TEC-1229: reserved for orders, available (on hand - reserved - quarantine), incoming. */
+  reserved: number;
+  available: number;
+  incoming: number;
 };
 
 /** Maps the API rows to list rows, keeping the API's order (by product name). */
@@ -34,6 +49,9 @@ export function warehouseProductTotals(rows: readonly WarehouseProductLike[]): W
       category: r.product.category?.name,
       units: r.quantity,
       meters: r.product.unit_type === 'roll_meter' ? (Number.isFinite(m) ? m : 0) : null,
+      reserved: r.balance?.reserved_quantity ?? 0,
+      available: r.balance?.available_quantity ?? r.quantity,
+      incoming: r.balance?.incoming_quantity ?? 0,
     };
   });
 }
@@ -50,3 +68,16 @@ export function filterTotals(rows: readonly WarehouseProductTotal[], q: string):
   return rows.filter((r) => r.product.name.toLocaleLowerCase().includes(s) || r.product.sku.toLocaleLowerCase().includes(s));
 }
 
+
+/**
+ * TEC-1229: the parts of the balance line under a stock row. Available is
+ * always shown when something is reserved or incoming; zero parts are left
+ * out. Keys are i18n keys of the warehouse namespace.
+ */
+export function balanceParts(b: { reserved: number; available: number; incoming: number }): { key: string; count: number }[] {
+  if (b.reserved === 0 && b.incoming === 0) return [];
+  const out = [{ key: 'm.balance_available', count: b.available }];
+  if (b.reserved > 0) out.push({ key: 'm.balance_reserved', count: b.reserved });
+  if (b.incoming > 0) out.push({ key: 'm.balance_incoming', count: b.incoming });
+  return out;
+}

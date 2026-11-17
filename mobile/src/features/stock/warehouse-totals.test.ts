@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it, test } from 'node:test';
 
-import { filterTotals, inStockTotals, warehouseProductTotals } from './warehouse-totals.ts';
+import { balanceParts, filterTotals, inStockTotals, warehouseProductTotals } from './warehouse-totals.ts';
 
 const row = (uuid: string, name: string, quantity: number, meters = '0.00', unitType = 'piece', sku = `SKU-${uuid}`) => ({
   product: { uuid, sku, name, unit_type: unitType, category: { name: 'Kat' } },
@@ -48,4 +48,29 @@ describe('filterTotals', () => {
   it('keeps every row without a search', () => {
     assert.equal(filterTotals(rows, '  ').length, 2);
   });
+});
+
+test('TEC-1229: balance split of a warehouse row and its line', () => {
+  const [row] = warehouseProductTotals([
+    {
+      product: { uuid: 'p', sku: 'S', name: 'N', unit_type: 'piece' },
+      quantity: 3,
+      meters: '0.00',
+      balance: {
+        reserved_quantity: 1,
+        available_quantity: 2,
+        incoming_quantity: 4,
+        quarantine_quantity: 0,
+        available_meters: '0.00',
+        reserved_meters: '0.00',
+      },
+    },
+  ]);
+  assert.deepEqual([row.reserved, row.available, row.incoming], [1, 2, 4]);
+  assert.deepEqual(balanceParts(row), [
+    { key: 'm.balance_available', count: 2 },
+    { key: 'm.balance_reserved', count: 1 },
+    { key: 'm.balance_incoming', count: 4 },
+  ]);
+  assert.deepEqual(balanceParts({ reserved: 0, available: 3, incoming: 0 }), []);
 });

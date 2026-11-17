@@ -861,5 +861,20 @@
   "arrival.result.matched": "Ricevuto",
   "arrival.result.already": "Già scansionato",
   "arrival.result.extra": "Non nel carico (eccedenza)",
-  "fields.lot": "Lotto"
+  "fields.lot": "Lotto",
+  "m.balance_available": "Disponibile: {{count}}",
+  "m.balance_reserved": "Riservato: {{count}}",
+  "m.balance_incoming": "In arrivo: {{count}}",
+  "m.critical_stock": "Scorte critiche",
+  "m.forecasts": "Previsione scorte",
+  "m.critical_empty": "Nessuna scorta critica.",
+  "m.forecasts_empty": "Nessuna previsione.",
+  "m.reorder_thresholds": "Min {{min}} · punto {{point}} · max {{max}}",
+  "m.level_ok": "Sufficiente",
+  "m.level_reorder": "Da riordinare",
+  "m.level_below_min": "Sotto il minimo",
+  "m.level_days_low": "Pochi giorni rimasti",
+  "m.suggested": "Suggerito: {{count}}",
+  "m.days_left": "{{days}} giorni",
+  "m.on_hand": "Giacenza: {{count}}"
 }

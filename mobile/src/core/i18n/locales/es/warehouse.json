@@ -861,5 +861,20 @@
   "arrival.result.matched": "Recibido",
   "arrival.result.already": "Escaneado antes",
   "arrival.result.extra": "No está en la entrada (sobrante)",
-  "fields.lot": "Lote"
+  "fields.lot": "Lote",
+  "m.balance_available": "Disponible: {{count}}",
+  "m.balance_reserved": "Reservado: {{count}}",
+  "m.balance_incoming": "En camino: {{count}}",
+  "m.critical_stock": "Stock crítico",
+  "m.forecasts": "Previsión de stock",
+  "m.critical_empty": "No hay stock crítico.",
+  "m.forecasts_empty": "No hay previsiones.",
+  "m.reorder_thresholds": "Mín. {{min}} · punto {{point}} · máx. {{max}}",
+  "m.level_ok": "Suficiente",
+  "m.level_reorder": "Pedir",
+  "m.level_below_min": "Bajo el mínimo",
+  "m.level_days_low": "Quedan pocos días",
+  "m.suggested": "Sugerido: {{count}}",
+  "m.days_left": "{{days}} días",
+  "m.on_hand": "En existencia: {{count}}"
 }
