@@ -42417,11 +42417,6 @@ components:
         status: { $ref: "#/components/schemas/StockUnitStatus" }
         initial_meters: { type: [string, "null"], description: "Roll length (decimal string, 2 places)" }
         remaining_meters: { type: [string, "null"] }
-        remnant:
-          type: boolean
-          description: >-
-            TEC-1230: a roll with meters left but fewer than the product's
-            minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle").
         product:
           type: object
           required: [uuid, sku, name, unit_type, uses_fixed_barcode]
@@ -42933,6 +42928,11 @@ components:
         quantity: { type: integer, description: "1 for a serial unit, the quantity on hand for a fixed barcode" }
         initial_meters: { type: [string, "null"], description: "Roll length (decimal string, 2 places)" }
         remaining_meters: { type: [string, "null"] }
+        remnant:
+          type: boolean
+          description: >-
+            TEC-1230: a roll with meters left but fewer than the product's
+            minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle").
         product:
           type: object
           required: [uuid, sku, name, unit_type, uses_fixed_barcode]

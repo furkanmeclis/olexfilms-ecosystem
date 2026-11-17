@@ -23566,8 +23566,6 @@ export interface components {
             /** @description Roll length (decimal string, 2 places) */
             initial_meters: string | null;
             remaining_meters: string | null;
-            /** @description TEC-1230: a roll with meters left but fewer than the product's minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle"). */
-            remnant?: boolean;
             product: {
                 /** Format: uuid */
                 uuid: string;
@@ -23948,6 +23946,8 @@ export interface components {
             /** @description Roll length (decimal string, 2 places) */
             initial_meters: string | null;
             remaining_meters: string | null;
+            /** @description TEC-1230: a roll with meters left but fewer than the product's minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle"). */
+            remnant?: boolean;
             product: {
                 /** Format: uuid */
                 uuid: string;
