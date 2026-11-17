@@ -1,4 +1,4 @@
--- TEC-1228 (migration 000191; Linear 000186 ayırmıştı, main ilerlediği için taşındı): the warehouse work queue and the shipment details of an order.
+-- TEC-1228 (migration 000192; Linear 000186 ayırmıştı, main ilerlediği için taşındı): the warehouse work queue and the shipment details of an order.
 --
 -- * priority / due_date: the buyer sets them when it opens the order (and
 --   while it is a draft or submitted), the seller side until it ships. The
