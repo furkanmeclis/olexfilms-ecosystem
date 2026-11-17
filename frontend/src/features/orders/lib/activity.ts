@@ -13,6 +13,11 @@ export const ORDER_ACTIVITY_ACTIONS = [
   "backorder_opened",
   "discrepancy_reported",
   "discrepancy_resolved",
+  // TEC-1228: the work queue steps.
+  "schedule_updated",
+  "claimed",
+  "claim_taken_over",
+  "claim_released",
 ] as const;
 
 type Translate = (
@@ -88,6 +93,20 @@ export function orderTimelineSteps(
           }),
         );
       }
+    }
+    // TEC-1228: the new schedule and whose job was taken.
+    if (e.action === "schedule_updated") {
+      if (e.priority) parts.push(t(`orders.queue.priority_${e.priority}`));
+      parts.push(
+        e.due_date
+          ? t("orders.queue.due", { date: e.due_date })
+          : t("orders.queue.no_due_date"),
+      );
+    }
+    if (e.previous_picker) {
+      parts.push(
+        t("orders.queue.previous_picker", { name: e.previous_picker }),
+      );
     }
     // TEC-1056: the lines an edit added, changed or removed.
     for (const c of e.changes ?? []) {

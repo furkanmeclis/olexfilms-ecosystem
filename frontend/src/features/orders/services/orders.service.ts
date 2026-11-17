@@ -40,7 +40,14 @@ export type BuyerDiscountInput = Schemas["BuyerDiscountInput"];
 export type OrderShippingInput = {
   delivery_method_uuid?: string;
   tracking_no?: string;
+  /** TEC-1228: printed on the shipping note. */
+  package_count?: number;
+  desi?: number;
+  weight_kg?: number;
 };
+
+export type OrderPriority = Schemas["OrderPriority"];
+export type OrderScheduleInput = Schemas["OrderScheduleInput"];
 
 /** Side of the active organization in the list: sales or purchases. */
 export type OrderSide = "seller" | "buyer";
@@ -263,6 +270,21 @@ export const ordersService = {
     return platformDownloadFile(
       `/v1/orders/${enc(uuid)}/discrepancies/${enc(discrepancy)}/photos/${index}`,
     );
+  },
+  /** TEC-1228: priority and due date. */
+  setSchedule(uuid: string, body: OrderScheduleInput) {
+    return platformRequest<Order>("PUT", `/v1/orders/${enc(uuid)}/schedule`, {
+      body,
+    });
+  },
+  /** TEC-1228: take the warehouse job (takeover: a manager takes it over). */
+  claim(uuid: string, takeover = false) {
+    return platformRequest<Order>("POST", `/v1/orders/${enc(uuid)}/claim`, {
+      body: { takeover },
+    });
+  },
+  releaseClaim(uuid: string) {
+    return platformRequest<Order>("DELETE", `/v1/orders/${enc(uuid)}/claim`);
   },
   assignUnit(uuid: string, item: string, body: OrderUnitAssignInput) {
     return platformRequest<Order>(

@@ -182,5 +182,8 @@
   "codes.ORDER_INVOICED": "Fakturalanmış sifariş ləğv edilə bilməz; əvvəlcə faktura qeydini silin.",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "Əlavə göndəriş yalnız göndərilmiş, çatdırılmış və ya qəbul edilmiş sifarişə əlavə edilə bilər.",
   "codes.UNIT_CREDITS_EXHAUSTED": "Bu barkodun istifadə krediti bitib; başqa xidmətdə seçilə bilməz.",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulonlar və sabit barkodlar istifadə krediti daşımır."
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulonlar və sabit barkodlar istifadə krediti daşımır.",
+  "codes.ORDER_ALREADY_CLAIMED": "Bu işi başqası götürüb.",
+  "codes.ORDER_NOT_CLAIMABLE": "Yalnız təsdiqlənmiş və hələ göndərilməmiş sifariş anbar işidir.",
+  "codes.ORDER_SCHEDULE_LOCKED": "Bu statusda prioritet və müddət dəyişdirilə bilməz."
 }

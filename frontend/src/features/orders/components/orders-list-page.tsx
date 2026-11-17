@@ -27,6 +27,7 @@ import { OrderActionDialog } from "@/features/orders/components/order-action-dia
 import { OrderQueueChips } from "@/features/orders/components/order-queue-chips";
 import { SupplementBadge } from "@/features/orders/components/order-supplements";
 import { BackorderBadge } from "@/features/orders/components/order-partial";
+import { OrderQueueBadges } from "@/features/orders/components/order-work-queue";
 import {
   activeOrderSide,
   canEditDraft,
@@ -43,6 +44,8 @@ import {
 import {
   ORDER_FILTER_STATUSES,
   ORDER_INVOICE_STATUSES,
+  ORDER_PRIORITIES,
+  isWorkQueueFilter,
 } from "@/features/orders/lib/list-filters";
 import {
   ORDERS_EXPORT_PATH,
@@ -189,8 +192,46 @@ export function OrdersListPage({ slug }: { slug: string }) {
               </Link>
               <SupplementBadge order={row.original} />
               <BackorderBadge order={row.original} />
+              <OrderQueueBadges order={row.original} />
             </span>
           ),
+        }),
+        // TEC-1228: the work queue — priority (sorts as the queue: urgent,
+        // then due date, then oldest) and the due date.
+        createColumn<Order>({
+          accessorKey: "priority",
+          labelKey: "orders.queue.priority",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterOptions: ORDER_PRIORITIES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `orders.queue.priority_${value}`,
+          })),
+          param: "priority",
+          defaultHidden: true,
+          cell: ({ row }) =>
+            t(`orders.queue.priority_${row.original.priority}`),
+        }),
+        createColumn<Order>({
+          accessorKey: "due_date",
+          labelKey: "orders.queue.due_date",
+          enableSorting: true,
+          defaultHidden: true,
+          cell: ({ row }) =>
+            row.original.due_date ? (
+              <span
+                className={
+                  row.original.is_overdue
+                    ? "text-destructive font-medium whitespace-nowrap"
+                    : "whitespace-nowrap"
+                }
+              >
+                {format.date(`${row.original.due_date}T12:00:00`)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
         }),
         createColumn<Order>({
           accessorKey: "status",
@@ -451,16 +492,30 @@ export function OrdersListPage({ slug }: { slug: string }) {
     }
     return filters.length ? filters : undefined;
   }, [statusParam, buyerParam, side]);
+  // TEC-1228: a work queue link (open warehouse statuses) sorts as the
+  // queue: urgent first, then the due date.
+  const queueLink =
+    side === "seller" &&
+    isWorkQueueFilter(
+      (initialColumnFilters?.find((f) => f.id === "status")?.value ??
+        []) as string[],
+    );
   const listState = useServerListState({
     columns,
     initialColumnFilters,
-    initialSort: "-created_at",
+    initialSort: queueLink ? "priority" : "-created_at",
     initialPageSize: ORDER_PAGE_SIZE,
     persistKey: ORDERS_PERSIST_KEY,
   });
+  // TEC-1228: "my jobs" — the orders the caller took (seller side).
+  const [mine, setMine] = useState(false);
   const params: OrderListQuery = useMemo(
-    () => ({ ...listState.params, side }),
-    [listState.params, side],
+    () => ({
+      ...listState.params,
+      side,
+      ...(mine && side === "seller" ? { picker: "me" } : {}),
+    }),
+    [listState.params, side, mine],
   );
 
   const list = useQuery({
@@ -481,7 +536,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
     [listState.filterParams, params.q, params.sort, side],
   );
 
-  const { onColumnFiltersChange, setPagination } = listState;
+  const { onColumnFiltersChange, onSortingChange, setPagination } = listState;
   const pickSide = (next: OrderSide) => {
     setSide(next);
     // The party filter means buyer on one tab and seller on the other.
@@ -565,9 +620,30 @@ export function OrdersListPage({ slug }: { slug: string }) {
               ...prev.filter((f) => f.id !== "status"),
               ...(statuses.length ? [{ id: "status", value: statuses }] : []),
             ]);
+            // TEC-1228: a work queue chip sorts urgent first, then by due date.
+            if (isWorkQueueFilter(statuses)) {
+              onSortingChange([{ id: "priority", desc: false }]);
+            }
             setPagination((prev) => ({ ...prev, pageIndex: 0 }));
           }}
         />
+      ) : null}
+      {side === "seller" && can(permissions.orders.ship) ? (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={mine ? "default" : "outline"}
+            aria-pressed={mine}
+            data-testid="orders-mine"
+            onClick={() => {
+              setMine((v) => !v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
+            {t("orders.queue.my_jobs")}
+          </Button>
+        </div>
       ) : null}
       <EntityTable
         columns={columns}
@@ -605,6 +681,7 @@ export function OrdersListPage({ slug }: { slug: string }) {
               </Link>
               <SupplementBadge order={order} />
               <BackorderBadge order={order} />
+              <OrderQueueBadges order={order} />
               <StatusChip
                 label={order.status_label}
                 tone={orderStatusTone(order.status)}

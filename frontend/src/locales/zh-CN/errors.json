@@ -182,5 +182,8 @@
   "codes.ORDER_INVOICED": "已开票的订单不能取消；请先删除发票记录。",
   "codes.ORDER_NOT_SUPPLEMENTABLE": "只能为已发货、已送达或已签收的订单添加补充发货。",
   "codes.UNIT_CREDITS_EXHAUSTED": "该条码的使用额度已用完，无法在其他服务中选择。",
-  "codes.UNIT_CREDITS_NOT_APPLICABLE": "卷材和固定条码没有使用额度。"
+  "codes.UNIT_CREDITS_NOT_APPLICABLE": "卷材和固定条码没有使用额度。",
+  "codes.ORDER_ALREADY_CLAIMED": "此任务已被他人领取。",
+  "codes.ORDER_NOT_CLAIMABLE": "只有已批准且尚未发货的订单才是仓库任务。",
+  "codes.ORDER_SCHEDULE_LOCKED": "此状态下无法更改优先级与截止日期。"
 }
