@@ -396,3 +396,16 @@ SET standard_discount_pct = sqlc.narg(standard_discount_pct),
     first_order_discount_pct = sqlc.narg(first_order_discount_pct)
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 RETURNING *;
+
+-- name: OrganizationHasLedger :one
+-- TEC-1214: the organization currency is the ledger currency (K7); once
+-- the organization owns a finance account, a cari (either side) or a
+-- finance entry, every later posting is checked against it, so the
+-- currency is locked.
+SELECT (
+    EXISTS (SELECT 1 FROM finance_accounts fa WHERE fa.organization_id = sqlc.arg(org_id)::bigint)
+    OR EXISTS (SELECT 1 FROM cari_accounts ca
+               WHERE ca.organization_id = sqlc.arg(org_id)::bigint
+                  OR ca.counterparty_org_id = sqlc.arg(org_id)::bigint)
+    OR EXISTS (SELECT 1 FROM finance_entries fe WHERE fe.organization_id = sqlc.arg(org_id)::bigint)
+)::bool AS has_ledger;

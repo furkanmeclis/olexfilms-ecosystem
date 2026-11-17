@@ -165,7 +165,7 @@ func (s *Service) computeScope(ctx context.Context, q *db.Queries, org db.Organi
 		return 0, fmt.Errorf("performance: clear %s/%s/%s: %w", org.Slug, period(month), scope, err)
 	}
 	row, err := q.ComputePerformanceMetrics(ctx, db.ComputePerformanceMetricsParams{
-		BrandID: org.BrandID, OrgIds: orgIDs,
+		BrandID: org.BrandID, OrgIds: orgIDs, Currency: org.Currency,
 		PeriodFrom: ts(from), PeriodTo: ts(to), AsOf: ts(at),
 	})
 	if err != nil {

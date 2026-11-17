@@ -171,6 +171,8 @@
   "system.keys.pricing_deviation_warning_pct_hint": "Un prezzo al cliente finale di un rivenditore o distributore che si discosta di questa percentuale dal prezzo consigliato (in entrambe le direzioni) supera la soglia.",
   "system.keys.pricing_price_list_auto_publish": "Pubblica il listino automaticamente",
   "system.keys.pricing_price_list_auto_publish_hint": "Se attivo, dopo ogni pubblicazione dei prezzi consigliati il PDF del listino viene caricato come nuova versione nel centro documenti.",
+  "system.keys.pricing_local_currency": "Valuta locale di visualizzazione",
+  "system.keys.pricing_local_currency_hint": "Codice ISO 4217 (es. TRY). Valuta di quotazione del cambio congelato all'approvazione dell'ordine e del piccolo importo al cambio del giorno accanto ai prezzi nella valuta del marchio.",
   "system.groups.einvoice": "Fattura elettronica",
   "system.groups.einvoice_hint": "Fatture UBL-TR e-Fatura ed e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Aliquota IVA predefinita (%)",

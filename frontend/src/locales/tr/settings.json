@@ -171,6 +171,8 @@
   "system.keys.pricing_deviation_warning_pct_hint": "Bayi veya distribütör son müşteri fiyatı tavsiye fiyattan bu yüzde kadar (iki yönde) saparsa eşik aşılmış sayılır.",
   "system.keys.pricing_price_list_auto_publish": "Fiyat listesini otomatik yayınla",
   "system.keys.pricing_price_list_auto_publish_hint": "Açıkken her tavsiye fiyat yayınından sonra fiyat listesi PDF'i doküman merkezine yeni sürüm olarak yüklenir.",
+  "system.keys.pricing_local_currency": "Yerel gösterim para birimi",
+  "system.keys.pricing_local_currency_hint": "ISO 4217 kodu (örn. TRY). Sipariş onayında dondurulan kurun karşı para birimi ve marka para birimindeki fiyatların yanında anlık kurla küçük gösterilen tutarın para birimi.",
   "system.groups.einvoice": "e-Fatura",
   "system.groups.einvoice_hint": "UBL-TR e-Fatura ve e-Arşiv faturaları.",
   "system.keys.einvoice_default_vat_rate": "Varsayılan KDV oranı (%)",

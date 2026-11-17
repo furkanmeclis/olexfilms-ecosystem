@@ -171,6 +171,8 @@ cari_balances AS (
     LEFT JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < $1::timestamptz
     WHERE c.brand_id = $2
       AND c.organization_id = ANY($3::bigint[])
+      -- TEC-1214: only caris in the metric currency are added up.
+      AND c.currency = $6::text
     GROUP BY c.id
 ),
 cari_stats AS (
@@ -221,7 +223,20 @@ waste AS (
       AND f.service_date < $5::date
 ),
 orders_in AS (
-    SELECT COALESCE(SUM(o.total), 0)::numeric(18,4) AS total
+    -- TEC-1214: each order total is converted to the metric currency with
+    -- the rate frozen at approval (the order currency itself, the main
+    -- rate_snapshot pair or one of its pairs); an order without a frozen
+    -- rate to that currency is left out instead of being added in its own
+    -- currency.
+    SELECT COALESCE(SUM(o.total * CASE
+               WHEN o.currency = $6::text THEN 1::numeric
+               WHEN o.rate_snapshot->>'base' = o.currency AND o.rate_snapshot->>'quote' = $6::text
+                   THEN (o.rate_snapshot->>'rate')::numeric
+               ELSE (SELECT (p->>'rate')::numeric
+                     FROM jsonb_array_elements(COALESCE(o.rate_snapshot->'pairs', '[]'::jsonb)) p
+                     WHERE p->>'base' = o.currency AND p->>'quote' = $6::text
+                     LIMIT 1)
+           END), 0)::numeric(18,4) AS total
     FROM orders o
     WHERE o.brand_id = $2
       AND o.buyer_org_id = ANY($3::bigint[])
@@ -264,6 +279,7 @@ type ComputePerformanceMetricsParams struct {
 	OrgIds     []int64            `json:"org_ids"`
 	PeriodFrom pgtype.Timestamptz `json:"period_from"`
 	PeriodTo   pgtype.Timestamptz `json:"period_to"`
+	Currency   string             `json:"currency"`
 }
 
 type ComputePerformanceMetricsRow struct {
@@ -293,6 +309,7 @@ func (q *Queries) ComputePerformanceMetrics(ctx context.Context, arg ComputePerf
 		arg.OrgIds,
 		arg.PeriodFrom,
 		arg.PeriodTo,
+		arg.Currency,
 	)
 	var i ComputePerformanceMetricsRow
 	err := row.Scan(

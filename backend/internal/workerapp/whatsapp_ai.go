@@ -84,7 +84,8 @@ func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 	customersSvc.SetPortalURL(cfg.Auth.FrontendURL)
 	customersSvc.SetOutbox(box)
 	accountingSvc := accountingusecase.New(pool, q, poster, d.features)
-	ordersSvc := ordersusecase.New(pool, q, box, rates).WithReceiptHook(ordersusecase.NewAccountingBridge(poster))
+	ordersSvc := ordersusecase.New(pool, q, box, rates).WithReceiptHook(ordersusecase.NewAccountingBridge(poster)).
+		WithLocalCurrency(sys) // TEC-1214
 	servicesSvc := servicesusecase.New(pool, q, box).
 		WithContractRequirement(sys, d.features).
 		WithCompletedCancelAccounting(poster)

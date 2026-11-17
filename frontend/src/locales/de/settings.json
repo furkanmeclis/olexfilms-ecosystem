@@ -171,6 +171,8 @@
   "system.keys.pricing_deviation_warning_pct_hint": "Ein Endkundenpreis eines Händlers oder Distributors, der um so viele Prozent (in beide Richtungen) von der Preisempfehlung abweicht, überschreitet die Schwelle.",
   "system.keys.pricing_price_list_auto_publish": "Preisliste automatisch veröffentlichen",
   "system.keys.pricing_price_list_auto_publish_hint": "Wenn aktiviert, wird die Preisliste als PDF nach jeder Veröffentlichung von Preisempfehlungen als neue Version im Dokumentenzentrum abgelegt.",
+  "system.keys.pricing_local_currency": "Lokale Anzeigewährung",
+  "system.keys.pricing_local_currency_hint": "ISO-4217-Code (z. B. TRY). Kurswährung des bei der Auftragsfreigabe eingefrorenen Kurses und des kleinen Betrags zum Tageskurs neben Preisen in der Markenwährung.",
   "system.groups.einvoice": "E-Rechnung",
   "system.groups.einvoice_hint": "UBL-TR-Rechnungen für e-Fatura und e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Standard-Mehrwertsteuersatz (%)",

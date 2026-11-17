@@ -189,6 +189,11 @@ const (
 	// KeyPricingPriceListAutoPublish publishes the recommended price list
 	// PDF to the document center after every publication (TEC-505).
 	KeyPricingPriceListAutoPublish = "pricing.price_list_auto_publish"
+	// KeyPricingLocalCurrency is the local display currency (TEC-1214): the
+	// quote currency of the rate frozen at order approval (orders.try_rate)
+	// and of the live totals (live_total_try), and the small converted
+	// amount next to a brand-currency price on web and mobile.
+	KeyPricingLocalCurrency = "pricing.local_currency"
 
 	// KeyEinvoiceDefaultVATRate is the KDV percent of an invoice line whose
 	// product or category has no rate (TEC-502).
@@ -208,6 +213,9 @@ const (
 // DefaultPricingDeviationWarningPct is the catalog default of
 // KeyPricingDeviationWarningPct (F5 QUESTIONS S35).
 const DefaultPricingDeviationWarningPct = 15
+
+// DefaultLocalCurrency is the catalog default of KeyPricingLocalCurrency.
+const DefaultLocalCurrency = "TRY"
 
 // DefaultEinvoiceDefaultVATRate is the catalog default of
 // KeyEinvoiceDefaultVATRate (general KDV rate).
@@ -317,6 +325,15 @@ func checkHTTPSURL(s string) string {
 	return ""
 }
 
+var currencyCode = regexp.MustCompile(`^[A-Z]{3}$`)
+
+func checkCurrencyCode(s string) string {
+	if s != "" && !currencyCode.MatchString(s) {
+		return "must be an upper-case ISO 4217 code such as TRY"
+	}
+	return ""
+}
+
 func i64(v int64) *int64 { return &v }
 
 var catalog = []Definition{
@@ -406,6 +423,8 @@ var catalog = []Definition{
 		Description: "Percent deviation from the recommended price that flags a dealer or distributor price (TEC-505)"},
 	{Key: KeyPricingPriceListAutoPublish, Group: GroupPricing, Kind: KindBool, Default: true,
 		Description: "Publish the recommended price list PDF to the document center after each publication (TEC-505)"},
+	{Key: KeyPricingLocalCurrency, Group: GroupPricing, Kind: KindString, Default: DefaultLocalCurrency, MaxLen: 3, check: checkCurrencyCode,
+		Description: "Local display currency (ISO 4217): quote currency of the rate frozen at order approval and of the small converted amount shown next to brand-currency prices (TEC-1214)"},
 	{Key: KeyEinvoiceDefaultVATRate, Group: GroupEinvoice, Kind: KindInt, Default: int64(DefaultEinvoiceDefaultVATRate), Min: i64(1), Max: i64(100),
 		Description: "KDV percent of an e-invoice line whose product or category has no rate; 0% needs an exemption code and is not allowed here (TEC-502)"},
 }

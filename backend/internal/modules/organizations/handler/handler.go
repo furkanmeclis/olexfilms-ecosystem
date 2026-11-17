@@ -686,6 +686,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, response.CodeLastOwner, err.Error())
 	case errors.Is(err, orgusecase.ErrSelfMembership):
 		response.Conflict(w, r, response.CodeSelfMembership, err.Error())
+	case errors.Is(err, orgusecase.ErrCurrencyLocked):
+		response.Conflict(w, r, response.CodeCurrencyLocked, err.Error())
 	case errors.Is(err, orgusecase.ErrConflict):
 		response.Conflict(w, r, response.CodeConflict, err.Error())
 	case errors.Is(err, i18n.ErrInvalidLocale):

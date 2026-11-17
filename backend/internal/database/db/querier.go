@@ -1427,6 +1427,11 @@ type Querier interface {
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
 	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
+	// TEC-1214: the last order line a unit was bought on from the supplier, in
+	// whatever currency the order was placed (a brand currency change leaves
+	// older orders in the old currency); rate_snapshot carries the rate frozen
+	// at approval to the buyer's ledger currency.
+	GetUnitLastOrderCost(ctx context.Context, arg GetUnitLastOrderCostParams) (GetUnitLastOrderCostRow, error)
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
@@ -3518,6 +3523,11 @@ type Querier interface {
 	NextDocumentTemplateVersion(ctx context.Context, arg NextDocumentTemplateVersionParams) (int32, error)
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
+	// TEC-1214: the organization currency is the ledger currency (K7); once
+	// the organization owns a finance account, a cari (either side) or a
+	// finance entry, every later posting is checked against it, so the
+	// currency is locked.
+	OrganizationHasLedger(ctx context.Context, orgID int64) (bool, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
 	// TEC-1216 (cross-record refs): detail summaries of records that had no
@@ -3658,7 +3668,9 @@ type Querier interface {
 	// order counts once it left draft and was not cancelled (draft, cancelling
 	// and cancelled are out); the scope narrows like the other order reports
 	// (seller or buyer inside org_ids). The active organization's own
-	// purchases are not a buyer row (self_org_id).
+	// purchases are not a buyer row (self_org_id). TEC-1214: totals are kept
+	// per order currency (a brand currency change leaves older orders in the
+	// old currency): a buyer with orders in two currencies has one row each.
 	ReportOrdersByBuyer(ctx context.Context, arg ReportOrdersByBuyerParams) ([]ReportOrdersByBuyerRow, error)
 	ReportRecentServices(ctx context.Context, arg ReportRecentServicesParams) ([]ReportRecentServicesRow, error)
 	ReportServiceOverview(ctx context.Context, arg ReportServiceOverviewParams) (ReportServiceOverviewRow, error)

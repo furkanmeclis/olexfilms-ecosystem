@@ -614,6 +614,17 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 		skipOrder(c, l, cand, "no_lines", false)
 		return nil
 	}
+	// TEC-1214: an approved order needs the rate of its day; without one
+	// the order is skipped and reported (never frozen at 1).
+	rate, err := u.rateFor(ctx, state)
+	if errors.Is(err, errRateMissing) {
+		c.inc("skipped_rate_missing:" + label)
+		skipOrder(c, l, cand, "rate_missing", true)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
 	ref := ""
 	if cand.Hub != nil {
@@ -691,10 +702,6 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 		changed = changed || res.Created || res.Changed
 	}
 
-	rate, rateDefaulted, err := u.rateFor(ctx, state)
-	if err != nil {
-		return err
-	}
 	tracking, note := orderTrackingAndNote(cand)
 
 	row, err := u.q.MigratorOrderByUUID(ctx, db.MigratorOrderByUUIDParams{Uuid: target, BrandID: u.brandID})
@@ -717,9 +724,6 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 		}
 		c.inc("orders_created")
 		c.inc("orders_status:" + state.Status)
-		if rateDefaulted {
-			c.inc("rate_defaulted")
-		}
 		return s.writeLines(ctx, u, id, buyer.ParentID, lines, c)
 	case err != nil:
 		return fmt.Errorf("read order: %w", err)
@@ -746,9 +750,6 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 		return nil
 	}
 	c.inc("orders_updated")
-	if rateDefaulted {
-		c.inc("rate_defaulted")
-	}
 	return s.writeLines(ctx, u, row.ID, row.OrganizationID, lines, c)
 }
 
@@ -803,35 +804,37 @@ type orderRate struct {
 	try      pgtype.Numeric
 }
 
+// errRateMissing: no stored rate for the brand currency -> local currency
+// on the order day (TEC-1214).
+var errRateMissing = errors.New("migrator: rate missing")
+
 // rateFor freezes the rate of the order date for an approved order (K7):
-// brand currency -> TRY, 1 when no rate is stored (defaulted true).
-func (u *orderCtx) rateFor(ctx context.Context, st orderState) (orderRate, bool, error) {
+// brand currency -> TRY. A missing rate is errRateMissing; the order is
+// skipped and reported instead of frozen at 1 (TEC-1214).
+func (u *orderCtx) rateFor(ctx context.Context, st orderState) (orderRate, error) {
 	if !st.Approved.Valid {
-		return orderRate{}, false, nil
+		return orderRate{}, nil
 	}
 	on := st.Created.Time
 	if !st.Created.Valid {
 		on = st.Approved.Time
 	}
-	defaulted := false
 	snap, err := u.rates.ResolveRate(ctx, on, u.currency, tryCurrency)
 	if errors.Is(err, fxrates.ErrRateNotFound) {
-		snap = fxrates.Snapshot{Base: u.currency, Quote: tryCurrency, Rate: "1",
-			RateDate: on.UTC().Format("2006-01-02"), Source: "migrator_default"}
-		defaulted, err = true, nil
+		return orderRate{}, errRateMissing
 	}
 	if err != nil {
-		return orderRate{}, false, fmt.Errorf("rate: %w", err)
+		return orderRate{}, fmt.Errorf("rate: %w", err)
 	}
 	raw, err := json.Marshal(snap)
 	if err != nil {
-		return orderRate{}, false, fmt.Errorf("rate snapshot: %w", err)
+		return orderRate{}, fmt.Errorf("rate snapshot: %w", err)
 	}
 	var n pgtype.Numeric
 	if err := n.Scan(snap.Rate); err != nil {
-		return orderRate{}, false, fmt.Errorf("rate %q: %w", snap.Rate, err)
+		return orderRate{}, fmt.Errorf("rate %q: %w", snap.Rate, err)
 	}
-	return orderRate{snapshot: raw, try: n}, defaulted, nil
+	return orderRate{snapshot: raw, try: n}, nil
 }
 
 // createdBy is the hub creator's account (warehouse users are not migrated).

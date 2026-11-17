@@ -120,7 +120,7 @@ func TestOlexOrders(t *testing.T) {
 	}
 	for k := range oc {
 		if strings.HasPrefix(k, "skipped_") || strings.Contains(k, "unmapped") || strings.Contains(k, "conflict") ||
-			strings.Contains(k, "mismatch") || k == "rate_defaulted" {
+			strings.Contains(k, "mismatch") || strings.Contains(k, "rate_missing") {
 			t.Errorf("unexpected report %s (%v)", k, oc)
 		}
 	}

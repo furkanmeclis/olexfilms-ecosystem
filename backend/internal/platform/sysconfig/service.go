@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -126,6 +127,15 @@ func (s *Service) String(ctx context.Context, key string) string {
 	var str string
 	s.decode(ctx, key, &str)
 	return str
+}
+
+// LocalCurrency is the local display currency (TEC-1214); an empty value
+// falls back to the catalog default.
+func (s *Service) LocalCurrency(ctx context.Context) string {
+	if c := strings.TrimSpace(s.String(ctx, KeyPricingLocalCurrency)); c != "" {
+		return c
+	}
+	return DefaultLocalCurrency
 }
 
 func (s *Service) decode(ctx context.Context, key string, dst any) {
