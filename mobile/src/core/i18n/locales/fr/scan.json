@@ -14,5 +14,12 @@
   "open_warranty": "Ouvrir la garantie",
   "next_hint.unit": "Vous n'êtes pas autorisé à voir cette unité de stock.",
   "next_hint.location": "Les emplacements d'entrepôt se scannent dans les écrans d'entrepôt.",
-  "next_hint.unknown": "Ce code n'est pas reconnu. Scannez le code-barres de l'étiquette produit ou le QR code du certificat de garantie."
+  "next_hint.unknown": "Ce code n'est pas reconnu. Scannez le code-barres de l'étiquette produit ou le QR code du certificat de garantie.",
+  "input.section": "Lecture des codes",
+  "input.camera": "Caméra",
+  "input.camera_hint": "Scanner avec la caméra du téléphone.",
+  "input.wedge": "Lecteur matériel",
+  "input.wedge_hint": "Lecteur Bluetooth/USB ou terminal (mode clavier, termine par Entrée).",
+  "input.ready": "Lecteur prêt, scannez un code",
+  "input.ready_hint": "Sur les terminaux Zebra/Honeywell, réglez le profil DataWedge en sortie clavier."
 }

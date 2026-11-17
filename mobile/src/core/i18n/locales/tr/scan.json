@@ -14,5 +14,12 @@
   "open_warranty": "Garantiyi aç",
   "next_hint.unit": "Bu ürün biriminin ayrıntılarını görme izniniz yok.",
   "next_hint.location": "Depo konumları depo ekranlarında okutulur.",
-  "next_hint.unknown": "Bu kod tanınmadı. Ürün etiketindeki barkodu ya da garanti belgesindeki QR kodu okutun."
+  "next_hint.unknown": "Bu kod tanınmadı. Ürün etiketindeki barkodu ya da garanti belgesindeki QR kodu okutun.",
+  "input.section": "Barkod okuma",
+  "input.camera": "Kamera",
+  "input.camera_hint": "Telefon kamerasıyla okut.",
+  "input.wedge": "Donanım okuyucu",
+  "input.wedge_hint": "Bluetooth/USB okuyucu veya el terminali (klavye modu, Enter ile biter).",
+  "input.ready": "Okuyucu hazır, kodu okutun",
+  "input.ready_hint": "Zebra/Honeywell terminallerde DataWedge profilini klavye (keystroke) çıktısına ayarlayın."
 }

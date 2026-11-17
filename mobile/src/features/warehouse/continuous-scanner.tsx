@@ -6,6 +6,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pres
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScopedTheme } from 'uniwind';
 
+import { useScannerInput } from '@/features/scanner/input-mode';
+import { WedgeInput } from '@/features/scanner/wedge-input';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
@@ -54,6 +56,8 @@ export function ContinuousScanner({
   const { t } = useTranslation('warehouse');
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
+  // TEC-1230: a hardware reader (keyboard wedge) instead of the camera.
+  const wedge = useScannerInput((s) => s.mode) === 'wedge';
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [torch, setTorch] = useState(false);
@@ -67,7 +71,8 @@ export function ContinuousScanner({
     const code = raw.trim();
     if (!code || lock.current) return;
     const now = clock();
-    if (code === last.current.code && now - last.current.at < REPEAT_MS) return;
+    // A reader trigger is deliberate: only the camera sees a code twice.
+    if (!wedge && code === last.current.code && now - last.current.at < REPEAT_MS) return;
     last.current = { code, at: now };
     lock.current = true;
     setBusy(true);
@@ -102,7 +107,18 @@ export function ContinuousScanner({
       {/* Always dark, like a camera: the overlay (and callers' footers) use white text. */}
       <ScopedTheme theme="dark">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-black">
-        {!permission ? null : !permission.granted ? (
+        {wedge ? (
+          <View className="flex-1 items-center justify-center gap-3 bg-black px-8">
+            <Icon name="barcode" tone="on-media" size={56} />
+            <Text variant="headline" className="text-center text-white">
+              {t('scan:input.ready')}
+            </Text>
+            <Text variant="footnote" className="text-center text-white/70">
+              {t('scan:input.ready_hint')}
+            </Text>
+            {visible ? <WedgeInput paused={typing} onCode={(c) => void handle(c)} /> : null}
+          </View>
+        ) : !permission ? null : !permission.granted ? (
           <View className="flex-1 justify-center bg-black">
             <EmptyState
               icon="camera"
@@ -138,11 +154,18 @@ export function ContinuousScanner({
               </Text>
             ) : null}
           </View>
-          <RoundButton label={t('m.torch')} onPress={() => setTorch((v) => !v)} icon="flashlight" active={torch} />
+          <RoundButton
+            label={t(wedge ? 'scan:input.camera' : 'scan:input.wedge')}
+            onPress={() => useScannerInput.getState().setMode(wedge ? 'camera' : 'wedge')}
+            icon={wedge ? 'camera' : 'barcode'}
+          />
+          {wedge ? null : (
+            <RoundButton label={t('m.torch')} onPress={() => setTorch((v) => !v)} icon="flashlight" active={torch} />
+          )}
           <RoundButton label={t('m.type_code')} onPress={() => setTyping((v) => !v)} icon="keyboard" active={typing} />
         </View>
 
-        {!typing && permission?.granted ? (
+        {!wedge && !typing && permission?.granted ? (
           <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
             <View className="h-44 w-72 rounded-2xl border-[3px] border-white/90" />
           </View>

@@ -12,6 +12,7 @@ import { getUpdateInfo } from '@/core/updates';
 import { CallerIdSettings } from '@/features/caller-id/caller-id-settings';
 import { FeedbackSettings } from '@/features/feedback/feedback-settings';
 import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
+import { ScannerInputSettings } from '@/features/scanner/scanner-settings';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -113,6 +114,8 @@ export function SettingsScreen() {
             </List>
           </>
         ) : null}
+
+        {customer ? null : <ScannerInputSettings />}
 
         {customer ? null : <PlateRecognitionSettings />}
 

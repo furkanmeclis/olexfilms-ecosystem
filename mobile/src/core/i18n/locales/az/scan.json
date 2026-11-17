@@ -14,5 +14,12 @@
   "open_warranty": "Zəmanəti aç",
   "next_hint.unit": "Bu stok vahidinin təfərrüatlarını görmək icazəniz yoxdur.",
   "next_hint.location": "Anbar yerləri anbar ekranlarında oxudulur.",
-  "next_hint.unknown": "Bu kod tanınmadı. Məhsul etiketindəki barkodu və ya zəmanət sənədindəki QR kodu oxudun."
+  "next_hint.unknown": "Bu kod tanınmadı. Məhsul etiketindəki barkodu və ya zəmanət sənədindəki QR kodu oxudun.",
+  "input.section": "Kod oxuma",
+  "input.camera": "Kamera",
+  "input.camera_hint": "Telefon kamerası ilə oxudun.",
+  "input.wedge": "Aparat oxuyucu",
+  "input.wedge_hint": "Bluetooth/USB oxuyucu və ya terminal (klaviatura rejimi, Enter ilə bitir).",
+  "input.ready": "Oxuyucu hazırdır, kodu oxudun",
+  "input.ready_hint": "Zebra/Honeywell terminallarında DataWedge profilini klaviatura çıxışına qoyun."
 }

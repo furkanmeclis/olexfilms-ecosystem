@@ -10,7 +10,7 @@ import { loadSharing } from '@/features/feedback/native';
 
 type Query = Record<string, string | string[] | undefined>;
 
-function panelUrl(path: string, query: Query = {}) {
+export function panelUrl(path: string, query: Query = {}) {
   const qs = Object.entries(query)
     .flatMap(([k, v]) => (v === undefined ? [] : (Array.isArray(v) ? v : [v]).map((x) => `${k}=${encodeURIComponent(x)}`)))
     .join('&');

@@ -50,6 +50,7 @@ export function WarehouseHome() {
   const orders = useCan('orders.read');
   const read = useCan('warehouse.read');
   const stockRead = useCan('stock.read');
+  const stockWrite = useCan('stock.write');
   const { warehouse, warehouses, isLoading, isError, refetch, select } = useCurrentWarehouse();
   // TEC-1049: the counters follow the picked warehouse (its uuid is in the query key).
   const scope = { uuid: warehouse?.uuid, ready: !isLoading };
@@ -96,6 +97,7 @@ export function WarehouseHome() {
     { key: 'stock', label: t('nav:stock'), icon: 'stock', path: '/depo/stock', show: true },
     { key: 'labels', label: t('labels.title'), icon: 'qr', path: '/depo/labels', show: read || stockRead },
     { key: 'reclass', label: t('reclass.title'), icon: 'barcode', path: '/depo/reclass', show: stockRead },
+    { key: 'split', label: t('split.title'), icon: 'tools', path: '/depo/split', show: stockWrite },
     { key: 'eod', label: t('eod.title'), icon: 'report', path: '/depo/eod', show: read },
     // TEC-1226: return inspection (quarantine) and stock adjustment documents.
     { key: 'returns', label: t('adjust:returns.title'), icon: 'inbox', path: '/depo/returns', show: read },
