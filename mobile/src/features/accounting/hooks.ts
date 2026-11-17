@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
 import { activeMembership } from '@/core/spaces';
+import { menuRoutePath } from '@/features/entity/href';
 
 import { accountingAccess, canReadEinvoices } from './lib';
 
@@ -40,11 +41,11 @@ export function useAccountingAccess() {
 export function useAccountingLinks() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   return {
-    cari: (uuid: string) => `/${space}/menu/accounting/${uuid}` as Href,
+    cari: (uuid: string) => menuRoutePath(space, 'cari', uuid) as Href,
     disputes: `/${space}/menu/disputes` as Href,
     dispute: (uuid: string) => `/${space}/menu/disputes/${uuid}` as Href,
-    einvoice: (uuid: string) => `/${space}/menu/einvoices/${uuid}` as Href,
-    order: (uuid: string) => `/${space}/menu/orders/${uuid}` as Href,
+    einvoice: (uuid: string) => menuRoutePath(space, 'invoice', uuid) as Href,
+    order: (uuid: string) => menuRoutePath(space, 'order', uuid) as Href,
   };
 }
 

@@ -289,5 +289,6 @@
   "contract.sign_hint": "Müşteri doğrulama kodu ve iki imza şimdilik web panelinde atılıyor. Bağlantıyı açın ya da QR kodu tablette okutun.",
   "contract.qr_hint": "Tablette panel oturumu açıkken okutun; sözleşme adımı açılır.",
   "contract.required_title": "Sözleşme gerekli",
-  "contract.required_body": "Hizmet bu duruma geçmeden önce araç kabul sözleşmesi müşteri ve personel tarafından imzalanmalı. Hizmet detayındaki sözleşme kartından imzalatabilirsiniz."
+  "contract.required_body": "Hizmet bu duruma geçmeden önce araç kabul sözleşmesi müşteri ve personel tarafından imzalanmalı. Hizmet detayındaki sözleşme kartından imzalatabilirsiniz.",
+  "applied_by": "Uygulayan"
 }

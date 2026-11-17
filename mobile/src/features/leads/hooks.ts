@@ -2,6 +2,7 @@ import type { Href } from 'expo-router';
 import { useSegments } from 'expo-router';
 
 import { api, unwrap } from '@/core/api/client';
+import { menuRoutePath } from '@/features/entity/href';
 import { activeMembership } from '@/core/spaces';
 import { useSession } from '@/core/auth/session';
 
@@ -10,7 +11,7 @@ export function useLeadLinks() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   const base = `/${space}/menu/leads`;
   return {
-    detail: (uuid: string) => `${base}/${uuid}` as Href,
+    detail: (uuid: string) => menuRoutePath(space, 'lead', uuid) as Href,
     create: () => `${base}/new` as Href,
   };
 }

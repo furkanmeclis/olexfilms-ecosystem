@@ -9,6 +9,7 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { Chips, ErrorState, InfoRow, ListSkeleton, useFormat } from '@/features/admin/kit';
+import { RefRow } from '@/features/entity/ref-row';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
 import { Input } from '@/ui/input';
@@ -132,10 +133,18 @@ export function TaskDetailScreen() {
             ) : null}
 
             <List>
-              <InfoRow label={t('subject')} value={task.subject_organization.name} />
-              <InfoRow label={t('assignee')} value={task.assignee?.name ?? t('unassigned')} />
+              <RefRow kind="organization" label={t('subject')} value={task.subject_organization} />
+              {task.assignee ? (
+                <RefRow kind="user" label={t('assignee')} value={task.assignee} />
+              ) : (
+                <InfoRow label={t('assignee')} value={t('unassigned')} />
+              )}
               <InfoRow label={t('due')} value={task.due_at ? `${overdue ? `${t('overdue')} · ` : ''}${f.date(task.due_at)}` : '–'} />
-              <InfoRow label={t('created_by')} value={task.created_by?.name ?? '–'} />
+              {task.created_by ? (
+                <RefRow kind="user" label={t('created_by')} value={task.created_by} />
+              ) : (
+                <InfoRow label={t('created_by')} value="–" />
+              )}
               <InfoRow label={t('created')} value={f.dateTime(task.created_at)} />
               {task.closed_at ? <InfoRow label={t('closed')} value={f.dateTime(task.closed_at)} /> : null}
               <InfoRow label={t('source')} value={t(`source_${task.source}`)} last />

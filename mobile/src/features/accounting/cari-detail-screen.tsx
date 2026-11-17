@@ -7,6 +7,7 @@ import { Alert, FlatList, Pressable, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatDateTime, PAGE_SIZE, usePagedList } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
+import { RefRow } from '@/features/entity/ref-row';
 import { DetailSkeleton, ErrorState, errorText, InfoRow, ListFooter, ListSkeleton, Section } from '@/features/services/ui';
 import { EmptyState } from '@/ui/empty-state';
 import { Input } from '@/ui/input';
@@ -97,6 +98,16 @@ export function CariDetailScreen() {
         </Text>
       </View>
       <Section>
+        {/* TEC-1219: the counterparty opens its record (a customer, or an organization of the network; fleets stay plain). */}
+        {c.counterparty.type === 'user' || c.counterparty.org_type !== 'fleet' ? (
+          <RefRow
+            kind={c.counterparty.type === 'user' ? 'customer' : 'organization'}
+            label={t(`counterparty.${counterpartyKind(c)}`)}
+            value={c.counterparty}
+          />
+        ) : (
+          <InfoRow label={t(`counterparty.${counterpartyKind(c)}`)} value={c.counterparty.name} />
+        )}
         <InfoRow label={t('fields.entry_count')} value={c.entry_count} />
         <InfoRow label={t('fields.last_entry')} value={c.last_entry_at ? formatDateTime(c.last_entry_at, i18n.language) : '—'} />
         <InfoRow label={t('fields.status')} value={c.active ? t('status.active') : t('status.inactive')} last />

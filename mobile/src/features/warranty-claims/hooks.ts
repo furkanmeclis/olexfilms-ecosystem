@@ -2,6 +2,7 @@ import type { Href } from 'expo-router';
 import { useSegments } from 'expo-router';
 
 import { useSession } from '@/core/auth/session';
+import { menuRoutePath } from '@/features/entity/href';
 import { activeMembership, useCan } from '@/core/spaces';
 
 import type { ClaimGrants } from './lib';
@@ -11,7 +12,7 @@ export function useClaimLinks() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   const base = `/${space}/menu/warranty_claims`;
   return {
-    detail: (uuid: string) => `${base}/${uuid}` as Href,
+    detail: (uuid: string) => menuRoutePath(space, 'warranty_claim', uuid) as Href,
     create: (warrantyUuid?: string) => (warrantyUuid ? `${base}/new?warranty_uuid=${warrantyUuid}` : `${base}/new`) as Href,
   };
 }

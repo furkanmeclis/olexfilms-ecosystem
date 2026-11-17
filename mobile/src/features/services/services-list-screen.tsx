@@ -27,20 +27,21 @@ import {
 } from './lib';
 import { Segmented } from '@/features/warehouse/parts';
 
+import { initialScope, type Scope } from './scope';
 import { Chips, ListBody, ListFooter, SearchField } from './ui';
 
 type Filter = 'all' | ServiceStatus;
-type Scope = 'own' | 'network';
 const SCOPE_KEY = 'services.scope';
 
 /**
  * The center sees the whole network's services; "own" narrows the list to the
- * ones its service point performed (web: network-scope toggle, TEC-1003).
+ * ones its service point performed (web: network-scope toggle, TEC-1003). It
+ * opens on the network, like the web (TEC-1219).
  */
 function useNetworkScope() {
   const me = useSession((s) => s.me);
   const center = isCenterWorkplace(me);
-  const [scope, setScope] = useState<Scope>(() => readJSON<Scope>(SCOPE_KEY) ?? 'own');
+  const [scope, setScope] = useState<Scope>(() => initialScope(readJSON<Scope>(SCOPE_KEY)));
   return {
     center,
     scope,

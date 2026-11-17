@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import type { components } from '@/core/api/schema';
 import { API_URL } from '@/core/config';
+import { stackPath } from '@/features/entity/href';
 import type { StatusTone } from '@/ui/status-pill';
 import { intlLocale } from '@/core/digits';
 
@@ -102,25 +103,17 @@ export function usePagedList<T>(key: readonly unknown[], fetchPage: (offset: num
   return { ...q, items, total };
 }
 
-type EntityKind = 'services' | 'customers' | 'warranties';
-
 /**
  * Detail links that stay inside the current tab's stack. Every feature
  * folder (`<space>/services`, `<space>/menu/customers`, `<space>/menu/warranties`)
  * carries detail routes for the other two kinds, so a pushed screen never
- * jumps to another tab. Home links open the services tab.
+ * jumps to another tab. Home links open the services tab. The paths come from
+ * the shared registry (`@/features/entity/href`, TEC-1219).
  */
 export function useLinks() {
   const seg = useSegments() as string[];
   const space = seg[1] ?? 'bayi';
-  const tab = seg[2];
-  let base = `/${space}/services`;
-  let self: EntityKind = 'services';
-  if (tab === 'menu' && (seg[3] === 'customers' || seg[3] === 'warranties')) {
-    base = `/${space}/menu/${seg[3]}`;
-    self = seg[3];
-  }
-  const to = (kind: EntityKind, id: string) => (kind === self ? `${base}/${id}` : `${base}/${kind}/${id}`) as Href;
+  const to = (kind: 'services' | 'customers' | 'warranties', id: string) => stackPath(seg, kind, id) as Href;
   return {
     service: (id: string) => to('services', id),
     addItem: (id: string, parts?: readonly string[]) =>

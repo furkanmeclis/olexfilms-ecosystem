@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { awaitingSignature, canCreateContract, contractState, contractWebUrl, showContract } from './contract.ts';
+import { awaitingSignature, canCreateContract, CONTRACT_MODULE, contractState, contractWebUrl, showContract } from './contract.ts';
 
 describe('contract (TEC-1083)', () => {
   it('maps the summary to a display state', () => {
@@ -31,5 +32,19 @@ describe('contract (TEC-1083)', () => {
 
   it('links the web wizard of the service', () => {
     assert.equal(contractWebUrl('https://x.tr', 'afm florya', 'u-1'), 'https://x.tr/t/afm%20florya/services/u-1/wizard');
+  });
+});
+
+describe('contract module key', () => {
+  it('is the backend intake_contracts module, not contracts (the card never showed)', () => {
+    assert.equal(CONTRACT_MODULE, 'intake_contracts');
+    const catalog = readFileSync(new URL('../../../../backend/internal/platform/features/catalog.go', import.meta.url), 'utf8');
+    assert.match(catalog, /ModuleIntakeContracts\s*=\s*"intake_contracts"/);
+  });
+
+  it('is what the card asks useModule for', () => {
+    const card = readFileSync(new URL('./contract-card.tsx', import.meta.url), 'utf8');
+    assert.match(card, /useModule\(CONTRACT_MODULE\)/);
+    assert.doesNotMatch(card, /useModule\('contracts'\)/);
   });
 });

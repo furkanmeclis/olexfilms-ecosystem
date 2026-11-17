@@ -6,8 +6,9 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-nat
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
-import { type SpaceKind, useResolvedSpace } from '@/core/spaces';
 import { readJSON, writeJSON } from '@/core/storage';
+import { SEARCH_SPEC_KINDS } from '@/features/entity/href';
+import { useEntityHrefs } from '@/features/entity/use-entity-href';
 import { compactPlate } from '@/features/plate-scan/lib';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { useDebounced } from '@/features/services/lib';
@@ -34,23 +35,6 @@ const RESULT_ICONS: Record<string, IconName> = {
   products: 'package',
 };
 
-/** Detail route of a hit inside the space the user is in; null when the app has no screen for it. */
-function hrefFor(space: SpaceKind | null, spec: string, id: string): Href | null {
-  if (space === 'bayi') {
-    if (spec === 'services') return `/bayi/services/${id}` as Href;
-    if (spec === 'customers') return `/bayi/menu/customers/${id}` as Href;
-    if (spec === 'warranties') return `/bayi/menu/warranties/${id}` as Href;
-    if (spec === 'orders') return `/bayi/menu/orders/${id}` as Href;
-  }
-  if (space === 'admin') {
-    if (spec === 'services') return `/admin/menu/customers/services/${id}` as Href;
-    if (spec === 'customers') return `/admin/menu/customers/${id}` as Href;
-    if (spec === 'warranties') return `/admin/menu/customers/warranties/${id}` as Href;
-    if (spec === 'orders') return `/admin/menu/orders/${id}` as Href;
-  }
-  return null;
-}
-
 function remember(q: string) {
   const list = (readJSON<string[]>(RECENT_KEY) ?? []).filter((x) => x.toLowerCase() !== q.toLowerCase());
   writeJSON(RECENT_KEY, [q, ...list].slice(0, MAX_RECENT));
@@ -63,7 +47,12 @@ function remember(q: string) {
  */
 export function SearchScreen() {
   const { t } = useTranslation('search');
-  const space = useResolvedSpace();
+  const hrefOf = useEntityHrefs();
+  /** Detail route of a hit in the space the user is in (shared registry, TEC-1219); null when the app has no screen for it. */
+  const hrefFor = (spec: string, id: string): Href | null => {
+    const kind = SEARCH_SPEC_KINDS[spec];
+    return kind ? hrefOf(kind, id) : null;
+  };
   const [q, setQ] = useState('');
   const [recent, setRecent] = useState<string[]>(() => readJSON<string[]>(RECENT_KEY) ?? []);
   const [opening, setOpening] = useState<string | null>(null);
@@ -91,7 +80,7 @@ export function SearchScreen() {
       setOpening(hit.id);
       try {
         const v = await unwrap(api.GET('/v1/vehicles/{uuid}', { params: { path: { uuid: hit.id } } }));
-        const href = hrefFor(space, 'customers', v.customer_uuid);
+        const href = hrefFor('customers', v.customer_uuid);
         if (href) go(href);
       } catch (e) {
         Alert.alert(t('open_failed'), errorText(e));
@@ -100,12 +89,12 @@ export function SearchScreen() {
       }
       return;
     }
-    const href = hrefFor(space, hit.spec, hit.id);
+    const href = hrefFor(hit.spec, hit.id);
     if (href) go(href);
   };
 
   const groups = (res.data?.groups ?? []).filter((g) => g.items.length > 0);
-  const openable = (spec: string) => spec === 'vehicles' ? !!hrefFor(space, 'customers', 'x') : !!hrefFor(space, spec, 'x');
+  const openable = (spec: string) => spec === 'vehicles' ? !!hrefFor('customers', 'x') : !!hrefFor(spec, 'x');
 
   return (
     <>

@@ -26,6 +26,7 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
+import { RefRow, RefText } from '@/features/entity/ref-row';
 import { CartButton, CATALOG_PRODUCTS, useCanOrder } from '@/features/catalog/catalog-screen';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
@@ -266,10 +267,10 @@ export function OrderDetailScreen() {
             ) : null}
 
             <List>
-              <InfoRow label={t('orders.seller')} value={o.seller.name} />
-              <InfoRow label={t('orders.buyer')} value={o.buyer.name} />
+              <RefRow kind="organization" label={t('orders.seller')} value={o.seller} />
+              <RefRow kind="organization" label={t('orders.buyer')} value={o.buyer} />
               {o.seller_warehouse ? <InfoRow label={t('orders:seller_warehouse')} value={o.seller_warehouse.name} /> : null}
-              {creatorOf(o.timeline) ? <InfoRow label={t('orders:detail.created_by')} value={creatorOf(o.timeline)!.name} /> : null}
+              <RefRow kind="user" label={t('orders:detail.created_by')} value={o.created_by ?? creatorOf(o.timeline)} />
               {amountText(o) ? <InfoRow label={t('orders:detail.amount')} value={amountText(o)!} /> : null}
               <InfoRow label={t('orders.created')} value={f.dateTime(o.created_at)} />
               {o.delivery_method ? <InfoRow label={t('orders.delivery')} value={o.delivery_method.name} /> : null}
@@ -302,9 +303,7 @@ export function OrderDetailScreen() {
               <List>
                 {o.items.map((it, i, arr) => (
                   <View key={it.uuid} className={i < arr.length - 1 ? 'gap-0.5 border-b border-border px-4 py-3' : 'gap-0.5 px-4 py-3'}>
-                    <Text variant="body" numberOfLines={2}>
-                      {it.product.name}
-                    </Text>
+                    <RefText kind="product" value={it.product} numberOfLines={2} />
                     {prices && it.price_missing ? (
                       <View className="self-start">
                         <StatusPill tone="problem" label={t('orders.price_missing')} />
@@ -321,6 +320,13 @@ export function OrderDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
+                    {it.units?.length ? (
+                      <View className="flex-row flex-wrap gap-x-3 gap-y-0.5">
+                        {it.units.map((u) => (
+                          <RefText key={u.unit_uuid} kind="stock_unit" value={{ uuid: u.unit_uuid, name: u.barcode }} id={u.barcode} variant="footnote" mono />
+                        ))}
+                      </View>
+                    ) : null}
                     <LinePlotter order={o} item={it} />
                   </View>
                 ))}

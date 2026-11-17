@@ -8,6 +8,13 @@
  * wizard. Pure, no `@/` imports, so node --test runs it.
  */
 
+/**
+ * Module key of intake contracts (backend `features.ModuleIntakeContracts`,
+ * internal/platform/features/catalog.go). Not `contracts`: with that key the
+ * card never showed.
+ */
+export const CONTRACT_MODULE = 'intake_contracts';
+
 export type ContractState = 'none' | 'draft' | 'pending' | 'executed' | 'voided';
 
 /** Display state; a voided contract counts as none when a new one may be made. */
