@@ -19,6 +19,7 @@ import { PullRefresh } from '@/ui/pull-refresh';
 
 import { type StockProduct, type StockWarehouseProduct, type StockWarehouseUnit, useOrgProducts, useWarehouseUnits } from './api';
 import {
+  balanceParts,
   filterTotals,
   inStockTotals,
   WAREHOUSE_TOTALS_MAX_PAGES,
@@ -66,6 +67,8 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
   const [picked, setPicked] = useState<string>(ALL);
 
   const canWarehouses = useCan('warehouse.read');
+  // TEC-1229: critical stock and forecasts (center / distributor warehouses).
+  const canCritical = space !== 'bayi' && canWarehouses;
   const warehouses = useWarehouses(canWarehouses).data ?? [];
   const selectWarehouse = useWarehouseChoice((s) => s.select);
   const warehouse = picked === ALL ? undefined : warehouses.find((w) => w.uuid === picked);
@@ -115,6 +118,18 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
         />
       ) : null}
       {depo && warehouse ? <Segmented value={view} onChange={setView} options={viewOptions(t)} /> : null}
+      {canCritical ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => go(`${base}/critical`)}
+          className="flex-row items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
+          <Icon name="alert" tone="muted-foreground" size={16} />
+          <Text variant="headline" className="flex-1">
+            {t('m.critical_stock')}
+          </Text>
+          <Icon name="forward" tone="muted-foreground" size={16} />
+        </Pressable>
+      ) : null}
       {/* TEC-1079: a main code lists the roll and its parts first. */}
       <FamilySection q={q} base={base} />
     </View>
@@ -192,6 +207,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                 category={item.category}
                 amount={item.w.meters !== null ? `${formatNumber(item.w.meters, 2)} m` : formatNumber(item.w.units)}
                 sub={item.w.meters !== null ? t('m.rolls', { count: item.w.units }) : undefined}
+                balance={balanceText(t, item.w)}
                 muted={false}
                 onPress={() => go(`${base}/${item.w.product.uuid}?name=${encodeURIComponent(item.w.product.name)}`)}
               />
@@ -207,6 +223,11 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                     : undefined
                 }
                 muted={item.kind === 'zero' || item.p.quantity <= 0}
+                balance={item.kind === 'org' && item.p.balance ? balanceText(t, {
+                  reserved: item.p.balance.reserved_quantity,
+                  available: item.p.balance.available_quantity,
+                  incoming: item.p.balance.incoming_quantity,
+                }) : undefined}
                 onPress={() => go(`${base}/${item.p.product.uuid}?name=${encodeURIComponent(item.p.product.name)}`)}
               />
             )
@@ -217,12 +238,22 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
   );
 }
 
+/** TEC-1229: "Kullanılabilir 2 · Rezerve 1 · Yolda 3" under a row. */
+function balanceText(
+  t: (k: string, o?: Record<string, unknown>) => string,
+  b: { reserved: number; available: number; incoming: number },
+): string | undefined {
+  const parts = balanceParts(b);
+  return parts.length ? parts.map((p) => t(p.key, { count: p.count })).join(' · ') : undefined;
+}
+
 function ProductRow(p: {
   name: string;
   sku: string;
   category?: string;
   amount: string;
   sub?: string;
+  balance?: string;
   muted: boolean;
   onPress: () => void;
 }) {
@@ -241,6 +272,11 @@ function ProductRow(p: {
           </Text>
           {p.category ? ` · ${p.category}` : ''}
         </Text>
+        {p.balance ? (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {p.balance}
+          </Text>
+        ) : null}
       </View>
       <View className="items-end">
         <Text variant="title" className={p.muted ? 'text-muted-foreground' : ''}>

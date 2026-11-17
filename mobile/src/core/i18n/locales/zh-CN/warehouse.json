@@ -861,5 +861,20 @@
   "arrival.result.matched": "已收货",
   "arrival.result.already": "已扫描过",
   "arrival.result.extra": "不在入库单中（多出）",
-  "fields.lot": "批次"
+  "fields.lot": "批次",
+  "m.balance_available": "可用：{{count}}",
+  "m.balance_reserved": "已预留：{{count}}",
+  "m.balance_incoming": "在途：{{count}}",
+  "m.critical_stock": "告急库存",
+  "m.forecasts": "库存预测",
+  "m.critical_empty": "没有告急库存。",
+  "m.forecasts_empty": "暂无预测。",
+  "m.reorder_thresholds": "最小 {{min}} · 订货点 {{point}} · 最大 {{max}}",
+  "m.level_ok": "充足",
+  "m.level_reorder": "需订货",
+  "m.level_below_min": "低于最小值",
+  "m.level_days_low": "剩余天数不足",
+  "m.suggested": "建议：{{count}}",
+  "m.days_left": "{{days}} 天",
+  "m.on_hand": "在库：{{count}}"
 }
