@@ -45,6 +45,9 @@ type StockUnitView struct {
 	QuantityOnHand  int32            `json:"quantity_on_hand"`
 	InitialMeters   *string          `json:"initial_meters"`
 	RemainingMeters *string          `json:"remaining_meters"`
+	// Credits (TEC-1221): the usage credits of a serial piece unit; nil
+	// for a roll or a fixed barcode.
+	Credits *UnitCreditsView `json:"credits"`
 }
 
 // StockProductView is the product of a picker unit with the parts its
@@ -74,7 +77,7 @@ func (s *Service) StockUnits(ctx context.Context, c Caller, id uuid.UUID, f Stoc
 		return nil, ErrForbidden
 	}
 	arg := db.ListServiceStockUnitsParams{
-		OrganizationID: svc.OrganizationID, BrandID: svc.BrandID,
+		OrganizationID: svc.OrganizationID, BrandID: svc.BrandID, ServiceID: svc.ID,
 		RowLimit: f.Limit, RowOffset: f.Offset,
 	}
 	if arg.RowLimit <= 0 {
@@ -133,8 +136,13 @@ func (s *Service) StockUnits(ctx context.Context, c Caller, id uuid.UUID, f Stoc
 				parts = []string{}
 			}
 		}
+		var cr *UnitCreditsView
+		if r.CreditsTotal >= 0 {
+			cr = &UnitCreditsView{Total: r.CreditsTotal, Remaining: r.CreditsRemaining}
+		}
 		out = append(out, StockUnitView{
-			UUID: r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind,
+			Credits: cr,
+			UUID:    r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind,
 			Product: StockProductView{
 				ProductRef:     ProductRef{UUID: r.ProductUuid, SKU: r.ProductSku, Name: r.ProductName, UnitType: r.ProductUnitType},
 				AvailableParts: parts,

@@ -500,24 +500,26 @@ const createServiceItem = `-- name: CreateServiceItem :one
 
 INSERT INTO service_items (
     service_id, organization_id, brand_id, product_id, unit_id, kind,
-    quantity, meters, applied_parts, notes
+    quantity, meters, applied_parts, notes, finished_product
 )
 SELECT s.id, s.organization_id, s.brand_id, $1, $2, $3,
-       $4, $5, $6, $7
+       $4, $5, $6, $7,
+       $8
 FROM services s
-WHERE s.id = $8
-RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at
+WHERE s.id = $9
+RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product
 `
 
 type CreateServiceItemParams struct {
-	ProductID    int64          `json:"product_id"`
-	UnitID       int64          `json:"unit_id"`
-	Kind         string         `json:"kind"`
-	Quantity     pgtype.Int4    `json:"quantity"`
-	Meters       pgtype.Numeric `json:"meters"`
-	AppliedParts []byte         `json:"applied_parts"`
-	Notes        pgtype.Text    `json:"notes"`
-	ServiceID    int64          `json:"service_id"`
+	ProductID       int64          `json:"product_id"`
+	UnitID          int64          `json:"unit_id"`
+	Kind            string         `json:"kind"`
+	Quantity        pgtype.Int4    `json:"quantity"`
+	Meters          pgtype.Numeric `json:"meters"`
+	AppliedParts    []byte         `json:"applied_parts"`
+	Notes           pgtype.Text    `json:"notes"`
+	FinishedProduct bool           `json:"finished_product"`
+	ServiceID       int64          `json:"service_id"`
 }
 
 // ---------------------------------------------------------------------------
@@ -532,6 +534,7 @@ func (q *Queries) CreateServiceItem(ctx context.Context, arg CreateServiceItemPa
 		arg.Meters,
 		arg.AppliedParts,
 		arg.Notes,
+		arg.FinishedProduct,
 		arg.ServiceID,
 	)
 	var i ServiceItem
@@ -551,6 +554,7 @@ func (q *Queries) CreateServiceItem(ctx context.Context, arg CreateServiceItemPa
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }
@@ -948,7 +952,7 @@ func (q *Queries) GetServiceImage(ctx context.Context, arg GetServiceImageParams
 }
 
 const getServiceItem = `-- name: GetServiceItem :one
-SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product FROM service_items
 WHERE id = $1 AND service_id = $2
 `
 
@@ -976,12 +980,13 @@ func (q *Queries) GetServiceItem(ctx context.Context, arg GetServiceItemParams) 
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }
 
 const getServiceItemByUUID = `-- name: GetServiceItemByUUID :one
-SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product FROM service_items
 WHERE uuid = $1 AND service_id = $2
 `
 
@@ -1009,6 +1014,7 @@ func (q *Queries) GetServiceItemByUUID(ctx context.Context, arg GetServiceItemBy
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }
@@ -1394,7 +1400,7 @@ func (q *Queries) ListServiceItemCorrections(ctx context.Context, serviceID int6
 }
 
 const listServiceItems = `-- name: ListServiceItems :many
-SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product FROM service_items
 WHERE service_id = $1
 ORDER BY id
 `
@@ -1424,6 +1430,7 @@ func (q *Queries) ListServiceItems(ctx context.Context, serviceID int64) ([]Serv
 			&i.StockMovementID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FinishedProduct,
 		); err != nil {
 			return nil, err
 		}
@@ -1478,15 +1485,15 @@ const listServiceStockUnits = `-- name: ListServiceStockUnits :many
 WITH stock AS (
     SELECT s.unit_id, 1::int AS quantity_on_hand
     FROM unit_current_state s
-    WHERE s.holder_org_id = $7
-      AND s.brand_id = $8
+    WHERE s.holder_org_id = $8
+      AND s.brand_id = $9
       AND s.status IN ('available', 'placed')
       AND s.owner_type IN ('organization', 'warehouse_location')
     UNION ALL
     SELECT h.unit_id, SUM(h.quantity_on_hand)::int AS quantity_on_hand
     FROM fixed_barcode_holdings h
-    WHERE h.holder_org_id = $7
-      AND h.brand_id = $8
+    WHERE h.holder_org_id = $8
+      AND h.brand_id = $9
       AND h.owner_type IN ('organization', 'warehouse_location')
     GROUP BY h.unit_id
     HAVING SUM(h.quantity_on_hand) > 0
@@ -1495,11 +1502,20 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meter
        st.quantity_on_hand,
        p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
        p.name AS product_name, p.unit_type AS product_unit_type,
-       c.available_parts AS product_available_parts
+       c.available_parts AS product_available_parts,
+       COALESCE(cr.credits_total, -1)::int AS credits_total, COALESCE(cr.credits_remaining, -1)::int AS credits_remaining
 FROM stock st
 JOIN units u ON u.id = st.unit_id
 JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
 JOIN product_categories c ON c.id = p.category_id AND c.brand_id = p.brand_id
+LEFT JOIN LATERAL (
+    -- TEC-1221: credits of a serial piece unit (balance, else the default).
+    SELECT COALESCE(b.credits_total, unit_credit_default(u.id)) AS credits_total,
+           COALESCE(b.credits_remaining, unit_credit_default(u.id)) AS credits_remaining
+    FROM (SELECT 1) one
+    LEFT JOIN unit_credit_balances b ON b.unit_id = u.id
+    WHERE u.unit_kind = 'serial' AND u.initial_meters IS NULL
+) cr ON TRUE
 WHERE ($1::text IS NULL OR u.barcode = $1::text)
   AND ($2::text IS NULL
        OR p.name ILIKE '%' || $2::text || '%'
@@ -1507,15 +1523,20 @@ WHERE ($1::text IS NULL OR u.barcode = $1::text)
        OR u.barcode ILIKE '%' || $2::text || '%')
   AND ($3::bigint IS NULL OR u.product_id = $3::bigint)
   AND ($4::numeric IS NULL OR u.remaining_meters >= $4::numeric)
-  AND (u.unit_kind = 'fixed' OR NOT EXISTS (
-        SELECT 1 FROM service_items i
-        JOIN services sv ON sv.id = i.service_id
-        WHERE i.unit_id = u.id
-          AND sv.status NOT IN ('completed', 'cancelled')
-          AND (u.initial_meters IS NULL OR i.kind = 'full')
-  ))
+  AND (u.unit_kind = 'fixed'
+       -- TEC-1221: a credit unit stays listed while it has credits, in
+       -- other open services too, but not twice in the same service.
+       OR (u.initial_meters IS NULL AND cr.credits_remaining > 0 AND NOT EXISTS (
+            SELECT 1 FROM service_items i
+            WHERE i.unit_id = u.id AND i.service_id = $5::bigint))
+       OR (u.initial_meters IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM service_items i
+            JOIN services sv ON sv.id = i.service_id
+            WHERE i.unit_id = u.id
+              AND sv.status NOT IN ('completed', 'cancelled')
+              AND i.kind = 'full')))
 ORDER BY p.name, u.barcode, u.id
-LIMIT $6 OFFSET $5
+LIMIT $7 OFFSET $6
 `
 
 type ListServiceStockUnitsParams struct {
@@ -1523,6 +1544,7 @@ type ListServiceStockUnitsParams struct {
 	Q              pgtype.Text    `json:"q"`
 	ProductID      pgtype.Int8    `json:"product_id"`
 	MinMeters      pgtype.Numeric `json:"min_meters"`
+	ServiceID      int64          `json:"service_id"`
 	RowOffset      int32          `json:"row_offset"`
 	RowLimit       int32          `json:"row_limit"`
 	OrganizationID int64          `json:"organization_id"`
@@ -1543,6 +1565,8 @@ type ListServiceStockUnitsRow struct {
 	ProductName           string         `json:"product_name"`
 	ProductUnitType       string         `json:"product_unit_type"`
 	ProductAvailableParts []byte         `json:"product_available_parts"`
+	CreditsTotal          int32          `json:"credits_total"`
+	CreditsRemaining      int32          `json:"credits_remaining"`
 }
 
 // ---------------------------------------------------------------------------
@@ -1560,6 +1584,7 @@ func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStoc
 		arg.Q,
 		arg.ProductID,
 		arg.MinMeters,
+		arg.ServiceID,
 		arg.RowOffset,
 		arg.RowLimit,
 		arg.OrganizationID,
@@ -1586,6 +1611,8 @@ func (q *Queries) ListServiceStockUnits(ctx context.Context, arg ListServiceStoc
 			&i.ProductName,
 			&i.ProductUnitType,
 			&i.ProductAvailableParts,
+			&i.CreditsTotal,
+			&i.CreditsRemaining,
 		); err != nil {
 			return nil, err
 		}
@@ -1975,7 +2002,7 @@ func (q *Queries) LockServiceByUUID(ctx context.Context, arg LockServiceByUUIDPa
 
 const lockServiceItemByUUID = `-- name: LockServiceItemByUUID :one
 
-SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product FROM service_items
 WHERE uuid = $1 AND service_id = $2
 FOR UPDATE
 `
@@ -2008,12 +2035,13 @@ func (q *Queries) LockServiceItemByUUID(ctx context.Context, arg LockServiceItem
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }
 
 const lockServiceItems = `-- name: LockServiceItems :many
-SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at FROM service_items
+SELECT id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product FROM service_items
 WHERE service_id = $1
 ORDER BY id
 FOR UPDATE
@@ -2046,6 +2074,7 @@ func (q *Queries) LockServiceItems(ctx context.Context, serviceID int64) ([]Serv
 			&i.StockMovementID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FinishedProduct,
 		); err != nil {
 			return nil, err
 		}
@@ -2272,7 +2301,7 @@ const setServiceItemMovement = `-- name: SetServiceItemMovement :one
 UPDATE service_items
 SET stock_movement_id = $1
 WHERE id = $2 AND stock_movement_id IS NULL
-RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at
+RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product
 `
 
 type SetServiceItemMovementParams struct {
@@ -2300,6 +2329,7 @@ func (q *Queries) SetServiceItemMovement(ctx context.Context, arg SetServiceItem
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }
@@ -2508,7 +2538,7 @@ SET kind = $1,
     applied_parts = $4,
     notes = $5
 WHERE id = $6 AND service_id = $7
-RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at
+RETURNING id, uuid, service_id, organization_id, brand_id, product_id, unit_id, kind, quantity, meters, applied_parts, notes, stock_movement_id, created_at, updated_at, finished_product
 `
 
 type UpdateServiceItemParams struct {
@@ -2548,6 +2578,7 @@ func (q *Queries) UpdateServiceItem(ctx context.Context, arg UpdateServiceItemPa
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FinishedProduct,
 	)
 	return i, err
 }

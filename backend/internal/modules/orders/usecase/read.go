@@ -67,9 +67,12 @@ type ItemView struct {
 	LineTotal     *string `json:"line_total"`
 	Note          *string `json:"note"`
 	// PlotterCut: "sent plotter cut" (TEC-1058, information only).
-	PlotterCut bool               `json:"plotter_cut"`
-	Assigned   string             `json:"assigned"`
-	Units      []AssignedUnitView `json:"units"`
+	PlotterCut bool `json:"plotter_cut"`
+	// PlotterCredits (TEC-1221): the usage credits of the units of a
+	// plotter cut line; nil = the product default.
+	PlotterCredits *int32             `json:"plotter_credits"`
+	Assigned       string             `json:"assigned"`
+	Units          []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
 	Invoiced    bool       `json:"invoiced"`
@@ -362,8 +365,8 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			UnitPrice: textRef(numericText(it.UnitPrice, 4)), PriceSource: textRef(it.PriceSource),
 			PriceMissing: it.PriceSource == PriceSourceMissing && !it.IsGift,
 			IsGift:       it.IsGift,
-			PlotterCut:   it.PlotterCut,
-			LineTotal:    textRef(numericText(it.LineTotal, 2)), Note: textPtr(it.Note),
+			PlotterCut:   it.PlotterCut, PlotterCredits: int4Ptr(it.PlotterCredits),
+			LineTotal: textRef(numericText(it.LineTotal, 2)), Note: textPtr(it.Note),
 		}
 		if showTerms {
 			iv.ListUnitPrice = numericTextPtr(it.ListUnitPrice, 4)
@@ -569,4 +572,12 @@ func assignedUnits(rows []db.ListOrderItemUnitsByOrderRow, meters bool) ([]Assig
 		return out, sum.FloatString(2)
 	}
 	return out, sum.FloatString(0)
+}
+
+func int4Ptr(v pgtype.Int4) *int32 {
+	if !v.Valid {
+		return nil
+	}
+	n := v.Int32
+	return &n
 }

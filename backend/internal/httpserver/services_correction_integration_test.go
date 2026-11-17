@@ -83,6 +83,7 @@ func TestIntegrationServiceConsumptionCorrection(t *testing.T) {
 	cust, veh := it.svcCustomer(dealer, "t230-cust", "34T230"+it.suffix[len(it.suffix)-4:])
 
 	piece := it.product(center, "T230P")
+	it.singleUse(piece)
 	roll := it.product(center, "T230R")
 	fixed := it.product(center, "T230F")
 	it.setWarrantyMonths(piece, 12)

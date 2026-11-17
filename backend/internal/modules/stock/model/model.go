@@ -116,6 +116,44 @@ type UnitHistory struct {
 	// Splits (TEC-1078): the roll this unit was cut from and the parts
 	// cut from it (recursively), limited to the viewer's reach.
 	Splits UnitSplits `json:"splits"`
+	// Credits (TEC-1221): the usage credits of a serial piece unit; nil
+	// for a roll or a fixed barcode.
+	Credits *UnitCredits `json:"credits"`
+}
+
+// UnitCredits is the credit card of a unit (TEC-1221): the balance, the
+// services the unit was selected in and the credit movements.
+type UnitCredits struct {
+	UnitUUID  uuid.UUID        `json:"unit_uuid"`
+	Total     int32            `json:"credits_total"`
+	Remaining int32            `json:"credits_remaining"`
+	UsedCount int32            `json:"used_count"`
+	Services  []CreditService  `json:"services"`
+	Movements []CreditMovement `json:"movements"`
+}
+
+// CreditService is a service the unit was selected in.
+type CreditService struct {
+	UUID            uuid.UUID  `json:"uuid"`
+	ServiceNo       string     `json:"service_no"`
+	Status          string     `json:"status"`
+	FinishedProduct bool       `json:"finished_product"`
+	CreditsTaken    int32      `json:"credits_taken"`
+	CreatedAt       time.Time  `json:"created_at"`
+	CompletedAt     *time.Time `json:"completed_at"`
+}
+
+// CreditMovement is one credit ledger row.
+type CreditMovement struct {
+	UUID           uuid.UUID  `json:"uuid"`
+	Type           string     `json:"type"`
+	TotalDelta     int32      `json:"total_delta"`
+	RemainingDelta int32      `json:"remaining_delta"`
+	Reason         *string    `json:"reason"`
+	ServiceUUID    *uuid.UUID `json:"service_uuid"`
+	ServiceNo      *string    `json:"service_no"`
+	ActorName      *string    `json:"actor_name"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 // Split family states of a part (TEC-1078), relative to the organization
@@ -359,6 +397,11 @@ type StockUnitRow struct {
 	Location      *LocationRef       `json:"location"`
 	PurchasePrice *UnitPurchasePrice `json:"purchase_price"`
 	UpdatedAt     time.Time          `json:"updated_at"`
+	// Credits (TEC-1221): usage credits of a serial piece unit (nil for a
+	// roll or fixed barcode) and the services it was used in.
+	CreditsTotal     *int32 `json:"credits_total"`
+	CreditsRemaining *int32 `json:"credits_remaining"`
+	CreditsUsed      *int32 `json:"credits_used"`
 	// Split family list only (family=<barcode>, TEC-1078): the holder, the
 	// state relative to the listed organization, the depth in the family
 	// (0: the roll), the source barcode, the meters cut and the order that

@@ -367,7 +367,8 @@ func (s *Service) CreateProduct(ctx context.Context, org orgctx.Scope, in model.
 	if err := checkUploadedKeys(nil, in.Images); err != nil {
 		return model.Product{}, err
 	}
-	p := productFields{UnitType: model.UnitPiece, Active: true, DealerOrderable: true, Images: []model.Image{}}
+	p := productFields{UnitType: model.UnitPiece, Active: true, DealerOrderable: true, Images: []model.Image{},
+		UsageCredits: DefaultUsageCredits}
 	p.apply(in)
 	cat, err := s.validateProduct(ctx, org.BrandID, &p, in.CategoryUUID, true)
 	if err != nil {
@@ -380,6 +381,7 @@ func (s *Service) CreateProduct(ctx context.Context, org orgctx.Scope, in model.
 		WarrantyDurationMonths: int4Arg(p.Warranty), MicronThickness: numericArg(p.Micron),
 		Images: images, UnitType: p.UnitType, UsesFixedBarcode: p.UsesFixedBarcode, Active: p.Active,
 		DealerOrderable: pgtype.Bool{Bool: p.DealerOrderable, Valid: true},
+		UsageCredits:    pgtype.Int4{Int32: p.UsageCredits, Valid: true},
 	})
 	if err != nil {
 		return model.Product{}, mapDBError(err)
@@ -589,7 +591,15 @@ type productFields struct {
 	UnitType                 string
 	UsesFixedBarcode, Active bool
 	DealerOrderable          bool
+	UsageCredits             int32
 }
+
+// DefaultUsageCredits is the usage credit default of a new product
+// (TEC-1221) and MaxUsageCredits its upper bound.
+const (
+	DefaultUsageCredits = 5
+	MaxUsageCredits     = 1000
+)
 
 func fieldsOf(row db.Product) productFields {
 	return productFields{
@@ -597,7 +607,7 @@ func fieldsOf(row db.Product) productFields {
 		Warranty: int4Ptr(row.WarrantyDurationMonths), Micron: numericPtr(row.MicronThickness),
 		Images: decodeImages(row.Images), UnitType: row.UnitType,
 		UsesFixedBarcode: row.UsesFixedBarcode, Active: row.Active,
-		DealerOrderable: row.DealerOrderable,
+		DealerOrderable: row.DealerOrderable, UsageCredits: row.UsageCredits,
 	}
 }
 
@@ -632,6 +642,9 @@ func (p *productFields) apply(in model.ProductInput) {
 	if in.DealerOrderable != nil {
 		p.DealerOrderable = *in.DealerOrderable
 	}
+	if in.UsageCredits != nil {
+		p.UsageCredits = *in.UsageCredits
+	}
 }
 
 func (p productFields) updateParams(id, brandID, categoryID int64) db.UpdateProductParams {
@@ -641,7 +654,7 @@ func (p productFields) updateParams(id, brandID, categoryID int64) db.UpdateProd
 		Sku: p.SKU, Name: p.Name, DescriptionMd: p.DescriptionMD,
 		WarrantyDurationMonths: int4Arg(p.Warranty), MicronThickness: numericArg(p.Micron),
 		Images: images, UnitType: p.UnitType, UsesFixedBarcode: p.UsesFixedBarcode, Active: p.Active,
-		DealerOrderable: p.DealerOrderable,
+		DealerOrderable: p.DealerOrderable, UsageCredits: p.UsageCredits,
 	}
 }
 
@@ -695,6 +708,12 @@ func (s *Service) validateProduct(ctx context.Context, brandID int64, p *product
 		verr.add("name", "required", "name is required")
 	case utf8.RuneCountInString(p.Name) > maxNameLen:
 		verr.add("name", "too_long", fmt.Sprintf("name is longer than %d characters", maxNameLen))
+	}
+	if p.UsageCredits == 0 {
+		p.UsageCredits = DefaultUsageCredits
+	}
+	if p.UsageCredits < 1 || p.UsageCredits > MaxUsageCredits {
+		verr.add("usage_credits", "out_of_range", fmt.Sprintf("usage_credits must be between 1 and %d", MaxUsageCredits))
 	}
 	if utf8.RuneCountInString(p.DescriptionMD) > maxDescriptionLen {
 		verr.add("description_md", "too_long", fmt.Sprintf("description is longer than %d characters", maxDescriptionLen))
@@ -764,7 +783,8 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 		SKU: r.Sku, Name: r.Name, DescriptionMD: r.DescriptionMd,
 		WarrantyDurationMonths: int4Ptr(r.WarrantyDurationMonths), MicronThickness: numericPtr(r.MicronThickness),
 		Images: decodeImages(r.Images), UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
-		Active: r.Active, DealerOrderable: r.DealerOrderable, ExternalID: ext, LockedFields: locked,
+		Active: r.Active, DealerOrderable: r.DealerOrderable, UsageCredits: r.UsageCredits,
+		ExternalID: ext, LockedFields: locked,
 		Roll: model.RollSettings{
 			DefaultMeters: numericPtr(r.DefaultRollMeters), WidthCm: numericPtr(r.RollWidthCm),
 			MinCutMeters: numericPtr(r.MinCutMeters), WastePct: numericPtr(r.WastePct),

@@ -323,10 +323,11 @@ WHERE s.id = sqlc.arg(id);
 -- name: CreateServiceItem :one
 INSERT INTO service_items (
     service_id, organization_id, brand_id, product_id, unit_id, kind,
-    quantity, meters, applied_parts, notes
+    quantity, meters, applied_parts, notes, finished_product
 )
 SELECT s.id, s.organization_id, s.brand_id, sqlc.arg(product_id), sqlc.arg(unit_id), sqlc.arg(kind),
-       sqlc.narg(quantity), sqlc.narg(meters), sqlc.arg(applied_parts), sqlc.narg(notes)
+       sqlc.narg(quantity), sqlc.narg(meters), sqlc.arg(applied_parts), sqlc.narg(notes),
+       sqlc.arg(finished_product)
 FROM services s
 WHERE s.id = sqlc.arg(service_id)
 RETURNING *;
@@ -471,11 +472,20 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.initial_meters, u.remaining_meter
        st.quantity_on_hand,
        p.id AS product_id, p.uuid AS product_uuid, p.sku AS product_sku,
        p.name AS product_name, p.unit_type AS product_unit_type,
-       c.available_parts AS product_available_parts
+       c.available_parts AS product_available_parts,
+       COALESCE(cr.credits_total, -1)::int AS credits_total, COALESCE(cr.credits_remaining, -1)::int AS credits_remaining
 FROM stock st
 JOIN units u ON u.id = st.unit_id
 JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
 JOIN product_categories c ON c.id = p.category_id AND c.brand_id = p.brand_id
+LEFT JOIN LATERAL (
+    -- TEC-1221: credits of a serial piece unit (balance, else the default).
+    SELECT COALESCE(b.credits_total, unit_credit_default(u.id)) AS credits_total,
+           COALESCE(b.credits_remaining, unit_credit_default(u.id)) AS credits_remaining
+    FROM (SELECT 1) one
+    LEFT JOIN unit_credit_balances b ON b.unit_id = u.id
+    WHERE u.unit_kind = 'serial' AND u.initial_meters IS NULL
+) cr ON TRUE
 WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
   AND (sqlc.narg(q)::text IS NULL
        OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
@@ -483,13 +493,18 @@ WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
        OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
   AND (sqlc.narg(min_meters)::numeric IS NULL OR u.remaining_meters >= sqlc.narg(min_meters)::numeric)
-  AND (u.unit_kind = 'fixed' OR NOT EXISTS (
-        SELECT 1 FROM service_items i
-        JOIN services sv ON sv.id = i.service_id
-        WHERE i.unit_id = u.id
-          AND sv.status NOT IN ('completed', 'cancelled')
-          AND (u.initial_meters IS NULL OR i.kind = 'full')
-  ))
+  AND (u.unit_kind = 'fixed'
+       -- TEC-1221: a credit unit stays listed while it has credits, in
+       -- other open services too, but not twice in the same service.
+       OR (u.initial_meters IS NULL AND cr.credits_remaining > 0 AND NOT EXISTS (
+            SELECT 1 FROM service_items i
+            WHERE i.unit_id = u.id AND i.service_id = sqlc.arg(service_id)::bigint))
+       OR (u.initial_meters IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM service_items i
+            JOIN services sv ON sv.id = i.service_id
+            WHERE i.unit_id = u.id
+              AND sv.status NOT IN ('completed', 'cancelled')
+              AND i.kind = 'full')))
 ORDER BY p.name, u.barcode, u.id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 

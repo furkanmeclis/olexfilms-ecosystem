@@ -24,6 +24,16 @@ type priceView struct {
 	} `json:"prices"`
 }
 
+// singleUse sets the product's usage credits to 1 (TEC-1221): its serial
+// piece units are consumed by their first service, the single use these
+// tests assert.
+func (it *itest) singleUse(p db.Product) {
+	it.t.Helper()
+	if _, err := it.pool.Exec(context.Background(), "UPDATE products SET usage_credits = 1 WHERE id = $1", p.ID); err != nil {
+		it.t.Fatalf("single use: %v", err)
+	}
+}
+
 // product creates a center product of the brand directly (catalog CRUD is
 // TEC-145).
 func (it *itest) product(center db.Organization, sku string) db.Product {

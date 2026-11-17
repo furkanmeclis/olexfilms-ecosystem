@@ -79,6 +79,7 @@ func TestIntegrationF3IntakeContractMeasurement(t *testing.T) {
 	it.custDo("PATCH", "/v1/vehicles/"+vehicle.Uuid.String(), dealerTok, map[string]any{"vin": vin}, http.StatusOK)
 
 	product := it.product(center, "T303P")
+	it.singleUse(product)
 	if _, err := it.pool.Exec(ctx, `UPDATE products SET micron_thickness = '190.00'::numeric WHERE id = $1`, product.ID); err != nil {
 		t.Fatalf("product micron: %v", err)
 	}

@@ -33,6 +33,7 @@ const (
 	CodeServiceNoTaken              = "SERVICE_NO_TAKEN"
 	CodeServiceNoLocked             = "SERVICE_NO_LOCKED"
 	CodeUnitInUse                   = "SERVICE_UNIT_IN_USE"
+	CodeUnitCreditsExhausted        = "UNIT_CREDITS_EXHAUSTED"
 	CodeUnitNotAvailable            = "SERVICE_UNIT_NOT_AVAILABLE"
 	CodeTooManyImages               = "SERVICE_TOO_MANY_IMAGES"
 	CodeContractRequired            = "CONTRACT_REQUIRED"
@@ -97,6 +98,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeServiceNoLocked, "The service number cannot change after completion")
 	case errors.Is(err, svcuc.ErrNotEditable):
 		response.Conflict(w, r, CodeNotEditable, "The service status does not allow this change")
+	case errors.Is(err, svcuc.ErrUnitCreditsExhausted):
+		response.Conflict(w, r, CodeUnitCreditsExhausted, "The unit has no usage credits left")
 	case errors.Is(err, svcuc.ErrUnitInUse):
 		response.Conflict(w, r, CodeUnitInUse, "The unit is already in another open service")
 	case errors.Is(err, svcuc.ErrUnitNotAvailable):
@@ -317,6 +320,8 @@ type itemBody struct {
 	Meters       *json.Number `json:"meters"`
 	AppliedParts []string     `json:"applied_parts"`
 	Notes        *string      `json:"notes"`
+	// FinishProduct: "ürünü bitirdim" (TEC-1221).
+	FinishProduct bool `json:"finish_product"`
 }
 
 // AddItem (POST /v1/services/{uuid}/items).
@@ -336,7 +341,7 @@ func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.svc.AddItem(r.Context(), caller(r), id, svcuc.ItemInput{
 		Barcode: b.Barcode, ProductUUID: b.ProductUUID, Kind: b.Kind, Quantity: b.Quantity,
-		Meters: meters, AppliedParts: b.AppliedParts, Notes: b.Notes,
+		Meters: meters, AppliedParts: b.AppliedParts, Notes: b.Notes, FinishProduct: b.FinishProduct,
 	})
 	if err != nil {
 		writeError(w, r, err)

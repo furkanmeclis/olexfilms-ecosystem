@@ -168,8 +168,18 @@ func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, 
 			note = l.note
 		}
 		same := ratEq(lineAmount(it), l.amount)
-		if p := items[i].PlotterCut; p != nil && *p != it.PlotterCut {
-			if _, err := q.SetOrderItemPlotterCut(ctx, db.SetOrderItemPlotterCutParams{ID: it.ID, PlotterCut: *p}); err != nil {
+		cut := it.PlotterCut
+		if p := items[i].PlotterCut; p != nil {
+			cut = *p
+		}
+		credits, err := plotterCredits(fmt.Sprintf("items[%d].plotter_credits", i), cut, it.PlotterCredits, items[i].PlotterCredits)
+		if err != nil {
+			return false, err
+		}
+		if cut != it.PlotterCut || credits != it.PlotterCredits {
+			if _, err := q.SetOrderItemPlotterCut(ctx, db.SetOrderItemPlotterCutParams{
+				ID: it.ID, PlotterCut: cut, PlotterCredits: credits,
+			}); err != nil {
 				return false, fmt.Errorf("orders: plotter mark: %w", err)
 			}
 			changed = true

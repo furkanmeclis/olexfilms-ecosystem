@@ -111,6 +111,7 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 				WarrantiesStep{System: hubSys},
 				MeasurementsStep{System: hubSys},
 				UnitTraceStep{System: hubSys, WHSystem: whSys},
+				UnitCreditsStep{},
 			}
 		},
 	}
@@ -195,6 +196,20 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 	rep := report()
 	if err := rep.Err(); err != nil {
 		t.Fatalf("full run report: %v: %+v", err, rep.Mismatches)
+	}
+	// TEC-1221: every serial piece unit used in a migrated service has a
+	// credit balance; a consumed one has no credit left.
+	var noBalance, usedWithCredits int
+	if err := tx.QueryRow(ctx, `SELECT
+		(SELECT count(DISTINCT u.id) FROM units u JOIN service_items si ON si.unit_id = u.id
+		 WHERE u.unit_kind = 'serial' AND u.initial_meters IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM unit_credit_balances b WHERE b.unit_id = u.id)),
+		(SELECT count(*) FROM units u JOIN unit_credit_balances b ON b.unit_id = u.id
+		 WHERE u.status = 'used' AND b.credits_remaining > 0)`).Scan(&noBalance, &usedWithCredits); err != nil {
+		t.Fatal(err)
+	}
+	if noBalance != 0 || usedWithCredits != 0 {
+		t.Fatalf("unit credits: %d used units without a balance, %d consumed units with credits", noBalance, usedWithCredits)
 	}
 	for _, c := range []struct {
 		src, table                        string

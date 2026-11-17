@@ -150,6 +150,10 @@ func unitRow(r db.ListOrganizationStockUnitRowsRow) model.StockUnitRow {
 	if r.LocationUuid.Valid {
 		row.Location = &model.LocationRef{UUID: uuid.UUID(r.LocationUuid.Bytes), Code: r.LocationCode.String, Name: r.LocationName.String}
 	}
+	if r.CreditsTotal >= 0 {
+		total, remaining, used := r.CreditsTotal, r.CreditsRemaining, r.CreditsUsed
+		row.CreditsTotal, row.CreditsRemaining, row.CreditsUsed = &total, &remaining, &used
+	}
 	return row
 }
 

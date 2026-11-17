@@ -117,7 +117,14 @@ func (s *Service) UnitHistory(ctx context.Context, org orgctx.Scope, f scopefilt
 			return model.UnitHistory{}, err
 		}
 		if visible {
-			return s.history(ctx, v, u, state, holdings, limit, offset)
+			out, err := s.history(ctx, v, u, state, holdings, limit, offset)
+			if err != nil {
+				return model.UnitHistory{}, err
+			}
+			if out.Credits, err = unitCredits(ctx, s.q, u, v.reaches); err != nil {
+				return model.UnitHistory{}, err
+			}
+			return out, nil
 		}
 	}
 	return model.UnitHistory{}, ErrNotFound

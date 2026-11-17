@@ -179,6 +179,17 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 		}
 		from := svc.Status
 		if to == StatusCancelled {
+			// TEC-1221: the cancelled service gives back the credits its
+			// items took.
+			items, lerr := q.LockServiceItems(ctx, svc.ID)
+			if lerr != nil {
+				return fmt.Errorf("services: lock items: %w", lerr)
+			}
+			for _, it := range items {
+				if err := s.refundItemCredits(ctx, q, svc, it.ID, it.UnitID, c, "service_cancelled"); err != nil {
+					return err
+				}
+			}
 			svc, err = q.CancelService(ctx, db.CancelServiceParams{
 				ID: svc.ID, ActorUserID: c.actor(), CancelReason: textOrNull(in.Note),
 			})

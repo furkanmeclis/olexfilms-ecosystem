@@ -2183,6 +2183,7 @@ type OrderItem struct {
 	DiscountPct              pgtype.Numeric     `json:"discount_pct"`
 	IsGift                   bool               `json:"is_gift"`
 	PlotterCut               bool               `json:"plotter_cut"`
+	PlotterCredits           pgtype.Int4        `json:"plotter_credits"`
 }
 
 type OrderItemUnit struct {
@@ -2555,6 +2556,7 @@ type Product struct {
 	MinCutMeters           pgtype.Numeric     `json:"min_cut_meters"`
 	WastePct               pgtype.Numeric     `json:"waste_pct"`
 	DealerOrderable        bool               `json:"dealer_orderable"`
+	UsageCredits           int32              `json:"usage_credits"`
 }
 
 type ProductCategory struct {
@@ -3000,6 +3002,7 @@ type ServiceItem struct {
 	StockMovementID pgtype.Int8        `json:"stock_movement_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	FinishedProduct bool               `json:"finished_product"`
 }
 
 type ServiceItemCorrection struct {
@@ -3763,6 +3766,37 @@ type Unit struct {
 	BatchID         pgtype.Int8        `json:"batch_id"`
 	Lot             pgtype.Text        `json:"lot"`
 	Note            pgtype.Text        `json:"note"`
+}
+
+type UnitCreditBalance struct {
+	UnitID           int64              `json:"unit_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	CreditsTotal     int32              `json:"credits_total"`
+	CreditsRemaining int32              `json:"credits_remaining"`
+	UsedCount        int32              `json:"used_count"`
+	LastMovementID   pgtype.Int8        `json:"last_movement_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UnitCreditMovement struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UnitID         int64              `json:"unit_id"`
+	Type           string             `json:"type"`
+	TotalDelta     int32              `json:"total_delta"`
+	RemainingDelta int32              `json:"remaining_delta"`
+	UsesDelta      int32              `json:"uses_delta"`
+	ServiceID      pgtype.Int8        `json:"service_id"`
+	ServiceItemID  pgtype.Int8        `json:"service_item_id"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	Reason         pgtype.Text        `json:"reason"`
+	Metadata       []byte             `json:"metadata"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type UnitCurrentState struct {

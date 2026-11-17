@@ -90,6 +90,10 @@ func olexSteps() []Step {
 		// TEC-1006: units used in legacy services get the service as owner;
 		// legacy barcodes vs units consistency report.
 		UnitTraceStep{},
+
+		// TEC-1221: usage credits of the used units from the service
+		// history (legacy has no credit counter).
+		UnitCreditsStep{},
 	}
 }
 

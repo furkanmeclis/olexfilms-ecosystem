@@ -530,12 +530,19 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
        c.uuid AS category_uuid, c.name AS category_name,
-       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
+       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name,
+       -- TEC-1221: credits of a serial piece unit (-1: none), uses so far.
+       COALESCE(cb.credits_total, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+                THEN unit_credit_default(u.id) END, -1)::int AS credits_total,
+       COALESCE(cb.credits_remaining, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+                THEN unit_credit_default(u.id) END, -1)::int AS credits_remaining,
+       COALESCE(cb.used_count, 0)::int AS credits_used
 FROM held
 JOIN units u ON u.id = held.unit_id
 JOIN products p ON p.id = u.product_id
 JOIN product_categories c ON c.id = p.category_id
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+LEFT JOIN unit_credit_balances cb ON cb.unit_id = u.id
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
   AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
   AND ((COALESCE(cardinality($3::text[]), 0) = 0 AND u.status IN ('available', 'placed'))
@@ -613,6 +620,9 @@ type ListOrganizationStockUnitRowsRow struct {
 	LocationUuid     pgtype.UUID        `json:"location_uuid"`
 	LocationCode     pgtype.Text        `json:"location_code"`
 	LocationName     pgtype.Text        `json:"location_name"`
+	CreditsTotal     int32              `json:"credits_total"`
+	CreditsRemaining int32              `json:"credits_remaining"`
+	CreditsUsed      int32              `json:"credits_used"`
 }
 
 // TEC-216 (F1-12a): unit list of an organization. Serial units come from
@@ -672,6 +682,9 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 			&i.LocationUuid,
 			&i.LocationCode,
 			&i.LocationName,
+			&i.CreditsTotal,
+			&i.CreditsRemaining,
+			&i.CreditsUsed,
 		); err != nil {
 			return nil, err
 		}

@@ -80,7 +80,7 @@ INSERT INTO products (
     organization_id, brand_id, category_id, sku, name, description_md,
     warranty_duration_months, micron_thickness, images, unit_type,
     uses_fixed_barcode, active, external_id, connection_id, locked_fields,
-    dealer_orderable
+    dealer_orderable, usage_credits
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(category_id), sqlc.arg(sku),
@@ -89,7 +89,9 @@ VALUES (
     sqlc.arg(uses_fixed_barcode), sqlc.arg(active), sqlc.narg(external_id),
     sqlc.narg(connection_id), sqlc.narg(locked_fields),
     -- TEC-1061: NULL keeps the column default (open to dealer orders).
-    COALESCE(sqlc.narg(dealer_orderable)::bool, true)
+    COALESCE(sqlc.narg(dealer_orderable)::bool, true),
+    -- TEC-1221: NULL keeps the column default (5).
+    COALESCE(sqlc.narg(usage_credits)::int, 5)
 )
 RETURNING *;
 
@@ -119,7 +121,8 @@ SET category_id = sqlc.arg(category_id),
     unit_type = sqlc.arg(unit_type),
     uses_fixed_barcode = sqlc.arg(uses_fixed_barcode),
     active = sqlc.arg(active),
-    dealer_orderable = sqlc.arg(dealer_orderable)
+    dealer_orderable = sqlc.arg(dealer_orderable),
+    usage_credits = sqlc.arg(usage_credits)
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
 

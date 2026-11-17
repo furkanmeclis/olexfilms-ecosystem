@@ -50,6 +50,9 @@ var (
 	ErrNotEditable = errors.New("services: service is not editable")
 	// ErrUnitInUse: the serial unit is already in another open service.
 	ErrUnitInUse = errors.New("services: unit is in another open service")
+	// ErrUnitCreditsExhausted: the unit has no usage credits left
+	// (TEC-1221, UNIT_CREDITS_EXHAUSTED).
+	ErrUnitCreditsExhausted = errors.New("services: unit credits exhausted")
 	// ErrUnitNotAvailable: the unit is not held (available) by the service
 	// organization, or not enough of it (also a ledger refusal on
 	// completion).

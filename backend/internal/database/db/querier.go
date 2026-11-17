@@ -59,6 +59,7 @@ type Querier interface {
 	// Delivery receipt of outgoing messages. A receipt only moves forward
 	// (sent → delivered → read); read is final.
 	ApplyMessageReceipt(ctx context.Context, arg ApplyMessageReceiptParams) ([]Message, error)
+	ApplyUnitCreditMovement(ctx context.Context, arg ApplyUnitCreditMovementParams) (UnitCreditBalance, error)
 	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
 	AppointmentRefByID(ctx context.Context, id int64) (AppointmentRefByIDRow, error)
 	ApproveBonusAccrual(ctx context.Context, arg ApproveBonusAccrualParams) (BonusAccrual, error)
@@ -1427,6 +1428,11 @@ type Querier interface {
 	GetUnitBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
 	GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodeParams) (Unit, error)
 	GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error)
+	GetUnitCreditBalance(ctx context.Context, unitID int64) (UnitCreditBalance, error)
+	// TEC-1221: unit usage credits (ledger unit_credit_movements, projection
+	// unit_credit_balances). Writes go through modules/stock/credits only.
+	// -1: the unit carries no credits (fixed barcode or roll).
+	GetUnitCreditDefault(ctx context.Context, unitID int64) (int32, error)
 	GetUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
 	// TEC-1214: the last order line a unit was bought on from the supplier, in
 	// whatever currency the order was placed (a brand currency change leaves
@@ -1662,6 +1668,8 @@ type Querier interface {
 	// parent (approver_org_id) decides, the giver ships, the receiver receives.
 	InsertTransferRequest(ctx context.Context, arg InsertTransferRequestParams) (StockTransferRequest, error)
 	InsertTransferRequestItem(ctx context.Context, arg InsertTransferRequestItemParams) (StockTransferRequestItem, error)
+	InsertUnitCreditBalance(ctx context.Context, arg InsertUnitCreditBalanceParams) (UnitCreditBalance, error)
+	InsertUnitCreditMovement(ctx context.Context, arg InsertUnitCreditMovementParams) (UnitCreditMovement, error)
 	// ---------------------------------------------------------------------------
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
@@ -2898,6 +2906,9 @@ type Querier interface {
 	ListTransferRequestsFiltered(ctx context.Context, arg ListTransferRequestsFilteredParams) ([]StockTransferRequest, error)
 	// Active organizations of the same type, brand and parent (K13 siblings).
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
+	ListUnitCreditMovements(ctx context.Context, unitID int64) ([]ListUnitCreditMovementsRow, error)
+	// Services the unit was selected in (credit uses), newest first.
+	ListUnitCreditServices(ctx context.Context, unitID int64) ([]ListUnitCreditServicesRow, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
 	// TEC-1078: the split family of a roll — the roll (depth 0) and every unit
@@ -3144,6 +3155,7 @@ type Querier interface {
 	LockTransferRequestByUUID(ctx context.Context, arg LockTransferRequestByUUIDParams) (StockTransferRequest, error)
 	// Locks the unit row for meters/status/product changes in ledger.Post.
 	LockUnit(ctx context.Context, id int64) (Unit, error)
+	LockUnitCreditBalance(ctx context.Context, unitID int64) (UnitCreditBalance, error)
 	// Serialises every ledger write on one unit (double owner / double
 	// consumption guard).
 	LockUnitCurrentState(ctx context.Context, unitID int64) (UnitCurrentState, error)
@@ -4027,6 +4039,9 @@ type Querier interface {
 	// Period summary: per staff and type, the paid total of a period (voided
 	// payments excluded).
 	SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaymentsByPeriodParams) ([]SumStaffPaymentsByPeriodRow, error)
+	// Net credits a service item holds: remaining_delta is negative for what
+	// it took, uses_delta the uses it counts.
+	SumUnitCreditsByItem(ctx context.Context, serviceItemID pgtype.Int8) (SumUnitCreditsByItemRow, error)
 	// Quota tokens of unidentified WhatsApp contacts (no user) on the system
 	// pool of an organization since a time.
 	SumVisitorWhatsAppTokensSince(ctx context.Context, arg SumVisitorWhatsAppTokensSinceParams) (int64, error)
@@ -4095,6 +4110,7 @@ type Querier interface {
 	// started_at, ended stamps ended_at. ended is final: a new link replaces
 	// it.
 	TransitionFleetDealerLink(ctx context.Context, arg TransitionFleetDealerLinkParams) (FleetDealerLink, error)
+	UnitCreditsBackfill(ctx context.Context) (int32, error)
 	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
 	UpdateAIConversationTitle(ctx context.Context, arg UpdateAIConversationTitleParams) (AiConversation, error)
 	UpdateAISettings(ctx context.Context, arg UpdateAISettingsParams) (AiSetting, error)

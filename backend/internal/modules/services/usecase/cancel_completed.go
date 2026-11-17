@@ -9,6 +9,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/credits"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
@@ -97,6 +98,18 @@ func (s *Service) CancelCompleted(ctx context.Context, c Caller, id uuid.UUID, i
 		l := ledger.New(s.q, s.out)
 		returnedIDs := make([]int64, 0, len(items))
 		for _, item := range items {
+			unit, err := q.LockUnit(ctx, item.UnitID)
+			if err != nil {
+				return fmt.Errorf("services: lock unit: %w", err)
+			}
+			if credits.Applies(unit) {
+				ids, err := s.cancelCreditItem(ctx, q, tx, l, svc, item, unit, c, reason)
+				if err != nil {
+					return err
+				}
+				returnedIDs = append(returnedIDs, ids...)
+				continue
+			}
 			mv, err := s.returnCompletedItem(ctx, q, tx, l, svc, item, c, reason)
 			if err != nil {
 				return err
@@ -164,6 +177,47 @@ func normalizeCompletedCancelReason(raw string) (string, error) {
 		return "", invalid("reason", fmt.Sprintf("must be at most %d characters", maxCompletedCancelReasonRunes))
 	}
 	return reason, nil
+}
+
+// ledgerRefTypeCreditReturn: a credit unit taken back into stock because a
+// cancelled service gave its credits back (TEC-1221).
+const ledgerRefTypeCreditReturn = "service_item_credit_return"
+
+// cancelCreditItem undoes a credit unit item of a cancelled completed
+// service (TEC-1221): the credits the item took are given back, and the
+// unit comes back into the organization's stock when it was consumed by
+// this service, or by another service of the organization while it has
+// credits again.
+func (s *Service) cancelCreditItem(ctx context.Context, q *db.Queries, tx pgx.Tx, l *ledger.Ledger, svc db.Service,
+	item db.ServiceItem, unit db.Unit, c Caller, reason string) ([]int64, error) {
+	bal, _, err := credits.RefundItem(ctx, q, unit, creditActor(c, svc), creditRef(svc, item.ID), "service_cancelled")
+	if err != nil {
+		return nil, fmt.Errorf("services: refund credits: %w", err)
+	}
+	st, err := q.GetUnitCurrentState(ctx, unit.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("services: unit state: %w", err)
+	}
+	if st.Status != string(ledger.StatusUsed) || st.OwnerType != string(ledger.OwnerService) ||
+		st.HolderOrgID != svc.OrganizationID {
+		return nil, nil
+	}
+	if st.OwnerID != svc.ID && bal.Remaining <= 0 {
+		return nil, nil
+	}
+	m := s.correctionMovement(svc, item, c, reason)
+	m.RefType = ledgerRefTypeCreditReturn
+	from := ledger.Owner{Type: ledger.OwnerService, ID: st.OwnerID, OrgID: st.HolderOrgID}
+	to := ledger.Owner{Type: ledger.OwnerOrganization, ID: svc.OrganizationID, OrgID: svc.OrganizationID}
+	m.Type, m.UnitID, m.From, m.To = ledger.TypeReturn, unit.ID, &from, &to
+	mv, err := post(ctx, l, tx, m, item)
+	if err != nil {
+		return nil, err
+	}
+	return []int64{mv.ID}, nil
 }
 
 func (s *Service) returnCompletedItem(ctx context.Context, q *db.Queries, tx pgx.Tx, l *ledger.Ledger, svc db.Service,
