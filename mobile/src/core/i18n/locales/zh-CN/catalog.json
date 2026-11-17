@@ -26,5 +26,7 @@
   "description": "描述",
   "unit_type.piece": "件",
   "unit_type.roll_meter": "卷（米）",
-  "stock_units": "库存单元"
+  "stock_units": "库存单元",
+  "usage_credits": "使用次数",
+  "usage_credits_value": "{{value}} 次服务"
 }

@@ -293,5 +293,12 @@
   "applied_by": "Εφαρμόστηκε από",
   "related.warranties": "Εγγυήσεις",
   "related.appointments": "Ραντεβού",
-  "related.measurements": "Μετρήσεις"
+  "related.measurements": "Μετρήσεις",
+  "credits.exhausted": "Αυτός ο γραμμωτός κώδικας δεν έχει άλλες πιστώσεις. Επιλέξτε άλλον.",
+  "credits.exhausted_title": "Δεν υπάρχουν πιστώσεις",
+  "credits.finish": "Τελείωσα το προϊόν",
+  "credits.finish_hint": "Όλες οι {{value}} υπόλοιπες πιστώσεις πηγαίνουν σε αυτή την υπηρεσία· ο κώδικας δεν θα χρησιμοποιείται σε άλλη υπηρεσία.",
+  "credits.finished": "Το προϊόν τελείωσε",
+  "credits.left": "Πιστώσεις: {{value}}",
+  "credits.use_one_hint": "Αυτή η υπηρεσία χρησιμοποιεί 1 πίστωση του κώδικα."
 }

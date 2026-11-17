@@ -26,5 +26,7 @@
   "description": "Описание",
   "unit_type.piece": "Брой",
   "unit_type.roll_meter": "Ролка (метри)",
-  "stock_units": "Единици в наличност"
+  "stock_units": "Единици в наличност",
+  "usage_credits": "Кредити за използване",
+  "usage_credits_value": "{{value}} услуги"
 }

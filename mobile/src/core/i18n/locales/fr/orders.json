@@ -137,5 +137,10 @@
   "clear": "Vider",
   "clear_title": "Vider le panier ?",
   "draft_kept": "Le brouillon a été enregistré ; un nouvel envoi ne fait que relancer la soumission.",
-  "card.created_by": "Passée par {{name}}"
+  "card.created_by": "Passée par {{name}}",
+  "errors.credits_invalid": "Les crédits doivent être un nombre entier de 1 à 1000.",
+  "plotter.badge_credits": "Découpe plotter · {{value}} crédits",
+  "plotter.credits": "Crédits",
+  "plotter.credits_default": "Valeur du produit",
+  "plotter.credits_hint": "Nombre de services dans lesquels chaque code-barres expédié sur cette ligne peut être utilisé (1–1000). Vide : valeur du produit."
 }

@@ -293,5 +293,12 @@
   "applied_by": "Applicato da",
   "related.warranties": "Garanzie",
   "related.appointments": "Appuntamenti",
-  "related.measurements": "Misurazioni"
+  "related.measurements": "Misurazioni",
+  "credits.exhausted": "Questo codice a barre non ha più crediti di utilizzo. Scegli un altro codice a barre.",
+  "credits.exhausted_title": "Crediti esauriti",
+  "credits.finish": "Ho finito il prodotto",
+  "credits.finish_hint": "Tutti i {{value}} crediti rimanenti vanno a questo servizio; il codice a barre non potrà essere usato in un altro servizio.",
+  "credits.finished": "Prodotto finito",
+  "credits.left": "Crediti: {{value}}",
+  "credits.use_one_hint": "Questo servizio usa 1 credito del codice a barre."
 }

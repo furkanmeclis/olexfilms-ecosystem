@@ -723,5 +723,21 @@
   "labels.no_access_title": "Немає доступу до етикеток",
   "labels.no_access_body": "Ваша роль не дозволяє друкувати етикетки.",
   "labels.ios_only_title": "Друк етикеток на цьому пристрої",
-  "labels.ios_only_body": "На iPhone PDF з етикетками відкриваються в системному меню «Поділитися». На цьому пристрої друкуйте їх із вебпанелі."
+  "labels.ios_only_body": "На iPhone PDF з етикетками відкриваються в системному меню «Поділитися». На цьому пристрої друкуйте їх із вебпанелі.",
+  "stock.credits.amount": "Скільки кредитів додати",
+  "stock.credits.amount_invalid": "Введіть ціле число від 1 до 1000.",
+  "stock.credits.amount_placeholder": "Напр. 2",
+  "stock.credits.exhausted": "Кредити закінчилися; штрихкод не можна вибрати в новій послузі.",
+  "stock.credits.finished": "Продукт використано",
+  "stock.credits.increase": "Додати кредити",
+  "stock.credits.increase_failed": "Не вдалося додати кредити",
+  "stock.credits.reason": "Причина",
+  "stock.credits.reason_placeholder": "Чому додаються кредити?",
+  "stock.credits.reason_required": "Причина обов'язкова.",
+  "stock.credits.remaining": "Залишок / усього",
+  "stock.credits.services": "Послуги, де використано",
+  "stock.credits.short": "Кредити {{value}}",
+  "stock.credits.taken": "{{value}} кредитів",
+  "stock.credits.title": "Кредити використання",
+  "stock.credits.used": "Використано в послугах"
 }

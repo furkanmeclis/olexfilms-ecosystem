@@ -723,5 +723,21 @@
   "labels.no_access_title": "Kein Zugriff auf Etiketten",
   "labels.no_access_body": "Ihre Rolle kann keine Etiketten drucken.",
   "labels.ios_only_title": "Etiketten auf diesem Gerät drucken",
-  "labels.ios_only_body": "Etiketten-PDFs öffnen sich auf dem iPhone im Teilen-Menü des Systems. Drucken Sie sie auf diesem Gerät über das Webpanel."
+  "labels.ios_only_body": "Etiketten-PDFs öffnen sich auf dem iPhone im Teilen-Menü des Systems. Drucken Sie sie auf diesem Gerät über das Webpanel.",
+  "stock.credits.amount": "Hinzuzufügendes Guthaben",
+  "stock.credits.amount_invalid": "Geben Sie eine ganze Zahl von 1 bis 1000 ein.",
+  "stock.credits.amount_placeholder": "z. B. 2",
+  "stock.credits.exhausted": "Kein Guthaben mehr; der Barcode kann in keinem neuen Auftrag gewählt werden.",
+  "stock.credits.finished": "Produkt aufgebraucht",
+  "stock.credits.increase": "Guthaben hinzufügen",
+  "stock.credits.increase_failed": "Guthaben konnte nicht hinzugefügt werden",
+  "stock.credits.reason": "Grund",
+  "stock.credits.reason_placeholder": "Warum wird Guthaben hinzugefügt?",
+  "stock.credits.reason_required": "Ein Grund ist erforderlich.",
+  "stock.credits.remaining": "Verbleibend / gesamt",
+  "stock.credits.services": "Verwendet in Aufträgen",
+  "stock.credits.short": "Guthaben {{value}}",
+  "stock.credits.taken": "{{value}} Guthaben",
+  "stock.credits.title": "Nutzungsguthaben",
+  "stock.credits.used": "Verwendet in Aufträgen"
 }

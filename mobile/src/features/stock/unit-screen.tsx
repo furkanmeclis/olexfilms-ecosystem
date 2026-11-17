@@ -16,6 +16,7 @@ import { unitStatusTone } from '@/features/warehouse/scan-result-card';
 import { useUnitHistory } from './api';
 import { siblingUnitPath } from './family';
 import { FamilyRowView } from './family-section';
+import { UnitCreditsSection } from './unit-credits';
 
 /** One barcode: product, state, holder and its movement history. */
 export function UnitScreen() {
@@ -74,6 +75,9 @@ export function UnitScreen() {
                 </>
               ) : null}
             </Card>
+
+            {/* TEC-1221: usage credits of a serial piece unit (none for a roll or a fixed barcode). */}
+            {h.credits ? <UnitCreditsSection barcode={h.unit.barcode} credits={h.credits} /> : null}
 
             {h.holdings.length > 1 ? (
               <>

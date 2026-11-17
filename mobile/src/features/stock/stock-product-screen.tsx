@@ -12,6 +12,7 @@ import { ListStatus } from '@/features/warehouse/parts';
 import { unitStatusTone } from '@/features/warehouse/scan-result-card';
 
 import { type StockUnitRow, useProductUnits } from './api';
+import { creditsText } from './credits';
 
 /** Units of one product in the active organization, with status and location. */
 export function StockProductScreen({ base }: { base: string }) {
@@ -64,7 +65,10 @@ export function UnitRow({ unit, onPress }: { unit: StockUnitRow; onPress: () => 
       ? `${formatNumber(unit.remaining_meters, 2)} m`
       : unit.unit_kind === 'fixed'
         ? `× ${formatNumber(unit.quantity)}`
-        : null;
+        : unit.credits_total != null && unit.credits_remaining != null
+          ? // TEC-1221: credits left on a serial piece unit.
+            t('stock.credits.short', { value: creditsText({ credits_total: unit.credits_total, credits_remaining: unit.credits_remaining }) })
+          : null;
   return (
     <Pressable
       accessibilityRole="button"

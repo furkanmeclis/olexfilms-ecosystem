@@ -293,5 +293,12 @@
   "applied_by": "Нанёс",
   "related.warranties": "Гарантии",
   "related.appointments": "Записи",
-  "related.measurements": "Замеры"
+  "related.measurements": "Замеры",
+  "credits.exhausted": "У этого штрихкода не осталось кредитов. Выберите другой штрихкод.",
+  "credits.exhausted_title": "Кредиты закончились",
+  "credits.finish": "Продукт израсходован",
+  "credits.finish_hint": "Все {{value}} оставшихся кредитов уходят на эту услугу; штрихкод нельзя будет использовать в другой услуге.",
+  "credits.finished": "Продукт израсходован",
+  "credits.left": "Кредиты: {{value}}",
+  "credits.use_one_hint": "Эта услуга списывает 1 кредит штрихкода."
 }

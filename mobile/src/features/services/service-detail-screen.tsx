@@ -8,6 +8,7 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { ServiceMeasurementMaps } from '@/features/measure/point-map-view';
+import { creditsText } from '@/features/stock/credits';
 import { VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -309,6 +310,12 @@ export function ServiceDetailScreen() {
                               it.kind === 'partial' && it.meters ? t('meters_value', { value: it.meters }) : null,
                               it.quantity ? t('quantity_value', { value: formatNumber(it.quantity, i18n.language) }) : null,
                               it.applied_parts.length ? t('parts_count', { count: it.applied_parts.length }) : null,
+                              // TEC-1221: the unit's credits left, or that the product was finished here.
+                              it.finished_product
+                                ? t('credits.finished')
+                                : it.credits
+                                  ? t('credits.left', { value: creditsText(it.credits) })
+                                  : null,
                             ]
                               .filter(Boolean)
                               .join(' · ')}

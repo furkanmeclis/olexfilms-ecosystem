@@ -137,5 +137,10 @@
   "clear": "清空",
   "clear_title": "清空购物车？",
   "draft_kept": "草稿已保存；再次发送只会重试提交。",
-  "card.created_by": "下单人 {{name}}"
+  "card.created_by": "下单人 {{name}}",
+  "errors.credits_invalid": "次数必须是 1 到 1000 的整数。",
+  "plotter.badge_credits": "绘图机裁切 · {{value}} 次",
+  "plotter.credits": "次数",
+  "plotter.credits_default": "产品默认值",
+  "plotter.credits_hint": "此行发出的每个条码可用于多少次服务（1–1000）。留空则使用产品默认值。"
 }

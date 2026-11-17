@@ -293,5 +293,12 @@
   "applied_by": "Наніс",
   "related.warranties": "Гарантії",
   "related.appointments": "Записи",
-  "related.measurements": "Заміри"
+  "related.measurements": "Заміри",
+  "credits.exhausted": "У цього штрихкоду не залишилося кредитів. Виберіть інший штрихкод.",
+  "credits.exhausted_title": "Кредити закінчилися",
+  "credits.finish": "Продукт використано",
+  "credits.finish_hint": "Усі {{value}} залишкових кредитів ідуть на цю послугу; штрихкод не можна буде використати в іншій послузі.",
+  "credits.finished": "Продукт використано",
+  "credits.left": "Кредити: {{value}}",
+  "credits.use_one_hint": "Ця послуга списує 1 кредит штрихкоду."
 }

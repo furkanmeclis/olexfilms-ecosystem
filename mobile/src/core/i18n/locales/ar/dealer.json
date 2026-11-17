@@ -293,5 +293,12 @@
   "applied_by": "طبّقه",
   "related.warranties": "الضمانات",
   "related.appointments": "المواعيد",
-  "related.measurements": "القياسات"
+  "related.measurements": "القياسات",
+  "credits.exhausted": "لم يتبقَّ لهذا الباركود أي رصيد استخدام. اختر باركود آخر.",
+  "credits.exhausted_title": "لا يوجد رصيد",
+  "credits.finish": "أنهيت المنتج",
+  "credits.finish_hint": "تذهب جميع الأرصدة المتبقية ({{value}}) إلى هذه الخدمة؛ ولا يمكن استخدام الباركود في خدمة أخرى.",
+  "credits.finished": "تم إنهاء المنتج",
+  "credits.left": "الرصيد: {{value}}",
+  "credits.use_one_hint": "تستخدم هذه الخدمة رصيدًا واحدًا من الباركود."
 }

@@ -26,5 +26,7 @@
   "description": "Description",
   "unit_type.piece": "Pièce",
   "unit_type.roll_meter": "Rouleau (mètres)",
-  "stock_units": "Unités en stock"
+  "stock_units": "Unités en stock",
+  "usage_credits": "Crédits d'utilisation",
+  "usage_credits_value": "{{value}} services"
 }

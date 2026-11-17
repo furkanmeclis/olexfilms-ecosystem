@@ -26,5 +26,7 @@
   "description": "Περιγραφή",
   "unit_type.piece": "Τεμάχιο",
   "unit_type.roll_meter": "Ρολό (μέτρα)",
-  "stock_units": "Μονάδες αποθέματος"
+  "stock_units": "Μονάδες αποθέματος",
+  "usage_credits": "Πιστώσεις χρήσης",
+  "usage_credits_value": "{{value}} υπηρεσίες"
 }

@@ -34,6 +34,8 @@ type Cart = Saved & {
   setPrice: (productUuid: string, price: string) => void;
   /** TEC-1059: the center marks a line "sent plotter cut". */
   setPlotter: (productUuid: string, plotterCut: boolean) => void;
+  /** TEC-1221: usage credits of a plotter cut line's barcodes (raw input). */
+  setPlotterCredits: (productUuid: string, credits: string) => void;
   setDiscount: (productUuid: string, discount: string) => void;
   setGift: (productUuid: string, gift: boolean) => void;
   remove: (productUuid: string) => void;
@@ -62,6 +64,8 @@ export const useCart = create<Cart>((set, get) => {
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, unit_price } : l)) }),
     setPlotter: (productUuid, plotter_cut) =>
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, plotter_cut } : l)) }),
+    setPlotterCredits: (productUuid, plotter_credits) =>
+      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, plotter_credits } : l)) }),
     setDiscount: (productUuid, discount_pct) =>
       update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, discount_pct } : l)) }),
     setGift: (productUuid, is_gift) =>

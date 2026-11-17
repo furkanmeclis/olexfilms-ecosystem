@@ -19,6 +19,8 @@
   "barcode": "Barkod",
   "barcode_fixed": "Sabit barkod",
   "barcode_serial": "Her birime ayrı",
+  "usage_credits": "Kullanım kredisi",
+  "usage_credits_value": "{{value}} hizmet",
   "description": "Açıklama",
   "unit_type.piece": "Adet",
   "unit_type.roll_meter": "Rulo (metre)",

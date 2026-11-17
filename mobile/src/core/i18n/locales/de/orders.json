@@ -137,5 +137,10 @@
   "clear": "Leeren",
   "clear_title": "Warenkorb leeren?",
   "draft_kept": "Der Entwurf wurde gespeichert; erneutes Senden wiederholt nur die Übermittlung.",
-  "card.created_by": "Aufgegeben von {{name}}"
+  "card.created_by": "Aufgegeben von {{name}}",
+  "errors.credits_invalid": "Das Guthaben muss eine ganze Zahl von 1 bis 1000 sein.",
+  "plotter.badge_credits": "Plotter-Zuschnitt · {{value}} Guthaben",
+  "plotter.credits": "Guthaben",
+  "plotter.credits_default": "Produktstandard",
+  "plotter.credits_hint": "In wie vielen Aufträgen jeder Barcode dieser Position verwendet werden kann (1–1000). Leer = Produktstandard."
 }

@@ -293,5 +293,12 @@
   "applied_by": "Angebracht von",
   "related.warranties": "Garantien",
   "related.appointments": "Termine",
-  "related.measurements": "Messungen"
+  "related.measurements": "Messungen",
+  "credits.exhausted": "Dieser Barcode hat kein Nutzungsguthaben mehr. Wählen Sie einen anderen Barcode.",
+  "credits.exhausted_title": "Kein Guthaben mehr",
+  "credits.finish": "Produkt aufgebraucht",
+  "credits.finish_hint": "Alle {{value}} verbleibenden Guthaben gehen an diesen Auftrag; der Barcode kann in keinem anderen Auftrag verwendet werden.",
+  "credits.finished": "Produkt aufgebraucht",
+  "credits.left": "Guthaben: {{value}}",
+  "credits.use_one_hint": "Dieser Auftrag verbraucht 1 Guthaben des Barcodes."
 }

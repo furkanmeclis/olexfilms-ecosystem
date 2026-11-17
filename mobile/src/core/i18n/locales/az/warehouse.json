@@ -723,5 +723,21 @@
   "labels.no_access_title": "Etiketlərə giriş yoxdur",
   "labels.no_access_body": "Rolunuz etiket çap edə bilmir.",
   "labels.ios_only_title": "Bu cihazda etiket çapı",
-  "labels.ios_only_body": "iPhone-da etiket PDF-ləri sistemin paylaşma menyusunda açılır. Bu cihazda onları veb paneldən çap edin."
+  "labels.ios_only_body": "iPhone-da etiket PDF-ləri sistemin paylaşma menyusunda açılır. Bu cihazda onları veb paneldən çap edin.",
+  "stock.credits.amount": "Əlavə ediləcək kredit",
+  "stock.credits.amount_invalid": "1-dən 1000-ə qədər tam ədəd daxil edin.",
+  "stock.credits.amount_placeholder": "Məs. 2",
+  "stock.credits.exhausted": "Kredit qalmayıb; barkod yeni xidmətdə seçilə bilməz.",
+  "stock.credits.finished": "Məhsul bitirildi",
+  "stock.credits.increase": "Kredit əlavə et",
+  "stock.credits.increase_failed": "Kredit əlavə edilə bilmədi",
+  "stock.credits.reason": "Səbəb",
+  "stock.credits.reason_placeholder": "Kredit niyə əlavə olunur?",
+  "stock.credits.reason_required": "Səbəb tələb olunur.",
+  "stock.credits.remaining": "Qalan / ümumi",
+  "stock.credits.services": "İstifadə olunduğu xidmətlər",
+  "stock.credits.short": "Kredit {{value}}",
+  "stock.credits.taken": "{{value}} kredit",
+  "stock.credits.title": "İstifadə krediti",
+  "stock.credits.used": "İstifadə olunduğu xidmət sayı"
 }

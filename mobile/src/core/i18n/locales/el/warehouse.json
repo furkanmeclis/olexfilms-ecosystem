@@ -723,5 +723,21 @@
   "labels.no_access_title": "Χωρίς πρόσβαση σε ετικέτες",
   "labels.no_access_body": "Ο ρόλος σας δεν μπορεί να τυπώνει ετικέτες.",
   "labels.ios_only_title": "Εκτύπωση ετικετών σε αυτή τη συσκευή",
-  "labels.ios_only_body": "Στο iPhone τα PDF ετικετών ανοίγουν στο μενού κοινοποίησης του συστήματος. Σε αυτή τη συσκευή, τυπώστε τα από το web panel."
+  "labels.ios_only_body": "Στο iPhone τα PDF ετικετών ανοίγουν στο μενού κοινοποίησης του συστήματος. Σε αυτή τη συσκευή, τυπώστε τα από το web panel.",
+  "stock.credits.amount": "Πιστώσεις προς προσθήκη",
+  "stock.credits.amount_invalid": "Εισαγάγετε ακέραιο από 1 έως 1000.",
+  "stock.credits.amount_placeholder": "Π.χ. 2",
+  "stock.credits.exhausted": "Δεν υπάρχουν πιστώσεις· ο κώδικας δεν μπορεί να επιλεγεί σε νέα υπηρεσία.",
+  "stock.credits.finished": "Το προϊόν τελείωσε",
+  "stock.credits.increase": "Προσθήκη πιστώσεων",
+  "stock.credits.increase_failed": "Οι πιστώσεις δεν προστέθηκαν",
+  "stock.credits.reason": "Αιτία",
+  "stock.credits.reason_placeholder": "Γιατί προστίθενται πιστώσεις;",
+  "stock.credits.reason_required": "Η αιτία είναι υποχρεωτική.",
+  "stock.credits.remaining": "Υπόλοιπο / σύνολο",
+  "stock.credits.services": "Υπηρεσίες όπου χρησιμοποιήθηκε",
+  "stock.credits.short": "Πιστώσεις {{value}}",
+  "stock.credits.taken": "{{value}} πιστώσεις",
+  "stock.credits.title": "Πιστώσεις χρήσης",
+  "stock.credits.used": "Χρησιμοποιήθηκε σε υπηρεσίες"
 }
