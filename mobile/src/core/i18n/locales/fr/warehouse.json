@@ -958,5 +958,12 @@
   "split.left_on_roll": "Reste sur le rouleau",
   "split.remnant": "Chute",
   "split.remnant_hint": "Le reste est sous la coupe minimale ; il ne peut être utilisé qu'en entier.",
-  "split.print": "Imprimer les étiquettes"
+  "split.print": "Imprimer les étiquettes",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Certaines lignes n'ont pas été scannées à l'arrivée. Scannez-les ou retirez les manquants puis confirmez.",
+  "labels.printed_title": "Les étiquettes ont-elles été imprimées ?",
+  "labels.printed_description": "Si oui, {{count}} unités sont marquées comme imprimées. Une entrée aux étiquettes imprimées ne peut pas être annulée.",
+  "labels.printed_confirm": "Oui, imprimées",
+  "labels.mark_failed": "Les étiquettes n'ont pas pu être marquées comme imprimées.",
+  "m.added_not_placed": "{{barcode}} a été ajouté mais pas placé",
+  "m.warehouse_totals_partial_products": "Seules les {{count}} premières lignes produit de cet entrepôt ont été lues ; la liste peut être incomplète."
 }

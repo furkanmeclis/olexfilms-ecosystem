@@ -958,5 +958,12 @@
   "split.left_on_roll": "Rest auf der Rolle",
   "split.remnant": "Restrolle",
   "split.remnant_hint": "Der Rest liegt unter dem Mindestzuschnitt; er kann nur ganz verwendet werden.",
-  "split.print": "Etiketten drucken"
+  "split.print": "Etiketten drucken",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Einige Positionen wurden beim Eingang nicht gescannt. Scannen Sie sie oder entfernen Sie die fehlenden und bestätigen Sie.",
+  "labels.printed_title": "Wurden die Etiketten gedruckt?",
+  "labels.printed_description": "Dann werden {{count}} Einheiten als gedruckt markiert. Ein Eingang mit gedruckten Etiketten kann nicht storniert werden.",
+  "labels.printed_confirm": "Ja, gedruckt",
+  "labels.mark_failed": "Die Etiketten konnten nicht als gedruckt markiert werden.",
+  "m.added_not_placed": "{{barcode}} wurde hinzugefügt, aber nicht eingelagert",
+  "m.warehouse_totals_partial_products": "Nur die ersten {{count}} Produktzeilen dieses Lagers wurden gelesen; die Liste kann unvollständig sein."
 }

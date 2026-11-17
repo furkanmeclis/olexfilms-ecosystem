@@ -958,5 +958,12 @@
   "split.left_on_roll": "Left on the roll",
   "split.remnant": "Remnant",
   "split.remnant_hint": "What is left is under the product's minimum cut; it can only be used whole.",
-  "split.print": "Print labels"
+  "split.print": "Print labels",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Some lines were not scanned on arrival. Scan them, or remove the missing lines and confirm.",
+  "labels.printed_title": "Were the labels printed?",
+  "labels.printed_description": "If so, {{count}} units are marked as printed. An entry with printed labels cannot be cancelled.",
+  "labels.printed_confirm": "Yes, printed",
+  "labels.mark_failed": "The labels could not be marked as printed.",
+  "m.added_not_placed": "{{barcode}} was added but could not be placed",
+  "m.warehouse_totals_partial_products": "Only the first {{count}} product rows of this warehouse were read; the list may be incomplete."
 }

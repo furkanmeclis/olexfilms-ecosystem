@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
+import { i18n } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
 import type { components } from '@/core/api/schema';
 import { CardRow, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
@@ -17,7 +18,7 @@ import { Text } from '@/ui/text';
 import { resolveScan, useRooms } from './api';
 import { useCurrentWarehouse } from './context';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
-import { alertError, whError } from './format';
+import { alertError, confirmAction, whError } from './format';
 import { IconButton, Segmented } from './parts';
 import { canSharePdf, sharePanelPdf } from './pdf-share';
 import { WarehouseField } from './warehouse-picker';
@@ -43,6 +44,21 @@ function usePdfShare() {
     }
   };
   return { busy, run };
+}
+
+/**
+ * TEC-1224: the label PDF no longer marks units printed; after the share
+ * sheet the user confirms the print and the reserved units become printed.
+ */
+function askPrinted(codes: string[]) {
+  const t = i18n.getFixedT(null, 'warehouse');
+  confirmAction({
+    title: t('labels.printed_title'),
+    body: t('labels.printed_description', { count: codes.length }),
+    action: t('labels.printed_confirm'),
+    onConfirm: () =>
+      void unwrap(api.POST('/v1/stock/labels/units/mark-printed', { body: { barcodes: codes } })).catch((e: unknown) => alertError(e)),
+  });
 }
 
 function LocationLabels() {
@@ -165,7 +181,10 @@ function UnitLabels() {
             size="lg"
             loading={pdf.busy === 'units'}
             onPress={() =>
-              void pdf.run('units', () => sharePanelPdf('/v1/stock/labels/units.pdf', { barcode: codes }, `units-${codes.length}`))
+              void pdf.run('units', async () => {
+                await sharePanelPdf('/v1/stock/labels/units.pdf', { barcode: codes }, `units-${codes.length}`);
+                askPrinted(codes);
+              })
             }
           />
           <Button title={t('labels.clear')} variant="ghost" onPress={() => setCodes([])} />

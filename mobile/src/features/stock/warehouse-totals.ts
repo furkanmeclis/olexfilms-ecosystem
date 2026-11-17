@@ -40,6 +40,15 @@ export type WarehouseProductTotal = {
   incoming: number;
 };
 
+/**
+ * Whether the warehouse has more product rows than the pages read
+ * (WAREHOUSE_TOTALS_MAX_PAGES × WAREHOUSE_TOTALS_PAGE): the list and its
+ * "out of stock" merge are then partial (TEC-1224).
+ */
+export function totalsTruncated(read: number, total: number | undefined): boolean {
+  return total !== undefined && read < total;
+}
+
 /** Maps the API rows to list rows, keeping the API's order (by product name). */
 export function warehouseProductTotals(rows: readonly WarehouseProductLike[]): WarehouseProductTotal[] {
   return rows.map((r) => {

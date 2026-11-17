@@ -958,5 +958,12 @@
   "split.left_on_roll": "المتبقي على اللفة",
   "split.remnant": "بقايا",
   "split.remnant_hint": "المتبقي أقل من الحد الأدنى للقطع؛ يُستخدم كاملًا فقط.",
-  "split.print": "طباعة الملصقات"
+  "split.print": "طباعة الملصقات",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "بعض البنود لم تُمسح عند الوصول. امسحها أو أزل الناقص ثم أكّد.",
+  "labels.printed_title": "هل طُبعت الملصقات؟",
+  "labels.printed_description": "إذا طُبعت، تُعلَّم {{count}} وحدات كمطبوعة. لا يمكن إلغاء إدخال ذي ملصقات مطبوعة.",
+  "labels.printed_confirm": "نعم، طُبعت",
+  "labels.mark_failed": "تعذّر تعليم الملصقات كمطبوعة.",
+  "m.added_not_placed": "أُضيف {{barcode}} لكن تعذّر وضعه في موقع",
+  "m.warehouse_totals_partial_products": "قُرئت أول {{count}} صفوف منتجات فقط من هذا المستودع؛ قد تكون القائمة ناقصة."
 }
