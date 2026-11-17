@@ -78,9 +78,12 @@ type Product struct {
 	Active                 bool        `json:"active"`
 	// DealerOrderable (TEC-1061): false keeps the product out of dealer /
 	// distributor orders (plexi sets, samples); the center still sees it.
-	DealerOrderable bool     `json:"dealer_orderable"`
-	ExternalID      *string  `json:"external_id"`
-	LockedFields    []string `json:"locked_fields"`
+	DealerOrderable bool `json:"dealer_orderable"`
+	// UsageCredits (TEC-1221): how many services one serial piece unit
+	// of the product can be used in (default 5).
+	UsageCredits int32    `json:"usage_credits"`
+	ExternalID   *string  `json:"external_id"`
+	LockedFields []string `json:"locked_fields"`
 	// Roll (TEC-1008): roll defaults; any product may hold rolls (a box
 	// counted as a piece is converted to a roll of DefaultMeters).
 	Roll      RollSettings `json:"roll"`
@@ -117,6 +120,7 @@ type ProductInput struct {
 	UsesFixedBarcode       *bool      `json:"uses_fixed_barcode"`
 	Active                 *bool      `json:"active"`
 	DealerOrderable        *bool      `json:"dealer_orderable"`
+	UsageCredits           *int32     `json:"usage_credits"`
 
 	// WarrantySet / MicronSet mark that the PATCH body named the field, so an
 	// explicit null clears it. Filled by the handler, never from JSON.

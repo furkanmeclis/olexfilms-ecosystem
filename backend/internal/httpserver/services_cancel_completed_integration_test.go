@@ -37,6 +37,7 @@ func TestIntegrationCancelCompletedService(t *testing.T) {
 	cust, veh := it.svcCustomer(dealer, "t356-cust", "34T356"+it.suffix[len(it.suffix)-4:])
 
 	product := it.product(center, "T356P")
+	it.singleUse(product)
 	it.setWarrantyMonths(product, 12)
 	chain := it.stockChain()
 	centerLoc := chain.location(center, "C356")

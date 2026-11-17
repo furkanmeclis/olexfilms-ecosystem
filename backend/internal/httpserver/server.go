@@ -961,6 +961,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
+	// TEC-1221: unit usage credit increase (super_admin).
+	stockmodule.RegisterCreditRoutes(mux, stockhandler.NewCredits(stockusecase.NewUnitCredits(deps.DB, deps.Queries)), tokens, loader)
 	// TEC-1008: bulk barcode operations (super_admin, step-up, background).
 	var bulkQueue stockbulkusecase.Enqueuer
 	if deps.Queue != nil {

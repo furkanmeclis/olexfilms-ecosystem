@@ -132,6 +132,10 @@ func (s *Service) CorrectConsumption(ctx context.Context, c Caller, id, itemID u
 		if err != nil {
 			return err
 		}
+		// TEC-1221: the wrong unit gets back the credits the item took.
+		if err := s.refundItemCredits(ctx, q, svc, item.ID, item.UnitID, c, "consumption_corrected"); err != nil {
+			return err
+		}
 		params := db.CreateServiceItemCorrectionParams{
 			ServiceItemID: item.ID, ReturnMovementID: returned.ID, Reason: reason,
 			CreatedByUserID: c.actor(), ActorOrgID: c.actorOrg(),

@@ -189,6 +189,36 @@ type ItemInput struct {
 	// PlotterCut marks the line "sent plotter cut" (TEC-1058, information
 	// only); nil = off on a new line, unchanged on a kept one.
 	PlotterCut *bool
+	// PlotterCredits (TEC-1221): the usage credits of the units shipped on
+	// a plotter cut line (overrides the product default). Only on a
+	// plotter cut line; 0 clears it, nil keeps it on a kept line.
+	PlotterCredits *int32
+}
+
+// MaxPlotterCredits bounds the plotter credits of a line (TEC-1221).
+const MaxPlotterCredits = 1000
+
+// plotterCredits resolves the credits of a line: in nil keeps cur, 0
+// clears; credits need a plotter cut line.
+func plotterCredits(field string, cut bool, cur pgtype.Int4, in *int32) (pgtype.Int4, error) {
+	out := cur
+	if in != nil {
+		switch {
+		case *in == 0:
+			out = pgtype.Int4{}
+		case *in < 0 || *in > MaxPlotterCredits:
+			return pgtype.Int4{}, invalid(field, fmt.Sprintf("must be between 1 and %d", MaxPlotterCredits))
+		default:
+			out = pgtype.Int4{Int32: *in, Valid: true}
+		}
+	}
+	if !cut {
+		if in != nil && *in > 0 {
+			return pgtype.Int4{}, invalid(field, "only a plotter cut line takes credits")
+		}
+		return pgtype.Int4{}, nil
+	}
+	return out, nil
 }
 
 // CreateInput is a new draft order of the active organization.
@@ -221,6 +251,8 @@ type line struct {
 	note    pgtype.Text
 	// plotterCut: the line's plotter mark (TEC-1058).
 	plotterCut bool
+	// plotterCredits: the plotter line's custom credits (TEC-1221).
+	plotterCredits pgtype.Int4
 }
 
 func textOrNull(p *string) pgtype.Text {
@@ -279,6 +311,17 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 		}
 		seen[p.ID] = true
 		l := line{product: p, note: textOrNull(it.Note), plotterCut: it.PlotterCut != nil && *it.PlotterCut}
+		// A kept line's mark may be unchanged (PlotterCut nil): its credits
+		// are resolved against the stored line by the edit.
+		if it.PlotterCut != nil || it.PlotterCredits == nil || *it.PlotterCredits == 0 {
+			if l.plotterCredits, err = plotterCredits(field+".plotter_credits", l.plotterCut, pgtype.Int4{}, it.PlotterCredits); err != nil {
+				return nil, err
+			}
+		} else if *it.PlotterCredits < 0 || *it.PlotterCredits > MaxPlotterCredits {
+			return nil, invalid(field+".plotter_credits", fmt.Sprintf("must be between 1 and %d", MaxPlotterCredits))
+		} else {
+			l.plotterCredits = pgtype.Int4{Int32: *it.PlotterCredits, Valid: true}
+		}
 		if p.UnitType == "roll_meter" {
 			if it.Quantity != nil || it.Meters == nil {
 				return nil, invalid(field+".meters", "roll products are ordered in meters")
@@ -370,12 +413,20 @@ func (s *Service) insertLines(ctx context.Context, q *db.Queries, o db.Order, bu
 	return nil
 }
 
+// creditsIfCut: a line's credits are stored only with the plotter mark.
+func creditsIfCut(l line) pgtype.Int4 {
+	if !l.plotterCut {
+		return pgtype.Int4{}
+	}
+	return l.plotterCredits
+}
+
 func createLine(ctx context.Context, q *db.Queries, o db.Order, l line, c lineCharge) error {
 	if _, err := q.CreateOrderItem(ctx, db.CreateOrderItemParams{
 		OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
 		UnitPrice: c.unitPrice, PriceSource: c.source, LineTotal: c.lineTotal, Note: l.note,
 		ListUnitPrice: c.listPrice, DiscountPct: c.discount, IsGift: pgtype.Bool{Bool: c.gift, Valid: true},
-		PlotterCut: l.plotterCut,
+		PlotterCut: l.plotterCut, PlotterCredits: creditsIfCut(l),
 	}); err != nil {
 		return fmt.Errorf("orders: create line: %w", err)
 	}
@@ -573,7 +624,8 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
 		}
-		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note, plotterCut: it.PlotterCut}
+		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note, plotterCut: it.PlotterCut,
+			plotterCredits: it.PlotterCredits}
 		if p.UnitType == "roll_meter" {
 			m, err := parseRat(numericText(it.Meters, 2))
 			if err != nil {
@@ -597,6 +649,9 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 			continue
 		}
 		out[i].plotterCut = out[i].plotterCut || l.plotterCut
+		if l.plotterCredits.Valid {
+			out[i].plotterCredits = l.plotterCredits
+		}
 		if l.product.UnitType == "roll_meter" {
 			total := new(big.Rat).Add(out[i].amount, l.amount)
 			m, err := numeric(total.FloatString(2))

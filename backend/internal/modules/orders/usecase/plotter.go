@@ -37,7 +37,10 @@ func canMarkPlotter(c Caller, o db.Order) bool {
 
 // SetPlotterCut sets the plotter mark of one line; the same value is a
 // no-op (no timeline step).
-func (s *Service) SetPlotterCut(ctx context.Context, c Caller, orderUUID, itemUUID uuid.UUID, on bool) (OrderView, error) {
+//
+// TEC-1221: credits (optional) are the plotter line's usage credits; nil
+// keeps the stored value, 0 clears it; turning the mark off clears it.
+func (s *Service) SetPlotterCut(ctx context.Context, c Caller, orderUUID, itemUUID uuid.UUID, on bool, credits *int32) (OrderView, error) {
 	var result db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := s.lockVisible(ctx, q, c, orderUUID)
@@ -60,13 +63,19 @@ func (s *Service) SetPlotterCut(ctx context.Context, c Caller, orderUUID, itemUU
 			return fmt.Errorf("orders: line: %w", err)
 		}
 		result = o
-		if it.PlotterCut == on {
+		next, err := plotterCredits("plotter_credits", on, it.PlotterCredits, credits)
+		if err != nil {
+			return err
+		}
+		if it.PlotterCut == on && it.PlotterCredits == next {
 			return nil
 		}
-		if _, err := q.SetOrderItemPlotterCut(ctx, db.SetOrderItemPlotterCutParams{ID: it.ID, PlotterCut: on}); err != nil {
+		if _, err := q.SetOrderItemPlotterCut(ctx, db.SetOrderItemPlotterCutParams{
+			ID: it.ID, PlotterCut: on, PlotterCredits: next,
+		}); err != nil {
 			return fmt.Errorf("orders: plotter mark: %w", err)
 		}
-		p := activityPayload{ItemUUID: it.Uuid.String(), PlotterCut: &on}
+		p := activityPayload{ItemUUID: it.Uuid.String(), PlotterCut: &on, PlotterCredits: int4Ptr(next)}
 		if pr, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID}); err == nil {
 			p.Product = pr.Name
 		}

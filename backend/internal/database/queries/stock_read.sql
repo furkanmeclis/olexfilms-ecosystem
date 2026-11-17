@@ -223,12 +223,19 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
        c.uuid AS category_uuid, c.name AS category_name,
-       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
+       l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name,
+       -- TEC-1221: credits of a serial piece unit (-1: none), uses so far.
+       COALESCE(cb.credits_total, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+                THEN unit_credit_default(u.id) END, -1)::int AS credits_total,
+       COALESCE(cb.credits_remaining, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+                THEN unit_credit_default(u.id) END, -1)::int AS credits_remaining,
+       COALESCE(cb.used_count, 0)::int AS credits_used
 FROM held
 JOIN units u ON u.id = held.unit_id
 JOIN products p ON p.id = u.product_id
 JOIN product_categories c ON c.id = p.category_id
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
+LEFT JOIN unit_credit_balances cb ON cb.unit_id = u.id
 WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::bigint)
   AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
   AND ((COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 AND u.status IN ('available', 'placed'))

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/credits"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/google/uuid"
@@ -93,6 +94,9 @@ type ItemInput struct {
 	Meters       *string
 	AppliedParts []string
 	Notes        *string
+	// FinishProduct: "ürünü bitirdim" (TEC-1221), the item takes all the
+	// remaining credits of a credit unit.
+	FinishProduct bool
 }
 
 // AddItem adds a stock unit to a draft / pending / processing service.
@@ -210,20 +214,41 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 				return err
 			}
 		}
+		creditUnit := credits.Applies(unit)
+		if in.FinishProduct && !creditUnit {
+			return invalid("finish_product", "only a unit with usage credits can be finished")
+		}
 		if unit.UnitKind == ledger.KindSerial {
 			open, err := q.ListOpenServicesByUnit(ctx, db.ListOpenServicesByUnitParams{UnitID: unit.ID})
 			if err != nil {
 				return fmt.Errorf("services: open services: %w", err)
 			}
 			for _, o := range open {
+				// TEC-1221: a credit unit may sit in several open services
+				// (one credit each), but only once in the same service.
+				if creditUnit {
+					if o.ID == svc.ID {
+						return ErrUnitInUse
+					}
+					continue
+				}
 				if !roll || kind == KindFull || o.Kind == KindFull {
 					return ErrUnitInUse
 				}
 			}
 		}
+		params.FinishedProduct = in.FinishProduct
 		item, err := q.CreateServiceItem(ctx, params)
 		if err != nil {
 			return fmt.Errorf("services: create item: %w", err)
+		}
+		if creditUnit {
+			if _, err := credits.UseForItem(ctx, q, unit, creditActor(c, svc), creditRef(svc, item.ID), in.FinishProduct); err != nil {
+				if errors.Is(err, credits.ErrExhausted) {
+					return ErrUnitCreditsExhausted
+				}
+				return err
+			}
 		}
 		if err := s.evaluateCertificatePolicy(ctx, q, tx, svc, c); err != nil {
 			return err
@@ -256,6 +281,9 @@ func (s *Service) RemoveItem(ctx context.Context, c Caller, id, itemID uuid.UUID
 		}
 		if err != nil {
 			return fmt.Errorf("services: item: %w", err)
+		}
+		if err := s.refundItemCredits(ctx, q, svc, item.ID, item.UnitID, c, "item_removed"); err != nil {
+			return err
 		}
 		if _, err := q.DeleteServiceItem(ctx, db.DeleteServiceItemParams{ID: item.ID, ServiceID: svc.ID}); err != nil {
 			return fmt.Errorf("services: delete item: %w", err)
@@ -352,4 +380,28 @@ func mustJSON(v any) []byte {
 		return []byte("[]")
 	}
 	return b
+}
+
+// creditActor is the organization and user of a credit movement written by
+// a service action.
+func creditActor(c Caller, svc db.Service) credits.Actor {
+	return credits.Actor{OrgID: svc.OrganizationID, UserID: actorPtr(c)}
+}
+
+func creditRef(svc db.Service, itemID int64) credits.Ref {
+	return credits.Ref{ServiceID: svc.ID, ServiceItemID: itemID, ServiceNo: svc.ServiceNo}
+}
+
+// refundItemCredits gives back the credits a service item took (TEC-1221):
+// the item is removed or its service cancelled. The unit is locked first.
+func (s *Service) refundItemCredits(ctx context.Context, q *db.Queries, svc db.Service, itemID, unitID int64,
+	c Caller, reason string) error {
+	unit, err := q.LockUnit(ctx, unitID)
+	if err != nil {
+		return fmt.Errorf("services: lock unit: %w", err)
+	}
+	if _, _, err := credits.RefundItem(ctx, q, unit, creditActor(c, svc), creditRef(svc, itemID), reason); err != nil {
+		return fmt.Errorf("services: refund credits: %w", err)
+	}
+	return nil
 }

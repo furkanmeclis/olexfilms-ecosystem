@@ -118,6 +118,19 @@ func RegisterPlatformRoutes(
 	))
 }
 
+// RegisterCreditRoutes mounts the TEC-1221 unit credit increase: platform
+// super admin only (kredili kod, TEC-1084).
+func RegisterCreditRoutes(
+	mux *http.ServeMux,
+	h *stockhandler.Credits,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+) {
+	mux.Handle("POST /v1/platform/stock/units/{uuid}/credits", middleware.Chain(
+		http.HandlerFunc(h.Increase), middleware.Authenticate(tokens, loader), middleware.RequireSuperAdmin,
+	))
+}
+
 // RegisterLabelRoutes mounts the TEC-202 barcode batches (center only,
 // stock.write), the label templates (stock.read / stock.write) and the label
 // print endpoints. Location labels sit under /v1/warehouse and need

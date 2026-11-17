@@ -20,7 +20,11 @@ type stockUnitPage struct {
 		UnitKind        string  `json:"unit_kind"`
 		QuantityOnHand  int32   `json:"quantity_on_hand"`
 		RemainingMeters *string `json:"remaining_meters"`
-		Product         struct {
+		Credits         *struct {
+			Total     int32 `json:"credits_total"`
+			Remaining int32 `json:"credits_remaining"`
+		} `json:"credits"`
+		Product struct {
 			UUID           string   `json:"uuid"`
 			AvailableParts []string `json:"available_parts"`
 		} `json:"product"`
@@ -113,6 +117,7 @@ func TestIntegrationServiceCompletion(t *testing.T) {
 	cust, veh := it.svcCustomer(dealerA, "t180-cust", "34T180"+it.suffix[len(it.suffix)-4:])
 
 	piece := it.product(center, "T180P")
+	it.singleUse(piece)
 	roll := it.product(center, "T180R")
 	fixed := it.product(center, "T180F")
 	if _, err := it.pool.Exec(ctx, `UPDATE products SET unit_type = 'roll_meter' WHERE id = $1`, roll.ID); err != nil {

@@ -51,6 +51,7 @@ function product(images: CatalogProduct["images"]): CatalogProduct {
     uses_fixed_barcode: false,
     active: true,
     dealer_orderable: true,
+    usage_credits: 5,
     external_id: null,
     locked_fields: [],
     roll: {

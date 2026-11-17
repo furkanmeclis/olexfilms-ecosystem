@@ -18,7 +18,7 @@ UPDATE products
 SET images = images || jsonb_build_array($1::jsonb)
 WHERE id = $2 AND brand_id = $3
   AND jsonb_array_length(images) < $4::int
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type AppendProductImageParams struct {
@@ -64,6 +64,7 @@ func (q *Queries) AppendProductImage(ctx context.Context, arg AppendProductImage
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -157,7 +158,7 @@ INSERT INTO products (
     organization_id, brand_id, category_id, sku, name, description_md,
     warranty_duration_months, micron_thickness, images, unit_type,
     uses_fixed_barcode, active, external_id, connection_id, locked_fields,
-    dealer_orderable
+    dealer_orderable, usage_credits
 )
 VALUES (
     $1, $2, $3, $4,
@@ -166,9 +167,11 @@ VALUES (
     $11, $12, $13,
     $14, $15,
     -- TEC-1061: NULL keeps the column default (open to dealer orders).
-    COALESCE($16::bool, true)
+    COALESCE($16::bool, true),
+    -- TEC-1221: NULL keeps the column default (5).
+    COALESCE($17::int, 5)
 )
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type CreateProductParams struct {
@@ -188,6 +191,7 @@ type CreateProductParams struct {
 	ConnectionID           pgtype.Int8    `json:"connection_id"`
 	LockedFields           []string       `json:"locked_fields"`
 	DealerOrderable        pgtype.Bool    `json:"dealer_orderable"`
+	UsageCredits           pgtype.Int4    `json:"usage_credits"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -208,6 +212,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.ConnectionID,
 		arg.LockedFields,
 		arg.DealerOrderable,
+		arg.UsageCredits,
 	)
 	var i Product
 	err := row.Scan(
@@ -235,6 +240,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -360,7 +366,7 @@ func (q *Queries) GetActiveProductUUIDByImageKey(ctx context.Context, key string
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits FROM products
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -397,12 +403,13 @@ func (q *Queries) GetProduct(ctx context.Context, arg GetProductParams) (Product
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
 
 const getProductBySKU = `-- name: GetProductBySKU :one
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits FROM products
 WHERE brand_id = $1 AND sku = $2
 `
 
@@ -439,12 +446,13 @@ func (q *Queries) GetProductBySKU(ctx context.Context, arg GetProductBySKUParams
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
 
 const getProductByUUID = `-- name: GetProductByUUID :one
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits FROM products
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -481,12 +489,13 @@ func (q *Queries) GetProductByUUID(ctx context.Context, arg GetProductByUUIDPara
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
 
 const getProductByUUIDForIndex = `-- name: GetProductByUUIDForIndex :one
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products WHERE uuid = $1
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits FROM products WHERE uuid = $1
 `
 
 // Search indexer only. Every document carries its brand_id and the search
@@ -519,6 +528,7 @@ func (q *Queries) GetProductByUUIDForIndex(ctx context.Context, argUuid uuid.UUI
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -786,7 +796,7 @@ func (q *Queries) ListProductCategoryOrder(ctx context.Context, brandID int64) (
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable FROM products p
+SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at, p.default_roll_meters, p.roll_width_cm, p.min_cut_meters, p.waste_pct, p.dealer_orderable, p.usage_credits FROM products p
 WHERE p.brand_id = $1
   AND (
     COALESCE(cardinality($2::bigint[]), 0) = 0
@@ -922,6 +932,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 			&i.MinCutMeters,
 			&i.WastePct,
 			&i.DealerOrderable,
+			&i.UsageCredits,
 		); err != nil {
 			return nil, err
 		}
@@ -934,7 +945,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 }
 
 const listProductsForIndex = `-- name: ListProductsForIndex :many
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable FROM products ORDER BY id
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits FROM products ORDER BY id
 `
 
 // Search indexer only (full reindex across brands).
@@ -972,6 +983,7 @@ func (q *Queries) ListProductsForIndex(ctx context.Context) ([]Product, error) {
 			&i.MinCutMeters,
 			&i.WastePct,
 			&i.DealerOrderable,
+			&i.UsageCredits,
 		); err != nil {
 			return nil, err
 		}
@@ -988,7 +1000,7 @@ UPDATE products
 SET images = $1::jsonb
 WHERE id = $2 AND brand_id = $3
   AND images = $4::jsonb
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type ReplaceProductImagesParams struct {
@@ -1033,6 +1045,7 @@ func (q *Queries) ReplaceProductImages(ctx context.Context, arg ReplaceProductIm
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -1041,7 +1054,7 @@ const setProductActiveByUUID = `-- name: SetProductActiveByUUID :one
 UPDATE products
 SET active = $1
 WHERE uuid = $2 AND brand_id = $3
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type SetProductActiveByUUIDParams struct {
@@ -1079,6 +1092,7 @@ func (q *Queries) SetProductActiveByUUID(ctx context.Context, arg SetProductActi
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -1118,7 +1132,7 @@ const setProductCategoryByUUID = `-- name: SetProductCategoryByUUID :one
 UPDATE products
 SET category_id = $1
 WHERE uuid = $2 AND brand_id = $3
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type SetProductCategoryByUUIDParams struct {
@@ -1156,6 +1170,7 @@ func (q *Queries) SetProductCategoryByUUID(ctx context.Context, arg SetProductCa
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -1186,7 +1201,7 @@ const setProductDealerOrderableByUUID = `-- name: SetProductDealerOrderableByUUI
 UPDATE products
 SET dealer_orderable = $1
 WHERE uuid = $2 AND brand_id = $3
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type SetProductDealerOrderableByUUIDParams struct {
@@ -1224,6 +1239,7 @@ func (q *Queries) SetProductDealerOrderableByUUID(ctx context.Context, arg SetPr
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -1300,9 +1316,10 @@ SET category_id = $1,
     unit_type = $8,
     uses_fixed_barcode = $9,
     active = $10,
-    dealer_orderable = $11
-WHERE id = $12 AND brand_id = $13
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+    dealer_orderable = $11,
+    usage_credits = $12
+WHERE id = $13 AND brand_id = $14
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type UpdateProductParams struct {
@@ -1317,6 +1334,7 @@ type UpdateProductParams struct {
 	UsesFixedBarcode       bool           `json:"uses_fixed_barcode"`
 	Active                 bool           `json:"active"`
 	DealerOrderable        bool           `json:"dealer_orderable"`
+	UsageCredits           int32          `json:"usage_credits"`
 	ID                     int64          `json:"id"`
 	BrandID                int64          `json:"brand_id"`
 }
@@ -1336,6 +1354,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		arg.UsesFixedBarcode,
 		arg.Active,
 		arg.DealerOrderable,
+		arg.UsageCredits,
 		arg.ID,
 		arg.BrandID,
 	)
@@ -1365,6 +1384,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }
@@ -1419,7 +1439,7 @@ UPDATE products
 SET default_roll_meters = $1, roll_width_cm = $2,
     min_cut_meters = $3, waste_pct = $4
 WHERE uuid = $5 AND brand_id = $6
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits
 `
 
 type UpdateProductRollSettingsParams struct {
@@ -1467,6 +1487,7 @@ func (q *Queries) UpdateProductRollSettings(ctx context.Context, arg UpdateProdu
 		&i.MinCutMeters,
 		&i.WastePct,
 		&i.DealerOrderable,
+		&i.UsageCredits,
 	)
 	return i, err
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/credits"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -71,6 +72,18 @@ type ItemView struct {
 	// unit went back to stock, ReplacementBarcode (if any) was consumed
 	// instead. nil when the item was not corrected.
 	Correction *ItemCorrectionView `json:"correction"`
+	// FinishedProduct: "ürünü bitirdim" (TEC-1221), the item took all the
+	// remaining credits of the unit.
+	FinishedProduct bool `json:"finished_product"`
+	// Credits is the unit's current credit state (TEC-1221); nil for a
+	// unit without credits (roll, fixed barcode).
+	Credits *UnitCreditsView `json:"credits"`
+}
+
+// UnitCreditsView is the credit state of a unit (TEC-1221).
+type UnitCreditsView struct {
+	Total     int32 `json:"credits_total"`
+	Remaining int32 `json:"credits_remaining"`
 }
 
 // ItemCorrectionView is the consumption correction of an item (TEC-230).
@@ -341,7 +354,12 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 			UUID: it.Uuid, Product: ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
 			Barcode: u.Barcode, UnitKind: u.UnitKind, Kind: it.Kind, Meters: numericTextPtr(it.Meters),
 			AppliedParts: parts, Notes: textPtr(it.Notes), CreatedAt: it.CreatedAt.Time,
-			Correction: correctionByItem[it.ID],
+			Correction: correctionByItem[it.ID], FinishedProduct: it.FinishedProduct,
+		}
+		if b, ok, err := credits.Get(ctx, q, u); err != nil {
+			return ServiceView{}, err
+		} else if ok {
+			iv.Credits = &UnitCreditsView{Total: b.Total, Remaining: b.Remaining}
 		}
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32

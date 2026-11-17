@@ -153,6 +153,7 @@ func TestIntegrationServicesFlow(t *testing.T) {
 
 	// Stock: u1 and u2 reach dealer A, u3 stays at the distributor.
 	p := it.product(center, "T179")
+	it.singleUse(p)
 	c := it.stockChain()
 	cLoc := c.location(center, "C179")
 	dLoc := c.location(dist, "D179")
@@ -206,11 +207,11 @@ func TestIntegrationServicesFlow(t *testing.T) {
 	// The center (brand scope) sees it.
 	it.svcCall("GET", "/v1/services/"+s1.UUID, staffTok, nil, http.StatusOK)
 
-	// 4. The same serial unit in a second open service is 409 (and twice in
-	// the same service too).
+	// 4. A single-use unit (1 credit, TEC-1221) taken by an open service
+	// is 409 in a second one (and twice in the same service too).
 	s2, _ := it.svcCall("POST", "/v1/services", aTok, body, http.StatusCreated)
 	if _, ec := it.svcCall("POST", "/v1/services/"+s2.UUID+"/items", aTok,
-		map[string]any{"barcode": units[0].Barcode}, http.StatusConflict); ec != "SERVICE_UNIT_IN_USE" {
+		map[string]any{"barcode": units[0].Barcode}, http.StatusConflict); ec != "UNIT_CREDITS_EXHAUSTED" {
 		t.Fatalf("double unit = %s", ec)
 	}
 	if _, ec := it.svcCall("POST", "/v1/services/"+s1.UUID+"/items", aTok,

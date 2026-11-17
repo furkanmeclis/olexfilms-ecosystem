@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/credits"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/jackc/pgx/v5"
@@ -51,6 +52,16 @@ func (s *Service) complete(ctx context.Context, q *db.Queries, tx pgx.Tx, svc db
 	itemIDs := make([]int64, 0, len(items))
 	for _, item := range items {
 		mv, err := s.consume(ctx, q, tx, l, svc, item, c)
+		if errors.Is(err, errNoConsumption) {
+			// TEC-1221: a credit unit with credits left (or still in
+			// another open service) stays in stock; no ledger movement.
+			itemIDs = append(itemIDs, item.ID)
+			payloadItems = append(payloadItems, map[string]any{
+				"id": item.ID, "uuid": item.Uuid.String(), "unit_id": item.UnitID, "product_id": item.ProductID,
+				"kind": item.Kind, "credit_use": true,
+			})
+			continue
+		}
 		if err != nil {
 			return db.Service{}, err
 		}
@@ -142,6 +153,15 @@ func (s *Service) consume(ctx context.Context, q *db.Queries, tx pgx.Tx, l *ledg
 		return post(ctx, l, tx, m, item)
 	}
 
+	if credits.Applies(unit) {
+		if done, err := s.creditUnitStaysInStock(ctx, q, svc, item, unit); err != nil || done {
+			if err == nil {
+				err = errNoConsumption
+			}
+			return db.StockMovement{}, err
+		}
+	}
+
 	// Serial: the service organization must hold the unit (the partial
 	// consumption rule keeps the owner and does not check it).
 	if err := requireSerialHeld(ctx, q, unit.ID, svc.OrganizationID); err != nil {
@@ -167,6 +187,44 @@ func (s *Service) consume(ctx context.Context, q *db.Queries, tx pgx.Tx, l *ledg
 		// cm == remaining: the cut takes the rest of the roll, a consumption.
 	}
 	return post(ctx, l, tx, m, item)
+}
+
+// errNoConsumption: the item's unit is not consumed by this completion
+// (TEC-1221 credit unit).
+var errNoConsumption = errors.New("services: no consumption")
+
+// creditUnitStaysInStock decides the completion of a credit unit item
+// (TEC-1221). The unit is consumed (status used, owner the service) only
+// when this item took its credits, none is left and no other open service
+// still holds it; otherwise it stays in the organization's stock and the
+// item has no ledger movement. An item that never took credits (a warranty
+// reapply copies the original items) does not touch the stock.
+func (s *Service) creditUnitStaysInStock(ctx context.Context, q *db.Queries, svc db.Service, item db.ServiceItem,
+	unit db.Unit) (bool, error) {
+	took, err := credits.TookCredits(ctx, q, item.ID)
+	if err != nil {
+		return false, err
+	}
+	if !took {
+		return true, nil
+	}
+	if err := requireSerialHeld(ctx, q, unit.ID, svc.OrganizationID); err != nil {
+		return false, fmt.Errorf("%w: item %s", err, item.Uuid)
+	}
+	left, err := credits.Remaining(ctx, q, unit)
+	if err != nil {
+		return false, err
+	}
+	if left > 0 {
+		return true, nil
+	}
+	others, err := q.ListOpenServicesByUnit(ctx, db.ListOpenServicesByUnitParams{
+		UnitID: unit.ID, ExcludeServiceID: pgtype.Int8{Int64: svc.ID, Valid: true},
+	})
+	if err != nil {
+		return false, fmt.Errorf("services: open services: %w", err)
+	}
+	return len(others) > 0, nil
 }
 
 func post(ctx context.Context, l *ledger.Ledger, tx pgx.Tx, m ledger.Movement, item db.ServiceItem) (db.StockMovement, error) {

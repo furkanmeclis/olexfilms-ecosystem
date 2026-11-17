@@ -344,6 +344,7 @@ func TestIntegrationF1GateOrderServiceWarranty(t *testing.T) {
 	ctx := context.Background()
 	f := it.newReceiveFixture("t186", 1860)
 	it.setWarrantyMonths(f.piece, 24)
+	it.singleUse(f.piece)
 	item := []any{map[string]any{"product_uuid": f.piece.Uuid.String(), "quantity": 1}}
 
 	// 1. Center -> distributor -> dealer.

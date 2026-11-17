@@ -6326,6 +6326,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/stock/units/{uuid}/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Increase the usage credits of a unit (super_admin)
+         * @description TEC-1221 (kredili kod): adds `amount` credits to the total and the remaining credits of a serial piece unit as a credit ledger movement with the reason and an activity row (`stock.unit_credits_increased`). Rolls and fixed barcodes carry no credits (409 UNIT_CREDITS_NOT_APPLICABLE).
+         */
+        post: operations["increaseStockUnitCredits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/splits": {
         parameters: {
             query?: never;
@@ -12608,7 +12628,7 @@ export interface paths {
         put?: never;
         /**
          * Add a stock unit to a service (by barcode)
-         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts.
+         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts. TEC-1221 (kredili kod): a serial piece unit takes one usage credit per service (finish_product takes all the rest) and may sit in several open services while it has credits; with none left it is 409 UNIT_CREDITS_EXHAUSTED, twice in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or cancelling the service gives the credits back; completion consumes the unit only when its last credit is used and no other open service holds it.
          */
         post: operations["addServiceItem"];
         delete?: never;
@@ -23023,6 +23043,8 @@ export interface components {
             active: boolean;
             /** @description TEC-1061: false keeps the product out of dealer / distributor orders (plexi sets, samples): hidden from their catalog list and refused in their orders (PRODUCT_NOT_ORDERABLE). The center may still add it to an order it opens for a dealer. */
             dealer_orderable: boolean;
+            /** @description TEC-1221 (kredili kod): how many services one serial piece unit (barcode) of the product can be used in; default 5. A plotter cut order line may override it for the units shipped on it. */
+            usage_credits: number;
             /** @description Reserved for the F2 Glorian catalog sync (read-only) */
             external_id: string | null;
             /** @description Fields locked by the F2 Glorian sync (read-only) */
@@ -23051,6 +23073,8 @@ export interface components {
             uses_fixed_barcode?: boolean;
             active?: boolean;
             dealer_orderable?: boolean;
+            /** @description TEC-1221 usage credits of a barcode (default 5); super admin or product edit permission. */
+            usage_credits?: number;
         };
         EnvelopeCatalogCategory: {
             /** @enum {boolean} */
@@ -23347,6 +23371,56 @@ export interface components {
             };
             trace: null | components["schemas"]["StockUnitTrace"];
             splits: components["schemas"]["StockUnitSplits"];
+            /** @description TEC-1221 usage credits of a serial piece unit; null for a roll or a fixed barcode. */
+            credits?: components["schemas"]["StockUnitCredits"] | null;
+        };
+        /** @description TEC-1221 (kredili kod): the credit card of a unit. Every selection in a service takes one credit, "ürünü bitirdim" takes the rest, a removed item or a cancelled service gives them back, the super admin adds credits. Movements are an append-only ledger. */
+        StockUnitCredits: {
+            /** Format: uuid */
+            unit_uuid: string;
+            credits_total: number;
+            credits_remaining: number;
+            /** @description Services the unit is used in (not refunded) */
+            used_count: number;
+            /** @description Services the unit was selected in (in the viewer's reach), newest first. */
+            services: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                status: string;
+                finished_product: boolean;
+                /** @description Credits the item holds (0 once given back) */
+                credits_taken: number;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                completed_at: string | null;
+            }[];
+            movements: {
+                /** Format: uuid */
+                uuid: string;
+                /** @enum {string} */
+                type: "opening" | "migration" | "service_use" | "service_finish" | "service_refund" | "increase";
+                total_delta: number;
+                remaining_delta: number;
+                reason: string | null;
+                /** Format: uuid */
+                service_uuid: string | null;
+                service_no: string | null;
+                actor_name: string | null;
+                /** Format: date-time */
+                created_at: string;
+            }[];
+        };
+        StockUnitCreditIncreaseInput: {
+            amount: number;
+            reason: string;
+        };
+        EnvelopeStockUnitCredits: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockUnitCredits"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         /**
          * @description TEC-1078: a split family member relative to the organization the family is read for: on_hand (available/placed there), sold (available/placed at another organization), used (consumed or used up), in_transit, other (label not in stock yet, void).
@@ -23504,6 +23578,11 @@ export interface components {
                 /** @enum {string} */
                 source: "list" | "override" | "distributor";
             } | null;
+            /** @description TEC-1221 usage credits of a serial piece unit; null for a roll or a fixed barcode. */
+            credits_total?: number | null;
+            credits_remaining?: number | null;
+            /** @description Services the unit is used in */
+            credits_used?: number | null;
             /** Format: date-time */
             updated_at: string;
             /** @description family=<barcode> only (TEC-1078): the current holder. */
@@ -27000,6 +27079,14 @@ export interface components {
             created_at: string;
             /** @description Consumption correction of the item (TEC-230); null when not corrected */
             correction: components["schemas"]["ServiceItemCorrection"] | null;
+            /** @description TEC-1221 "ürünü bitirdim" — the item took every remaining credit of the unit. */
+            finished_product?: boolean;
+            /** @description TEC-1221 current credits of the unit; null for a roll or a fixed barcode. */
+            credits?: components["schemas"]["UnitCreditsSummary"] | null;
+        };
+        UnitCreditsSummary: {
+            credits_total: number;
+            credits_remaining: number;
         };
         ServiceItemCorrection: {
             /** Format: uuid */
@@ -27036,6 +27123,8 @@ export interface components {
             initial_meters: string | null;
             /** @description Meters left on the roll */
             remaining_meters: string | null;
+            /** @description TEC-1221 usage credits of a serial piece unit (null for a roll or a fixed barcode). A unit without credits left is not listed; a unit with credits is listed even while other open services use it, but not in a service that already has it. */
+            credits?: components["schemas"]["UnitCreditsSummary"] | null;
         };
         ServiceImage: {
             /** Format: uuid */
@@ -27360,6 +27449,8 @@ export interface components {
             meters?: number;
             applied_parts?: string[];
             notes?: string;
+            /** @description TEC-1221 "ürünü bitirdim": the item takes every remaining credit of the unit (serial piece units only). A unit without credits answers 409 UNIT_CREDITS_EXHAUSTED. */
+            finish_product?: boolean;
         };
         ServiceTransitionInput: {
             status: components["schemas"]["ServiceStatus"];
@@ -28101,6 +28192,8 @@ export interface components {
             is_gift: boolean;
             /** @description "Sent plotter cut" (TEC-1058, information only) */
             plotter_cut: boolean;
+            /** @description TEC-1221: usage credits of the barcodes shipped on this plotter cut line (overrides the product default); null = the product default. */
+            plotter_credits?: number | null;
             /** @description The line is on a manual invoice record (TEC-1030) */
             invoiced: boolean;
             /** @description Number of that invoice record */
@@ -28572,9 +28665,13 @@ export interface components {
             note?: string;
             /** @description TEC-1058: "sent plotter cut" (information only). A new line without it is off; on a kept line of a seller edit, absent keeps the mark. */
             plotter_cut?: boolean;
+            /** @description TEC-1221: usage credits of the barcodes of a plotter cut line (only with plotter_cut; 0 clears, absent keeps it on a kept line). */
+            plotter_credits?: number;
         };
         OrderItemPatchInput: {
             plotter_cut: boolean;
+            /** @description TEC-1221: usage credits of the line's barcodes; absent keeps, 0 clears; turning plotter_cut off clears it. */
+            plotter_credits?: number;
         };
         OrderItemsInput: {
             items: components["schemas"]["OrderItemInput"][];
@@ -44339,6 +44436,37 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    increaseStockUnitCredits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockUnitCreditIncreaseInput"];
+            };
+        };
+        responses: {
+            /** @description The unit's credit card after the increase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockUnitCredits"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     createStockSplit: {
