@@ -9,7 +9,7 @@ import {
 import { CalendarClock, CalendarPlus, Car, Store } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";

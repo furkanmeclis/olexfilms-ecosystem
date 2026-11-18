@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Unlink } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { AppleIcon } from "@/components/icons/apple-icon";
 import { FacebookIcon } from "@/components/icons/facebook-icon";

@@ -38,7 +38,7 @@ import {
 } from "@/features/accounting/services/accounting.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type ManualEntryFormProps = {
   accounts: FinanceAccount[];

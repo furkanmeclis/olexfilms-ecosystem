@@ -57,7 +57,7 @@ import {
   warehouseService,
 } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const RETURNS_PERSIST_KEY = "tenant-warehouse-return-inspections-v1";
 

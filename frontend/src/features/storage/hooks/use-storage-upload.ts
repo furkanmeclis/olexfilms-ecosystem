@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { storageKeys } from "@/features/storage/hooks/query-keys";
 import { storageService } from "@/features/storage/services/storage.service";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 
 export type UploadJob = {

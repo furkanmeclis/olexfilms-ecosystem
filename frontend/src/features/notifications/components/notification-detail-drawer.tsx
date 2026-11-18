@@ -12,7 +12,7 @@ import { formatNotificationText } from "@/features/notifications/lib/notificatio
 import { runNotificationAction } from "@/features/notifications/lib/run-notification-action";
 import type { Notification } from "@/features/notifications/services/notifications.service";
 import { useOptionalTenant } from "@/features/organizations/providers/tenant-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 
 type NotificationDetailDrawerProps = {

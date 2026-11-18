@@ -34,7 +34,7 @@ import {
 import { download } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const RANKING_PERSIST_KEY = "tenant-performance-ranking-v1";
 const EXPORT_PAGE = 100;

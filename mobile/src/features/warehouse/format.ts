@@ -1,6 +1,5 @@
 import * as Haptics from 'expo-haptics';
 import { type Href, router } from 'expo-router';
-import { Alert } from 'react-native';
 
 import { ApiError, isApiError } from '@/core/api/errors';
 import { errorMessage, i18n } from '@/core/i18n';
@@ -8,6 +7,7 @@ import type { StatusTone } from '@/ui/status-pill';
 
 import type { StockCountStatus, StockEntryStatus, TransferStatus } from './api';
 import { intlLocale } from '@/core/digits';
+import { toast } from '@/ui/toast';
 
 /**
  * Message for a failed warehouse call: the web errors catalog first, then the
@@ -28,7 +28,7 @@ export function isCode(e: unknown, code: string) {
 /** Error haptic + alert; used by every failed action. */
 export function alertError(e: unknown) {
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  Alert.alert(whError(e));
+  toast.error(whError(e));
 }
 
 /** Asks before an irreversible step (shared with the other features). */

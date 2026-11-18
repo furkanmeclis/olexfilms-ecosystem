@@ -21,7 +21,7 @@ import {
   type SessionRealm,
 } from "@/features/mcp/services/mcp.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const CONNECTED_APPS_PERSIST_KEY = {
   panel: "profile-connected-apps-v1",

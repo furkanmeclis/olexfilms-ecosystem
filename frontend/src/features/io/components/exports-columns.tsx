@@ -22,7 +22,7 @@ import {
 import { exportsService } from "@/features/io/services/exports.service";
 import type { ExportJob, ExportJobScope } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 function statusVariant(status: string) {
   if (status === "completed") return "default" as const;

@@ -30,7 +30,7 @@ import type {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const PLATFORM_MODULES_PERSIST_KEY = "platform-modules-v1";
 

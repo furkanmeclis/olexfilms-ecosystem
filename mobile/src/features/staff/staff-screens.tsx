@@ -15,6 +15,7 @@ import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   filterStaff,
@@ -135,7 +136,7 @@ export function StaffListScreen() {
       void qc.invalidateQueries({ queryKey: staffKey });
       router.push(child(s.uuid));
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   return (
@@ -239,7 +240,7 @@ export function StaffDetailScreen() {
       qc.setQueryData<StaffProfile[]>(staffKey, (old) => old?.map((x) => (x.uuid === s.uuid ? s : x)));
       void qc.invalidateQueries({ queryKey: staffKey });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const toggleActive = (s: StaffProfile) => {
     const next = { ...staffForm(s), active: !s.active };

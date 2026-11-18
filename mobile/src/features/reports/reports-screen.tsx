@@ -2,9 +2,6 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
-
-import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { ErrorState, ListSkeleton, useChildHref, useFormat } from '@/features/admin/kit';
 import { PeriodBar } from '@/features/analytics-kit/period-bar';
 import { DEFAULT_PERIOD, type PeriodState, type Preset, PRESETS, toQuery } from '@/features/analytics-kit/period';
@@ -15,6 +12,7 @@ import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { supportOf, useReport, useReportCatalog } from './api';
 import { canShareExport, type ExportFormat, shareReportExport } from './export';
@@ -104,7 +102,7 @@ export function ReportScreen() {
     try {
       await shareReportExport(key, { ...toQuery(period, support), ...(limit ? { limit } : {}) }, format, entry?.title ?? report.data?.title ?? key);
     } catch (e) {
-      Alert.alert(t('export_failed'), errorMessage(isApiError(e) ? e.code : undefined, t('common:error_generic')));
+      toast.apiError(e, { title: t('export_failed') });
     } finally {
       setExporting(false);
     }

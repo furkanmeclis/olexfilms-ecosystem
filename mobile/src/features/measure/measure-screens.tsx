@@ -6,10 +6,8 @@ import { Alert, type AlertButton, Image, Pressable, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import type { paths } from '@/core/api/schema';
 import { APP_VERSION, MOBILE_API_VERSION } from '@/core/config';
-import { errorMessage } from '@/core/i18n';
 import { usePreferences } from '@/core/preferences';
 import { useCan } from '@/core/spaces';
 import { formatThickness, toMicrons } from '@/core/units';
@@ -59,6 +57,7 @@ import type { PartMapData } from './point-map';
 import { MeasurementMap } from './point-map-view';
 import type { IconName } from '@/ui/icons';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 type Measurement =
   paths['/v1/measurements']['get']['responses'][200]['content']['application/json']['data']['items'][number];
@@ -762,7 +761,7 @@ export function NewMeasurementScreen() {
 
   const keepDraft = () => {
     storeDraft();
-    Alert.alert(t('draft_saved'));
+    toast.success(t('draft_saved'));
     releaseLeave();
     router.back();
   };
@@ -808,11 +807,11 @@ export function NewMeasurementScreen() {
     onSuccess: () => {
       removeDraft(clientId);
       void qc.invalidateQueries({ queryKey: ['measurements', 'list'] });
-      Alert.alert(t('saved'));
+      toast.success(t('saved'));
       releaseLeave();
       router.back();
     },
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
 
   const unitLabel = unit === 'mil' ? 'mil' : 'µm';

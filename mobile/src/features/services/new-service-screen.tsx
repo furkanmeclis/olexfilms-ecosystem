@@ -23,6 +23,7 @@ import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
 import { useLeaveGuard } from '@/ui/use-leave-guard';
+import { toast } from '@/ui/toast';
 
 import { ServiceContractCard, useContractRequiredAlert } from './contract-card';
 import { customerSubtitle, customerTitle } from './customer-name';
@@ -210,7 +211,7 @@ export function NewServiceScreen() {
   const removeItem = useMutation({
     mutationFn: (item: string) => unwrap(api.DELETE('/v1/services/{uuid}/items/{item}', { params: { path: { uuid, item } } })),
     onSuccess: onWrite,
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const finish = useMutation({
@@ -234,7 +235,7 @@ export function NewServiceScreen() {
         // Nothing to clean up.
       }
       // A kept draft is easy to mistake for a finished service: say so.
-      if (done.status === 'draft') Alert.alert(t('wizard.saved_draft'));
+      if (done.status === 'draft') toast.success(t('wizard.saved_draft'));
       releaseLeave();
       if (params.uuid && router.canGoBack()) router.back();
       else router.replace(links.service(uuid));
@@ -243,11 +244,11 @@ export function NewServiceScreen() {
       if (isApiError(e, 'PHOTO_STANDARD_INCOMPLETE')) {
         void qc.invalidateQueries({ queryKey: intakeKey(uuid) });
         setWanted('photos');
-        Alert.alert(t('photos_missing_title'), t('photos_missing_body'));
+        toast.warning(t('photos_missing_title'), { description: t('photos_missing_body') });
         return;
       }
       if (isApiError(e, 'VALIDATION_ERROR') && e.details?.some((d) => d.field === 'items')) {
-        Alert.alert(t('action_failed'), t('complete_needs_items'));
+        toast.error(t('action_failed'), { description: t('complete_needs_items') });
         return;
       }
       // TEC-1083: the chosen status needs a signed intake contract (signed on the web for now).
@@ -255,7 +256,7 @@ export function NewServiceScreen() {
         contractRequired();
         return;
       }
-      Alert.alert(t('action_failed'), errorText(e));
+      toast.apiError(e, { title: t('action_failed') });
     },
   });
   const contractRequired = useContractRequiredAlert(uuid);

@@ -74,9 +74,10 @@ vi.mock("@/hooks/use-debounce", () => ({
 vi.mock("@/features/modules/hooks/use-features", () => ({
   useEnabledFeatures: () => state.features,
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock(
   "@/features/performance/services/performance.service",
   async (orig) => ({

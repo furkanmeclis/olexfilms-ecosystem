@@ -29,8 +29,8 @@ vi.mock("next/link", () => ({
   } & Record<string, unknown>) =>
     createElement("a", { href, ...rest }, children as never),
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/providers/locale-provider", () => ({

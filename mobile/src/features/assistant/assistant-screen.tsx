@@ -5,11 +5,12 @@ import { Alert, FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDateTime } from '@/features/services/lib';
-import { ErrorState, errorText, ListBody, ListSkeleton } from '@/features/services/ui';
+import { ErrorState, ListBody, ListSkeleton } from '@/features/services/ui';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { type AIConversation, type AIStatus, quotaRemainingPercent, quotaUsedUp } from './chat-state';
 import { ConsentCard, useAssistantLinks } from './consent-card';
@@ -61,7 +62,7 @@ export function AssistantScreen() {
     mutationFn: (uuid: string) => unwrap(api.DELETE('/v1/ai/conversations/{uuid}', { params: { path: { uuid } } })),
     onSuccess: (_, uuid) =>
       qc.setQueryData<AIConversation[]>(aiKeys.conversations, (list) => list?.filter((c) => c.uuid !== uuid)),
-    onError: (e) => Alert.alert(t('errors.generic'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('errors.generic') }),
   });
   const askDelete = (c: AIConversation) =>
     Alert.alert(t('history.delete_title'), t('history.delete_body', { title: c.title || t('history.untitled') }), [

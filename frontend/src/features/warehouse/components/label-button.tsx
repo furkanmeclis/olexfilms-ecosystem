@@ -9,7 +9,7 @@ import {
   triggerBrowserDownload,
 } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Downloads a label sheet PDF (TEC-202): a batch's `labels_url`, a unit's

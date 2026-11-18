@@ -24,14 +24,15 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: {
+vi.mock("@/lib/toast", () => {
+  const t = {
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
-  },
-}));
+  };
+  return { toast: t, appToast: t };
+});
 const gate = vi.hoisted(() => ({
   grants: new Set<string>(),
   features: [] as string[],

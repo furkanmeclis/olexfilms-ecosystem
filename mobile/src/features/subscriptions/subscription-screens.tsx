@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
@@ -11,13 +11,14 @@ import { useChildHref, useFormat } from '@/features/admin/kit';
 import { FleetList, FleetRow } from '@/features/customer-space/fleet-screens';
 import { PAGE_SIZE, useDebounced } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
-import { Chips, DetailSkeleton, ErrorState, errorText, InfoRow, SearchField, Section } from '@/features/services/ui';
+import { Chips, DetailSkeleton, ErrorState, InfoRow, SearchField, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   CANCEL_REQUEST_STATUSES,
@@ -128,9 +129,9 @@ export function SubscriptionDetailScreen() {
       setOpen(false);
       setReason('');
       void qc.invalidateQueries({ queryKey: ['service-subscriptions'] });
-      Alert.alert(t('cancel_sent'), t('cancel_sent_body', { fee: fmt.money(r.cancellation_fee, r.currency) }));
+      toast.success(t('cancel_sent'), { description: t('cancel_sent_body', { fee: fmt.money(r.cancellation_fee, r.currency) }) });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   return (
@@ -242,7 +243,7 @@ export function CancelRequestsScreen() {
       setNote('');
       void qc.invalidateQueries({ queryKey: ['service-subscriptions'] });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const openDecision = (item: CancelQueueItem, approve: boolean) => {
     setNote('');

@@ -67,7 +67,7 @@ import type {
 } from "@/features/storage/types";
 import { usePermission } from "@/providers/permission-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export function StorageExplorer() {
   const { t } = useLocale();

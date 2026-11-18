@@ -51,7 +51,7 @@ import { CompactReportBody } from "@/features/reports/components/report-body";
 import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 function WidgetCard({
   widget,

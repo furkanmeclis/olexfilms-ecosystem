@@ -71,5 +71,11 @@
   "placeholder_year": "2024",
   "placeholder_km": "45000 公里",
   "related_empty": "暂无记录",
-  "related_more": "还有 {{count}} 条"
+  "related_more": "还有 {{count}} 条",
+  "toast.success": "成功",
+  "toast.error": "错误",
+  "toast.warning": "警告",
+  "toast.info": "提示",
+  "toast.loading": "处理中",
+  "toast.dismiss_hint": "轻点或滑动以关闭"
 }

@@ -11,7 +11,7 @@ const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 vi.mock("@/lib/api/platform-request", () => req);
 vi.mock("@/lib/api/platform-form-request", () => files);
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ locale: "en", t: (key: string) => key }),
 }));

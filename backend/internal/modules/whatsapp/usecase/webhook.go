@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/jackc/pgx/v5"
@@ -296,6 +297,8 @@ func (s *Service) applyConnection(ctx context.Context, state, rawType, reason, j
 	return alarm, nil
 }
 
+// alarmTexts holds the connection alarm per supported locale (TEC-1233);
+// %s is the reason reported by the provider.
 var alarmTexts = map[string]map[string][2]string{
 	"tr": {
 		whatsapp.StateLoggedOut: {"WhatsApp bağlantısı koptu", "WhatsApp numarasının oturumu kapandı (%s). OTP ve bildirimler gönderilemiyor; Entegrasyonlar > WhatsApp ekranından QR ile yeniden bağlayın."},
@@ -305,6 +308,67 @@ var alarmTexts = map[string]map[string][2]string{
 		whatsapp.StateLoggedOut: {"WhatsApp disconnected", "The WhatsApp number was logged out (%s). OTPs and notifications cannot be sent; reconnect with a QR code under Integrations > WhatsApp."},
 		whatsapp.StateBanned:    {"WhatsApp number temporarily banned", "The WhatsApp number is temporarily banned (%s). Sending stopped; consider enabling the SMS fallback."},
 	},
+	"bg": {
+		whatsapp.StateLoggedOut: {"Връзката с WhatsApp е прекъсната", "Сесията на номера в WhatsApp е прекратена (%s). Не могат да се изпращат OTP кодове и известия; свържете отново с QR код от Интеграции > WhatsApp."},
+		whatsapp.StateBanned:    {"Номерът в WhatsApp е временно блокиран", "Номерът в WhatsApp е временно блокиран (%s). Изпращането е спряно; помислете за включване на резервния SMS канал."},
+	},
+	"de": {
+		whatsapp.StateLoggedOut: {"WhatsApp-Verbindung getrennt", "Die WhatsApp-Nummer wurde abgemeldet (%s). OTP-Codes und Benachrichtigungen können nicht gesendet werden; verbinden Sie sie unter Integrationen > WhatsApp per QR-Code erneut."},
+		whatsapp.StateBanned:    {"WhatsApp-Nummer vorübergehend gesperrt", "Die WhatsApp-Nummer ist vorübergehend gesperrt (%s). Der Versand wurde gestoppt; erwägen Sie, den SMS-Fallback zu aktivieren."},
+	},
+	"el": {
+		whatsapp.StateLoggedOut: {"Η σύνδεση WhatsApp διακόπηκε", "Έγινε αποσύνδεση του αριθμού WhatsApp (%s). Δεν είναι δυνατή η αποστολή κωδικών OTP και ειδοποιήσεων· συνδεθείτε ξανά με κωδικό QR από Ενσωματώσεις > WhatsApp."},
+		whatsapp.StateBanned:    {"Ο αριθμός WhatsApp αποκλείστηκε προσωρινά", "Ο αριθμός WhatsApp έχει αποκλειστεί προσωρινά (%s). Οι αποστολές σταμάτησαν· εξετάστε την ενεργοποίηση της εφεδρικής αποστολής SMS."},
+	},
+	"uk": {
+		whatsapp.StateLoggedOut: {"З’єднання з WhatsApp розірвано", "Сеанс номера WhatsApp завершено (%s). Неможливо надсилати OTP-коди та сповіщення; підключіть номер повторно за QR-кодом у розділі Інтеграції > WhatsApp."},
+		whatsapp.StateBanned:    {"Номер WhatsApp тимчасово заблоковано", "Номер WhatsApp тимчасово заблоковано (%s). Надсилання зупинено; розгляньте можливість увімкнути резервне надсилання SMS."},
+	},
+	"ru": {
+		whatsapp.StateLoggedOut: {"Соединение с WhatsApp разорвано", "Сеанс номера WhatsApp завершён (%s). Невозможно отправлять OTP-коды и уведомления; подключите номер заново по QR-коду в разделе Интеграции > WhatsApp."},
+		whatsapp.StateBanned:    {"Номер WhatsApp временно заблокирован", "Номер WhatsApp временно заблокирован (%s). Отправка остановлена; рассмотрите возможность включить резервную отправку SMS."},
+	},
+	"fr": {
+		whatsapp.StateLoggedOut: {"WhatsApp déconnecté", "Le numéro WhatsApp a été déconnecté (%s). Les codes OTP et les notifications ne peuvent pas être envoyés ; reconnectez-le avec un code QR dans Intégrations > WhatsApp."},
+		whatsapp.StateBanned:    {"Numéro WhatsApp temporairement bloqué", "Le numéro WhatsApp est temporairement bloqué (%s). Les envois sont arrêtés ; envisagez d'activer le secours par SMS."},
+	},
+	"es": {
+		whatsapp.StateLoggedOut: {"WhatsApp desconectado", "Se cerró la sesión del número de WhatsApp (%s). No se pueden enviar códigos OTP ni notificaciones; vuelva a vincularlo con un código QR en Integraciones > WhatsApp."},
+		whatsapp.StateBanned:    {"Número de WhatsApp bloqueado temporalmente", "El número de WhatsApp está bloqueado temporalmente (%s). Los envíos se han detenido; considere activar el respaldo por SMS."},
+	},
+	"it": {
+		whatsapp.StateLoggedOut: {"WhatsApp disconnesso", "La sessione del numero WhatsApp è stata chiusa (%s). Non è possibile inviare codici OTP e notifiche; ricolleghi il numero con un codice QR da Integrazioni > WhatsApp."},
+		whatsapp.StateBanned:    {"Numero WhatsApp temporaneamente bloccato", "Il numero WhatsApp è temporaneamente bloccato (%s). Gli invii sono stati interrotti; valuti di attivare il fallback via SMS."},
+	},
+	"zh-CN": {
+		whatsapp.StateLoggedOut: {"WhatsApp 连接已断开", "WhatsApp 号码已退出登录（%s）。无法发送 OTP 验证码和通知；请在 集成 > WhatsApp 中扫描二维码重新连接。"},
+		whatsapp.StateBanned:    {"WhatsApp 号码已被临时封禁", "WhatsApp 号码已被临时封禁（%s）。发送已停止；请考虑启用短信备用通道。"},
+	},
+	"az": {
+		whatsapp.StateLoggedOut: {"WhatsApp bağlantısı kəsildi", "WhatsApp nömrəsinin sessiyası bağlandı (%s). OTP kodları və bildirişlər göndərilə bilmir; İnteqrasiyalar > WhatsApp bölməsindən QR kodla yenidən qoşun."},
+		whatsapp.StateBanned:    {"WhatsApp nömrəsi müvəqqəti bloklandı", "WhatsApp nömrəsi müvəqqəti bloklanıb (%s). Göndərişlər dayandı; SMS ehtiyat kanalını aktivləşdirməyi nəzərdən keçirin."},
+	},
+	"ar": {
+		whatsapp.StateLoggedOut: {"انقطع اتصال WhatsApp", "تم تسجيل خروج رقم WhatsApp (%s). لا يمكن إرسال رموز OTP والإشعارات؛ أعد الربط برمز QR من التكاملات > WhatsApp."},
+		whatsapp.StateBanned:    {"تم حظر رقم WhatsApp مؤقتًا", "رقم WhatsApp محظور مؤقتًا (%s). توقف الإرسال؛ فكّر في تفعيل الإرسال الاحتياطي عبر SMS."},
+	},
+}
+
+// alarmLocale picks the alarm language of a recipient: the stored locale,
+// tr when empty, en when there is no text for it.
+func alarmLocale(stored string) string {
+	if stored == "" {
+		return string(i18n.DefaultLocale)
+	}
+	if _, ok := alarmTexts[stored]; ok {
+		return stored
+	}
+	if l, ok := i18n.Parse(stored); ok {
+		if _, ok := alarmTexts[string(l)]; ok {
+			return string(l)
+		}
+	}
+	return string(i18n.FallbackLocale)
 }
 
 // AlarmActionURL is the panel page an alarm notification opens.
@@ -318,15 +382,8 @@ type Alarm struct {
 // AlarmText is the alarm of state (logged_out or banned) in the
 // recipient's language: tr when empty, en when unsupported.
 func AlarmText(locale, state, reason string) Alarm {
-	lang := locale
-	if lang == "" {
-		lang = "tr"
-	}
-	texts, ok := alarmTexts[lang]
-	if !ok {
-		lang, texts = "en", alarmTexts["en"]
-	}
-	t := texts[state]
+	lang := alarmLocale(locale)
+	t := alarmTexts[lang][state]
 	return Alarm{Lang: lang, Title: t[0], Body: fmt.Sprintf(t[1], reason)}
 }
 

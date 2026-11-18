@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { EntityLink } from "@/components/entity";
 import { ActivityTimeline } from "@/components/common/activity-timeline";

@@ -3,12 +3,11 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
-import { errorMessage } from '@/core/i18n';
 import { formatDate } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
@@ -16,6 +15,7 @@ import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { retryPortal, useFleetRoles } from './lib';
 import { reviewMissing } from './review-lib';
@@ -152,7 +152,7 @@ function ReviewForm({ uuid, rows }: { uuid: string; rows: Row[] }) {
     onSuccess: (next) => qc.setQueryData(['portal', 'services', 'review', uuid], next),
     onError: (e) => {
       if (isApiError(e) && e.status === 409) void qc.invalidateQueries({ queryKey: ['portal', 'services', 'review', uuid] });
-      Alert.alert(errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e);
     },
   });
 

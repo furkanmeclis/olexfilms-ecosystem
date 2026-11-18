@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, ScanBarcode, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/layout/page-header";

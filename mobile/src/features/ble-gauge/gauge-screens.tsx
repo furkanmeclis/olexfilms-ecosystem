@@ -13,6 +13,7 @@ import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { calibrationSteps, newerCalibration, type StoredCalibration } from './calibration';
 import { deviceModelName, type Material } from './curve';
@@ -333,7 +334,7 @@ export function GaugeCalibrationScreen() {
 
   const save = () => {
     if (!finishCalibration()) return;
-    Alert.alert(t('ble.cal.saved'), t('ble.cal.verify_hint', { um }));
+    toast.success(t('ble.cal.saved'), { description: t('ble.cal.verify_hint', { um }) });
     router.back();
   };
 

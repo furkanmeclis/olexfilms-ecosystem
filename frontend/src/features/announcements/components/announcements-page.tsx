@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { ErrorState } from "@/components/common/error-state";
 import {

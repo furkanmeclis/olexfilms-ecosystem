@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, ScrollView, Switch, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { useScannerInput } from '@/features/scanner/input-mode';
 import { WedgeInput } from '@/features/scanner/wedge-input';
@@ -18,10 +18,11 @@ import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { type ServiceStockUnit, useDebounced } from './lib';
 import { useServiceWrite } from './service-detail-screen';
-import { Chips, errorText, ListBody, SearchField } from './ui';
+import { Chips, ListBody, SearchField } from './ui';
 import { itemPartsMode, parseParts, partsForProduct, togglePart } from './wizard';
 
 type Kind = 'full' | 'partial';
@@ -75,9 +76,9 @@ export function AddItemScreen() {
       if (isApiError(e) && e.code === 'UNIT_CREDITS_EXHAUSTED') {
         setPicked(null);
         void qc.invalidateQueries({ queryKey: ['services', 'stock-units', uuid] });
-        return Alert.alert(t('credits.exhausted_title'), errorMessage(e.code, t('credits.exhausted')));
+        return toast.error(t('credits.exhausted_title'), { description: errorMessage(e.code, t('credits.exhausted')) });
       }
-      Alert.alert(t('action_failed'), errorText(e));
+      toast.apiError(e, { title: t('action_failed') });
     },
   });
 

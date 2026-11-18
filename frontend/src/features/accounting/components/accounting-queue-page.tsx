@@ -48,7 +48,7 @@ import {
 } from "@/features/orders/services/orders.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const QUEUE_TABS = ["orders", "transit", "returns"] as const;
 export type QueueTab = (typeof QUEUE_TABS)[number];

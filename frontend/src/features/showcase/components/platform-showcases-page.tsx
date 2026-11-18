@@ -38,7 +38,7 @@ import {
 } from "@/features/showcase/services/showcase.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const PLATFORM_SHOWCASES_PERSIST_KEY = "platform-showcases-v1";
 

@@ -41,7 +41,7 @@ import {
 } from "@/features/warehouse/services/warehouse.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const MEMBERS_PAGE_SIZE = 20;
 export const MEMBERS_PERSIST_KEY = "tenant-warehouse-members-v1";

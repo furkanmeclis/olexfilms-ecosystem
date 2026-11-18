@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type Translate = (
   key: string,

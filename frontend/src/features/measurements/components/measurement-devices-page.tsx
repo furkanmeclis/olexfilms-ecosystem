@@ -39,7 +39,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const MEASUREMENT_DEVICES_PERSIST_KEY = "tenant-measurement-devices-v1";
 

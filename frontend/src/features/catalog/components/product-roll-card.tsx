@@ -12,7 +12,7 @@ import type { components } from "@/generated/api";
 import { isApiError } from "@/lib/api";
 import { platformRequest } from "@/lib/api/platform-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type Product = components["schemas"]["CatalogProduct"];
 type Roll = components["schemas"]["CatalogRollSettings"];

@@ -14,9 +14,10 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 
 import { resolveServiceIncomeAccess } from "@/features/services/lib/access";
 import type { FinanceAccount } from "@/features/accounting/services/accounting.service";

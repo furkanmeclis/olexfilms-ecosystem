@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, PANEL_MIRROR_PREFIX, unwrap, uploadForm } from '@/core/api/client';
@@ -16,6 +16,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { errorText, Section } from './ui';
 
@@ -161,7 +162,7 @@ function CaptureModal({
       void qc.invalidateQueries({ queryKey: ['services', 'detail', serviceUuid] });
       onClose();
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const take = async () => {
@@ -171,7 +172,7 @@ function CaptureModal({
       const pic = await camera.current.takePictureAsync({ quality: 0.7, skipProcessing: false });
       if (pic?.uri) setShot(pic.uri);
     } catch (e) {
-      Alert.alert(t('action_failed'), e instanceof Error ? e.message : String(e));
+      toast.error(t('action_failed'), { description: e instanceof Error ? e.message : String(e) });
     } finally {
       setTaking(false);
     }

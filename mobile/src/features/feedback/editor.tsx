@@ -21,6 +21,7 @@ import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { loadViewShot } from './native';
 
@@ -111,7 +112,7 @@ export function FeedbackEditor({ imageUri, onCancel, onSave }: Props) {
       }
       await onSave(note.trim(), annotated);
     } catch (e) {
-      Alert.alert(t('save_failed'), e instanceof Error ? e.message : String(e));
+      toast.error(t('save_failed'), { description: e instanceof Error ? e.message : String(e) });
       setSaving(false);
     }
   };

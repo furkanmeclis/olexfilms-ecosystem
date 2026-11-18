@@ -20,7 +20,7 @@ const api = vi.hoisted(() => ({
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/toast", () => ({ toast: toast, appToast: toast }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

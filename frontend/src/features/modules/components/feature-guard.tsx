@@ -19,7 +19,7 @@ import { moduleName } from "@/features/modules/lib/labels";
 import { modulesService } from "@/features/modules/services/modules.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type FeatureGuardProps = {
   /** Tenant route slug (active organization). */

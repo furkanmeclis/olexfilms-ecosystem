@@ -6,7 +6,7 @@ import { measurementsService } from "@/features/measurements/services/measuremen
 import { isApiError } from "@/lib/api";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** "PDF indir": waits for the render (202 polling) and saves the file. */
 export function useMeasurementPdf() {

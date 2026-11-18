@@ -2,18 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
-import { errorMessage } from '@/core/i18n';
 import { formatDate } from '@/features/services/lib';
 import { ListBody } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { retryPortal, useCustomerLinks } from './lib';
 
@@ -52,7 +51,7 @@ export function CustomerClaimsScreen() {
       });
       if (w.service?.uuid) router.push(links.service(w.service.uuid));
     } catch (e) {
-      Alert.alert(errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e);
     } finally {
       setOpening(null);
     }

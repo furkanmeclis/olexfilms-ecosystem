@@ -2,13 +2,11 @@ import { type QueryClient, useMutation, useQueryClient } from '@tanstack/react-q
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
-import { errorMessage } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
 import { useDebounced, useFormat } from '@/features/admin/kit';
 import { useProducts } from '@/features/catalog/api';
@@ -17,6 +15,7 @@ import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import {
   addEditLine,
@@ -75,7 +74,7 @@ export function usePlotterMark(orderUuid: string) {
       void Haptics.selectionAsync().catch(() => undefined);
       storeOrder(qc, order);
     },
-    onError: (e) => Alert.alert(t('plotter.failed'), errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e, { title: t('plotter.failed') }),
   });
 }
 
@@ -286,11 +285,11 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
       storeOrder(qc, updated);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onClose();
-      Alert.alert(t('edit.saved'));
+      toast.success(t('edit.saved'));
     },
     onError: (e) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('edit.failed'), errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e, { title: t('edit.failed') });
     },
   });
 

@@ -32,7 +32,7 @@ import {
   type StockReclassification,
 } from "@/features/stock/services/stock-ops.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type Product = NonNullable<OperableUnit["product"]>;
 

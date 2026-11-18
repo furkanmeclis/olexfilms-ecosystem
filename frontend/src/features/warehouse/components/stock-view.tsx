@@ -68,7 +68,7 @@ import {
 } from "@/features/warehouse/services/warehouse.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const WAREHOUSE_PRODUCTS_KEY = "tenant-warehouse-detail-products-v1";
 export const STOCK_MOVEMENTS_KEY = "tenant-warehouse-movements-v1";

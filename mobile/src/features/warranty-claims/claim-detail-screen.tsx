@@ -9,7 +9,7 @@ import { api, unwrap } from '@/core/api/client';
 import { apiImage } from '@/features/services/intake-photos';
 import { formatDateTime } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
-import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from '@/features/services/ui';
+import { DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
 import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -17,6 +17,7 @@ import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { ClaimPhotoCapture, claimKey } from './claim-photo-capture';
 import { useClaimGrants } from './hooks';
@@ -54,7 +55,7 @@ export function ClaimDetailScreen() {
       qc.setQueryData(claimKey(uuid), (old: typeof c) => ({ ...old, ...updated }));
       done();
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const reopen = useMutation({
     mutationFn: (r: string) =>
@@ -63,7 +64,7 @@ export function ClaimDetailScreen() {
       qc.setQueryData(claimKey(uuid), (old: typeof c) => ({ ...old, ...updated }));
       done();
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   // The body says where the claim goes next (review, the center, decided).

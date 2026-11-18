@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCan } from '@/core/spaces';
@@ -18,6 +18,7 @@ import { PullRefresh } from '@/ui/pull-refresh';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { ToastHost, toast } from '@/ui/toast';
 
 import {
   ADJUSTMENT_TYPES,
@@ -197,7 +198,7 @@ export function AdjustDetailScreen() {
   const add = async (code: string): Promise<boolean> => {
     const m = meters.trim() ? normalizeMeters(meters) : undefined;
     if (meters.trim() && !m) {
-      Alert.alert(t('meters_invalid'));
+      toast.warning(t('meters_invalid'));
       return false;
     }
     try {
@@ -411,7 +412,7 @@ function AdjustPhotoCapture({ uuid, onDone, onClose }: { uuid: string; onDone: (
       const pic = await ref.current.takePictureAsync({ quality: 0.7 });
       if (pic?.uri) setShot(pic.uri);
     } catch {
-      Alert.alert(t('photos.camera_failed'));
+      toast.error(t('photos.camera_failed'));
     } finally {
       setTaking(false);
     }
@@ -483,6 +484,7 @@ function AdjustPhotoCapture({ uuid, onDone, onClose }: { uuid: string; onDone: (
           ) : null}
         </View>
       </View>
+      <ToastHost inModal />
     </Modal>
   );
 }

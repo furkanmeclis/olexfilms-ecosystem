@@ -8,7 +8,7 @@ import { importsService } from "@/features/io/services/imports.service";
 import type { ExportJobScope } from "@/features/io/types";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Set once the error report endpoint answered 404: the button stays hidden

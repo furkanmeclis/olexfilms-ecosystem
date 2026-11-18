@@ -34,7 +34,7 @@ import { isSpreadsheetExportFormat } from "@/features/io/lib/parse-export-spread
 import { exportsService } from "@/features/io/services/exports.service";
 import type { ExportJobScope } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type ExportDetailPageProps = {
   uuid: string;

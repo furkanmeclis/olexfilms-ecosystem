@@ -137,8 +137,21 @@ func (f *fakeMeili) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(w, `{"uid":%s,"status":"succeeded"}`, strings.TrimPrefix(r.URL.Path, "/tasks/"))
 		return
 	}
-	body, _ := io.ReadAll(r.Body)
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if r.Method == http.MethodGet && len(parts) == 2 && parts[0] == "indexes" {
+		// EnsureIndex looks the index up first and creates it only on 404.
+		f.mu.Lock()
+		known := slices.Contains(f.index, parts[1])
+		f.mu.Unlock()
+		if !known {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = fmt.Fprintf(w, `{"message":"Index %s not found.","code":"index_not_found","type":"invalid_request"}`, parts[1])
+			return
+		}
+		_, _ = fmt.Fprintf(w, `{"uid":%q,"primaryKey":"id"}`, parts[1])
+		return
+	}
+	body, _ := io.ReadAll(r.Body)
 	f.mu.Lock()
 	switch {
 	case r.Method == http.MethodPost && r.URL.Path == "/indexes":

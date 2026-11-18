@@ -2,6 +2,7 @@ import ArrowLeftRightIcon from 'lucide-react-native/icons/arrow-left-right';
 import ChevronUpIcon from 'lucide-react-native/icons/chevron-up';
 import CirclePlayIcon from 'lucide-react-native/icons/circle-play';
 import CircleAlertIcon from 'lucide-react-native/icons/circle-alert';
+import CircleCheckIcon from 'lucide-react-native/icons/circle-check';
 import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
 import ListTreeIcon from 'lucide-react-native/icons/list-tree';
 import MonitorSmartphoneIcon from 'lucide-react-native/icons/monitor-smartphone';
@@ -164,6 +165,7 @@ export type IconName =
   | 'transfer'
   | 'chevronUp'
   | 'error'
+  | 'success'
   | 'addPhoto'
   | 'hierarchy'
   | 'devices'
@@ -262,6 +264,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   transfer: { sf: 'arrow.left.arrow.right', lucide: ArrowLeftRightIcon },
   chevronUp: { sf: 'chevron.up', lucide: ChevronUpIcon },
   error: { sf: 'exclamationmark.circle', lucide: CircleAlertIcon },
+  success: { sf: 'checkmark.circle', lucide: CircleCheckIcon },
   addPhoto: { sf: 'photo.badge.plus', lucide: ImagePlusIcon, minIOS: 17 },
   hierarchy: { sf: 'list.bullet.indent', lucide: ListTreeIcon },
   devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },

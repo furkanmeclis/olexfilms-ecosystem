@@ -18,7 +18,7 @@ import type { Service } from "@/features/services/services/service-wizard.servic
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Poll interval while an executed contract's PDF is being rendered. */
 export const CONTRACT_PDF_POLL_MS = 5000;

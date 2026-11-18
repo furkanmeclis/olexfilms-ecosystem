@@ -11,7 +11,7 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const documentTemplatesKeys = {
   all: ["platform", "document-templates"] as const,

@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type ExportMenuProps = {
   /** Registered resource; or pass `exportPath` for another endpoint. */

@@ -11,7 +11,7 @@ import { FleetList, FleetReportRow, FleetRow, FleetVehicleRow } from '@/features
 import { fleetLinkTone } from '@/features/customer-space/fleet-lib';
 import { PAGE_SIZE, useDebounced } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
-import { Chips, DetailSkeleton, ErrorState, errorText, InfoRow, SearchField, Section } from '@/features/services/ui';
+import { Chips, DetailSkeleton, ErrorState, InfoRow, SearchField, Section } from '@/features/services/ui';
 import { StatTile } from '@/features/customer-space/parts';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -20,6 +20,7 @@ import { List, ListRow } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   closedPeriods,
@@ -268,7 +269,7 @@ export function FleetVehiclesScreen() {
       void qc.invalidateQueries({ queryKey: ['fleets', uuid, 'vehicles'] });
       void qc.invalidateQueries({ queryKey: cardKey(uuid) });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const confirmRemove = (v: PanelFleetVehicle) =>
     Alert.alert(t('vehicle_remove_title'), v.plate ?? undefined, [
@@ -349,15 +350,15 @@ export function FleetUsersScreen() {
       setInviteOpen(false);
       setForm({ email: '', name: '', surname: '' });
       refresh();
-      Alert.alert(t('invite_sent'), t('invite_sent_body'));
+      toast.success(t('invite_sent'), { description: t('invite_sent_body') });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const disable = useMutation({
     mutationFn: (user: string) =>
       unwrap(api.POST('/v1/fleets/{uuid}/users/{user_uuid}/disable', { params: { path: { uuid, user_uuid: user } } })),
     onSuccess: refresh,
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const confirmDisable = (u: PanelFleetUser) =>
     Alert.alert(t('user_disable_title'), [u.name, u.surname].filter(Boolean).join(' '), [
@@ -459,9 +460,9 @@ export function FleetReportsScreen() {
     onSuccess: () => {
       setOpen(false);
       void qc.invalidateQueries({ queryKey: ['fleets', uuid, 'reports'] });
-      Alert.alert(t('report_requested'), t('report_requested_body'));
+      toast.success(t('report_requested'), { description: t('report_requested_body') });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   return (

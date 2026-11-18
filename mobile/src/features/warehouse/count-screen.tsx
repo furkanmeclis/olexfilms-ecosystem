@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { useCan } from '@/core/spaces';
@@ -13,6 +13,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   countApi,
@@ -144,7 +145,7 @@ export function CountScreen() {
     const resolutions: { line_uuid: string; resolution: CountResolution }[] = [];
     for (const l of toResolve) {
       const r = choices[l.uuid] ?? defaultResolution(l);
-      if (!r) return Alert.alert(t('count.resolve_all'));
+      if (!r) return toast.warning(t('count.resolve_all'));
       resolutions.push({ line_uuid: l.uuid, resolution: r });
     }
     confirmAction({
