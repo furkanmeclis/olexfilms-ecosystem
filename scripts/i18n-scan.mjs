@@ -419,5 +419,6 @@ if (isMain) {
     }
     console.log(findings ? `\n${findings} bulgu.` : "\nTemiz: bulgu yok.");
   }
-  process.exit(flag("--fail") && findings ? 1 : 0);
+  // exitCode: process.exit() büyük --json çıktısını borudan önce keser.
+  process.exitCode = flag("--fail") && findings ? 1 : 0;
 }
