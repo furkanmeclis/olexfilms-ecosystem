@@ -3,8 +3,31 @@
   "source": "TEC-1233: Farsça (İran, resmî yazım) alan terimleri; eski katalog yok.",
   "style": "Resmî «شما» hitabı; düğmeler kısa mastar/emir kipi (ذخیره، لغو). Farsça ی (U+06CC) ve ک (U+06A9) kullanılır, Arapça ي/ك kullanılmaz. Ekler ve bileşikler ZWNJ (U+200C) ile yazılır: می‌شود، فیلم‌ها. Noktalama: «،» virgül, «؟» soru işareti, «؛» noktalı virgül.",
   "digits": "Metinlerde rakamlar Latin (0-9) yazılır; sayıları uygulama biçimlendirir. Barkod, plaka, kod, tutar, tarih alanları her zaman Latin rakamdır.",
-  "brands": ["Olexfilms", "Olex", "Glorian", "NexPTG", "WhatsApp", "Meilisearch"],
-  "keep": ["PPF", "SKU", "IBAN", "VIN", "PDF", "CSV", "Excel", "JSON", "OTP", "SMS", "UUID", "QR", "KVKK", "API", "URL"],
+  "brands": [
+    "Olexfilms",
+    "Olex",
+    "Glorian",
+    "NexPTG",
+    "WhatsApp",
+    "Meilisearch"
+  ],
+  "keep": [
+    "PPF",
+    "SKU",
+    "IBAN",
+    "VIN",
+    "PDF",
+    "CSV",
+    "Excel",
+    "JSON",
+    "OTP",
+    "SMS",
+    "UUID",
+    "QR",
+    "KVKK",
+    "API",
+    "URL"
+  ],
   "terms": {
     "customer": "مشتری",
     "dealer": "نمایندگی",
