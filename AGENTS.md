@@ -30,7 +30,7 @@ Bu repo bir Claude Code cloud oturumu tarafından sıfırdan inşa edilir. Tek k
 - Ledger tabloları append-only; güncel durum projeksiyonda. Modüller arası iletişim outbox + event bus.
 - Feature flag'ler DB'de; `RequireFeature(module)` middleware'i.
 - Telefonlar E.164. Para tutarları `NUMERIC(18,2)`, para birimi `CHAR(3)`, kur `rate_snapshot` ile dondurulur.
-- i18n: 13 dil (tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar); RTL için logical properties. Yeni UI metni her zaman i18n anahtarıyla.
+- i18n: 14 dil (tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar, fa); RTL (ar, fa) için logical properties ve ortak `RTL_LOCALES`. Yeni UI metni her zaman i18n anahtarıyla ve 14 dilin hepsinde (CI `make i18n-scan` eksik/çevrilmemiş anahtarda kırılır; bilinçli istisna `scripts/i18n-allowlist.json`). Terimler: `docs/i18n-glossary.md`.
 - Her modülde usecase testi; kritik akışlarda uçtan uca senaryo (F1-13); Playwright ana akışlar.
 - OpenAPI (`docs/openapi.yaml`) değişince `pnpm api:generate` çalıştır ve üretilen tipleri commit'le.
 - Secret'lar `.env`'de; `.env.example` güncel tutulur; `scripts/gen-env-server.sh` prod env'i üretir.
@@ -50,7 +50,7 @@ Bu repo bir Claude Code cloud oturumu tarafından sıfırdan inşa edilir. Tek k
 - [ ] `go vet`, `golangci-lint`, `go test ./...` yeşil
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm build` yeşil
 - [ ] Yeni tablo → migration + sqlc + `organization_id`/`brand_id`
-- [ ] Yeni UI metni → i18n anahtarı (en az tr + en)
+- [ ] Yeni UI metni → i18n anahtarı (14 dilin hepsinde; `make i18n-scan`)
 - [ ] `.env.example` ve `docs/openapi.yaml` güncel
 
 ## 6. DataTable kuralı (kalıcı, TEC-362)
