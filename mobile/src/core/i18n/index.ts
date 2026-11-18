@@ -8,7 +8,7 @@ import { storage } from '@/core/storage';
 
 import { NAMESPACES, resources } from './resources';
 
-/** K10: 12 languages + Arabic, same codes as the web and the backend `Locale`. */
+/** K10: 12 languages + Arabic, TEC-1233: + Persian; same codes as the web and the backend `Locale`. */
 export const LANGUAGES = [
   { code: 'tr', name: 'Türkçe' },
   { code: 'en', name: 'English' },
@@ -23,6 +23,7 @@ export const LANGUAGES = [
   { code: 'zh-CN', name: '简体中文' },
   { code: 'az', name: 'Azərbaycan dili' },
   { code: 'ar', name: 'العربية', rtl: true },
+  { code: 'fa', name: 'فارسی', rtl: true },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]['code'];
@@ -34,8 +35,11 @@ export function isLanguage(v: unknown): v is Language {
   return typeof v === 'string' && codes.includes(v);
 }
 
+/** Right-to-left languages (TEC-1233): every RTL decision goes through isRTL. */
+export const RTL_LOCALES: readonly Language[] = LANGUAGES.filter((l) => 'rtl' in l && l.rtl).map((l) => l.code);
+
 export function isRTL(lang: string) {
-  return LANGUAGES.some((l) => l.code === lang && 'rtl' in l && l.rtl);
+  return (RTL_LOCALES as readonly string[]).includes(lang);
 }
 
 /** Saved choice, else the first device language we support, else English. */

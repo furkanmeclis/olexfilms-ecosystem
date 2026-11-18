@@ -1,0 +1,21 @@
+{
+  "title": "جستجو",
+  "placeholder": "پلاک، تلفن، نام، شماره سرویس، کد",
+  "recent": "جستجوهای اخیر",
+  "clear": "پاک کردن",
+  "hint_title": "جستجو در همه‌چیز",
+  "hint_body": "پلاک‌ها، شماره‌های تلفن، نام‌ها، شماره‌های سرویس و کدهای گارانتی.",
+  "no_results": "چیزی یافت نشد",
+  "no_results_body": "یک پلاک، شماره تلفن یا شماره سرویس را امتحان کنید.",
+  "disabled": "جستجو در حال حاضر در دسترس نیست.",
+  "open_failed": "باز نشد",
+  "group.customers": "مشتریان",
+  "group.vehicles": "خودروها",
+  "group.services": "سرویس‌ها",
+  "group.warranties": "گارانتی‌ها",
+  "group.orders": "سفارش‌ها",
+  "group.organizations": "سازمان‌ها",
+  "group.stock_units": "واحدهای موجودی",
+  "group.leads": "سرنخ‌های فروش",
+  "group.products": "محصولات"
+}

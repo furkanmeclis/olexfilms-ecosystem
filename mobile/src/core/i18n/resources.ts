@@ -546,6 +546,48 @@ import ar_warehouse from './locales/ar/warehouse.json';
 import ar_widgets from './locales/ar/widgets.json';
 import ar_errors from '../../../../frontend/src/locales/ar/errors.json';
 import ar_modules from '../../../../frontend/src/locales/ar/modules.json';
+import fa_common from './locales/fa/common.json';
+import fa_accounting from './locales/fa/accounting.json';
+import fa_adjust from './locales/fa/adjust.json';
+import fa_admin from './locales/fa/admin.json';
+import fa_analytics from './locales/fa/analytics.json';
+import fa_announcements from './locales/fa/announcements.json';
+import fa_appointments from './locales/fa/appointments.json';
+import fa_assistant from './locales/fa/assistant.json';
+import fa_auth from './locales/fa/auth.json';
+import fa_callerid from './locales/fa/callerid.json';
+import fa_campaigns from './locales/fa/campaigns.json';
+import fa_catalog from './locales/fa/catalog.json';
+import fa_claims from './locales/fa/claims.json';
+import fa_customer from './locales/fa/customer.json';
+import fa_dealer from './locales/fa/dealer.json';
+import fa_feedback from './locales/fa/feedback.json';
+import fa_fleets from './locales/fa/fleets.json';
+import fa_governance from './locales/fa/governance.json';
+import fa_home from './locales/fa/home.json';
+import fa_leads from './locales/fa/leads.json';
+import fa_measure from './locales/fa/measure.json';
+import fa_menu from './locales/fa/menu.json';
+import fa_nav from './locales/fa/nav.json';
+import fa_notifications from './locales/fa/notifications.json';
+import fa_onboarding from './locales/fa/onboarding.json';
+import fa_orders from './locales/fa/orders.json';
+import fa_plate from './locales/fa/plate.json';
+import fa_qr from './locales/fa/qr.json';
+import fa_sales from './locales/fa/sales.json';
+import fa_scan from './locales/fa/scan.json';
+import fa_search from './locales/fa/search.json';
+import fa_settings from './locales/fa/settings.json';
+import fa_spaces from './locales/fa/spaces.json';
+import fa_staff from './locales/fa/staff.json';
+import fa_subscriptions from './locales/fa/subscriptions.json';
+import fa_tasks from './locales/fa/tasks.json';
+import fa_transfers from './locales/fa/transfers.json';
+import fa_update from './locales/fa/update.json';
+import fa_warehouse from './locales/fa/warehouse.json';
+import fa_widgets from './locales/fa/widgets.json';
+import fa_errors from '../../../../frontend/src/locales/fa/errors.json';
+import fa_modules from '../../../../frontend/src/locales/fa/modules.json';
 
 export const NAMESPACES = ['common', 'accounting', 'adjust', 'admin', 'analytics', 'announcements', 'appointments', 'assistant', 'auth', 'callerid', 'campaigns', 'catalog', 'claims', 'customer', 'dealer', 'feedback', 'fleets', 'governance', 'home', 'leads', 'measure', 'menu', 'nav', 'notifications', 'onboarding', 'orders', 'plate', 'qr', 'sales', 'scan', 'search', 'settings', 'spaces', 'staff', 'subscriptions', 'tasks', 'transfers', 'update', 'warehouse', 'widgets', 'errors', 'modules'] as const;
 
@@ -563,4 +605,5 @@ export const resources = {
   'zh-CN': { common: zhCN_common, accounting: zhCN_accounting, adjust: zhCN_adjust, admin: zhCN_admin, analytics: zhCN_analytics, announcements: zhCN_announcements, appointments: zhCN_appointments, assistant: zhCN_assistant, auth: zhCN_auth, callerid: zhCN_callerid, campaigns: zhCN_campaigns, catalog: zhCN_catalog, claims: zhCN_claims, customer: zhCN_customer, dealer: zhCN_dealer, feedback: zhCN_feedback, fleets: zhCN_fleets, governance: zhCN_governance, home: zhCN_home, leads: zhCN_leads, measure: zhCN_measure, menu: zhCN_menu, nav: zhCN_nav, notifications: zhCN_notifications, onboarding: zhCN_onboarding, orders: zhCN_orders, plate: zhCN_plate, qr: zhCN_qr, sales: zhCN_sales, scan: zhCN_scan, search: zhCN_search, settings: zhCN_settings, spaces: zhCN_spaces, staff: zhCN_staff, subscriptions: zhCN_subscriptions, tasks: zhCN_tasks, transfers: zhCN_transfers, update: zhCN_update, warehouse: zhCN_warehouse, widgets: zhCN_widgets, errors: zhCN_errors, modules: zhCN_modules },
   az: { common: az_common, accounting: az_accounting, adjust: az_adjust, admin: az_admin, analytics: az_analytics, announcements: az_announcements, appointments: az_appointments, assistant: az_assistant, auth: az_auth, callerid: az_callerid, campaigns: az_campaigns, catalog: az_catalog, claims: az_claims, customer: az_customer, dealer: az_dealer, feedback: az_feedback, fleets: az_fleets, governance: az_governance, home: az_home, leads: az_leads, measure: az_measure, menu: az_menu, nav: az_nav, notifications: az_notifications, onboarding: az_onboarding, orders: az_orders, plate: az_plate, qr: az_qr, sales: az_sales, scan: az_scan, search: az_search, settings: az_settings, spaces: az_spaces, staff: az_staff, subscriptions: az_subscriptions, tasks: az_tasks, transfers: az_transfers, update: az_update, warehouse: az_warehouse, widgets: az_widgets, errors: az_errors, modules: az_modules },
   ar: { common: ar_common, accounting: ar_accounting, adjust: ar_adjust, admin: ar_admin, analytics: ar_analytics, announcements: ar_announcements, appointments: ar_appointments, assistant: ar_assistant, auth: ar_auth, callerid: ar_callerid, campaigns: ar_campaigns, catalog: ar_catalog, claims: ar_claims, customer: ar_customer, dealer: ar_dealer, feedback: ar_feedback, fleets: ar_fleets, governance: ar_governance, home: ar_home, leads: ar_leads, measure: ar_measure, menu: ar_menu, nav: ar_nav, notifications: ar_notifications, onboarding: ar_onboarding, orders: ar_orders, plate: ar_plate, qr: ar_qr, sales: ar_sales, scan: ar_scan, search: ar_search, settings: ar_settings, spaces: ar_spaces, staff: ar_staff, subscriptions: ar_subscriptions, tasks: ar_tasks, transfers: ar_transfers, update: ar_update, warehouse: ar_warehouse, widgets: ar_widgets, errors: ar_errors, modules: ar_modules },
+  fa: { common: fa_common, accounting: fa_accounting, adjust: fa_adjust, admin: fa_admin, analytics: fa_analytics, announcements: fa_announcements, appointments: fa_appointments, assistant: fa_assistant, auth: fa_auth, callerid: fa_callerid, campaigns: fa_campaigns, catalog: fa_catalog, claims: fa_claims, customer: fa_customer, dealer: fa_dealer, feedback: fa_feedback, fleets: fa_fleets, governance: fa_governance, home: fa_home, leads: fa_leads, measure: fa_measure, menu: fa_menu, nav: fa_nav, notifications: fa_notifications, onboarding: fa_onboarding, orders: fa_orders, plate: fa_plate, qr: fa_qr, sales: fa_sales, scan: fa_scan, search: fa_search, settings: fa_settings, spaces: fa_spaces, staff: fa_staff, subscriptions: fa_subscriptions, tasks: fa_tasks, transfers: fa_transfers, update: fa_update, warehouse: fa_warehouse, widgets: fa_widgets, errors: fa_errors, modules: fa_modules },
 };

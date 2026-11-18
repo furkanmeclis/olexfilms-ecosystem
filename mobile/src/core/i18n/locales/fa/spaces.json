@@ -1,0 +1,19 @@
+{
+  "title": "تغییر سازمان",
+  "kind.bayi": "نمایندگی",
+  "kind.depo": "انبار",
+  "kind.admin": "مدیریت",
+  "kind.musteri": "مشتری",
+  "org_type.center": "مرکز",
+  "org_type.distributor": "توزیع‌کننده",
+  "org_type.dealer": "نمایندگی",
+  "active": "باز",
+  "switching": "در حال تغییر…",
+  "none_title": "فضایی در دسترس نیست",
+  "none_body": "حساب شما هنوز به هیچ سازمانی متصل نیست. با مدیر خود تماس بگیرید.",
+  "workplace": "محل کار",
+  "title_spaces": "فضا و سازمان",
+  "switch_hint": "برای رفتن به فضای دیگر، نگه دارید",
+  "spaces_title": "فضاها",
+  "orgs_title": "سازمان‌ها"
+}

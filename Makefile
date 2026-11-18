@@ -220,15 +220,17 @@ dev-pii-key:
 check-i18n:
 	node scripts/check-i18n.mjs
 
-# Fully translated languages (TEC-138): no missing keys, < 3% copy equal to en.
-I18N_TRANSLATED ?= de,fr,es,it,ru,uk
+# Fully translated languages (TEC-138, TEC-1233: every language beyond tr/en):
+# no missing keys, < 3% copy equal to en.
+I18N_TRANSLATED ?= bg,de,el,uk,ru,fr,es,it,zh-CN,az,ar,fa
 check-i18n-translations:
 	node scripts/check-i18n.mjs --strict --locales $(I18N_TRANSLATED)
 	node scripts/i18n-untranslated-report.mjs --locales $(I18N_TRANSLATED)
 
 # TEC-1233: web + mobile + backend report for every language (missing,
-# untranslated, {{param}}, plural forms). I18N_SCAN_FLAGS=--fail gates it.
-I18N_SCAN_FLAGS ?=
+# untranslated, {{param}}, plural forms). Fails on any finding; exceptions
+# live in scripts/i18n-allowlist.json. I18N_SCAN_FLAGS= for a report only.
+I18N_SCAN_FLAGS ?= --fail
 i18n-scan:
 	node scripts/i18n-scan.mjs $(I18N_SCAN_FLAGS)
 

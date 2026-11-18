@@ -27,6 +27,9 @@ export function hasDigitChoice(locale: string): boolean {
 
 /** The locale tag Intl gets: Arabic with an explicit numbering system. */
 export function intlLocale(locale: string, digits: DigitStyle = current): string {
+  // TEC-1233: Persian keeps Latin digits (ICU defaults "fa" to ۰-۹), like
+  // barcodes, plates, codes and amounts.
+  if (locale.split('-')[0]?.toLowerCase() === 'fa') return `${locale}-u-nu-latn`;
   return hasDigitChoice(locale) ? `${locale}-u-nu-${digits}` : locale;
 }
 

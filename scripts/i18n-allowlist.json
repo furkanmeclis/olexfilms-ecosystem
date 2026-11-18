@@ -1755,6 +1755,11 @@
       "widgets:koruma.left_short_months_other": "Azərbaycan dilində də eyni yazılır (\"{{count}} ay\")",
       "widgets:kpi.title": "Azərbaycan dilində də eyni yazılır (\"Son 30 gün\")",
       "widgets:service.steps.completed": "Azərbaycan dilində də eyni yazılır (\"Tamamlandı\")"
+    },
+    "fa": {
+      "leads:phone_placeholder": "Türkiye telefon biçimi örneği (uygulamanın varsayılan ülke kodu)",
+      "onboarding:film_p1_eyebrow": "Marka adı (Olex Films®)",
+      "warehouse:labels.output.zpl": "Yazıcı dili adı (ZPL)"
     }
   },
   "backend-labels": {

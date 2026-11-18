@@ -1,0 +1,10 @@
+{
+  "title": "اطلاعیه‌ها",
+  "empty": "هنوز اطلاعیه‌ای وجود ندارد",
+  "empty_unread": "همه را خوانده‌اید",
+  "filter.all": "همه",
+  "filter.unread": "خوانده‌نشده",
+  "filter.unread_count": "خوانده‌نشده ({{count}})",
+  "pinned": "سنجاق‌شده",
+  "expires": "معتبر تا {{date}}"
+}
