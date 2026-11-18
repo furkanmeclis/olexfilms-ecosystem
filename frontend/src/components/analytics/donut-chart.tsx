@@ -5,7 +5,12 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { useFormatter, useLocale } from "@/providers/locale-provider";
 
-import { ChartFrame, type ChartTable, type LegendItem } from "./chart-frame";
+import {
+  ChartFrame,
+  type ChartTable,
+  type LegendItem,
+  CHART_INITIAL_DIMENSION,
+} from "./chart-frame";
 import { formatValue, type ValueFormat } from "./format";
 import { OTHER_KEY, categoricalColor, foldCategories } from "./palette";
 import type { CategoryDatum, ChartChromeProps } from "./types";
@@ -84,7 +89,12 @@ export function DonutChart({
       isEmpty={slices.length === 0}
     >
       <div className="relative h-full w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+          initialDimension={CHART_INITIAL_DIMENSION}
+        >
           <PieChart>
             <Tooltip
               content={(props) => {

@@ -9,7 +9,7 @@ import { storageConfig } from "@/config/storage";
 import { resolveLogoSrc } from "@/lib/branding/logo-url";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const LOGO_ACCEPT = storageConfig.acceptedImageTypes.join(",");
 

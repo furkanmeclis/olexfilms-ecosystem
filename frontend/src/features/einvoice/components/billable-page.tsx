@@ -38,7 +38,7 @@ import {
 } from "@/features/einvoice/services/einvoice.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const BILLABLE_PERSIST_KEY = "tenant-einvoice-billable-v1";
 

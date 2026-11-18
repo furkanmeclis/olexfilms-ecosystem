@@ -5,9 +5,7 @@ import { ActivityIndicator, Alert, Switch, View } from 'react-native';
 import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
-import { errorMessage } from '@/core/i18n';
 import { errorText } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
@@ -15,6 +13,7 @@ import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { portalFiles, useExportDownload } from './files';
 import { isHidden, type NotificationPreferences, retryPortal } from './lib';
@@ -42,7 +41,7 @@ function NotificationPrefs() {
     },
     onError: (e, _b, ctx) => {
       if (ctx?.prev) qc.setQueryData(PREFS_KEY, ctx.prev);
-      Alert.alert(errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e);
     },
     onSuccess: (data) => qc.setQueryData(PREFS_KEY, data),
   });

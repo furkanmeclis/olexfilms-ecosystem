@@ -39,7 +39,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () =>
     state.orgType ? { slug: "acme", type: state.orgType } : null,
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
   useIsXl: () => true,

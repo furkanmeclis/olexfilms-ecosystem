@@ -20,7 +20,12 @@ import {
   xAxisProps,
   yAxisProps,
 } from "./chart-axes";
-import { ChartFrame, type ChartTable, type LegendItem } from "./chart-frame";
+import {
+  ChartFrame,
+  type ChartTable,
+  type LegendItem,
+  CHART_INITIAL_DIMENSION,
+} from "./chart-frame";
 import {
   formatAxisValue,
   formatBucket,
@@ -120,7 +125,12 @@ export function BarChart({
 
   return (
     <ChartFrame {...chrome} legend={legend} table={table} isEmpty={isEmpty}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        initialDimension={CHART_INITIAL_DIMENSION}
+      >
         <RBarChart
           data={rows}
           margin={{ top: 8, right: 8, bottom: 0, left: 0 }}

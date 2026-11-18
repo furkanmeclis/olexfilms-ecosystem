@@ -22,6 +22,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { useLeaveGuard } from '@/ui/use-leave-guard';
+import { toast } from '@/ui/toast';
 
 import { createSale, dealerSalesKeys, lookupSaleItem, useProductSearch } from './api';
 import { alertError, failMessage, success } from './errors';
@@ -176,7 +177,7 @@ export function NewSaleScreen() {
   const addAndReport = async (query: { barcode?: string; product_uuid?: string }) => {
     const out = await addItem(query);
     if (out.ok) success();
-    else Alert.alert(out.title);
+    else toast.error(out.title);
   };
 
   const totals = cartTotals(lines);
@@ -224,7 +225,7 @@ export function NewSaleScreen() {
       void qc.invalidateQueries({ queryKey: dealerSalesKeys.all });
       void qc.invalidateQueries({ queryKey: ['stock'] });
       success();
-      Alert.alert(t('quick_sale.saved'));
+      toast.success(t('quick_sale.saved'));
       releaseLeave();
       router.back();
     } catch (e) {

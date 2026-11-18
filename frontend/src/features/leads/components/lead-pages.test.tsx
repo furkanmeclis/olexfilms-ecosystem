@@ -53,7 +53,10 @@ vi.mock("next/link", () => ({
     createElement("a", { href, ...rest }, children as never),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

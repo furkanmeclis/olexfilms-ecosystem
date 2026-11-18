@@ -37,7 +37,7 @@ import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const LABEL_TEMPLATES_PERSIST_KEY = "stock-label-templates-v1";
 

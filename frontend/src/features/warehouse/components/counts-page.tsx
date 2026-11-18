@@ -81,7 +81,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { exportsService } from "@/features/io/services/exports.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const COUNT_PAGE_SIZE = 20;
 export const COUNTS_PERSIST_KEY = "tenant-warehouse-counts-v1";

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Archive, Eye, Pin, PinOff, Send } from "lucide-react";
 import { useMemo } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { StatusChip } from "@/components/common/status-chip";
 import {

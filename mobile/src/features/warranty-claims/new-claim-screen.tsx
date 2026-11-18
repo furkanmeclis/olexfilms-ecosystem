@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -15,6 +15,7 @@ import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 import { useLeaveGuard } from '@/ui/use-leave-guard';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { useClaimLinks } from './hooks';
 import { claimFormMissing } from './lib';
@@ -132,7 +133,7 @@ export function NewClaimScreen() {
       router.replace(links.detail(claim.uuid));
     },
     onError: (e) =>
-      Alert.alert(t('action_failed'), isApiError(e, 'WARRANTY_CLAIM_EXISTS') ? t('claim_exists') : errorText(e)),
+      toast.error(t('action_failed'), { description: isApiError(e, 'WARRANTY_CLAIM_EXISTS') ? t('claim_exists') : errorText(e) }),
   });
 
   const missing = claimFormMissing({ parts, description });

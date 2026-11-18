@@ -67,5 +67,7 @@
   "campaign_unsubscribe.home": "Μετάβαση στην αρχική σελίδα",
   "digits": "Ψηφία",
   "digits_arab": "Αραβοϊνδικά (٠١٢٣)",
-  "digits_latn": "Λατινικά (0123)"
+  "digits_latn": "Λατινικά (0123)",
+  "toast_region": "Ειδοποιήσεις",
+  "error_reference": "Κωδικός αναφοράς για υποστήριξη: {{id}}"
 }

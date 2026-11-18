@@ -22,7 +22,7 @@ import {
   type GlorianOutboundState,
 } from "@/features/integrations/glorian/services/glorian.service";
 import { useFormatter, useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const OUTBOUND_STATES: GlorianOutboundState[] = [
   "held",

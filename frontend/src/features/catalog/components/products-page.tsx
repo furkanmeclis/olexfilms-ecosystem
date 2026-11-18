@@ -53,7 +53,7 @@ import { ExportMenu } from "@/features/io/components/export-menu";
 import { ImportButton } from "@/features/io/components/import-button";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const RESOURCE = "tenant.catalog.products" as const;
 export const PRODUCTS_PERSIST_KEY = "tenant-catalog-products-v2";

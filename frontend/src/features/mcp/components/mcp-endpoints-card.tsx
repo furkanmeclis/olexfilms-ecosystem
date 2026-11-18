@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useFeature } from "@/features/modules/hooks/use-features";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const MCP_FEATURE = "mcp";
 

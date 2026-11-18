@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { Flame, Hand, Package, UserCheck } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

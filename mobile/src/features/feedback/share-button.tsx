@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import { Button } from '@/ui/button';
+import { toast } from '@/ui/toast';
 
 import { SharingUnavailableError, shareFeedbackZip } from './export';
 import { useFeedback } from './store';
@@ -19,10 +19,9 @@ export function ShareZipButton({ className }: { className?: string }) {
     try {
       await shareFeedbackZip(records, t('share_zip'));
     } catch (e) {
-      Alert.alert(
-        t('share_failed'),
-        e instanceof SharingUnavailableError ? t('needs_update') : e instanceof Error ? e.message : String(e),
-      );
+      toast.error(t('share_failed'), {
+        description: e instanceof SharingUnavailableError ? t('needs_update') : e instanceof Error ? e.message : String(e),
+      });
     } finally {
       setBusy(false);
     }

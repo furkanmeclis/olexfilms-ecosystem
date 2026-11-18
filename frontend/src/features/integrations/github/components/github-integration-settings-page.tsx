@@ -13,7 +13,7 @@ import { githubIntegrationService } from "@/features/integrations/github/service
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const QUERY_KEY = ["platform", "integrations", "github"] as const;
 

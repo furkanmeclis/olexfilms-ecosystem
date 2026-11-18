@@ -10,6 +10,7 @@ import { List, ListRow } from '@/ui/list';
 import { Text } from '@/ui/text';
 
 import { useCan } from '@/core/spaces';
+import { ToastHost } from '@/ui/toast';
 
 import type { Warehouse } from './api';
 import { useCurrentWarehouse } from './context';
@@ -79,6 +80,7 @@ export function WarehousePickerSheet({
           ) : null}
         </ScrollView>
       </View>
+      <ToastHost inModal />
     </Modal>
   );
 }

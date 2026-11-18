@@ -34,6 +34,36 @@ const EXPLICIT: Record<string, ReportCategory> = {
   "orders.fulfillment": "warehouse",
 };
 
+/**
+ * Snapshot reports: they show the state now and take no period, range,
+ * compare or granularity (backend Definition.Periodic = false). Sending one
+ * answers 400, so the shared period of an overview is dropped for them.
+ */
+export const SNAPSHOT_REPORTS: ReadonlySet<string> = new Set([
+  "stock.summary",
+  "activities.recent",
+  "stock.aging",
+]);
+
+const PERIOD_PARAMS = [
+  "period",
+  "range_from",
+  "range_to",
+  "compare",
+  "granularity",
+] as const;
+
+/** The query a report accepts: snapshot reports lose the period params. */
+export function reportQueryFor<Q extends Record<string, unknown>>(
+  key: string,
+  query: Q,
+): Q {
+  if (!SNAPSHOT_REPORTS.has(key)) return query;
+  const out: Record<string, unknown> = { ...query };
+  for (const k of PERIOD_PARAMS) delete out[k];
+  return out as Q;
+}
+
 const PREFIX: Record<string, ReportCategory> = {
   services: "services",
   orders: "orders",

@@ -27,6 +27,7 @@ import { Text } from '@/ui/text';
 import { formatMoney } from '@/features/accounting/lib';
 import { useWarehouses } from '@/features/warehouse/api';
 import { WarehouseField } from '@/features/warehouse/warehouse-picker';
+import { toast } from '@/ui/toast';
 
 import { useCart } from './cart';
 import { PlotterCreditsInput, PlotterSwitch } from './order-edit';
@@ -406,10 +407,10 @@ export function OrderNewScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const missing = order.items?.filter((i) => i.price_missing).length ?? 0;
       router.replace((warehouse ? `/depo/jobs/order/${order.uuid}` : `/bayi/menu/orders/${order.uuid}`) as never);
-      if (missing && prices) Alert.alert(t('price_missing_title'), t('price_missing_body', { count: missing }));
+      if (missing && prices) toast.warning(t('price_missing_title'), { description: t('price_missing_body', { count: missing }) });
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('save_failed'), errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e, { title: t('save_failed') });
     } finally {
       inFlight.current = false;
       setBusy(null);
@@ -448,7 +449,7 @@ export function OrderNewScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       // The draft exists: say so, so a retry (send or open) is understood.
       const msg = errorMessage(isApiError(e) ? e.code : undefined);
-      Alert.alert(t('save_failed'), created.current ? `${msg}\n\n${t('draft_kept')}` : msg);
+      toast.error(t('save_failed'), { description: created.current ? `${msg}\n\n${t('draft_kept')}` : msg });
     } finally {
       inFlight.current = false;
       setBusy(null);

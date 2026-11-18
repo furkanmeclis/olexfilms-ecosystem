@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { EntityLink } from "@/components/entity";
 import { ErrorState } from "@/components/common/error-state";

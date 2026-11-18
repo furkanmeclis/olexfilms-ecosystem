@@ -56,7 +56,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const STOCK_BULK_PERSIST_KEY = "tenant-stock-bulk-v1";
 const UNIT_STATUSES = ["available", "placed", "reserved", "printed"] as const;

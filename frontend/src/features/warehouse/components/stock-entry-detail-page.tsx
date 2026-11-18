@@ -93,7 +93,7 @@ import {
 import { voidHeldWarnings } from "@/features/warehouse/lib/void-result";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Flattened tree as indented select options. */
 function locationOptions(

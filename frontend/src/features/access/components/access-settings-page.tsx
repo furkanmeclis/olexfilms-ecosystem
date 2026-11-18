@@ -12,7 +12,7 @@ import { accessService } from "@/features/access/services/access.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const QUERY_KEY = ["platform", "access", "settings"] as const;
 

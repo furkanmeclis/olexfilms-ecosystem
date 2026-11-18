@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../styles/theme.css";
+@import "../styles/toast.css";
 @import "../components/editor/themes/editor-theme.css";
 @import "../components/shadix-ui/styles/signature-pad.css";
 

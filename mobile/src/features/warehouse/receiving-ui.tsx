@@ -14,6 +14,7 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { Text } from '@/ui/text';
+import { ToastHost } from '@/ui/toast';
 
 import { entryApi, type StockEntry, type StockEntryAttachment, useArrivalReport, useSuppliers, useUndoCheck, wk } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
@@ -165,6 +166,7 @@ function DeliverySheet({ entry, onClose, onSaved }: { entry: StockEntry; onClose
           <Button size="lg" title={t('common:save')} loading={busy} onPress={() => void save()} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <ToastHost inModal />
     </Modal>
   );
 }
@@ -468,6 +470,7 @@ export function ReceivingSheet({
           }}
         />
       ) : null}
+      <ToastHost inModal />
     </Modal>
   );
 }
@@ -582,6 +585,7 @@ function EntryPhotoCapture({
           ) : null}
         </View>
       </View>
+      <ToastHost inModal />
     </Modal>
   );
 }

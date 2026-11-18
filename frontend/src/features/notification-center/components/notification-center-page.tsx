@@ -45,7 +45,7 @@ import {
 } from "@/features/notification-center/services/notification-center.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const KEY = ["platform", "notification-center"] as const;
 

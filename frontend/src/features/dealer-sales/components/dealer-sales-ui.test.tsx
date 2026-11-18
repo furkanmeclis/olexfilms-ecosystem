@@ -58,7 +58,7 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: captured.toast }));
+vi.mock("@/lib/toast", () => ({ appToast: captured.toast }));
 vi.mock("@/components/ui/async-combobox", () => ({
   AsyncCombobox: () => null,
 }));

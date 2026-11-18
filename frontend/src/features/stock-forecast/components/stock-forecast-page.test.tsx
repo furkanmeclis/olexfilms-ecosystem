@@ -60,12 +60,13 @@ vi.mock("@/hooks/use-active-organization", () => ({
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: {
+vi.mock("@/lib/toast", () => {
+  const t = {
     success: (message: string) => captured.toasts.push(message),
     error: (message: string) => captured.toasts.push(message),
-  },
-}));
+  };
+  return { toast: t, appToast: t };
+});
 vi.mock(
   "@/features/stock-forecast/services/stock-forecast.service",
   async (orig) => ({

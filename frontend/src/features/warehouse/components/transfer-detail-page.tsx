@@ -51,7 +51,7 @@ import {
 } from "@/features/warehouse/services/warehouse.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type Finish = "ship" | "complete" | "cancel";
 

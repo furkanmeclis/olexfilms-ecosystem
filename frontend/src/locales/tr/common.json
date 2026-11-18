@@ -67,5 +67,7 @@
   "campaign_unsubscribe.home": "Ana sayfaya git",
   "digits": "Rakamlar",
   "digits_arab": "Arap-Hint (٠١٢٣)",
-  "digits_latn": "Latin (0123)"
+  "digits_latn": "Latin (0123)",
+  "toast_region": "Bildirimler",
+  "error_reference": "Destek için başvuru numarası: {{id}}"
 }

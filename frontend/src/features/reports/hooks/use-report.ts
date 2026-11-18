@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { reportQueryFor } from "@/features/reports/lib/catalog";
 import {
   reportsKeys,
   reportsService,
@@ -30,9 +31,10 @@ export function useReport(
 ) {
   const org = useActiveOrganization(slug);
   const orgKey = org?.uuid ?? slug;
+  const q = reportQueryFor(key, query);
   return useQuery({
-    queryKey: reportsKeys.report(orgKey, key, query),
-    queryFn: () => reportsService.report(key, query),
+    queryKey: reportsKeys.report(orgKey, key, q),
+    queryFn: () => reportsService.report(key, q),
     enabled: (options.enabled ?? true) && Boolean(key),
     placeholderData: keepPreviousData,
     staleTime: 60_000,

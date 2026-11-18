@@ -9,7 +9,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { CLEAR_HISTORY_COMMAND } from "lexical";
 
 import { SendIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import {
   docFromHash,

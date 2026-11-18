@@ -67,5 +67,7 @@
   "campaign_unsubscribe.home": "Zur Startseite",
   "digits": "Ziffern",
   "digits_arab": "Arabisch-indisch (٠١٢٣)",
-  "digits_latn": "Lateinisch (0123)"
+  "digits_latn": "Lateinisch (0123)",
+  "toast_region": "Benachrichtigungen",
+  "error_reference": "Referenz für den Support: {{id}}"
 }

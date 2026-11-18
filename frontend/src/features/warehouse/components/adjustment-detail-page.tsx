@@ -37,7 +37,7 @@ import {
 } from "@/features/warehouse/services/adjustments.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * One stock adjustment document (TEC-1226): header, lines (scan a barcode;

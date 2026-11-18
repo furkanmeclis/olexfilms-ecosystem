@@ -43,9 +43,10 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => s.grants.has(p) }),
 }));

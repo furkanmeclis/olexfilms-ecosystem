@@ -11,7 +11,7 @@ import {
   Truck,
 } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

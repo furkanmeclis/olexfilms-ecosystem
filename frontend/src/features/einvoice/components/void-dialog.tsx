@@ -25,7 +25,7 @@ import {
 } from "@/features/einvoice/services/einvoice.service";
 import { useStepUp } from "@/features/step-up-engine";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Void with a reason (list row action and detail, TEC-504). A mark only:

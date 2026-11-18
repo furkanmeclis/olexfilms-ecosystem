@@ -53,7 +53,7 @@ import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const STOCK_PAGE_SIZE = 20;
 export const STOCK_UNITS_PERSIST_KEY = "tenant-stock-units-v1";

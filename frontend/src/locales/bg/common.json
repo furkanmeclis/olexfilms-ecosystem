@@ -67,5 +67,7 @@
   "campaign_unsubscribe.home": "Към началната страница",
   "digits": "Цифри",
   "digits_arab": "Арабско-индийски (٠١٢٣)",
-  "digits_latn": "Латински (0123)"
+  "digits_latn": "Латински (0123)",
+  "toast_region": "Известия",
+  "error_reference": "Референтен номер за поддръжка: {{id}}"
 }

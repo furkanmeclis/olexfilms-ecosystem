@@ -1,16 +1,15 @@
 import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { Chips } from '@/features/admin/kit';
 import { DEFAULT_COUNTRY, parsePhone } from '@/features/auth/phone-country';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import {
   EMPTY_RECIPIENT,
@@ -59,7 +58,7 @@ export function RecipientNewForm({
       onCreated({ uuid: r.uuid, name: r.name });
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('recipient.save_failed'), errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e, { title: t('recipient.save_failed') });
     } finally {
       inFlight.current = false;
       setBusy(false);

@@ -57,7 +57,7 @@ import {
 } from "@/features/performance/services/performance.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const TARGETS_PERSIST_KEY = "tenant-performance-targets-v1";
 

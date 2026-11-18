@@ -20,7 +20,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export type ReclassDecision = "approve" | "reject" | "cancel";
 

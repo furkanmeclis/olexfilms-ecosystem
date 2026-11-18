@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -10,9 +9,9 @@ import { VIN_RE } from '@/features/services/pickers';
 import { isComplete, VehiclePicker, type VehicleValue } from '@/features/vehicle-picker';
 import { Sheet } from '@/features/services/sheet';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
-import { errorText } from '@/features/services/ui';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -49,12 +48,12 @@ export function EditCustomerSheet({ customer, onClose }: { customer: CustomerDet
     onSuccess: (c) => {
       qc.setQueryData(['customers', 'detail', customer.uuid], c);
       void qc.invalidateQueries({ queryKey: ['customers', 'list'] });
-      if (c.ignored_fields.length) Alert.alert(t('customer_saved'), t('customer_ignored_fields'));
+      if (c.ignored_fields.length) toast.success(t('customer_saved'), { description: t('customer_ignored_fields') });
       onClose();
     },
     onError: (e) => {
       if (isApiError(e) && Object.keys(e.fieldErrors()).length) setErrors(e.fieldErrors());
-      else Alert.alert(t('action_failed'), errorText(e));
+      else toast.apiError(e, { title: t('action_failed') });
     },
   });
 
@@ -139,12 +138,12 @@ export function EditVehicleSheet({
       onClose();
     },
     onError: (e) => {
-      if (!isApiError(e)) return Alert.alert(t('action_failed'), errorText(e));
+      if (!isApiError(e)) return toast.apiError(e, { title: t('action_failed') });
       const f = e.fieldErrors();
       if (e.code === 'INVALID_PLATE' || f.plate) setErrors({ plate: t('invalid.plate') });
       else if (f.vin) setErrors({ vin: t('invalid.vin') });
       else if (f.model_year || f.car_model_uuid) setErrors({ model: t(f.model_year ? 'invalid.year' : 'invalid.model') });
-      else Alert.alert(t('action_failed'), errorText(e));
+      else toast.apiError(e, { title: t('action_failed') });
     },
   });
 

@@ -276,7 +276,7 @@ func TestInvalidInput(t *testing.T) {
 	if _, err := e.svc.Request(context.Background(), otp.RequestInput{Phone: randomPhone(), Purpose: "nope"}); !errors.Is(err, otp.ErrInvalidPurpose) {
 		t.Fatalf("purpose: %v", err)
 	}
-	if otp.NormalizeLocale("de-DE") != "en" || otp.NormalizeLocale("") != "tr" || otp.NormalizeLocale("TR_tr") != "tr" {
+	if otp.NormalizeLocale("de-DE") != "de" || otp.NormalizeLocale("") != "tr" || otp.NormalizeLocale("TR_tr") != "tr" {
 		t.Fatal("locale")
 	}
 }

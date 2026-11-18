@@ -36,8 +36,9 @@ import { ServiceHero } from './service-hero';
 import { openWarranty, shareWarranty } from './share';
 import { Sheet } from './sheet';
 import { RefRow } from '@/features/entity/ref-row';
+import { toast } from '@/ui/toast';
 
-import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from './ui';
+import { DetailSkeleton, ErrorState, InfoRow, Section } from './ui';
 import { partsFromItems } from './wizard';
 
 export function useService(uuid: string, enabled = true) {
@@ -94,11 +95,11 @@ export function ServiceDetailScreen() {
     onError: (e) => {
       if (isApiError(e, 'PHOTO_STANDARD_INCOMPLETE')) {
         void qc.invalidateQueries({ queryKey: intakeKey(uuid) });
-        Alert.alert(t('photos_missing_title'), t('photos_missing_body'));
+        toast.warning(t('photos_missing_title'), { description: t('photos_missing_body') });
         return;
       }
       if (isApiError(e, 'VALIDATION_ERROR') && e.details?.some((d) => d.field === 'items')) {
-        Alert.alert(t('action_failed'), t('complete_needs_items'));
+        toast.error(t('action_failed'), { description: t('complete_needs_items') });
         return;
       }
       // TEC-1083: the move needs a signed intake contract; the card below shows how to sign.
@@ -107,7 +108,7 @@ export function ServiceDetailScreen() {
         contractRequired();
         return;
       }
-      Alert.alert(t('action_failed'), errorText(e));
+      toast.apiError(e, { title: t('action_failed') });
     },
   });
   const contractRequired = useContractRequiredAlert(uuid);
@@ -116,7 +117,7 @@ export function ServiceDetailScreen() {
     mutationFn: (item: string) =>
       unwrap(api.DELETE('/v1/services/{uuid}/items/{item}', { params: { path: { uuid, item } } })),
     onSuccess: onWrite,
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const s = svc.data;

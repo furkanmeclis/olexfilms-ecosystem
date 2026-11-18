@@ -20,7 +20,7 @@ import {
 } from "@/features/storage/hooks/use-storage-sharing";
 import type { StorageLink, StorageObject } from "@/features/storage/types";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 function LinkResult({
   link,

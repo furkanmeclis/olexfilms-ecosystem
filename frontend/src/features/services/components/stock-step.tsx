@@ -36,7 +36,7 @@ import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export type StockStepProps = {
   service: Service;

@@ -15,6 +15,7 @@ import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { ToastHost } from '@/ui/toast';
 
 import {
   INSPECTION_DECISIONS,
@@ -177,6 +178,7 @@ function InspectSheet({ item, onClose }: { item: QuarantineItem; onClose: () => 
           <Button title={t('returns.save')} size="lg" loading={busy} disabled={!reason} onPress={() => void save()} />
         </Screen>
       </View>
+      <ToastHost inModal />
     </Modal>
   );
 }

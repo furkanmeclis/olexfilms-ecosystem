@@ -23,7 +23,7 @@ vi.mock("@/providers/locale-provider", () => ({
       params ? `${key} ${JSON.stringify(params)}` : key,
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/components/ui/dialog", () => {
   const Pass = ({ children }: { children?: ReactNode }) =>
     createElement(Fragment, null, children);

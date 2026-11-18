@@ -7,7 +7,7 @@ import { defaultHomeForUser } from "@/lib/auth/types";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export function ImpersonationBanner() {
   const { user, hydrateProfile } = useAuth();

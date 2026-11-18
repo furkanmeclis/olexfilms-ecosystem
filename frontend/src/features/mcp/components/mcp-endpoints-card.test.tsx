@@ -11,9 +11,10 @@ const state = vi.hoisted(() => ({
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/features/modules/hooks/use-features", () => ({
   useFeature: (_slug: string, key: string) => ({
     enabled: key === "mcp" && state.enabled,

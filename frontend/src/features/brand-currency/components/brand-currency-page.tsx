@@ -35,7 +35,7 @@ import { isApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth/session-store";
 import { useCurrencyList } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type OpenOrdersOption = "block" | "reprice";
 

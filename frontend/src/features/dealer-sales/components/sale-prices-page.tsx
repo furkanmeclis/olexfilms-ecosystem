@@ -30,7 +30,7 @@ import {
 } from "@/features/dealer-sales/services/dealer-sales.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const SALE_PRICES_PERSIST_KEY = "tenant-dealer-sale-prices-v1";
 

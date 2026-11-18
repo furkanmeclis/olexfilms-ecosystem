@@ -12,6 +12,7 @@ import { Chips, ListBody, ListFooter } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { PAGE_SIZE, type PortalAppointment, useFleetRoles, usePortalPages } from './lib';
 import { AppointmentRow } from './parts';
@@ -41,7 +42,7 @@ export function CustomerAppointmentsScreen() {
       const msg = isApiError(e, 'APPOINTMENT_CANCEL_WINDOW_CLOSED')
         ? t('appointment_cancel_window_closed')
         : errorMessage(isApiError(e) ? e.code : undefined);
-      Alert.alert(t('appointment_cancel_failed'), msg);
+      toast.error(t('appointment_cancel_failed'), { description: msg });
     },
   });
 

@@ -6,7 +6,7 @@ import { storageKeys } from "@/features/storage/hooks/query-keys";
 import { storageService } from "@/features/storage/services/storage.service";
 import type { ListStorageParams } from "@/features/storage/types";
 import { useAppMutation } from "@/lib/query/mutation";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 
 export function useStorageFiles(params: ListStorageParams, enabled = true) {

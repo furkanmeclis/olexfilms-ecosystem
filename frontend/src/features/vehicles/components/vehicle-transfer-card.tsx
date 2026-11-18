@@ -20,7 +20,7 @@ import {
   vehicleTransferService,
   type VehicleTransfer,
 } from "@/features/vehicles/services/vehicle-transfer.service";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 
 const STATUS_LABELS: Record<string, string> = {

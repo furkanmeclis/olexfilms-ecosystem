@@ -16,6 +16,7 @@ import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { fetchAssignees, leadEventsKey, leadKey } from './hooks';
 import {
@@ -74,7 +75,7 @@ export function LeadDetailScreen() {
       setLostReason('');
       written(l);
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const assign = useMutation({
     mutationFn: (assignee: string | null) =>
@@ -83,7 +84,7 @@ export function LeadDetailScreen() {
       setAssignOpen(false);
       written(l);
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
   const addNote = useMutation({
     mutationFn: (body: string) => unwrap(api.POST('/v1/leads/{uuid}/notes', { params: { path: { uuid } }, body: { body } })),
@@ -91,7 +92,7 @@ export function LeadDetailScreen() {
       setNote('');
       void qc.invalidateQueries({ queryKey: leadEventsKey(uuid) });
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const pickStatus = (status: LeadStatus) => {

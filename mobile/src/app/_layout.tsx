@@ -23,6 +23,7 @@ import { FeedbackRoot } from '@/features/feedback/feedback-root';
 import { UpdateBanner } from '@/features/shell/update-banner';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';
 import { fontAssets } from '@/ui/fonts';
+import { ToastHost } from '@/ui/toast';
 
 // Known React Native Animated noise (native driver events after unmount); harmless.
 LogBox.ignoreLogs(['Sending `onAnimatedValueUpdate` with no listeners registered']);
@@ -73,6 +74,7 @@ export default function RootLayout() {
               </Stack>
               {!updateRequired && <UpdateBanner />}
               {!updateRequired && status === 'signedIn' && <FeedbackRoot />}
+              <ToastHost />
             </ThemeProvider>
           </LayoutDirection>
         </PersistQueryClientProvider>

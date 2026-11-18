@@ -41,7 +41,7 @@ import {
 } from "@/lib/api/platform-form-request";
 import { voidHeldWarnings } from "@/features/warehouse/lib/void-result";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useDialogs } from "@/providers/dialog-provider";
 
 export const BATCH_PAGE_SIZE = 20;

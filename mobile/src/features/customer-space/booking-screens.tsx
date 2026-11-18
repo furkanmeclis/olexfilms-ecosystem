@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -19,6 +19,7 @@ import type { IconName } from '@/ui/icons';
 import { Input } from '@/ui/input';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import {
   addDaysIso,
@@ -100,7 +101,7 @@ export function CustomerBookingScreen() {
       ),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['portal', 'appointments'] });
-      Alert.alert(t('booking_done'), t('booking_done_body'));
+      toast.success(t('booking_done'), { description: t('booking_done_body') });
       if (router.canGoBack()) router.back();
       else router.replace('/musteri/appointments');
     },
@@ -109,7 +110,7 @@ export function CustomerBookingScreen() {
         setSlot(null);
         void qc.invalidateQueries({ queryKey: ['portal', 'appointments', 'availability'] });
       }
-      Alert.alert(t('booking_failed'), bookingError(e, t));
+      toast.error(t('booking_failed'), { description: bookingError(e, t) });
     },
   });
 

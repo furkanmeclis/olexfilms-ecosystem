@@ -21,7 +21,7 @@ import {
   type WarehouseSettings,
 } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** HH:MM (00:00-23:59); empty clears the cutoff. */
 export const CUTOFF_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;

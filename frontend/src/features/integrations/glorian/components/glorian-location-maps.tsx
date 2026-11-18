@@ -40,7 +40,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useFormatter, useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const LOCATION_MAPS_PERSIST_KEY = "platform-glorian-location-maps-v1";
 

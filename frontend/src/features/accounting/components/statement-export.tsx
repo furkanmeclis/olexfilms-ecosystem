@@ -15,7 +15,7 @@ import {
 } from "@/features/accounting/services/accounting.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Poll interval of a queued / processing export job. */
 export const EXPORT_POLL_MS = 2000;

@@ -27,7 +27,7 @@ import {
 } from "@/lib/realtime";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 import { RealtimeDebugPanel } from "@/components/realtime/realtime-debug-panel";
 
