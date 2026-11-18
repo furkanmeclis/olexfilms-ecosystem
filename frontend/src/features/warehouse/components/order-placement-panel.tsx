@@ -38,7 +38,7 @@ import {
 } from "@/features/warehouse/services/warehouse.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const ORDER_PLACEMENT_PERSIST_KEY = "tenant-order-placement-units-v1";
 

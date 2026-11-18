@@ -65,7 +65,7 @@ vi.mock("@/providers/auth-provider", () => ({
 }));
 vi.mock("@/features/step-up-engine", () => ({ useStepUp: () => stepUp }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));

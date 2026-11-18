@@ -38,7 +38,7 @@ import {
   type StockEntryHeaderInput,
 } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** The header fields of a delivery form, from an entry. */
 export function deliveryForm(entry: StockEntry) {

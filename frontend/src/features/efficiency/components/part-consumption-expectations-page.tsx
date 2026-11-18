@@ -63,7 +63,7 @@ import {
   isKnownPart,
 } from "@/features/services/lib/car-parts";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const EXPECTATIONS_PAGE_SIZE = 50;
 export const EXPECTATIONS_PERSIST_KEY = "platform-part-expectations-v1";

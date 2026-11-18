@@ -28,7 +28,7 @@ import {
 } from "@/features/einvoice/services/einvoice.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const S = "einvoice.settings";
 const XSLT_MAX_BYTES = 1 << 20;

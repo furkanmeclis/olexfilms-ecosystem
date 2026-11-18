@@ -13,7 +13,7 @@ import { glorianErrorText } from "@/features/integrations/glorian/lib/errors";
 import { glorianKeys } from "@/features/integrations/glorian/lib/keys";
 import { glorianService } from "@/features/integrations/glorian/services/glorian.service";
 import { useFormatter, useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Reconcile trigger and the drift report of the latest reconcile run

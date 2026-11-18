@@ -19,7 +19,7 @@ import { VinField } from "@/features/services/components/vin-field";
 import { normalizeVin, validateVin } from "@/features/services/lib/vin";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * VIN completion of a vin_pending measurement (PATCH

@@ -32,7 +32,7 @@ import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const T = "photo_standard.settings";
 

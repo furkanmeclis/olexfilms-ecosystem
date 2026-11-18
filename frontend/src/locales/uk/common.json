@@ -69,5 +69,7 @@
   "campaign_unsubscribe.home": "На головну сторінку",
   "digits": "Цифри",
   "digits_arab": "Арабсько-індійські (٠١٢٣)",
-  "digits_latn": "Латинські (0123)"
+  "digits_latn": "Латинські (0123)",
+  "toast_region": "Сповіщення",
+  "error_reference": "Номер звернення для підтримки: {{id}}"
 }

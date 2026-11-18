@@ -58,7 +58,7 @@ import {
 } from "@/features/performance/services/performance.service";
 import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const BONUS_RULES_PERSIST_KEY = "tenant-performance-bonus-rules-v1";
 

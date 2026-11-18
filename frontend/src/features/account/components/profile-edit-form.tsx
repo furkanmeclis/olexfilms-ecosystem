@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { AppCombobox, AppForm, AppInput, AppSelect } from "@/components/forms";
 import { Alert, AlertDescription } from "@/components/ui/alert";

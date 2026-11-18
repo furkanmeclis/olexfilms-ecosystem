@@ -20,7 +20,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: "bayi-a" }),
   useRouter: () => ({ push: routerPush }),
 }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/lib/toast", () => {
+  const t = { error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }));

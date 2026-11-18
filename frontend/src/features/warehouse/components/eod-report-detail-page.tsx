@@ -30,7 +30,7 @@ import {
 } from "@/features/warranty/lib/certificate";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * One end-of-day report (TEC-207): totals, the movement groups and the

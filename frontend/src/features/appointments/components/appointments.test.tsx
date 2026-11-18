@@ -38,9 +38,10 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: captured.toastError },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: captured.toastError };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/lib/api/platform-request", () => http);
 // Drag and drop: the test drives DndContext's onDragEnd directly.
 vi.mock("@dnd-kit/core", () => ({

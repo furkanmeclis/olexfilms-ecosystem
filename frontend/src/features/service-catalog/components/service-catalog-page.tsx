@@ -58,7 +58,7 @@ import {
 } from "@/features/service-catalog/services/service-catalog.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type Mode = "platform" | "tenant";
 

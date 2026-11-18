@@ -29,7 +29,7 @@ import {
 } from "@/features/stock/services/stock-ops.service";
 import { useAuthStore } from "@/lib/auth/session-store";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** API bounds of a credit increase (TEC-1221). */
 export const MAX_CREDIT_INCREASE = 1000;

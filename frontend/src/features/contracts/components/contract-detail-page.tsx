@@ -30,7 +30,7 @@ import { isApiError } from "@/lib/api";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const D = "contract_templates.contract_detail";
 export const CONTRACT_SIGNERS_PERSIST_KEY = "tenant-contract-signers-v1";

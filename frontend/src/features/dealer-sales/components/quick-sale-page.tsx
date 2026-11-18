@@ -41,7 +41,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const PRODUCT_SALES_PERSIST_KEY = "tenant-dealer-product-sales-v1";
 

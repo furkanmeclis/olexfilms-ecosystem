@@ -76,7 +76,7 @@ import {
 } from "@/features/warehouse/components/warehouse-export";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const TRANSFER_PAGE_SIZE = 20;
 export const TRANSFERS_PERSIST_KEY = "tenant-warehouse-transfers-v1";

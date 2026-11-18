@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { StatusChip } from "@/components/common/status-chip";
 import { Badge } from "@/components/ui/badge";

@@ -27,7 +27,7 @@ import {
 } from "@/features/warranty-claims/services/claim-reports.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Queues the active tab's report as a CSV / XLSX export job (TEC-338

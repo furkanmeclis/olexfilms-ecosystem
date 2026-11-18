@@ -39,7 +39,7 @@ import {
 import { Markdown } from "@/features/portal/lib/markdown";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Create (uuid undefined) or edit a product; center + catalog.write only. */
 export function ProductFormPage({

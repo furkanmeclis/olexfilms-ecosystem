@@ -10,7 +10,7 @@ import type {
 } from "@/features/bulk-engine/types";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 function isSyncResult(
   data: BulkJob | BulkExecuteSyncResult,

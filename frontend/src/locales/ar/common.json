@@ -71,5 +71,7 @@
   "campaign_unsubscribe.home": "الانتقال إلى الصفحة الرئيسية",
   "digits": "الأرقام",
   "digits_arab": "عربية مشرقية (٠١٢٣)",
-  "digits_latn": "لاتينية (0123)"
+  "digits_latn": "لاتينية (0123)",
+  "toast_region": "الإشعارات",
+  "error_reference": "رقم المرجع للدعم: {{id}}"
 }

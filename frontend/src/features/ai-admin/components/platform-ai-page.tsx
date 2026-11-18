@@ -20,7 +20,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const PLATFORM_AI_TABS = ["settings", "orgs", "usage"] as const;
 type PlatformAITab = (typeof PLATFORM_AI_TABS)[number];

@@ -12,7 +12,7 @@ import {
   type VehicleImageKind,
 } from "@/features/vehicle-catalog/lib/images";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const PROBLEM_KEYS = {
   svg: "vehicles.image.svg_refused",

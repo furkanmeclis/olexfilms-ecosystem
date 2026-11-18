@@ -19,7 +19,7 @@ import { importsService } from "@/features/io/services/imports.service";
 import type { ExportJobScope, ImportJob } from "@/features/io/types";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Poll interval while the job is queued / applying. */
 const POLL_MS = 1500;

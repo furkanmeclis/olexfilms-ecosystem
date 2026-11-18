@@ -28,7 +28,7 @@ import {
   type GlorianSyncRunStatus,
 } from "@/features/integrations/glorian/services/glorian.service";
 import { useFormatter, useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const RUN_KINDS: GlorianSyncRunKind[] = [
   "pull_categories",

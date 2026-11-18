@@ -35,7 +35,7 @@ import {
 import { importsService } from "@/features/io/services/imports.service";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type ImportDetailPageProps = {
   uuid: string;

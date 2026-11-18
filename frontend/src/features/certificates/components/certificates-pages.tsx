@@ -54,7 +54,7 @@ import { UserFilterCombobox } from "@/features/users/components/user-filter-comb
 import { useAuthStore } from "@/lib/auth/session-store";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const TYPE_KEY = "platform-certificate-types-v1";
 const CERT_KEY = "tenant-certificates-v1";

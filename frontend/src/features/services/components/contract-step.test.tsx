@@ -43,7 +43,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => granted.set.has(p) }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));

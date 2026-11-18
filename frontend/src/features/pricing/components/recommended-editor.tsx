@@ -59,7 +59,7 @@ import {
 } from "@/features/pricing/services/recommended.service";
 import { useCurrencyList, useSessionCurrencies } from "@/lib/currency";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const RECOMMENDED_EDITOR_PERSIST_KEY = "tenant-recommended-prices-v1";
 

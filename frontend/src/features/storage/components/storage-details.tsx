@@ -32,7 +32,7 @@ import { formatBytes } from "@/features/storage/lib/format";
 import { storageService } from "@/features/storage/services/storage.service";
 import type { StorageObject } from "@/features/storage/types";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (

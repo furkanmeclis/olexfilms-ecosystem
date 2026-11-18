@@ -27,7 +27,7 @@ import {
 } from "@/features/fleets/services/fleets.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const FLEET_STATEMENT_PERSIST_KEY = "tenant-fleet-statement-v1";
 const EXPORT_POLL_MS = 2000;

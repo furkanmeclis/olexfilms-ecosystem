@@ -39,7 +39,7 @@ import {
   tasksService,
 } from "@/features/tasks/services/tasks.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** "Set target": a network target for the row's organization. */
 export function TargetDialog({

@@ -47,9 +47,10 @@ vi.mock("@/providers/dialog-provider", () => ({
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
-vi.mock("@/providers/toast-provider", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock(
   "@/features/vehicle-catalog/services/vehicle-catalog.service",
   async (orig) => ({

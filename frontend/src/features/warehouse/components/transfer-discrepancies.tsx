@@ -27,7 +27,7 @@ import {
   type WarehouseTransfer,
 } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const NOTE_MAX = 500;
 

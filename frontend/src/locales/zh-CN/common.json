@@ -66,5 +66,7 @@
   "campaign_unsubscribe.home": "返回首页",
   "digits": "数字",
   "digits_arab": "阿拉伯-印度数字 (٠١٢٣)",
-  "digits_latn": "拉丁数字 (0123)"
+  "digits_latn": "拉丁数字 (0123)",
+  "toast_region": "通知",
+  "error_reference": "支持参考编号：{{id}}"
 }

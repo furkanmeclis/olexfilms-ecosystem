@@ -39,7 +39,7 @@ import {
 } from "@/features/services/services/service-wizard.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Account type a payment method books into (cari books no account). */
 const METHOD_ACCOUNT_TYPE: Record<ServiceIncomePaymentMethod, string | null> = {

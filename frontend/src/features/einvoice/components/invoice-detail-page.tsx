@@ -45,7 +45,7 @@ import {
 import { useStepUp } from "@/features/step-up-engine";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (

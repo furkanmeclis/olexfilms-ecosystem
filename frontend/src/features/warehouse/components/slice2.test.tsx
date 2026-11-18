@@ -74,7 +74,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
   }),
 }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/features/step-up-engine", () => ({ useStepUp: () => stepUp }));
 vi.mock("@/providers/auth-provider", () => ({ useAuth: () => auth }));
 vi.mock("@/hooks/use-mobile", () => ({

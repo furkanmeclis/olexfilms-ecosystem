@@ -31,7 +31,7 @@ import {
 import { ImportWizard } from "@/features/io";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const FLEET_VEHICLES_PERSIST_KEY = "tenant-fleet-vehicles-v1";
 

@@ -48,7 +48,7 @@ import {
 } from "@/features/appointments/services/appointments.service";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export type CalendarView = "day" | "week";
 

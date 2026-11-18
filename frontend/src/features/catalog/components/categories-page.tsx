@@ -39,7 +39,7 @@ import {
 } from "@/features/bulk-engine";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const CATEGORIES_PERSIST_KEY = "tenant-catalog-categories-v2";
 

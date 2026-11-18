@@ -9,7 +9,7 @@ import {
   type RoleListResult,
 } from "@/features/roles/services/roles.service";
 import { useAppMutation } from "@/lib/query/mutation";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 
 export function useCreateRole() {

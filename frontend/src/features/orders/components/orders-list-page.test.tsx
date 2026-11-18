@@ -39,7 +39,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: captured.push }),
   useSearchParams: () => new URLSearchParams(captured.search ?? ""),
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string) => key,

@@ -26,7 +26,7 @@ import {
   type StockSplit,
 } from "@/features/stock/services/stock-ops.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * "Split the roll" (TEC-184, TEC-763): cuts meters off a roll as a new

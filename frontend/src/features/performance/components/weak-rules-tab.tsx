@@ -50,7 +50,7 @@ import {
   type PerformanceRuleInput,
 } from "@/features/performance/services/performance.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const RULES_PERSIST_KEY = "tenant-performance-weak-rules-v1";
 

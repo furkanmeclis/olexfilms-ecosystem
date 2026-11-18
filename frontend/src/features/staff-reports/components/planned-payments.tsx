@@ -38,7 +38,7 @@ import {
 } from "@/features/staff-reports/services/staff-reports.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const PLANNED_PAYMENTS_PERSIST_KEY = "tenant-staff-planned-payments-v1";
 

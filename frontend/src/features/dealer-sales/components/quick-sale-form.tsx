@@ -38,7 +38,7 @@ import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { unitBarcode } from "@/features/warehouse/lib/scan";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type QuickSaleFormProps = {
   /** Display currency before the first line (the dealer's). */

@@ -41,7 +41,7 @@ import {
   type ReportQuery,
 } from "@/features/reports/services/reports.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** Query string of the period (kept when opening the report detail). */
 export function periodSearch(query: ReportQuery): string {
