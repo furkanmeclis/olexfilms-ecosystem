@@ -32,6 +32,7 @@
   "passive": "Inattivo",
   "saving": "Salvataggio…",
   "items_one": "{{count}} elemento",
+  "items_many": "{{count}} elementi",
   "items_other": "{{count}} elementi",
   "language": "Lingua",
   "theme": "Tema",

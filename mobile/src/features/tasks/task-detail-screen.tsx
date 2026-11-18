@@ -2,12 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
-import { errorMessage } from '@/core/i18n';
 import { Chips, ErrorState, InfoRow, ListSkeleton, useFormat } from '@/features/admin/kit';
 import { RefRow } from '@/features/entity/ref-row';
 import { Button } from '@/ui/button';
@@ -18,6 +16,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { isOverdue, nextStatuses, priorityTone, statusTone, TASK_PRIORITIES, type TaskPriority, type TaskStatus } from './lib';
 
@@ -54,7 +53,7 @@ export function TaskDetailScreen() {
       void qc.invalidateQueries({ queryKey: ['tasks', 'list'] });
       void qc.invalidateQueries({ queryKey: ['tasks', 'comments', uuid] });
     },
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
   const addComment = useMutation({
     mutationFn: (body: string) => unwrap(api.POST('/v1/tasks/{uuid}/comments', { params: { path: { uuid: uuid! } }, body: { body } })),
@@ -63,7 +62,7 @@ export function TaskDetailScreen() {
       void qc.invalidateQueries({ queryKey: ['tasks', 'comments', uuid] });
       void qc.invalidateQueries({ queryKey: ['tasks', 'list'] });
     },
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
 
   const task = q.data;

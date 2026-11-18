@@ -59,7 +59,7 @@
   "diff.place": "Zona",
   "diff.title": "Hissə fərqləri",
   "diff.tolerance": "Tolerantlıq: ±{{value}} µm",
-  "interpretations.original": "Orijinal boya",
+  "interpretations.original": "Orijinal boya qatı",
   "interpretations.second_layer": "İkinci boya qatı",
   "interpretations.thick_putty": "Qalın macun qatı",
   "interpretations.thin_putty": "Nazik macun qatı",

@@ -108,7 +108,7 @@
   "transfer.verified": "Təsdiqləndi",
   "transfer.new_owner_hint": "Yeni sahibin hesabı yoxdur; təhvil tamamlandıqda müştəri qeydi yaradılır. Ad mütləqdir.",
   "transfer.new_owner_name": "Yeni sahibin adı",
-  "transfer.new_owner_surname": "Soyadı",
+  "transfer.new_owner_surname": "Soyad",
   "transfer.verify": "Kodları təsdiqlə",
   "transfer.cancel": "Təhvili ləğv et",
   "transfer.cancelled": "Təhvil ləğv edildi.",

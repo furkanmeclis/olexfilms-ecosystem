@@ -22,7 +22,7 @@
   "territories.remove": "Rimuovi territorio",
   "territories.empty": "Ancora nessun territorio.",
   "territories.error": "Impossibile caricare i territori",
-  "territories.columns.area": "Area",
+  "territories.columns.area": "Superficie",
   "territories.columns.level": "Livello",
   "territories.columns.distributor": "Distributore",
   "territories.validation.distributor": "Seleziona un distributore",

@@ -21,7 +21,7 @@
   "columns.source": "Джерело",
   "columns.temperature": "Температура",
   "columns.status": "Статус",
-  "columns.follow_up": "Follow-up",
+  "columns.follow_up": "Повторний контакт",
   "columns.assignee": "Відповідальний",
   "target_type.customer": "Клієнт",
   "target_type.dealer_candidate": "Кандидат у дилери",

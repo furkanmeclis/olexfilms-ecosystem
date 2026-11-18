@@ -217,5 +217,6 @@
   "labels.showcase.read": "عرض الواجهة",
   "labels.showcase.write": "تعديل الواجهة",
   "labels.platform.showcase.review": "مراجعة واجهات الوكلاء",
-  "groups.dealer_showcase": "واجهة الوكيل"
+  "groups.dealer_showcase": "واجهة الوكيل",
+  "labels.stock.bulk": "عمليات الباركود الجماعية"
 }

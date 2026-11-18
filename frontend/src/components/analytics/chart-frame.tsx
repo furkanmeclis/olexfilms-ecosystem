@@ -259,3 +259,10 @@ export function ChartFrame({
     </section>
   );
 }
+
+/**
+ * First-render size of a ResponsiveContainer, before its ResizeObserver
+ * measures the frame. Recharts' default (-1 x -1) logs a "width(-1) and
+ * height(-1) of chart should be greater than 0" warning on every mount.
+ */
+export const CHART_INITIAL_DIMENSION = { width: 320, height: 200 } as const;

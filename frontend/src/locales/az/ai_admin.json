@@ -41,7 +41,7 @@
   "settings.instructions_description": "Hər söhbətin sistem təlimatına əlavə olunur.",
   "settings.knowledge_title": "Bilik mətni",
   "settings.knowledge_description": "Köməkçinin müraciət edə biləcəyi Markdown mətni (məhsullar, qaydalar, tez-tez verilən suallar).",
-  "settings.knowledge_write": "Yaz",
+  "settings.knowledge_write": "Yazma",
   "settings.knowledge_preview": "Önizləmə",
   "settings.knowledge_empty": "Hələ önizləmək üçün heç nə yoxdur.",
   "settings.knowledge_size": "{{used}} KB / {{max}} KB",

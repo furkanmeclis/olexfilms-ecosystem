@@ -266,6 +266,6 @@
   "tenant_detail.counts": "Zähler",
   "tenant_detail.count.members": "Mitglieder",
   "tenant_detail.count.customers": "Kunden",
-  "tenant_detail.count.leads": "Leads",
+  "tenant_detail.count.leads": "Interessenten",
   "tenant_detail.count.warehouses": "Lager"
 }

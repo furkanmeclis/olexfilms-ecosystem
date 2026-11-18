@@ -22,7 +22,7 @@
   "kinds.transfer": "Transferencia",
   "kinds.organization": "Organización",
   "kinds.user": "Usuario",
-  "kinds.lead": "Lead",
+  "kinds.lead": "Cliente potencial",
   "kinds.appointment": "Cita",
   "kinds.task": "Tarea",
   "kinds.measurement": "Medición",
@@ -61,7 +61,7 @@
   "related.tabs.service": "Servicios",
   "related.tabs.warranty": "Garantías",
   "related.tabs.appointment": "Citas",
-  "related.tabs.lead": "Leads",
+  "related.tabs.lead": "Clientes potenciales",
   "related.tabs.measurement": "Mediciones",
   "related.tabs.contract": "Contratos",
   "related.columns.subject": "Asunto"

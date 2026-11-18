@@ -34,7 +34,7 @@
   "confirm.cancelled": "Bu transfer ləğv edilsin?",
   "reason_hint": "Səbəb əlavə edə bilərsiniz (istəyə bağlı).",
   "sender": "Göndərən",
-  "receiver": "Alan",
+  "receiver": "Qəbul edən",
   "created": "Yaradılıb",
   "shipped_at": "Göndərilib",
   "received_at": "Qəbul edilib",

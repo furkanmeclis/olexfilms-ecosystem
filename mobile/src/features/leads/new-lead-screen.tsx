@@ -2,17 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { DEFAULT_COUNTRY, parsePhone } from '@/features/auth/phone-country';
 import { PickerSheet } from '@/features/picker-sheet';
 import { fullName, PAGE_SIZE, useDebounced, usePagedList } from '@/features/services/lib';
-import { Chips, errorText, Section } from '@/features/services/ui';
+import { Chips, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { fetchAssignees, useLeadLinks, useOrgType } from './hooks';
 import {
@@ -128,7 +129,7 @@ export function NewLeadScreen() {
       void qc.invalidateQueries({ queryKey: ['leads', 'list'] });
       router.replace(links.detail(lead.uuid));
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const submit = () => {

@@ -6,11 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { useSessionCurrencies } from '@/core/currency';
 import type { paths } from '@/core/api/schema';
-import { errorMessage } from '@/core/i18n';
 import { hasAmount } from '@/core/price-visibility';
 import { usePricesVisible } from '@/core/use-prices-visible';
 import { isCenterWorkplace, kindsOf } from '@/core/spaces';
@@ -37,6 +35,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { useCart } from './cart';
 import { LinePlotter, OrderLinesEditor } from './order-edit';
@@ -213,10 +212,10 @@ export function OrderDetailScreen() {
       void qc.invalidateQueries({ queryKey: ['approvals'] });
       if (status === 'approved') {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(t('orders.approved_done'), o?.order_no);
+        toast.success(t('orders.approved_done'), { description: o?.order_no });
       }
     },
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
   const o = q.data;
   const actions = (o?.available_transitions ?? []).filter((s) => SIMPLE_TRANSITIONS.includes(s));

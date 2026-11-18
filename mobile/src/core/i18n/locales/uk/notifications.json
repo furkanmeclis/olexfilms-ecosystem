@@ -2,6 +2,8 @@
   "title": "Сповіщення",
   "bell": "Сповіщення",
   "bell_unread_one": "Сповіщення, {{count}} непрочитане",
+  "bell_unread_few": "Сповіщення, {{count}} непрочитані",
+  "bell_unread_many": "Сповіщення, {{count}} непрочитаних",
   "bell_unread_other": "Сповіщення, {{count}} непрочитаних",
   "filter.all": "Усі",
   "filter.unread": "Непрочитані",

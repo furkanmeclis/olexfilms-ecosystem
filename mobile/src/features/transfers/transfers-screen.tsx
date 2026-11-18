@@ -35,6 +35,7 @@ import { StatusPill } from '@/ui/status-pill';
 import { StepTimeline } from '@/ui/step-timeline';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   createTransfer,
@@ -79,7 +80,7 @@ function failMessage(e: unknown) {
 
 function alertError(e: unknown) {
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  Alert.alert(failMessage(e));
+  toast.error(failMessage(e));
 }
 
 function counterparty(tr: Transfer) {

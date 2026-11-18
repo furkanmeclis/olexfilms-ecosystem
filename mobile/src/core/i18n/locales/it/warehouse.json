@@ -477,7 +477,7 @@
   "stock.movement.void": "Dismesso",
   "stock.products.empty_description": "I prodotti compaiono qui quando ci sono unità in stock.",
   "stock.products.empty_title": "Nessun prodotto in stock",
-  "stock.products.status.in_stock": "In stock",
+  "stock.products.status.in_stock": "Disponibile",
   "stock.products.status.out_of_stock": "Esaurito",
   "stock.status.available": "Disponibile",
   "stock.status.in_transit": "In transito",

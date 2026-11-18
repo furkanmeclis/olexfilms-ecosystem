@@ -32,7 +32,7 @@
   "fields.expires_at": "Expire",
   "fields.status": "Statut",
   "fields.verified_by": "Validé par",
-  "fields.service": "Service",
+  "fields.service": "Prestation",
   "fields.dealer": "Revendeur",
   "fields.missing_type": "Type manquant",
   "fields.decision": "Décision",

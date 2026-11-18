@@ -5,6 +5,7 @@ import {
   groupByCategory,
   reportCategory,
   visibleSpecialReports,
+  reportQueryFor,
 } from "@/features/reports/lib/catalog";
 
 describe("reportCategory", () => {
@@ -51,5 +52,22 @@ describe("visibleSpecialReports", () => {
       "accounting.reports",
       "warranty_claims.reports",
     ]);
+  });
+});
+
+describe("reportQueryFor", () => {
+  it("drops the period params of snapshot reports", () => {
+    const q = {
+      period: "30d",
+      compare: "previous",
+      range_from: "2026-01-01",
+      limit: 10,
+    };
+    expect(reportQueryFor("stock.summary", q)).toEqual({ limit: 10 });
+    expect(reportQueryFor("activities.recent", q)).toEqual({ limit: 10 });
+  });
+  it("keeps them for periodic reports", () => {
+    const q = { period: "30d", compare: "previous" };
+    expect(reportQueryFor("services.trend", q)).toBe(q);
   });
 });

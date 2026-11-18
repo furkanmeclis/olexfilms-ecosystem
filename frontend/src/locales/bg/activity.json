@@ -213,6 +213,7 @@
   "actions.einvoice.buyer_profile_updated": "Профилът за фактуриране на купувача е обновен",
   "resources.einvoices": "Е-фактури",
   "actions.services.created_on_behalf": "Услуга открита от името на дилър",
+  "actions.catalog.product.roll_updated": "Настройките за ролка на продукта са обновени",
   "actions.organizations.member_updated": "Ролите на члена на организацията са обновени",
   "actions.organizations.member_removed": "Членът е премахнат от организацията",
   "resources.organizations": "Организации",

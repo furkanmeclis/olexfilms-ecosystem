@@ -62,7 +62,7 @@
   "performance.no_metrics": "Keine Kennzahlen für diesen Monat",
   "performance.type.all": "Alle",
   "performance.type.dealer": "Händler",
-  "performance.type.distributor": "Distributor",
+  "performance.type.distributor": "Vertriebspartner",
   "performance.metric.services_count": "Services",
   "performance.metric.order_volume": "Bestellvolumen",
   "performance.metric.warranty_start_rate": "Garantiestarts",

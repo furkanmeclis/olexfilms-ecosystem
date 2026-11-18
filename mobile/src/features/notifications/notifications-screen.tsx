@@ -2,11 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, View } from 'react-native';
-
-import { isApiError } from '@/core/api/errors';
+import { Linking, Pressable, View } from 'react-native';
 import { intlLocale } from '@/core/digits';
-import { errorMessage } from '@/core/i18n';
 import { useSession } from '@/core/auth/session';
 import { kindsOf, useResolvedSpace } from '@/core/spaces';
 import { PagedList, PAGE_SIZE, usePagedQuery } from '@/features/admin/kit';
@@ -15,6 +12,7 @@ import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { useInbox } from './inbox';
 import { type AppNotification, notificationExternalUrl, notificationIcon, notificationRoute, notificationSpace } from './lib';
@@ -52,7 +50,7 @@ export function NotificationsScreen() {
   );
 
   const refresh = () => void qc.invalidateQueries({ queryKey: ['notifications'] });
-  const onError = (e: unknown) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined, t('error_generic')));
+  const onError = (e: unknown) => toast.apiError(e, { fallback: t('error_generic') });
 
   const read = useMutation({ mutationFn: inbox.read, onSuccess: refresh, onError });
   const readAll = useMutation({ mutationFn: inbox.readAll, onSuccess: refresh, onError });

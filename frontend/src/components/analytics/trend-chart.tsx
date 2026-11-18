@@ -23,7 +23,12 @@ import {
   xAxisProps,
   yAxisProps,
 } from "./chart-axes";
-import { ChartFrame, type ChartTable, type LegendItem } from "./chart-frame";
+import {
+  ChartFrame,
+  type ChartTable,
+  type LegendItem,
+  CHART_INITIAL_DIMENSION,
+} from "./chart-frame";
 import {
   formatAxisValue,
   formatBucket,
@@ -272,7 +277,12 @@ export function TrendChart({
       isEmpty={isEmpty}
       testId={chrome.title ? undefined : "trend-chart"}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        initialDimension={CHART_INITIAL_DIMENSION}
+      >
         {kind === "area" ? (
           <AreaChart data={rows} margin={margin}>
             {axes}

@@ -41,7 +41,7 @@
   "total": "Toplam",
   "bucket": "Dönem",
   "mode.line": "Çizgi",
-  "mode.bar": "Bar",
+  "mode.bar": "Çubuk",
   "mode.table": "Tablo",
   "compared_with": "Karşılaştırılan: {{range}}",
   "export": "Dışa aktar",

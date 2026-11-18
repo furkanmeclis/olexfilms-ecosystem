@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, View } from 'react-n
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
+import { ToastHost } from '@/ui/toast';
 
 import { whError } from './format';
 import { Chips } from './parts';
@@ -92,6 +93,7 @@ export function CodeNameSheet({
           <Button size="lg" title={t('form.save')} loading={busy} onPress={() => void submit()} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <ToastHost inModal />
     </Modal>
   );
 }

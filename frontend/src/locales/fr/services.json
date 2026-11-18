@@ -185,7 +185,7 @@
   "status.ready": "Prêt",
   "status.completed": "Terminé",
   "status.cancelled": "Annulé",
-  "list.title": "Services",
+  "list.title": "Prestations",
   "list.description": "Services de votre périmètre ; filtrez par statut, date, plaque ou client.",
   "list.forbidden": "Vous devez avoir l'autorisation services.read pour voir les services.",
   "list.empty_title": "Aucun service trouvé",

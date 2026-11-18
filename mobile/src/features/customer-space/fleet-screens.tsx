@@ -4,8 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { formatDate, formatNumber, vehicleLabel } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, ListBody, ListFooter, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
@@ -15,6 +13,7 @@ import { List, ListRow } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import {
   type FleetLink,
@@ -340,7 +339,7 @@ export function FleetHomeScreen() {
       void qc.invalidateQueries({ queryKey: ['portal', 'fleet'] });
     },
     onError: (e) => {
-      Alert.alert(t('fleet_link_failed'), errorMessage(isApiError(e) ? e.code : undefined));
+      toast.apiError(e, { title: t('fleet_link_failed') });
     },
   });
 

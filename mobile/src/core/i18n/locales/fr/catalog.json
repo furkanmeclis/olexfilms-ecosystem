@@ -28,5 +28,5 @@
   "unit_type.roll_meter": "Rouleau (mètres)",
   "stock_units": "Unités en stock",
   "usage_credits": "Crédits d'utilisation",
-  "usage_credits_value": "{{value}} services"
+  "usage_credits_value": "{{value}} prestations"
 }

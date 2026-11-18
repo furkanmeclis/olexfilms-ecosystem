@@ -26,7 +26,7 @@
   "validation.valid": "Valide",
   "validation.rule_warnings": "Avertissements de règles",
   "validation.invalid": "Non valide",
-  "profiles.EARSIVFATURA": "e-Archive (EARSIVFATURA)",
+  "profiles.EARSIVFATURA": "Facture e-Archive (EARSIVFATURA)",
   "profiles.TEMELFATURA": "Facture de base (TEMELFATURA)",
   "profiles.TICARIFATURA": "Facture commerciale (TICARIFATURA)",
   "source_types.order": "Commande",

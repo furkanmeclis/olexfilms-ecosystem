@@ -4,7 +4,7 @@
   "title": "Anuncios",
   "description": "Anuncios de la red, borradores localizados y seguimiento de lectura.",
   "forbidden": "No tienes permiso para leer anuncios.",
-  "list.title": "Feed",
+  "list.title": "Novedades",
   "list.empty": "Todavía no hay anuncios.",
   "list.page": "Página {{page}} / {{total}}",
   "list.previous": "Anterior",
