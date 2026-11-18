@@ -36,6 +36,8 @@ var orderReceiptDiscrepancyTexts = map[string]localizedText{
 		"{{buyer_name}} {{order_no}} nömrəli sifarişi qəbul edərkən {{missing_count}} əskik və {{damaged_count}} zədəli vahid bildirdi. Qeydi sifarişdə yoxlayın."},
 	"ar": {"تم الإبلاغ عن فرق في الاستلام: {{order_no}}",
 		"أبلغ {{buyer_name}} عن {{missing_count}} وحدات مفقودة و{{damaged_count}} وحدات تالفة عند استلام الطلب {{order_no}}. راجعوا السجل في الطلب."},
+	"fa": {"مغایرت در تحویل گزارش شد: {{order_no}}",
+		"{{buyer_name}} هنگام دریافت سفارش {{order_no}}، {{missing_count}} واحد کسری و {{damaged_count}} واحد آسیب\u200cدیده گزارش کرد. صورت\u200cجلسه را در سفارش بررسی کنید."},
 }
 
 func init() {

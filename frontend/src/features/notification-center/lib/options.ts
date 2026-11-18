@@ -1,3 +1,4 @@
+import { SUPPORTED_LOCALES } from "@/config/i18n";
 import type {
   NotificationChannel,
   NotificationDeliveryStatus,
@@ -21,22 +22,8 @@ export const ROLES: NotificationTemplateRole[] = [
   "center",
 ];
 
-// K10: 12 languages + Arabic (backend i18n.Supported).
-export const LANGUAGES = [
-  "tr",
-  "en",
-  "bg",
-  "de",
-  "el",
-  "uk",
-  "ru",
-  "fr",
-  "es",
-  "it",
-  "zh-CN",
-  "az",
-  "ar",
-] as const;
+// K10 + TEC-1233: the app languages (backend i18n.Supported).
+export const LANGUAGES = SUPPORTED_LOCALES;
 
 export const DELIVERY_STATUSES: NotificationDeliveryStatus[] = [
   "queued",

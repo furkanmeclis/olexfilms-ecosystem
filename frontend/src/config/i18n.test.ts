@@ -9,7 +9,7 @@ import {
 } from "@/config/i18n";
 
 describe("i18n config", () => {
-  it("supports the 13 K10 languages with zh-CN in BCP-47 form", () => {
+  it("supports the 13 K10 languages plus Persian with zh-CN in BCP-47 form", () => {
     expect(SUPPORTED_LOCALES).toEqual([
       "tr",
       "en",
@@ -24,14 +24,16 @@ describe("i18n config", () => {
       "zh-CN",
       "az",
       "ar",
+      "fa",
     ]);
     for (const l of SUPPORTED_LOCALES) expect(LOCALE_NAMES[l]).toBeTruthy();
   });
 
-  it("is RTL for Arabic only", () => {
-    expect(i18nConfig.rtlLocales).toEqual(["ar"]);
+  it("is RTL for Arabic and Persian only", () => {
+    expect(i18nConfig.rtlLocales).toEqual(["ar", "fa"]);
     expect(SUPPORTED_LOCALES.filter((l) => localeDir(l) === "rtl")).toEqual([
       "ar",
+      "fa",
     ]);
   });
 

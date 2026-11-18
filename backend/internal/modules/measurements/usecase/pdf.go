@@ -500,12 +500,16 @@ func documentVars(d pdfData) (map[string]string, error) {
 }
 
 // formatStamp prints a timestamp in the organization timezone with the
-// zone name (dd.mm.yyyy hh:mm; yyyy-mm-dd for en and zh-CN).
+// zone name (dd.mm.yyyy hh:mm; yyyy-mm-dd for en and zh-CN; yyyy/mm/dd for
+// fa).
 func formatStamp(ts time.Time, zone *time.Location, loc i18n.Locale) string {
 	ts = ts.In(zone)
 	layout := "02.01.2006 15:04"
-	if loc == i18n.LocaleEN || loc == i18n.LocaleZhCN {
+	switch loc {
+	case i18n.LocaleEN, i18n.LocaleZhCN:
 		layout = "2006-01-02 15:04"
+	case i18n.LocaleFA:
+		layout = "2006/01/02 15:04"
 	}
 	return ts.Format(layout) + " (" + zone.String() + ")"
 }

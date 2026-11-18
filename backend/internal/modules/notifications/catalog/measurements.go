@@ -20,6 +20,7 @@ var measurementDiffTexts = map[string]localizedText{
 	"zh-CN": {"需要检查测量", "服务 {{service_no}} 有 {{deviation_count}} 个部位的微米差异超出容差。请检查测量差异表。"},
 	"az":    {"Ölçüm yoxlaması tələb olunur", "{{service_no}} xidmətində {{deviation_count}} hissədə mikron fərqi tolerantlıqdan kənardır. Ölçüm fərqi cədvəlini yoxlayın."},
 	"ar":    {"يلزم فحص القياس", "الخدمة {{service_no}} لديها فروقات ميكرون خارج حدود السماحية في {{deviation_count}} جزء. يرجى مراجعة جدول الفروقات."},
+	"fa":    {"بررسی اندازه\u200cگیری لازم است", "سرویس {{service_no}} در {{deviation_count}} قطعه اختلاف میکرون خارج از حد مجاز دارد. لطفاً جدول مقایسه اندازه\u200cگیری را بررسی کنید."},
 }
 
 func measurementDiffTemplates() []DefaultTemplate {

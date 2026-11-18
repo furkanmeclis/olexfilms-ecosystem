@@ -362,7 +362,8 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 }
 
 // FormatCertificateDate prints the calendar day of t in the organization's
-// zone: ISO (2006-01-02) for en and zh_CN, day.month.year otherwise.
+// zone: ISO (2006-01-02) for en and zh_CN, year/month/day for fa,
+// day.month.year otherwise.
 func FormatCertificateDate(t time.Time, zone *time.Location, loc i18n.Locale) string {
 	if zone == nil {
 		zone = time.UTC
@@ -370,6 +371,9 @@ func FormatCertificateDate(t time.Time, zone *time.Location, loc i18n.Locale) st
 	t = t.In(zone)
 	if loc == i18n.LocaleEN || loc == i18n.LocaleZhCN {
 		return t.Format(time.DateOnly)
+	}
+	if loc == i18n.LocaleFA {
+		return t.Format("2006/01/02")
 	}
 	return i18n.Digits(loc, t.Format("02.01.2006"))
 }

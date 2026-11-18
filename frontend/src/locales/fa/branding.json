@@ -1,0 +1,8 @@
+{
+  "logo.upload": "بارگذاری لوگو",
+  "logo.replace": "جایگزینی لوگو",
+  "logo.clear": "پاک کردن لوگو",
+  "logo.uploading": "در حال بارگذاری…",
+  "logo.too_large": "حجم لوگو باید 2 MB یا کمتر باشد.",
+  "logo.invalid_type": "از تصویر JPEG، PNG یا WebP استفاده کنید."
+}

@@ -12,8 +12,8 @@ func TestMeasurementDiffTemplatesCoverEveryLocale(t *testing.T) {
 	if !ok {
 		t.Fatalf("%s not registered", EventMeasurementDiffCheckRequired)
 	}
-	if len(msgtemplate.Locales) != 13 {
-		t.Fatalf("locales = %d, want 13", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 14 {
+		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
 	}
 	seen := map[string]bool{}
 	for _, tpl := range ev.Templates {

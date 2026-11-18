@@ -15,6 +15,8 @@ import (
 // the document only allows data: fonts, so they are inlined as base64.
 // Cyrillic, Greek and CJK fall back to the fonts installed in the Gotenberg
 // image (Noto Sans / Noto Sans CJK), which need no network either.
+// TEC-1233: Persian documents use Vazirmatn (arabic subset, @fontsource
+// 5.2.5, SIL OFL 1.1) with Noto Sans Arabic as the fallback.
 //
 //go:embed fonts/*.woff2
 var fontFS embed.FS
@@ -62,16 +64,23 @@ var arabicFaces = []fontFace{
 	{"Noto Sans Arabic", "noto-sans-arabic-arabic-700-normal.woff2", 700, rangeArabic},
 }
 
+var persianFaces = []fontFace{
+	{"Vazirmatn", "vazirmatn-arabic-400-normal.woff2", 400, rangeArabic},
+	{"Vazirmatn", "vazirmatn-arabic-700-normal.woff2", 700, rangeArabic},
+}
+
 var (
-	fontOnce      sync.Once
-	latinFontCSS  string
-	arabicFontCSS string
+	fontOnce       sync.Once
+	latinFontCSS   string
+	arabicFontCSS  string
+	persianFontCSS string
 )
 
 func loadFontCSS() {
 	fontOnce.Do(func() {
 		latinFontCSS = facesCSS(latinFaces)
 		arabicFontCSS = facesCSS(arabicFaces)
+		persianFontCSS = facesCSS(persianFaces)
 	})
 }
 
@@ -92,16 +101,29 @@ func facesCSS(faces []fontFace) string {
 
 // fontCSS returns the @font-face rules for a document. Arabic faces are only
 // inlined when the document needs them (RTL language or Arabic text), which
-// keeps the common Latin request ~190 KB smaller.
-func fontCSS(mode FontMode, rtl bool, body string) string {
+// keeps the common Latin request ~190 KB smaller; Vazirmatn only for a
+// Persian document (lang fa).
+func fontCSS(mode FontMode, lang string, body string) string {
 	if mode == FontsSystem {
 		return ""
 	}
 	loadFontCSS()
-	if rtl || containsArabic(body) {
+	if isPersian(lang) {
+		return latinFontCSS + persianFontCSS + arabicFontCSS
+	}
+	if IsRTL(lang) || containsArabic(body) {
 		return latinFontCSS + arabicFontCSS
 	}
 	return latinFontCSS
+}
+
+// isPersian reports whether a document language is Persian (fa, fa-IR).
+func isPersian(lang string) bool {
+	l := strings.ToLower(strings.TrimSpace(lang))
+	if i := strings.IndexAny(l, "-_"); i > 0 {
+		l = l[:i]
+	}
+	return l == "fa"
 }
 
 func containsArabic(s string) bool {

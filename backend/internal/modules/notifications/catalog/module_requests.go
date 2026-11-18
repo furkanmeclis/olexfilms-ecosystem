@@ -24,6 +24,7 @@ var moduleRequestDecidedTexts = map[string]localizedText{
 	"zh-CN": {"模块申请已处理：{{module_key}}", "{{organization_name}} 的 {{module_key}} 模块申请：{{decision}}。{{decision_note}}"},
 	"az":    {"Modul sorğusu üzrə qərar verildi: {{module_key}}", "{{organization_name}} üçün {{module_key}} modul sorğusu: {{decision}}. {{decision_note}}"},
 	"ar":    {"تم البت في طلب الوحدة: {{module_key}}", "طلب الوحدة {{module_key}} الخاص بـ {{organization_name}}: {{decision}}. {{decision_note}}"},
+	"fa":    {"درباره درخواست ماژول تصمیم\u200cگیری شد: {{module_key}}", "درخواست ماژول {{module_key}} از سوی {{organization_name}}: {{decision}}. {{decision_note}}"},
 }
 
 // moduleRequestDecisionLabels is the {{decision}} value per locale and
@@ -42,6 +43,7 @@ var moduleRequestDecisionLabels = map[string][2]string{
 	"zh-CN": {"已批准", "已拒绝"},
 	"az":    {"təsdiqləndi", "rədd edildi"},
 	"ar":    {"تمت الموافقة", "تم الرفض"},
+	"fa":    {"تأیید شد", "رد شد"},
 }
 
 // ModuleRequestDecisionLabel returns the localized {{decision}} value of a

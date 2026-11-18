@@ -8,7 +8,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // threshold, so each threshold notifies once a month. Recipients: the
 // organization's ai.usage.read holders (org pool) or the platform admins
 // (the brand center's system pool). Panel users only, so in-app and e-mail.
-// Templates ship in all 13 locales and are seeded by SyncCatalog with
+// Templates ship in all 14 locales and are seeded by SyncCatalog with
 // InsertNotificationTemplateIfMissing (no migration); only admins edit them.
 const EventAIQuotaThreshold = "ai.quota.threshold"
 
@@ -42,6 +42,8 @@ var aiQuotaTexts = map[string]localizedText{
 		"{{organization_name}} {{period}} dövrü üçün süni intellekt token kvotasının {{threshold}}%-ni istifadə etdi ({{used_tokens}} / {{quota_tokens}} token). Kvota bitdikdə köməkçi növbəti aya qədər cavab vermir."},
 	"ar": {"تم استخدام {{threshold}}% من حصة الذكاء الاصطناعي",
 		"استخدمت {{organization_name}} نسبة {{threshold}}% من حصة رموز الذكاء الاصطناعي للفترة {{period}} ({{used_tokens}} / {{quota_tokens}} رمز). عند نفاد الحصة يتوقف المساعد عن الرد حتى الشهر التالي."},
+	"fa": {"{{threshold}}% از سهمیه هوش مصنوعی مصرف شد",
+		"{{organization_name}} برای دوره {{period}}، {{threshold}}% از سهمیه توکن هوش مصنوعی خود را مصرف کرده است ({{used_tokens}} / {{quota_tokens}} توکن). با اتمام سهمیه، دستیار تا ماه آینده پاسخ نمی\u200cدهد."},
 }
 
 func aiQuotaTemplates() []DefaultTemplate {

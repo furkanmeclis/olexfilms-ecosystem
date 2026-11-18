@@ -8,7 +8,7 @@ import (
 )
 
 // TEC-398: conversation.inbound ships in-app and web push templates in all
-// 13 locales, naming the contact and the message preview.
+// 14 locales, naming the contact and the message preview.
 func TestConversationInboundTemplatesCoverEveryLocale(t *testing.T) {
 	ev, ok := Lookup(EventConversationInbound)
 	if !ok {

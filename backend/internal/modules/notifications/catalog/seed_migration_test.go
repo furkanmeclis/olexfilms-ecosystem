@@ -16,17 +16,19 @@ type seedRow struct {
 }
 
 // TEC-148: every default template seeded by 000008 (tr + en only) exists in
-// all 13 locales once the migrations ran (000036 adds the notifications.test
-// ar rows, 000054 the rest), with the same placeholder set as tr/en. The
+// all 14 locales once the migrations ran (000036 adds the notifications.test
+// ar rows, 000054 the rest, 000195 fa), with the same placeholder set as
+// tr/en. The
 // migration SQL is parsed, so this runs without a database.
 func TestMigrationSeedTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 13 {
-		t.Fatalf("locales = %d, want 13", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 14 {
+		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
 	}
 	base := seedRows(t, "000008_create_notifications.up.sql")
 	added := seedRows(t, "000054_notification_template_translations.up.sql")
 	all := append(append(append([]seedRow{}, base...),
 		seedRows(t, "000036_notification_center.up.sql")...), added...)
+	all = append(all, seedRows(t, "000195_locale_fa.up.sql")...)
 
 	// 000008 source keys and their placeholder set (tr and en must agree).
 	want := map[string][]string{}

@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Warranty customer notifications (TEC-187, TEC-98 decision 5). The
 // warranty cron writes warranty.expiring_soon (days 30 or 7) and
 // warranty.expired outbox events; the bus handler dispatches these catalog
-// events to the warranty holder. Default templates ship in all 13 locales
+// events to the warranty holder. Default templates ship in all 14 locales
 // for WhatsApp (wuzapi, K16/K21) and in-app; the generic role covers a
 // holder who is also an organization member.
 const (
@@ -45,6 +45,8 @@ var warrantyExpiringSoonTexts = map[string]localizedText{
 		"{{plate}} nömrəli avtomobilinizdəki {{product_name}} zəmanəti {{end_date}} tarixində bitir ({{days}} gün qalıb). Ətraflı məlumat üçün {{organization_name}} ilə əlaqə saxlayın. Zəmanət: {{verify_url}}"},
 	"ar": {"ينتهي ضمانك خلال {{days}} يومًا",
 		"ينتهي ضمان {{product_name}} لمركبتك {{plate}} في {{end_date}} (متبقٍ {{days}} يومًا). للتفاصيل تواصل مع {{organization_name}}. الضمان: {{verify_url}}"},
+	"fa": {"گارانتی شما {{days}} روز دیگر به پایان می\u200cرسد",
+		"گارانتی {{product_name}} روی خودروی {{plate}} شما در تاریخ {{end_date}} به پایان می\u200cرسد ({{days}} روز باقی مانده است). برای جزئیات با {{organization_name}} تماس بگیرید. گارانتی: {{verify_url}}"},
 }
 
 var warrantyExpiredTexts = map[string]localizedText{
@@ -74,6 +76,8 @@ var warrantyExpiredTexts = map[string]localizedText{
 		"{{plate}} nömrəli avtomobilinizdəki {{product_name}} zəmanətinin müddəti {{end_date}} tarixində bitdi. Yeniləmək üçün {{organization_name}} ilə əlaqə saxlayın. Zəmanət: {{verify_url}}"},
 	"ar": {"انتهت صلاحية ضمانك",
 		"انتهى ضمان {{product_name}} لمركبتك {{plate}} في {{end_date}}. لتجديده تواصل مع {{organization_name}}. الضمان: {{verify_url}}"},
+	"fa": {"گارانتی شما منقضی شد",
+		"گارانتی {{product_name}} روی خودروی {{plate}} شما در تاریخ {{end_date}} منقضی شد. برای تمدید با {{organization_name}} تماس بگیرید. گارانتی: {{verify_url}}"},
 }
 
 func warrantyTemplates(texts map[string]localizedText) []DefaultTemplate {

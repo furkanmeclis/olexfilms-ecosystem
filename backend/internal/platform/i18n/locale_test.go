@@ -14,6 +14,9 @@ func TestParse(t *testing.T) {
 		{"tr_TR", LocaleTR, true},
 		{"en-US", LocaleEN, true},
 		{"ar-AE", LocaleAR, true},
+		{"fa", LocaleFA, true},
+		{"fa-IR", LocaleFA, true},
+		{"FA_ir", LocaleFA, true},
 		{"zh-CN", LocaleZhCN, true},
 		{"zh_CN", LocaleZhCN, true},
 		{"zh-cn", LocaleZhCN, true},
@@ -49,8 +52,8 @@ func TestNormalizeFallsBackToTR(t *testing.T) {
 }
 
 func TestSupportedIsCanonical(t *testing.T) {
-	if len(Supported) != 13 {
-		t.Fatalf("supported = %d, want 13", len(Supported))
+	if len(Supported) != 14 {
+		t.Fatalf("supported = %d, want 14", len(Supported))
 	}
 	for _, l := range Supported {
 		if !IsSupported(string(l)) {
@@ -66,8 +69,13 @@ func TestSupportedIsCanonical(t *testing.T) {
 	if IsSupported("zh_CN") || IsSupported("tr-TR") {
 		t.Error("IsSupported must only accept canonical codes")
 	}
-	if Dir(LocaleAR) != "rtl" || Dir(LocaleTR) != "ltr" {
+	if Dir(LocaleAR) != "rtl" || Dir(LocaleFA) != "rtl" || Dir(LocaleTR) != "ltr" {
 		t.Error("Dir")
+	}
+	for _, l := range Supported {
+		if IsRTL(l) != (l == LocaleAR || l == LocaleFA) {
+			t.Errorf("IsRTL(%q) = %v", l, IsRTL(l))
+		}
 	}
 }
 
@@ -82,6 +90,7 @@ func TestParseAcceptLanguage(t *testing.T) {
 		{"en;q=0.5,ar;q=0.9", LocaleAR, true},
 		{"fr;q=0,es", LocaleES, true},
 		{"zh-CN,zh;q=0.9", LocaleZhCN, true},
+		{"fa-IR,fa;q=0.9,en;q=0.8", LocaleFA, true},
 		{"*", "", false},
 		{"ja", "", false},
 		{"", "", false},

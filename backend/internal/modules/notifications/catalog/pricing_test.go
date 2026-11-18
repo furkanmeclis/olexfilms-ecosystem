@@ -8,7 +8,7 @@ import (
 )
 
 // TEC-506: both pricing events ship an in-app and e-mail template in each of
-// the 13 locales with only known placeholders.
+// the 14 locales with only known placeholders.
 func TestPricingTemplatesCoverEveryLocale(t *testing.T) {
 	for _, code := range PricingEvents {
 		ev, ok := Lookup(code)
@@ -25,7 +25,7 @@ func TestPricingTemplatesCoverEveryLocale(t *testing.T) {
 				t.Errorf("%s %s/%s: unknown placeholders %v", code, tpl.Channel, tpl.Language, unknown)
 			}
 		}
-		if len(msgtemplate.Locales) != 13 {
+		if len(msgtemplate.Locales) != 14 {
 			t.Fatalf("locales = %d", len(msgtemplate.Locales))
 		}
 		for _, lang := range msgtemplate.Locales {

@@ -8,11 +8,11 @@ import (
 )
 
 // TEC-200: every transfer event ships a default template in every locale
-// (13) for in-app and WhatsApp, using only catalog placeholders and naming
+// (14) for in-app and WhatsApp, using only catalog placeholders and naming
 // the transfer number.
 func TestTransferTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 13 {
-		t.Fatalf("locales = %d, want 13", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 14 {
+		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
 	}
 	for _, code := range TransferEvents {
 		ev, ok := Lookup(code)

@@ -1,5 +1,6 @@
 /**
- * Supported UI languages (K10: 12 languages + Arabic). Canonical codes are
+ * Supported UI languages (K10: 12 languages + Arabic, TEC-1233: + Persian).
+ * Canonical codes are
  * short BCP-47 tags that Intl accepts as is; the backend uses the same list
  * (backend/internal/platform/i18n, OpenAPI `Locale`).
  *
@@ -19,6 +20,7 @@ export const SUPPORTED_LOCALES = [
   "zh-CN",
   "az",
   "ar",
+  "fa",
 ] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -38,9 +40,14 @@ export const LOCALE_NAMES: Record<AppLocale, string> = {
   "zh-CN": "简体中文",
   az: "Azərbaycan dili",
   ar: "العربية",
+  fa: "فارسی",
 };
 
-const RTL_LOCALES: readonly AppLocale[] = ["ar"];
+/**
+ * Right-to-left languages (TEC-1233). Every RTL decision (html dir, editors,
+ * legal texts, document templates) goes through this list / isRtlLocale.
+ */
+export const RTL_LOCALES: readonly AppLocale[] = ["ar", "fa"];
 
 /**
  * Maps any spelling to a supported locale, like the backend's

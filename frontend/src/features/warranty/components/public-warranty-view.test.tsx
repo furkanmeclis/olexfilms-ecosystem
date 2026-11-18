@@ -244,7 +244,7 @@ describe("PublicWarrantyView", () => {
   it("links every language with ?lang=", () => {
     render({ kind: "not_found" });
     const links = container.querySelectorAll("nav a");
-    expect(links).toHaveLength(13);
+    expect(links).toHaveLength(14);
     expect(links[0]?.getAttribute("href")).toBe("/warranty/DS7K2M9QX4?lang=tr");
   });
 });

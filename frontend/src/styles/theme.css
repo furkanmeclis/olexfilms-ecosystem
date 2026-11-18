@@ -301,3 +301,16 @@
     var(--font-outfit), var(--font-jakarta), ui-sans-serif, system-ui,
     sans-serif;
 }
+
+/*
+ * TEC-1233: Persian uses Vazirmatn (self-hosted, Arabic-script subset) for
+ * its letters; Latin text, codes and digits stay in the app fonts.
+ */
+html[lang="fa"] {
+  --font-sans:
+    var(--font-jakarta), var(--font-vazirmatn), Tahoma, ui-sans-serif,
+    system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-display:
+    var(--font-outfit), var(--font-jakarta), var(--font-vazirmatn), Tahoma,
+    ui-sans-serif, system-ui, sans-serif;
+}

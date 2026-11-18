@@ -378,6 +378,7 @@ var messageTemplates = map[string]string{
 	"zh-CN": "您的 {app} 验证码：{code}\n有效期 {minutes} 分钟。请勿向任何人透露此验证码。",
 	"az":    "{app} təsdiq kodunuz: {code}\nKod {minutes} dəqiqə etibarlıdır. Bu kodu heç kimlə paylaşmayın.",
 	"ar":    "رمز التحقق الخاص بك في {app}: {code}\nالرمز صالح لمدة {minutes} دقائق. لا تشارك هذا الرمز مع أي شخص.",
+	"fa":    "کد تأیید {app} شما: {code}\nاین کد {minutes} دقیقه اعتبار دارد. آن را در اختیار هیچ\u200cکس قرار ندهید.",
 }
 
 // RenderMessage builds the OTP text with the KVKK notice appended (K11). A

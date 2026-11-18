@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Dealer application notifications (TEC-317, F3-03f). A public dealer
 // application opens a lead in the territory distributor (or the brand
 // center); the members of that organization holding leads.read are told
-// over in-app and e-mail. Default templates ship in all 13 locales and are
+// over in-app and e-mail. Default templates ship in all 14 locales and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const EventLeadDealerApplication = "LEAD_DEALER_APPLICATION"
 const EventLeadWebsiteReceived = "LEAD_WEBSITE_RECEIVED"
@@ -43,6 +43,8 @@ var leadApplicationTexts = map[string]localizedText{
 		"{{company_name}} ({{contact_name}}, {{location}}) diler olmaq üçün müraciət etdi. Müraciət potensial müştərilərinizə əlavə olundu; zəhmət olmasa paneldə nəzərdən keçirin."},
 	"ar": {"طلب وكيل جديد: {{company_name}}",
 		"تقدّمت {{company_name}} ({{contact_name}}، {{location}}) بطلب لتصبح وكيلاً. أُضيف الطلب إلى العملاء المحتملين لديك؛ يرجى مراجعته في اللوحة."},
+	"fa": {"درخواست جدید نمایندگی: {{company_name}}",
+		"{{company_name}} ({{contact_name}}، {{location}}) برای اخذ نمایندگی درخواست داده است. این درخواست به سرنخ\u200cهای فروش شما افزوده شد؛ لطفاً آن را در پنل بررسی کنید."},
 }
 
 func leadApplicationTemplates() []DefaultTemplate {
@@ -76,6 +78,7 @@ var leadWebsiteTexts = map[string]localizedText{
 	"zh-CN": {"新的展示页请求：{{contact_name}}", "{{contact_name}}（{{phone}}）从展示页 #{{dealer_code}} 请求报价。已加入线索列表。"},
 	"az":    {"Yeni vitrin sorğusu: {{contact_name}}", "{{contact_name}} ({{phone}}) #{{dealer_code}} vitrinindən təklif istədi. Lead siyahınıza əlavə olundu."},
 	"ar":    {"طلب واجهة جديد: {{contact_name}}", "طلب {{contact_name}} ({{phone}}) عرض سعر من الواجهة #{{dealer_code}}. تمت إضافته إلى قائمة العملاء المحتملين."},
+	"fa":    {"درخواست جدید از ویترین: {{contact_name}}", "{{contact_name}} ({{phone}}) از ویترین #{{dealer_code}} درخواست پیش\u200cفاکتور کرده است. این درخواست به سرنخ\u200cهای فروش شما افزوده شد."},
 }
 
 func leadWebsiteTemplates() []DefaultTemplate {

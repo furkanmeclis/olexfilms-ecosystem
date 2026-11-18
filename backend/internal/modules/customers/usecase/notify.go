@@ -3,7 +3,7 @@ package usecase
 // TEC-164: customer.created. When an organization creates a new customer
 // (a new user, not the link of an existing phone), the create transaction
 // writes customer.created to the outbox; the notification module turns it
-// into the CUSTOMER_WELCOME WhatsApp message (13 locales, catalog
+// into the CUSTOMER_WELCOME WhatsApp message (14 locales, catalog
 // templates) with the /portal link. A customer without a phone, or one
 // whose WhatsApp preference is off, gets no event.
 

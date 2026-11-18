@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { isRtlLocale, normalizeLocale } from "@/config/i18n";
 import { EditorX } from "@/components/editor/editor-x";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
@@ -263,7 +264,8 @@ function EditorBody({ initial }: { initial: Draft }) {
     }
   };
 
-  const rtl = initial.language === "ar";
+  const lang = normalizeLocale(initial.language);
+  const rtl = lang ? isRtlLocale(lang) : false;
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">

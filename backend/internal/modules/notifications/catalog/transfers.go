@@ -7,7 +7,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // event; the transfer use case resolves the recipients (notify_user_ids:
 // members of the notified sides holding the transfer permission, minus the
 // actor) and the organization names into the event payload. Default
-// templates ship in all 13 locales for in-app and WhatsApp (K16/K21) and are
+// templates ship in all 14 locales for in-app and WhatsApp (K16/K21) and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const (
 	EventTransferRequested = "TRANSFER_REQUESTED"
@@ -55,6 +55,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{sender_name}} {{receiver_name}} üçün stok transferi tələb etdi ({{transfer_no}}). Zəhmət olmasa paneldə nəzərdən keçirin."},
 		"ar": {"طلب نقل مخزون جديد {{transfer_no}}",
 			"طلب {{sender_name}} نقل مخزون إلى {{receiver_name}} ({{transfer_no}}). يرجى مراجعته في اللوحة."},
+		"fa": {"درخواست جدید انتقال موجودی {{transfer_no}}",
+			"{{sender_name}} درخواست انتقال موجودی به {{receiver_name}} را ثبت کرده است ({{transfer_no}}). لطفاً آن را در پنل بررسی کنید."},
 	},
 	EventTransferApproved: {
 		"tr": {"Stok transferi {{transfer_no}} onaylandı",
@@ -83,6 +85,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{sender_name}} → {{receiver_name}} stok transferi ({{transfer_no}}) təsdiqləndi. Göndərən artıq göndərə bilər."},
 		"ar": {"تمت الموافقة على نقل المخزون {{transfer_no}}",
 			"تمت الموافقة على نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}}). يمكن للمرسل الآن شحنه."},
+		"fa": {"انتقال موجودی {{transfer_no}} تأیید شد",
+			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) تأیید شد. اکنون فرستنده می\u200cتواند آن را ارسال کند."},
 	},
 	EventTransferRejected: {
 		"tr": {"Stok transferi {{transfer_no}} reddedildi",
@@ -111,6 +115,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{sender_name}} → {{receiver_name}} stok transferi ({{transfer_no}}) rədd edildi."},
 		"ar": {"تم رفض نقل المخزون {{transfer_no}}",
 			"تم رفض نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}})."},
+		"fa": {"انتقال موجودی {{transfer_no}} رد شد",
+			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) رد شد."},
 	},
 	EventTransferShipped: {
 		"tr": {"Stok transferi {{transfer_no}} sevk edildi",
@@ -139,6 +145,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{sender_name}} {{transfer_no}} nömrəli stok transferini {{receiver_name}} üçün göndərdi. Məhsullar çatanda paneldə qəbulu təsdiqləyin."},
 		"ar": {"تم شحن نقل المخزون {{transfer_no}}",
 			"قام {{sender_name}} بشحن نقل المخزون {{transfer_no}} إلى {{receiver_name}}. أكد الاستلام في اللوحة عند الوصول."},
+		"fa": {"انتقال موجودی {{transfer_no}} ارسال شد",
+			"{{sender_name}} انتقال موجودی {{transfer_no}} را برای {{receiver_name}} ارسال کرد. پس از رسیدن، دریافت آن را در پنل تأیید کنید."},
 	},
 	EventTransferReceived: {
 		"tr": {"Stok transferi {{transfer_no}} teslim alındı",
@@ -167,6 +175,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{receiver_name}} {{sender_name}} tərəfindən göndərilən {{transfer_no}} nömrəli stok transferini qəbul etdi. Transfer məbləği cari hesaba yazıldı."},
 		"ar": {"تم استلام نقل المخزون {{transfer_no}}",
 			"استلم {{receiver_name}} نقل المخزون {{transfer_no}} من {{sender_name}}. تم قيد مبلغ النقل في الحساب الجاري."},
+		"fa": {"انتقال موجودی {{transfer_no}} دریافت شد",
+			"{{receiver_name}} انتقال موجودی {{transfer_no}} را از {{sender_name}} دریافت کرد. مبلغ انتقال در حساب جاری ثبت شد."},
 	},
 	EventTransferCancelled: {
 		"tr": {"Stok transferi {{transfer_no}} iptal edildi",
@@ -195,6 +205,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"{{sender_name}} → {{receiver_name}} stok transferi ({{transfer_no}}) ləğv edildi."},
 		"ar": {"تم إلغاء نقل المخزون {{transfer_no}}",
 			"تم إلغاء نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}})."},
+		"fa": {"انتقال موجودی {{transfer_no}} لغو شد",
+			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) لغو شد."},
 	},
 }
 

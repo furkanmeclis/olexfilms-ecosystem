@@ -7,7 +7,7 @@ import (
 )
 
 // TEC-508 acceptance: every module of the catalog has its own non-empty
-// description in all 13 locales (no en fallback), and no description is
+// description in all 14 locales (no en fallback), and no description is
 // written for a key outside the catalog.
 func TestModuleDescriptionsParity(t *testing.T) {
 	for _, l := range Supported {

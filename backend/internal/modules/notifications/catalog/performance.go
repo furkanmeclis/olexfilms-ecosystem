@@ -25,6 +25,7 @@ var performanceWeakDealerTexts = map[string]localizedText{
 	"zh-CN": {"弱经销商规则：{{dealer_name}}", "{{dealer_name}} 在 {{period}} 触发了 {{rule_name}}。{{metric}}={{metric_value}}，阈值 {{threshold}}。"},
 	"az":    {"Zəif bayi qaydası: {{dealer_name}}", "{{dealer_name}} üçün {{period}} dövründə {{rule_name}} qaydası işə düşdü. {{metric}}={{metric_value}}, hədd {{threshold}}."},
 	"ar":    {"قاعدة أداء منخفض: {{dealer_name}}", "تم تفعيل قاعدة {{rule_name}} لـ {{dealer_name}} خلال {{period}}. {{metric}}={{metric_value}}، الحد {{threshold}}."},
+	"fa":    {"قاعده نمایندگی ضعیف: {{dealer_name}}", "قاعده {{rule_name}} برای {{dealer_name}} در دوره {{period}} فعال شد. {{metric}}={{metric_value}}، آستانه {{threshold}}."},
 }
 
 var performanceBelowTargetTexts = map[string]localizedText{
@@ -41,6 +42,7 @@ var performanceBelowTargetTexts = map[string]localizedText{
 	"zh-CN": {"目标跟踪：{{period}}", "您在 {{period}} 的 {{metric}} 数值为 {{metric_value}}。请查看绩效面板跟踪目标。"},
 	"az":    {"Hədəf izləmə: {{period}}", "{{period}} dövründə {{metric}} dəyəriniz {{metric_value}}. Hədəfinizi performans panelində izləyin."},
 	"ar":    {"متابعة الهدف: {{period}}", "قيمة {{metric}} لديك في {{period}} هي {{metric_value}}. راجع لوحة الأداء لمتابعة الهدف."},
+	"fa":    {"پیگیری هدف: {{period}}", "مقدار {{metric}} شما در دوره {{period}} برابر {{metric_value}} است. برای پیگیری هدف خود داشبورد عملکرد را ببینید."},
 }
 
 var performanceBonusCalculatedTexts = map[string]localizedText{
@@ -57,6 +59,7 @@ var performanceBonusCalculatedTexts = map[string]localizedText{
 	"zh-CN": {"奖金已计算：{{period}}", "{{period}} 的 {{count}} 条奖金计提正在等待 owner 审批。"},
 	"az":    {"Prim hesablamalari hazirdir: {{period}}", "{{period}} dovru ucun {{count}} prim hesablamasi owner tesdiqini gozleyir."},
 	"ar":    {"تم حساب المكافآت: {{period}}", "{{count}} استحقاقات مكافأة للفترة {{period}} بانتظار موافقة المالك."},
+	"fa":    {"پاداش\u200cهای محاسبه\u200cشده آماده است: {{period}}", "{{count}} پاداش محاسبه\u200cشده برای دوره {{period}} در انتظار تأیید مالک است."},
 }
 
 var performanceBonusApprovedTexts = map[string]localizedText{
@@ -73,6 +76,7 @@ var performanceBonusApprovedTexts = map[string]localizedText{
 	"zh-CN": {"您的奖金已审批", "您 {{period}} 的 {{amount}} {{currency}} 奖金已审批。付款日：{{paid_on}}。"},
 	"az":    {"Priminiz tesdiqlendi", "{{period}} dovru ucun {{amount}} {{currency}} priminiz tesdiqlendi. Odeme gunu: {{paid_on}}."},
 	"ar":    {"تمت الموافقة على مكافأتك", "تمت الموافقة على مكافأة {{amount}} {{currency}} للفترة {{period}}. يوم الدفع: {{paid_on}}."},
+	"fa":    {"پاداش شما تأیید شد", "پاداش {{amount}} {{currency}} شما برای دوره {{period}} تأیید شد. روز پرداخت: {{paid_on}}."},
 }
 
 func performanceTemplates(code string, texts map[string]localizedText) []DefaultTemplate {

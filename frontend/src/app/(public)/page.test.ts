@@ -33,7 +33,7 @@ describe("landing metadata (TEC-251)", () => {
     expect(og.images?.[0]?.width).toBe(1200);
     expect(og.images?.[0]?.height).toBe(630);
     const languages = meta.alternates?.languages as Record<string, string>;
-    expect(Object.keys(languages)).toHaveLength(14);
+    expect(Object.keys(languages)).toHaveLength(15);
     expect(languages.tr).toBe(`${site.url}/?lang=tr`);
   });
 

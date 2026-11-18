@@ -45,6 +45,7 @@ var keywords = func() map[string]keyword {
 	add(kwStop, "zh_CN", "退订", "停止")
 	add(kwStop, "az", "dayan")
 	add(kwStop, "ar", "توقف", "إلغاء الاشتراك")
+	add(kwStop, "fa", "لغو اشتراک", "لغو عضویت")
 
 	add(kwHuman, "tr", "insan", "temsilci", "müşteri temsilcisi", "yetkili")
 	add(kwHuman, "en", "agent", "human", "representative", "operator")
@@ -58,6 +59,7 @@ var keywords = func() map[string]keyword {
 	add(kwHuman, "zh_CN", "人工", "客服")
 	add(kwHuman, "az", "nümayəndə")
 	add(kwHuman, "ar", "موظف", "ممثل")
+	add(kwHuman, "fa", "اپراتور", "پشتیبان", "کارشناس")
 
 	add(kwYes, "tr", "evet", "kabul", "kabul ediyorum", "onaylıyorum")
 	add(kwYes, "en", "yes")
@@ -71,6 +73,7 @@ var keywords = func() map[string]keyword {
 	add(kwYes, "zh_CN", "是", "是的")
 	add(kwYes, "az", "bəli")
 	add(kwYes, "ar", "نعم")
+	add(kwYes, "fa", "بله", "آره", "قبول")
 
 	add(kwNo, "tr", "hayır", "vazgeç", "iptal")
 	add(kwNo, "en", "no", "cancel")
@@ -83,6 +86,7 @@ var keywords = func() map[string]keyword {
 	add(kwNo, "zh_CN", "否", "不")
 	add(kwNo, "az", "xeyr")
 	add(kwNo, "ar", "لا")
+	add(kwNo, "fa", "خیر", "نه", "لغو")
 	return m
 }()
 
@@ -95,6 +99,8 @@ func fold(s string) string {
 		"â", "a", "à", "a", "á", "a", "é", "e", "è", "e", "ê", "e", "í", "i", "ì", "i",
 		"ó", "o", "ò", "o", "ú", "u", "ù", "u", "ñ", "n",
 		"ά", "α", "έ", "ε", "ή", "η", "ί", "ι", "ό", "ο", "ύ", "υ", "ώ", "ω",
+		// Persian typed on an Arabic keyboard (ي, ك, ى) and ZWNJ (TEC-1233).
+		"ي", "ی", "ى", "ی", "ك", "ک", "\u200c", " ",
 	).Replace(s)
 	s = strings.TrimFunc(s, func(r rune) bool {
 		return unicode.IsPunct(r) || unicode.IsSpace(r) || unicode.IsSymbol(r)

@@ -64,6 +64,7 @@ func TestKeywords(t *testing.T) {
 	cases := map[string]int{
 		"DUR": kwStop, "Stop!": kwStop, "İNSAN": kwHuman, "agent": kwHuman, "EVET": kwYes, "evet.": kwYes,
 		"Yes": kwYes, "HAYIR": kwNo, "hayir": kwNo, "Да": kwYes, "durum nedir": kwNone, "evet ama": kwNone,
+		"بله": kwYes, "خير": kwNo, "لغو اشتراك": kwStop, "نعم": kwYes,
 	}
 	for in, want := range cases {
 		if got := keywordOf(in).kind; got != want {

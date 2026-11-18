@@ -20,6 +20,7 @@ var stockReorderLowTexts = map[string]localizedText{
 	"zh-CN": {"库存告急：{{product_name}}", "{{warehouse_name}} 仓库中 {{product_name}} 的可用库存为 {{available_quantity}}（阈值 {{threshold}}）。"},
 	"az":    {"Kritik stok: {{product_name}}", "{{warehouse_name}} anbarında {{product_name}} üzrə mövcud stok {{available_quantity}} ədəddir (hədd {{threshold}})."},
 	"ar":    {"مخزون حرج: {{product_name}}", "المخزون المتاح من {{product_name}} في المستودع {{warehouse_name}} هو {{available_quantity}} (الحد {{threshold}})."},
+	"fa":    {"موجودی بحرانی: {{product_name}}", "موجودی در دسترس {{product_name}} در انبار {{warehouse_name}} برابر {{available_quantity}} است (آستانه {{threshold}})."},
 }
 
 func stockReorderLowTemplates() []DefaultTemplate {

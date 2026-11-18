@@ -1238,7 +1238,7 @@ func NormalizeLocale(raw string) string {
 		s = s[:i]
 	}
 	s = strings.ToLower(s)
-	for _, l := range []string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "az", "ar"} {
+	for _, l := range []string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "az", "ar", "fa"} {
 		if s == l {
 			return l
 		}

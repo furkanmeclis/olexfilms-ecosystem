@@ -8,7 +8,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // holding orders.approve are told). The orders use case resolves the
 // recipients (notify_user_ids, minus the actor) and the party names into
 // the orders.shipped / orders.delivered / orders.received payloads. They go
-// in-app and as web and Expo push, in all 13 locales.
+// in-app and as web and Expo push, in all 14 locales.
 const (
 	EventOrderShipped   = "ORDER_SHIPPED"
 	EventOrderDelivered = "ORDER_DELIVERED"
@@ -47,6 +47,8 @@ var orderShippedTexts = map[string]localizedText{
 		"{{seller_name}} {{order_no}} nömrəli sifarişinizi göndərdi. Məhsullar çatanda sifarişi \"Qəbul edildi\" kimi qeyd edin."},
 	"ar": {"طلبكم في الطريق: {{order_no}}",
 		"قام {{seller_name}} بشحن الطلب {{order_no}}. ضعوا علامة \"تم الاستلام\" على الطلب عند وصول البضاعة."},
+	"fa": {"سفارش شما در راه است: {{order_no}}",
+		"{{seller_name}} سفارش {{order_no}} را ارسال کرد. پس از رسیدن کالا، سفارش را «دریافت\u200cشده» علامت بزنید."},
 }
 
 var orderDeliveredTexts = map[string]localizedText{
@@ -76,6 +78,8 @@ var orderDeliveredTexts = map[string]localizedText{
 		"{{seller_name}} {{order_no}} nömrəli sifarişi təhvil verilmiş kimi qeyd etdi. Məhsulları yoxlayıb sifarişi \"Qəbul edildi\" kimi təsdiqləyin."},
 	"ar": {"تم تسليم طلبكم: {{order_no}}",
 		"وضع {{seller_name}} علامة \"تم التسليم\" على الطلب {{order_no}}. تحققوا من البضاعة وأكدوا الطلب كـ \"تم الاستلام\"."},
+	"fa": {"سفارش شما تحویل داده شد: {{order_no}}",
+		"{{seller_name}} سفارش {{order_no}} را تحویل\u200cشده علامت زد. کالا را بررسی کنید و سفارش را «دریافت\u200cشده» تأیید کنید."},
 }
 
 var orderReceivedTexts = map[string]localizedText{
@@ -105,6 +109,8 @@ var orderReceivedTexts = map[string]localizedText{
 		"{{buyer_name}} {{order_no}} nömrəli sifarişi qəbul etdi. Məbləğ diler hesabına yazıldı."},
 	"ar": {"تم استلام الطلب: {{order_no}}",
 		"استلم {{buyer_name}} الطلب {{order_no}}. تم قيد المبلغ في حساب الوكيل."},
+	"fa": {"سفارش دریافت شد: {{order_no}}",
+		"{{buyer_name}} سفارش {{order_no}} را دریافت کرد. مبلغ آن در حساب نمایندگی ثبت شد."},
 }
 
 // orderStatusTemplates builds the default templates of texts for channels.

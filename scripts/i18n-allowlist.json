@@ -292,6 +292,7 @@
       "chart:lab.palette": "Fransızcada aynı yazılır (Palette)",
       "chart:total": "Fransızcada aynı yazılır (Total)",
       "common:actions": "Fransızcada aynı yazılır (Actions)",
+      "common:toast_region": "Fransızcada aynı yazılır (Notifications)",
       "contract_templates:editor.version": "Fransızcada aynı yazılır (Version {{version}})",
       "contract_templates:variable_groups.date": "Fransızcada aynı yazılır (Date)",
       "conversations:actions.label": "Fransızcada aynı yazılır (Actions)",
@@ -1212,6 +1213,15 @@
       "warranty:portal.back": "Azərbaycan dilində də eyni yazılır (\"Geri\")",
       "warranty:portal.sort.label": "Azərbaycan dilində də eyni yazılır (\"Sıralama\")",
       "warranty:public.package": "Azərbaycan dilində də eyni yazılır (\"Paket\")"
+    },
+    "fa": {
+      "integrations:github.form.section_title": "Ürün adı (GitHub App)",
+      "integrations:github.title": "Ürün adı (GitHub App)",
+      "measurements:units.mil": "Birim kısaltması (mil)",
+      "measurements:units.um": "Birim kısaltması (µm)",
+      "organizations:placeholders.plan_code": "Plan kodu örneği (trial)",
+      "stock:label_templates.output_format.zpl": "Yazıcı dili adı (ZPL)",
+      "storage:field_etag": "Teknik terim (ETag)"
     }
   },
   "mobile": {
@@ -1318,6 +1328,7 @@
       "analytics:total": "İspanyolcada aynı yazılır (Total)",
       "campaigns:channel.push": "kanal adı; İspanyolcada yerleşik kullanım (Push)",
       "campaigns:stats.total": "İspanyolcada aynı yazılır (Total)",
+      "common:toast.error": "İspanyolcada aynı yazılır (Error)",
       "dealer:no": "İspanyolcada aynı yazılır (No)",
       "leads:phone_placeholder": "telefon numarası biçimi",
       "measure:ble.status.error": "İspanyolcada aynı yazılır (Error)",
@@ -1775,7 +1786,8 @@
       "suppliers.phone": "Almancada doğru (Telefon)",
       "warehouse.export.status": "Almancada aynı yazılır (Status)",
       "warranties.export.status": "Almancada aynı yazılır (Status)",
-      "warranty.certificate.status": "Almancada aynı yazılır (Status)"
+      "warranty.certificate.status": "Almancada aynı yazılır (Status)",
+      "email.campaign.details": "Almancada aynı yazılır (Details)"
     },
     "es": {
       "ai.actions.values.priority.normal": "İspanyolcada aynı yazılır (Normal)",
@@ -1918,6 +1930,7 @@
   },
   "backend-texts": {
     "*": {
+      "backend/internal/emailpreview/preview.go": "Yalnız geliştirici e-posta önizleme aracının örnek içeriği (tr/en/ar); kullanıcıya gitmez.",
       "backend/internal/modules/legacymobile/messages.go": "Eski mobil API uyumluluk katmanı yalnız tr/en döner (eski uygulama sözleşmesi).",
       "backend/internal/platform/certtheme/certtheme.go": "Sertifika kapanış sayfaları yalnız tr/en/de/bg/ru tasarım varlıklarıyla gelir; diğer diller İngilizce sayfayı kullanır (pageLocales)."
     },

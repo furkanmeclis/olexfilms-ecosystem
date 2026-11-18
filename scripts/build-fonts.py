@@ -10,13 +10,13 @@ same files the Google Fonts API serves), checked against a sha256. Each font
 is cut to the weight range the app uses and to the unicode ranges of the
 Google Fonts subsets below, then written as a single woff2 per family.
 One file per family is required because next/font/local cannot emit a
-per-file unicode-range. Scripts a family does not draw (Arabic everywhere,
+per-file unicode-range. Scripts a family does not draw (Arabic outside Persian,
 Cyrillic/Greek in the sans fonts) fall through to the CSS fallback stack in
 src/styles/theme.css.
 
 Usage (needs fonttools + brotli; network access only here):
     python3 -m venv /tmp/fontvenv && /tmp/fontvenv/bin/pip install fonttools brotli
-    /tmp/fontvenv/bin/python scripts/build-fonts.py
+    /tmp/fontvenv/bin/python scripts/build-fonts.py [family ...]
 """
 
 from __future__ import annotations
@@ -46,6 +46,9 @@ SUBSETS = {
     "cyrillic-ext": "U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,"
     "U+FE2E-FE2F",
     "greek": "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF",
+    "arabic": "U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,"
+    "U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,"
+    "U+FE76-FEFC",
 }
 
 # (output name, google/fonts dir, TTF name, sha256, wght min, wght max, subsets)
@@ -76,6 +79,17 @@ FONTS = [
         400,
         500,
         ["latin", "latin-ext", "cyrillic", "cyrillic-ext", "greek"],
+    ),
+    # TEC-1233: Persian (fa) UI text. Arabic script only; Latin falls back to
+    # Plus Jakarta Sans. Applied for html[lang="fa"] in src/styles/theme.css.
+    (
+        "vazirmatn",
+        "vazirmatn",
+        "Vazirmatn[wght].ttf",
+        "696249a2c74b39ffdef55de4df2809c5b639d3ff80d618d8160a095d2fd49dca",
+        400,
+        700,
+        ["arabic"],
     ),
 ]
 
@@ -126,11 +140,15 @@ def build(name, family_dir, ttf, sha256, wmin, wmax, subsets) -> None:
     print(f"{target.relative_to(OUT.parent.parent.parent)}: {target.stat().st_size} bytes")
 
 
-def main() -> None:
+def main(only: list[str]) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for spec in FONTS:
-        build(*spec)
+        if not only or spec[0] in only:
+            build(*spec)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    # Optional family names (e.g. "vazirmatn") rebuild only those files.
+    main(sys.argv[1:])

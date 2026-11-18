@@ -29,6 +29,7 @@ var warrantyClaimOpenedTexts = map[string]localizedText{
 	"zh-CN": {"新的质保申请", "{{organization_name}} 已提交质保申请 {{claim_no}}。产品：{{product_name}}，车辆：{{plate}}。"},
 	"az":    {"Yeni zəmanət müraciəti", "{{organization_name}} tərəfindən {{claim_no}} nömrəli zəmanət müraciəti açıldı. Məhsul: {{product_name}}, avtomobil: {{plate}}."},
 	"ar":    {"طلب ضمان جديد", "تم فتح طلب الضمان {{claim_no}} بواسطة {{organization_name}}. المنتج: {{product_name}}، المركبة: {{plate}}."},
+	"fa":    {"درخواست گارانتی جدید", "درخواست گارانتی {{claim_no}} از سوی {{organization_name}} ثبت شد. محصول: {{product_name}}، خودرو: {{plate}}."},
 }
 
 var warrantyClaimStatusTexts = map[string]localizedText{
@@ -45,6 +46,7 @@ var warrantyClaimStatusTexts = map[string]localizedText{
 	"zh-CN": {"质保申请状态已更新", "质保申请 {{claim_no}} 已从 {{from}} 变为 {{to}}。"},
 	"az":    {"Zəmanət müraciətinin statusu dəyişdi", "{{claim_no}} müraciəti {{from}} statusundan {{to}} statusuna keçdi."},
 	"ar":    {"تغيّرت حالة طلب الضمان", "انتقل طلب الضمان {{claim_no}} من {{from}} إلى {{to}}."},
+	"fa":    {"وضعیت درخواست گارانتی تغییر کرد", "درخواست گارانتی {{claim_no}} از وضعیت {{from}} به {{to}} رفت."},
 }
 
 var warrantyClaimResultTexts = map[string]localizedText{
@@ -61,6 +63,7 @@ var warrantyClaimResultTexts = map[string]localizedText{
 	"zh-CN": {"您的质保申请已完成", "您的质保申请 {{claim_no}} 已标记为 {{to}}。产品：{{product_name}}，车辆：{{plate}}。"},
 	"az":    {"Zəmanət müraciətiniz tamamlandı", "{{claim_no}} müraciətiniz {{to}} kimi qeyd edildi. Məhsul: {{product_name}}, avtomobil: {{plate}}."},
 	"ar":    {"اكتمل طلب الضمان الخاص بك", "تم وضع طلبك {{claim_no}} بالحالة {{to}}. المنتج: {{product_name}}، المركبة: {{plate}}."},
+	"fa":    {"درخواست گارانتی شما تکمیل شد", "درخواست گارانتی {{claim_no}} شما به وضعیت {{to}} درآمد. محصول: {{product_name}}، خودرو: {{plate}}."},
 }
 
 var warrantyClaimReopenedTexts = map[string]localizedText{
@@ -77,6 +80,7 @@ var warrantyClaimReopenedTexts = map[string]localizedText{
 	"zh-CN": {"质保申请已重新打开", "质保申请 {{claim_no}} 已恢复为 approved。原因：{{reason}}"},
 	"az":    {"Zəmanət müraciəti yenidən açıldı", "{{claim_no}} müraciəti yenidən approved statusuna qaytarıldı. Səbəb: {{reason}}"},
 	"ar":    {"أُعيد فتح طلب الضمان", "تمت إعادة طلب الضمان {{claim_no}} إلى approved. السبب: {{reason}}"},
+	"fa":    {"درخواست گارانتی دوباره باز شد", "درخواست گارانتی {{claim_no}} به وضعیت تأییدشده برگردانده شد. دلیل: {{reason}}"},
 }
 
 func warrantyClaimTemplates(texts map[string]localizedText, channels []string, role string) []DefaultTemplate {
