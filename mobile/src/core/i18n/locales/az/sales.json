@@ -47,7 +47,7 @@
   "quick_sale.scan": "Barkodları skan et",
   "quick_sale.scan_hint": "Vahid etiketlərini bir-birinin ardınca skan edin; hər biri satışa əlavə olunur.",
   "quick_sale.scan_label": "Barkod",
-  "quick_sale.scan_placeholder": "Barkod yazın",
+  "quick_sale.scan_placeholder": "Barkodu yazın",
   "quick_sale.search_label": "Məhsul axtar",
   "quick_sale.search_placeholder": "Məhsul adı və ya SKU",
   "quick_sale.products_empty": "Uyğun məhsul yoxdur",

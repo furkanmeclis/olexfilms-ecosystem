@@ -10,6 +10,8 @@
   "create_for_dealer": "Створити замовлення",
   "price_missing_title": "Товари без ціни",
   "price_missing_body_one": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
+  "price_missing_body_few": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
+  "price_missing_body_many": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
   "price_missing_body_other": "Товарів без ціни: {{count}}; додано за 0 і позначено.",
   "errors.price_invalid": "Введіть ціну від 0, не більше 4 знаків після коми.",
   "confirm_submit_title": "Надіслати замовлення? (товарів: {{count}})",

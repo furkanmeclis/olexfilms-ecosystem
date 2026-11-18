@@ -1,7 +1,11 @@
 {
   "title": "الإشعارات",
   "bell": "الإشعارات",
+  "bell_unread_zero": "الإشعارات، {{count}} إشعار غير مقروء",
   "bell_unread_one": "الإشعارات، {{count}} غير مقروء",
+  "bell_unread_two": "الإشعارات، {{count}} إشعاران غير مقروءين",
+  "bell_unread_few": "الإشعارات، {{count}} إشعارات غير مقروءة",
+  "bell_unread_many": "الإشعارات، {{count}} إشعارًا غير مقروء",
   "bell_unread_other": "الإشعارات، {{count}} غير مقروءة",
   "filter.all": "الكل",
   "filter.unread": "غير المقروءة",

@@ -122,7 +122,7 @@
   "einvoice.validation.valid": "Valide",
   "einvoice.validation.rule_warnings": "Avertissements de règles",
   "einvoice.validation.invalid": "Non valide",
-  "einvoice.profile.EARSIVFATURA": "e-Archive (EARSIVFATURA)",
+  "einvoice.profile.EARSIVFATURA": "Facture e-Archive (EARSIVFATURA)",
   "einvoice.profile.TEMELFATURA": "Facture de base (TEMELFATURA)",
   "einvoice.profile.TICARIFATURA": "Facture commerciale (TICARIFATURA)",
   "einvoice.source_type.order": "Commande",
