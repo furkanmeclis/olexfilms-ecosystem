@@ -21,7 +21,7 @@ FRONTEND_PORT ?= 3000
 .PHONY: infra infra-down infra-logs infra-ps migrate-up backend-dev frontend-dev local-dev \
 	free-dev-ports prod-config prod-up prod-down prod-create-super-admin tools create-super-admin seed-demo \
 	gen-env-server backup restore dr-drill \
-	search-reindex inventory-rebuild normalize-org-phones dev-pii-key check-i18n check-i18n-translations openapi-sync openapi-lint api-generate
+	search-reindex inventory-rebuild normalize-org-phones dev-pii-key check-i18n check-i18n-translations i18n-scan openapi-sync openapi-lint api-generate
 
 infra:
 	@if [ -n "$(ENV_FILE)" ]; then \
@@ -225,6 +225,12 @@ I18N_TRANSLATED ?= de,fr,es,it,ru,uk
 check-i18n-translations:
 	node scripts/check-i18n.mjs --strict --locales $(I18N_TRANSLATED)
 	node scripts/i18n-untranslated-report.mjs --locales $(I18N_TRANSLATED)
+
+# TEC-1233: web + mobile + backend report for every language (missing,
+# untranslated, {{param}}, plural forms). I18N_SCAN_FLAGS=--fail gates it.
+I18N_SCAN_FLAGS ?=
+i18n-scan:
+	node scripts/i18n-scan.mjs $(I18N_SCAN_FLAGS)
 
 # docs/openapi.yaml is canonical; backend embeds a synced copy (see backend/docs/embed.go).
 openapi-sync:

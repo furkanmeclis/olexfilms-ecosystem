@@ -112,6 +112,8 @@ jobs:
               frontend/*.test.ts|frontend/*.test.tsx|frontend/vitest.config.ts|frontend/src/test/*)
                 frontend=true; contracts=true ;;
               frontend/*) frontend=true; e2e=true; contracts=true ;;
+              # Mobile catalogs are part of the cross-platform i18n scan (TEC-1233).
+              mobile/src/core/i18n/*|mobile/scripts/i18n-languages.mjs) mobile=true; contracts=true ;;
               mobile/*) mobile=true ;;
               backend/*|db/*) backend=true; contracts=true ;;
               *) backend=true; frontend=true; e2e=true; contracts=true ;;
@@ -364,6 +366,10 @@ jobs:
         run: make check-i18n
       - name: i18n translations
         run: make check-i18n-translations
+      # TEC-1233: web + mobile + backend, every language (missing, untranslated,
+      # placeholder, plural). Exceptions: scripts/i18n-allowlist.json.
+      - name: i18n scan
+        run: make i18n-scan
 
   # Builds the production images exactly as Dokploy does (compose.prod.yml),
   # without pushing. A throw-away env file satisfies the required (:?) vars.
