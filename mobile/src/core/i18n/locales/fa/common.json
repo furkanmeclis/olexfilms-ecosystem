@@ -71,5 +71,11 @@
   "leave_body": "اگر خارج شوید، اطلاعات واردشده از بین می‌رود.",
   "leave_discard": "خروج",
   "related_empty": "رکوردی وجود ندارد",
-  "related_more": "{{count}} مورد دیگر"
+  "related_more": "{{count}} مورد دیگر",
+  "toast.success": "موفق",
+  "toast.error": "خطا",
+  "toast.warning": "هشدار",
+  "toast.info": "اطلاعات",
+  "toast.loading": "در حال انجام",
+  "toast.dismiss_hint": "برای بستن، ضربه بزنید یا بکشید"
 }
