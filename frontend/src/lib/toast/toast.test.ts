@@ -34,8 +34,12 @@ const t = (key: string, params?: Record<string, string | number>) => {
   return v;
 };
 
-const apiErr = (status: number, code: string, message = "", requestId?: string) =>
-  new ApiError({ status, code, message, requestId });
+const apiErr = (
+  status: number,
+  code: string,
+  message = "",
+  requestId?: string,
+) => new ApiError({ status, code, message, requestId });
 
 describe("toast", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -94,17 +98,21 @@ describe("apiErrorToast", () => {
   });
 
   it("puts the request id into the description, not the title", () => {
-    expect(apiErrorToast(apiErr(500, "INTERNAL_ERROR", "boom", "req-1"), t)).toEqual({
+    expect(
+      apiErrorToast(apiErr(500, "INTERNAL_ERROR", "boom", "req-1"), t),
+    ).toEqual({
       message: "Sunucu hatası",
       description: "Destek için başvuru numarası: req-1",
     });
   });
 
   it("falls back to status texts and server validation text", () => {
-    expect(apiErrorToast(apiErr(403, "FORBIDDEN"), t)?.message).toBe("Yetkiniz yok");
-    expect(apiErrorToast(apiErr(422, "VALIDATION_ERROR", "Ad zorunlu"), t)?.message).toBe(
-      "Ad zorunlu",
+    expect(apiErrorToast(apiErr(403, "FORBIDDEN"), t)?.message).toBe(
+      "Yetkiniz yok",
     );
+    expect(
+      apiErrorToast(apiErr(422, "VALIDATION_ERROR", "Ad zorunlu"), t)?.message,
+    ).toBe("Ad zorunlu");
     expect(apiErrorToast(apiErr(400, "UNKNOWN_CODE"), t)?.message).toBe(
       "Formu kontrol edin",
     );

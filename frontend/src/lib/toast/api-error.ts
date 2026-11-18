@@ -45,7 +45,10 @@ function translated(t: Translate, key: string): string | undefined {
  * destek için başvuru numarası (açıklama). Teknik kod gösterilmez.
  * `null`: bu hata için toast gösterilmez.
  */
-export function apiErrorToast(error: unknown, t: Translate): ApiErrorToast | null {
+export function apiErrorToast(
+  error: unknown,
+  t: Translate,
+): ApiErrorToast | null {
   if (!isApiError(error)) {
     return { message: t("common.error_generic") };
   }
