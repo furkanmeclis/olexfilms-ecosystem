@@ -84,6 +84,20 @@ describe("LocaleProvider RTL", () => {
     expect(container.textContent).toBe("حفظ");
   });
 
+  it("switching to Persian is RTL with Persian text and Latin digits (TEC-1233)", async () => {
+    await mount("tr");
+    await act(async () => {
+      await probe!.setLocale("fa");
+    });
+    expect(document.documentElement.getAttribute("dir")).toBe("rtl");
+    expect(document.documentElement.getAttribute("lang")).toBe("fa");
+    expect(probe?.radixDir).toBe("rtl");
+    expect(document.cookie).toContain("NEXT_LOCALE=fa");
+    expect(container.textContent).toBe("ذخیره");
+    // Amounts and dates keep Latin digits in Persian.
+    expect(probe?.format.time("2026-01-01T12:00:00Z")).toMatch(/^[0-9:]+$/);
+  });
+
   it("starts RTL when the server resolved Arabic from the cookie", async () => {
     document.cookie = "NEXT_LOCALE=ar; Path=/";
     await mount("ar");

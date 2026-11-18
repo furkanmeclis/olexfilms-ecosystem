@@ -71,7 +71,7 @@ describe("buildSitemap (TEC-251)", () => {
     expect(entries[1]!.lastModified).toEqual(new Date("2026-09-01T10:00:00Z"));
     expect(entries[2]!.lastModified).toEqual(now);
     for (const entry of entries) {
-      expect(Object.keys(entry.alternates?.languages ?? {})).toHaveLength(14);
+      expect(Object.keys(entry.alternates?.languages ?? {})).toHaveLength(15);
     }
   });
 });
@@ -120,7 +120,7 @@ describe("sitemap route (TEC-251)", () => {
       `${site.url}/bayi-basvuru`,
     ]);
     expect(Object.keys(entries[1]!.alternates?.languages ?? {})).toHaveLength(
-      14,
+      15,
     );
     const configCall = upstream.calls.find((c) => c.path === CONFIG_PATH);
     expect(configCall!.headers.get("x-forwarded-host")).toBe(
