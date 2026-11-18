@@ -1212,6 +1212,15 @@
       "warranty:portal.back": "Azərbaycan dilində də eyni yazılır (\"Geri\")",
       "warranty:portal.sort.label": "Azərbaycan dilində də eyni yazılır (\"Sıralama\")",
       "warranty:public.package": "Azərbaycan dilində də eyni yazılır (\"Paket\")"
+    },
+    "fa": {
+      "integrations:github.form.section_title": "Ürün adı (GitHub App)",
+      "integrations:github.title": "Ürün adı (GitHub App)",
+      "measurements:units.mil": "Birim kısaltması (mil)",
+      "measurements:units.um": "Birim kısaltması (µm)",
+      "organizations:placeholders.plan_code": "Plan kodu örneği (trial)",
+      "stock:label_templates.output_format.zpl": "Yazıcı dili adı (ZPL)",
+      "storage:field_etag": "Teknik terim (ETag)"
     }
   },
   "mobile": {
