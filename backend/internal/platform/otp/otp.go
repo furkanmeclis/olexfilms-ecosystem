@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/google/uuid"
@@ -178,20 +179,17 @@ func validPurpose(p string) bool {
 	return p == PurposeCustomerLogin || p == PurposeContractSign || p == PurposeMobileLogin
 }
 
-// NormalizeLocale maps a locale to one with a KVKK notice (tr, en), tr default.
+// NormalizeLocale maps a locale to a supported one ("de-DE" -> de); every
+// supported locale has a KVKK notice (000034 + 000110) and a message
+// template. Empty is tr; an unsupported language falls back to en.
 func NormalizeLocale(locale string) string {
-	l := strings.ToLower(strings.TrimSpace(locale))
-	if i := strings.IndexAny(l, "-_"); i > 0 {
-		l = l[:i]
+	if strings.TrimSpace(locale) == "" {
+		return string(i18n.DefaultLocale)
 	}
-	switch l {
-	case "tr", "en":
-		return l
-	case "":
-		return "tr"
-	default:
-		return "en"
+	if l, ok := i18n.Parse(locale); ok {
+		return string(l)
 	}
+	return string(i18n.FallbackLocale)
 }
 
 // Request issues a code and delivers it synchronously (critical message:
@@ -364,16 +362,34 @@ func MessageHash(message string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// messageTemplates holds the OTP text per supported locale (TEC-1233).
+// {app}, {code} and {minutes} are replaced by RenderMessage.
 var messageTemplates = map[string]string{
-	"tr": "{app} doğrulama kodunuz: {code}\nKod {minutes} dakika geçerlidir. Bu kodu kimseyle paylaşmayın.",
-	"en": "Your {app} verification code: {code}\nIt is valid for {minutes} minutes. Do not share this code.",
+	"tr":    "{app} doğrulama kodunuz: {code}\nKod {minutes} dakika geçerlidir. Bu kodu kimseyle paylaşmayın.",
+	"en":    "Your {app} verification code: {code}\nIt is valid for {minutes} minutes. Do not share this code.",
+	"bg":    "Вашият код за потвърждение за {app}: {code}\nКодът е валиден {minutes} минути. Не споделяйте този код с никого.",
+	"de":    "Ihr {app}-Bestätigungscode: {code}\nEr ist {minutes} Minuten gültig. Geben Sie diesen Code nicht weiter.",
+	"el":    "Ο κωδικός επαλήθευσης {app}: {code}\nΙσχύει για {minutes} λεπτά. Μην κοινοποιείτε αυτόν τον κωδικό.",
+	"uk":    "Ваш код підтвердження {app}: {code}\nКод дійсний {minutes} хв. Нікому не повідомляйте цей код.",
+	"ru":    "Ваш код подтверждения {app}: {code}\nКод действителен {minutes} мин. Никому не сообщайте этот код.",
+	"fr":    "Votre code de vérification {app} : {code}\nIl est valable {minutes} minutes. Ne communiquez ce code à personne.",
+	"es":    "Su código de verificación de {app}: {code}\nEs válido durante {minutes} minutos. No comparta este código.",
+	"it":    "Il suo codice di verifica {app}: {code}\nÈ valido per {minutes} minuti. Non condivida questo codice.",
+	"zh-CN": "您的 {app} 验证码：{code}\n有效期 {minutes} 分钟。请勿向任何人透露此验证码。",
+	"az":    "{app} təsdiq kodunuz: {code}\nKod {minutes} dəqiqə etibarlıdır. Bu kodu heç kimlə paylaşmayın.",
+	"ar":    "رمز التحقق الخاص بك في {app}: {code}\nالرمز صالح لمدة {minutes} دقائق. لا تشارك هذا الرمز مع أي شخص.",
 }
 
-// RenderMessage builds the OTP text with the KVKK notice appended (K11).
+// RenderMessage builds the OTP text with the KVKK notice appended (K11). A
+// locale without a template (raw or unsupported) is normalized first; en is
+// the last resort.
 func RenderMessage(locale, app, code string, minutes int, kvkk string) string {
 	tpl, ok := messageTemplates[locale]
 	if !ok {
-		tpl = messageTemplates["tr"]
+		tpl, ok = messageTemplates[NormalizeLocale(locale)]
+	}
+	if !ok {
+		tpl = messageTemplates[string(i18n.FallbackLocale)]
 	}
 	msg := strings.NewReplacer("{app}", app, "{code}", code, "{minutes}", fmt.Sprint(minutes)).Replace(tpl)
 	if kvkk = strings.TrimSpace(kvkk); kvkk != "" {
