@@ -8,13 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, unwrap } from '@/core/api/client';
 import { orderTone } from '@/features/orders/orders-screen';
 import { formatDateTime, formatNumber, PAGE_SIZE, usePagedList } from '@/features/services/lib';
-import { Chips, errorText, ListBody, ListFooter } from '@/features/services/ui';
+import { Chips, ListBody, ListFooter } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { KpiCard, KpiGrid } from '@/ui/kpi';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { accountingKey, useAccountingAccess, useAccountingLinks } from './hooks';
 import { formatMoney } from './lib';
@@ -215,9 +216,9 @@ function QueueReturns({ header, onChanged }: { header: React.ReactElement; onCha
       unwrap(api.DELETE('/v1/accounting/queue/returns/{uuid}/processed', { params: { path: { uuid } } })),
     onSuccess: () => {
       changed();
-      Alert.alert(t('queue.unmarked'));
+      toast.success(t('queue.unmarked'));
     },
-    onError: (e) => Alert.alert(t('queue.mark_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('queue.mark_failed') }),
   });
 
   const confirmUnmark = (r: QueueReturn) =>
@@ -387,10 +388,10 @@ function InvoiceFields({ uuid, onDone }: { uuid: string; onDone: () => void }) {
   const mark = useMutation({
     mutationFn: () => unwrap(api.POST('/v1/orders/{uuid}/invoices', { params: { path: { uuid } }, body: invoiceInput(form) })),
     onSuccess: () => {
-      Alert.alert(t('queue.invoiced'));
+      toast.success(t('queue.invoiced'));
       onDone();
     },
-    onError: (e) => Alert.alert(t('queue.invoice_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('queue.invoice_failed') }),
   });
 
   const submit = () => {
@@ -454,10 +455,10 @@ function ProcessFields({ uuid, onDone }: { uuid: string; onDone: () => void }) {
     mutationFn: () =>
       unwrap(api.POST('/v1/accounting/queue/returns/{uuid}/processed', { params: { path: { uuid } }, body: processInput(note) })),
     onSuccess: () => {
-      Alert.alert(t('queue.marked'));
+      toast.success(t('queue.marked'));
       onDone();
     },
-    onError: (e) => Alert.alert(t('queue.mark_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('queue.mark_failed') }),
   });
   return (
     <>

@@ -3,9 +3,6 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
-
-import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
 import { Chips, PagedList, usePagedQuery, useFormat } from '@/features/admin/kit';
 import { Sheet } from '@/features/services/sheet';
@@ -14,6 +11,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { decideWarning, listCertificates, listWarnings, rejectCertificate, verifyCertificate } from './api';
 import {
@@ -34,7 +32,7 @@ const MIN_FILTERED = 10;
 type Tab = 'queue' | 'approvals';
 type Filter = 'pending' | 'all';
 
-const fail = (e: unknown) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined));
+const fail = (e: unknown) => toast.apiError(e);
 
 /** A reason or note typed in a sheet; the decision runs on Save. */
 function ReasonSheet({

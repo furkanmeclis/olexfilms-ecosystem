@@ -71,5 +71,11 @@
   "leave_body": "If you leave, what you entered is lost.",
   "leave_discard": "Leave",
   "related_empty": "No records",
-  "related_more": "{{count}} more"
+  "related_more": "{{count}} more",
+  "toast.success": "Success",
+  "toast.error": "Error",
+  "toast.warning": "Warning",
+  "toast.info": "Info",
+  "toast.loading": "In progress",
+  "toast.dismiss_hint": "Tap or swipe to dismiss"
 }

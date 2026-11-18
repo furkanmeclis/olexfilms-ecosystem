@@ -13,6 +13,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { ToastHost } from '@/ui/toast';
 
 export const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'itf14'] as const;
 
@@ -253,6 +254,7 @@ export function ContinuousScanner({
         </View>
         </KeyboardAvoidingView>
       </ScopedTheme>
+      <ToastHost inModal />
     </Modal>
   );
 }

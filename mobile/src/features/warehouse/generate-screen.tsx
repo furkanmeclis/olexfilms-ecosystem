@@ -8,6 +8,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { alertError } from './format';
 import { Card, Chips, IconButton } from './parts';
@@ -122,7 +123,7 @@ export function GenerateScreen() {
       try {
         const r = await setupApi.generate({ room_uuid: p.room, parent_uuid: p.parent ?? null, levels: levels.map(toApi) });
         void qc.invalidateQueries({ queryKey: ['warehouse', 'setup'] });
-        Alert.alert(t('bulk.result.created', { count: r.created }), t('bulk.result.existing', { count: r.existing }));
+        toast.success(t('bulk.result.created', { count: r.created }), { description: t('bulk.result.existing', { count: r.existing }) });
         router.back();
       } catch (e) {
         alertError(e);

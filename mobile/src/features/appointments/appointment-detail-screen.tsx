@@ -16,6 +16,7 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { useClock } from './appointments-screen';
 import { getAppointment } from './data';
@@ -79,7 +80,7 @@ export function AppointmentDetailScreen() {
       closeCancel();
       void saved(next);
     },
-    onError: (e) => Alert.alert(bookingError(e)),
+    onError: (e) => toast.error(bookingError(e)),
   });
 
   const intake = useMutation({
@@ -88,7 +89,7 @@ export function AppointmentDetailScreen() {
       void saved(next);
       if (next.service_uuid) router.push(`/bayi/services/${next.service_uuid}` as never);
     },
-    onError: (e) => Alert.alert(bookingError(e)),
+    onError: (e) => toast.error(bookingError(e)),
   });
 
   const confirmStatus = (status: AppointmentStatus) => {

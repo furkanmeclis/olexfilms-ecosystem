@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
@@ -17,6 +17,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { toast } from '@/ui/toast';
 
 type Hit = components['schemas']['SearchHit'];
 
@@ -83,7 +84,7 @@ export function SearchScreen() {
         const href = hrefFor('customers', v.customer_uuid);
         if (href) go(href);
       } catch (e) {
-        Alert.alert(t('open_failed'), errorText(e));
+        toast.apiError(e, { title: t('open_failed') });
       } finally {
         setOpening(null);
       }

@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { Directory, File, Paths } from 'expo-file-system';
 import { useEffect, useRef } from 'react';
-import { Alert, Platform, Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 import { api, refreshTokens, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -9,6 +9,7 @@ import type { components } from '@/core/api/schema';
 import { getTokens } from '@/core/auth/tokens';
 import { API_URL, APP_VERSION, MOBILE_API_VERSION } from '@/core/config';
 import { errorMessage, i18n } from '@/core/i18n';
+import { toast } from '@/ui/toast';
 
 export type ExportJob = components['schemas']['ExportJob'];
 
@@ -140,7 +141,7 @@ function useAbortOnUnmount() {
 
 const onFileError = (e: unknown) => {
   if (e instanceof Cancelled) return;
-  Alert.alert(fileErrorMessage(e));
+  toast.error(fileErrorMessage(e));
 };
 
 /** Mutation hook: runs `start` (queues a job), downloads the result and opens it; alerts on failure. */

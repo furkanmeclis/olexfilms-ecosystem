@@ -21,6 +21,14 @@ module.exports = defineConfig([
           ],
         },
       ],
+      // TEC-1235: düz bildirimler toast ile (`@/ui/toast`); Alert yalnızca butonlu onay/seçim diyaloğu.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.object.name='Alert'][callee.property.name='alert'][arguments.length<3]",
+          message: "Use toast from '@/ui/toast' for plain notices; Alert.alert is only for dialogs with buttons.",
+        },
+      ],
     },
   },
   {

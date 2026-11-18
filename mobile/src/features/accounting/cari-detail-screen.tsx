@@ -2,18 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatDateTime, PAGE_SIZE, usePagedList } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
 import { RefRow } from '@/features/entity/ref-row';
-import { DetailSkeleton, ErrorState, errorText, InfoRow, ListFooter, ListSkeleton, Section } from '@/features/services/ui';
+import { DetailSkeleton, ErrorState, InfoRow, ListFooter, ListSkeleton, Section } from '@/features/services/ui';
 import { EmptyState } from '@/ui/empty-state';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { OrderDetailSheet } from './order-detail-sheet';
 import { accountingKey, useAccountingAccess, useCategoryLabels, useOpenDisputeEntries } from './hooks';
@@ -59,9 +60,9 @@ export function CariDetailScreen() {
       setDisputing(null);
       setReason('');
       void qc.invalidateQueries({ queryKey: key });
-      Alert.alert(t('disputes.opened'));
+      toast.success(t('disputes.opened'));
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const c = cari.data;

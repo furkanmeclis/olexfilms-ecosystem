@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { ErrorState, ListSkeleton } from '@/features/admin/kit';
@@ -24,6 +24,7 @@ import { useBookingError } from './appointment-detail-screen';
 import { getAppointment, useAvailability } from './data';
 import { type AvailabilityDay, canReschedule, parseDay, todayIn } from './lib';
 import { intlLocale } from '@/core/digits';
+import { toast } from '@/ui/toast';
 
 type Step = 'customer' | 'vehicle' | 'time';
 const STEPS: Step[] = ['customer', 'vehicle', 'time'];
@@ -74,7 +75,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
       void qc.invalidateQueries({ queryKey: ['appointments', 'availability'] });
       router.back();
     },
-    onError: (e) => Alert.alert(bookingError(e)),
+    onError: (e) => toast.error(bookingError(e)),
   });
 
   const loadingExisting = edit && !!uuid && existing.isPending
