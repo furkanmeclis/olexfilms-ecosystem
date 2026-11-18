@@ -20,7 +20,7 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/lib/auth/session-store", () => ({
   useAuthStore: (
     selector: (state: { user: { isSuperAdmin: boolean } }) => unknown,

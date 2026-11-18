@@ -35,8 +35,8 @@ vi.mock("next/navigation", () => ({
 vi.mock("qrcode", () => ({
   default: { toDataURL: vi.fn(async () => "data:image/png;base64,QR") },
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/providers/locale-provider", () => ({

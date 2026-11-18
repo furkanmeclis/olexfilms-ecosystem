@@ -32,7 +32,7 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: state.toast }));
+vi.mock("@/lib/toast", () => ({ appToast: state.toast }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 vi.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({ isAuthenticated: true }),

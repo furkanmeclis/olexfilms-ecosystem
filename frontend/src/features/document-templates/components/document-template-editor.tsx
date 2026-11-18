@@ -42,7 +42,7 @@ import {
 } from "@/features/document-templates/services/document-templates.service";
 import { usePermission } from "@/providers/permission-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type EditorMode = "html" | "visual";
 

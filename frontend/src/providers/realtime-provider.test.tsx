@@ -53,7 +53,7 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: {
     info: vi.fn(),
     error: vi.fn(),

@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/layout/page-header";

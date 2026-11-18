@@ -56,7 +56,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: "bayi-a" }),
   useRouter: () => ({ push: routerPush }),
 }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({
     bootstrapped: true,

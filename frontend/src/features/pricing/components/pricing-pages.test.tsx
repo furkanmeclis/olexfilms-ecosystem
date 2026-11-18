@@ -43,7 +43,7 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 vi.mock("@/providers/permission-provider", () => ({

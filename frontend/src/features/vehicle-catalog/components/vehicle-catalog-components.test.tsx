@@ -8,7 +8,7 @@ const toastWarning = vi.fn();
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: {
     warning: (m: string) => toastWarning(m),
     success: vi.fn(),

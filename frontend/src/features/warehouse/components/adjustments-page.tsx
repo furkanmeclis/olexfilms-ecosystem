@@ -63,7 +63,7 @@ import {
   warehouseService,
 } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const ADJUSTMENTS_PAGE_SIZE = 20;
 export const ADJUSTMENTS_PERSIST_KEY = "tenant-warehouse-adjustments-v1";

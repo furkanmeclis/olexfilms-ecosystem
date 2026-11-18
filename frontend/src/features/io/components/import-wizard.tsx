@@ -52,7 +52,7 @@ import {
 } from "@/features/io/types";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 /**

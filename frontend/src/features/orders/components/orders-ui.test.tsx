@@ -36,7 +36,7 @@ vi.mock("next/link", () => ({
     createElement("a", { href, ...rest }, children as never),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/toast", () => ({ toast }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>

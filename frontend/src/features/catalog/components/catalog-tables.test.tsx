@@ -54,7 +54,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({

@@ -32,7 +32,7 @@ import {
 } from "@/features/legal-texts/services/legal-texts.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /** The 13 content languages of the backend (K10). */
 const TEXT_LOCALES = [

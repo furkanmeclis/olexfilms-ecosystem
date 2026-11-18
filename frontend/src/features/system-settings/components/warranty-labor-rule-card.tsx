@@ -34,7 +34,7 @@ import {
 import { systemSettingsService } from "@/features/system-settings/services/system-settings.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * System settings hub card for the warranty claim labor rule (TEC-337

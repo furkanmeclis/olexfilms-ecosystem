@@ -28,7 +28,7 @@ import {
 } from "@/features/mcp/services/mcp.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const MCP_CLIENTS_PERSIST_KEY = "platform-mcp-clients-v1";
 

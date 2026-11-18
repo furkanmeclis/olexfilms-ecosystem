@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: "olex" }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 

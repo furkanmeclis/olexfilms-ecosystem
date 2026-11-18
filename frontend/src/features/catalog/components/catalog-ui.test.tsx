@@ -38,7 +38,7 @@ vi.mock("@/hooks/use-active-organization", () => ({
   }),
 }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({

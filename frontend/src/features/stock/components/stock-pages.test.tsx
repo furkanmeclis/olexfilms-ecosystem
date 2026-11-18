@@ -75,7 +75,7 @@ vi.mock("@/lib/api/platform-form-request", async (orig) => ({
   ...(await orig<object>()),
   triggerBrowserDownload: captured.download,
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/features/io/components/export-menu", () => ({

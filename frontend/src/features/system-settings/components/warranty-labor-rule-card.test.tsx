@@ -23,7 +23,7 @@ vi.mock("next/link", () => ({
   } & Record<string, unknown>) =>
     createElement("a", { href, ...rest }, children as never),
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>

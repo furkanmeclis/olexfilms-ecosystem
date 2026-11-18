@@ -10,7 +10,7 @@ const api = vi.hoisted(() => ({
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: () => true }),
 }));

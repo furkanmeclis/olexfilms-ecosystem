@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { EntityLink } from "@/components/entity";
 import { ActivityTimeline } from "@/components/common/activity-timeline";

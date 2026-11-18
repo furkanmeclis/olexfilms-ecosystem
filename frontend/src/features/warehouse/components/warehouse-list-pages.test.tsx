@@ -80,7 +80,7 @@ vi.mock("@/features/modules/hooks/use-features", () => ({
   }),
 }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));

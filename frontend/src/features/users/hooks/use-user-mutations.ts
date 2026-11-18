@@ -13,7 +13,7 @@ import {
   type UserListResult,
 } from "@/features/users/services/users.service";
 import { useAppMutation } from "@/lib/query/mutation";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 import { useLocale } from "@/providers/locale-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { useStepUp } from "@/features/step-up-engine";

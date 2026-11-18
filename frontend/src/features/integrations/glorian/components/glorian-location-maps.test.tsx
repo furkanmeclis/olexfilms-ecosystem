@@ -28,7 +28,7 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
   useFormatter: () => ({ dateTime: (v: string) => v }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/providers/dialog-provider", () => ({
   useDialogs: () => ({ confirmDelete: vi.fn() }),
 }));

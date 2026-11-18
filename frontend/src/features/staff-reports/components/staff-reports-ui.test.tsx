@@ -17,7 +17,7 @@ vi.mock("next/link", async () => {
       h("a", { href }, children as never),
   };
 });
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

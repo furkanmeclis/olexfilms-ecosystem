@@ -40,7 +40,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { isFeatureDisabledError } from "@/lib/api/limit-events";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const T = "photo_standard.angles";
 export const PHOTO_ANGLES_PERSIST_KEY = "platform-photo-angles-v1";

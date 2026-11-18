@@ -59,7 +59,7 @@ import {
   WarehouseExportMenu,
 } from "@/features/warehouse/components/warehouse-export";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const EOD_PAGE_SIZE = 20;
 export const EOD_PERSIST_KEY = "tenant-warehouse-eod-v1";

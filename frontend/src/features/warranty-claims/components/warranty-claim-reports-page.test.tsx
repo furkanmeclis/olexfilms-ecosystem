@@ -23,7 +23,7 @@ vi.mock("@/components/analytics", async (orig) => ({
   ...(await orig<object>()),
   BarChart: () => null,
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@/providers/locale-provider", () => ({

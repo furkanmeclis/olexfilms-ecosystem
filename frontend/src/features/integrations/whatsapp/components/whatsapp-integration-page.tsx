@@ -34,7 +34,7 @@ import {
 } from "@/features/integrations/whatsapp/services/whatsapp.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 const QUERY_KEY = ["platform", "integrations", "whatsapp"] as const;
 const KVKK_LOCALES = ["tr", "en"] as const;

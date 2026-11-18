@@ -22,7 +22,7 @@ import {
 } from "@/features/service-subscriptions/services/service-subscriptions.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export type CancelDecision = "approve" | "reject";
 

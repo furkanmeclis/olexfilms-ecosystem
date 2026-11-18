@@ -20,7 +20,7 @@ import { VehicleBrandLogo } from "@/features/vehicle-catalog/components/vehicle-
 import { vehicleCatalogService } from "@/features/vehicle-catalog/services/vehicle-catalog.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 async function loadBrands(q: string): Promise<ComboboxOption[]> {
   const page = await vehicleCatalogService.listBrands({

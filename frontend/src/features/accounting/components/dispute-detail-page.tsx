@@ -47,7 +47,7 @@ import {
 } from "@/features/accounting/services/accounting.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Resolution of an open dispute by the parent the row came from (TEC-174):

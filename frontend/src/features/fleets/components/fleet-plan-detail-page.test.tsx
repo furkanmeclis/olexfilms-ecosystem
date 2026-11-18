@@ -37,7 +37,7 @@ vi.mock("@/providers/locale-provider", () => ({
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: () => true }),
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/lib/toast", () => ({ appToast: toast }));
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: ReactNode }) =>
     createElement("a", { href }, children),

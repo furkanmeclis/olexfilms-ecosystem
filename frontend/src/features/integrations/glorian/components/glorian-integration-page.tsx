@@ -36,7 +36,7 @@ import {
 } from "@/features/integrations/glorian/services/glorian.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Platform > Integrations > Glorian (TEC-274): the hub connection of the

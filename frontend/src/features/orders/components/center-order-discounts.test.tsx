@@ -27,7 +27,7 @@ vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: unknown }) =>
     createElement("a", { href }, children as never),
 }));
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/toast", () => ({ toast }));
 // TEC-1214: brand USD, local display currency TRY (from the session).
 vi.mock("@/lib/currency", () => ({
   useSessionCurrencies: () => ({

@@ -38,7 +38,7 @@ vi.mock("@/providers/locale-provider", () => ({
     },
   }),
 }));
-vi.mock("@/providers/toast-provider", () => ({
+vi.mock("@/lib/toast", () => ({
   appToast: { success: vi.fn(), error: captured.toastError },
 }));
 vi.mock("@/lib/api/platform-request", () => http);

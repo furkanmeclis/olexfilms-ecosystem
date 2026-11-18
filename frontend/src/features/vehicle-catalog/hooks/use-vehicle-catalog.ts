@@ -16,7 +16,7 @@ import {
 } from "@/features/vehicle-catalog/services/vehicle-catalog.service";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const vehicleCatalogKeys = {
   all: ["vehicle-catalog"] as const,

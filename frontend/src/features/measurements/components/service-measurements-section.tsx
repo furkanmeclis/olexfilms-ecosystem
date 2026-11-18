@@ -55,7 +55,7 @@ import {
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const SERVICE_MEASUREMENT_DIFF_PERSIST_KEY =
   "tenant-service-measurement-diff-v1";

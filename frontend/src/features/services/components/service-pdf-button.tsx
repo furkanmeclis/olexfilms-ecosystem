@@ -12,7 +12,7 @@ import {
 } from "@/features/warranty/lib/certificate";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 /**
  * Queues the service PDF, waits for the export job and downloads it; also

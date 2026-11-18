@@ -22,7 +22,7 @@ const state = vi.hoisted(() => ({
   orgType: "center" as "center" | "distributor" | "dealer",
 }));
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

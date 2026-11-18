@@ -77,7 +77,7 @@ import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-e
 import { useDialogs } from "@/providers/dialog-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 type CountAction = "approve-start" | "start" | "complete" | "cancel";
 

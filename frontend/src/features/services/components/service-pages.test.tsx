@@ -81,7 +81,7 @@ vi.mock("@/lib/api/platform-form-request", async (orig) => ({
   ...(await orig<object>()),
   triggerBrowserDownload: cert.trigger,
 }));
-vi.mock("@/providers/toast-provider", () => ({ appToast: cert.toast }));
+vi.mock("@/lib/toast", () => ({ appToast: cert.toast }));
 vi.mock("@/features/modules/hooks/use-features", () => ({
   useFeature: (_slug: string, key: string) => ({
     enabled: state.features.includes(key),

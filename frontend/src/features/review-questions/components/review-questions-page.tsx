@@ -41,7 +41,7 @@ import {
 } from "@/features/review-questions/services/review-questions.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const REVIEW_QUESTIONS_PERSIST_KEY = "platform-review-questions-v1";
 

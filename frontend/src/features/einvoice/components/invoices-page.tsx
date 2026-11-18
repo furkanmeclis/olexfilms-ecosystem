@@ -47,7 +47,7 @@ import {
 } from "@/features/einvoice/services/einvoice.service";
 import { download } from "@/lib/utils/format";
 import { useLocale } from "@/providers/locale-provider";
-import { appToast } from "@/providers/toast-provider";
+import { appToast } from "@/lib/toast";
 
 export const INVOICES_PERSIST_KEY = "tenant-einvoices-v1";
 const EXPORT_PAGE = 100;

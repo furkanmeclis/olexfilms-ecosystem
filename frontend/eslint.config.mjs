@@ -70,6 +70,25 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // TEC-1235: every toast goes through the shared helper (@/lib/toast).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/toast/**", "src/components/ui/sonner.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "sonner",
+              message:
+                'Use toast from "@/lib/toast" (shared design, dedupe, API error mapping).',
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: PHYSICAL_CLASS_IGNORES.map((dir) => `${dir}**`),
