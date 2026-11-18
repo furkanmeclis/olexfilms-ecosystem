@@ -38,3 +38,24 @@ func TestServiceSubscriptionTemplatesCoverEveryLocale(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1235: every locale is written (no en copies) and tr keeps its
+// diacritics.
+func TestServiceSubscriptionTextsTranslated(t *testing.T) {
+	for _, code := range serviceSubscriptionEvents {
+		texts := serviceSubscriptionTexts[code]
+		for _, lang := range msgtemplate.Locales {
+			tx, ok := texts[lang]
+			if !ok {
+				t.Errorf("%s: %s not written", code, lang)
+				continue
+			}
+			if lang != "en" && (tx.subject == texts["en"].subject || tx.body == texts["en"].body) {
+				t.Errorf("%s/%s: still the en text", code, lang)
+			}
+		}
+		if !strings.ContainsAny(texts["tr"].subject+texts["tr"].body, "ğüşıöçİ") {
+			t.Errorf("%s/tr: no Turkish characters", code)
+		}
+	}
+}

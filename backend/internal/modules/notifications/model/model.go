@@ -14,6 +14,10 @@ const (
 	ChannelSMS      = "sms"
 	ChannelWhatsApp = "whatsapp"
 
+	// PayloadEmailPreheader is the payload key of an explicit e-mail
+	// preview text; without it the preheader is derived from the body.
+	PayloadEmailPreheader = "email_preheader"
+
 	StatusQueued     = "queued"
 	StatusProcessing = "processing"
 	StatusSent       = "sent"

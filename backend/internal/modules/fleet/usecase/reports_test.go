@@ -630,20 +630,15 @@ func TestReportLabelsEveryLocale(t *testing.T) {
 					t.Errorf("%s empty", v.Type().Field(i).Name)
 				}
 			}
-			for _, k := range []string{"{fleet}", "{period}"} {
-				if !strings.Contains(lab.MailSubject, k) && !strings.Contains(lab.MailBody, k) {
-					t.Errorf("mail misses %s", k)
-				}
-			}
-			if !strings.Contains(lab.MailLink, "{url}") || !strings.Contains(lab.Quarter, "{q}") || !strings.Contains(lab.Quarter, "{year}") {
+			if !strings.Contains(lab.Quarter, "{q}") || !strings.Contains(lab.Quarter, "{year}") {
 				t.Error("placeholders missing")
 			}
-			if l != i18n.LocaleEN && lab.MailBody == reportTexts[i18n.LocaleEN].MailBody {
-				t.Error("mail body not translated")
+			if l != i18n.LocaleEN && lab.Empty == reportTexts[i18n.LocaleEN].Empty {
+				t.Error("labels not translated")
 			}
 		})
 	}
-	if !strings.ContainsFunc(reportTexts[i18n.LocaleAR].MailSubject, func(r rune) bool { return r >= 0x0600 && r <= 0x06FF }) {
+	if !strings.ContainsFunc(reportTexts[i18n.LocaleAR].Dealer, func(r rune) bool { return r >= 0x0600 && r <= 0x06FF }) {
 		t.Fatal("ar labels are not Arabic")
 	}
 	if got, l := reportLabelsFor("zh-CN"); l != i18n.LocaleZhCN || got.Dealer != "经销商" {

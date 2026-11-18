@@ -27,7 +27,7 @@ var sameAsEN = map[Locale]map[string]bool{
 	LocaleES: {"No": true, "Normal": true, "Error": true, "Total": true, "Subtotal": true},
 	LocaleIT: {"No": true},
 	LocaleEL: {"Email": true, "Barcode": true},
-	LocaleDE: {"Status": true, "Normal": true, "Text": true},
+	LocaleDE: {"Status": true, "Normal": true, "Text": true, "Details": true},
 	LocaleAZ: {"Status": true, "Normal": true, "Lot": true},
 }
 

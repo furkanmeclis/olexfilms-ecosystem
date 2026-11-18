@@ -3,6 +3,29 @@ package i18n
 // frCatalog holds the French labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var frCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Ouvrir",
+	"email.link_fallback":                       "Si le bouton ne fonctionne pas, ouvrez ce lien :",
+	"email.footer.reason":                       "Vous recevez cet e-mail suite à une notification concernant votre compte {{brand}}.",
+	"email.footer.reason_campaign":              "Vous recevez cet e-mail car vous avez accepté de recevoir les offres de {{brand}}.",
+	"email.campaign.details":                    "En savoir plus",
+	"email.unsubscribe.intro":                   "Vous ne souhaitez plus recevoir nos offres ?",
+	"email.unsubscribe.label":                   "Se désabonner",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp déconnecté",
+	"email.whatsapp_alarm.logged_out.body":      "Le numéro WhatsApp a été déconnecté ({{reason}}). Les codes de vérification (OTP) et les notifications ne peuvent plus être envoyés. Reconnectez-le en scannant le QR code dans Intégrations > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Codes et notifications à l'arrêt. Scannez le QR code pour reconnecter.",
+	"email.whatsapp_alarm.banned.title":         "Numéro WhatsApp temporairement bloqué",
+	"email.whatsapp_alarm.banned.body":          "Le numéro WhatsApp est temporairement bloqué ({{reason}}). Les envois sont interrompus. Envisagez d'activer le secours SMS jusqu'à la levée du blocage.",
+	"email.whatsapp_alarm.banned.preheader":     "Envois interrompus. Envisagez le secours SMS.",
+	"email.fleet_report.subject":                "Rapport de flotte {{fleet}} : {{period}}",
+	"email.fleet_report.body_attached":          "Bonjour,\n\nvous trouverez ci-joint le rapport de la flotte {{fleet}} pour {{period}}.",
+	"email.fleet_report.body_link":              "Bonjour,\n\nle rapport de la flotte {{fleet}} pour {{period}} est prêt. Le fichier est trop volumineux pour être joint ; téléchargez-le sur le portail.",
+	"email.fleet_report.button":                 "Télécharger le rapport",
+	"email.fleet_report.preheader_attached":     "Le rapport de {{period}} est joint au format PDF.",
+	"email.fleet_report.preheader_link":         "Le rapport de {{period}} est prêt à être téléchargé sur le portail.",
+
 	"warehouse.count.self_approval": "La personne qui a créé le comptage ou effectué seule tous les scans ne peut pas l’approuver. Demandez à une autre personne autorisée.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "E-mail",

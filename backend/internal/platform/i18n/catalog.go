@@ -34,6 +34,29 @@ func Translate(locale Locale, key string) string {
 }
 
 var trCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Görüntüle",
+	"email.link_fallback":                       "Buton çalışmıyorsa bu bağlantıyı açın:",
+	"email.footer.reason":                       "Bu e-postayı {{brand}} hesabınızla ilgili bir bildirim olduğu için aldınız.",
+	"email.footer.reason_campaign":              "Bu e-postayı {{brand}} kampanya mesajlarına izin verdiğiniz için aldınız.",
+	"email.campaign.details":                    "Ayrıntılar",
+	"email.unsubscribe.intro":                   "Kampanya mesajları almak istemiyorsanız:",
+	"email.unsubscribe.label":                   "Abonelikten çık",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp bağlantısı koptu",
+	"email.whatsapp_alarm.logged_out.body":      "WhatsApp numarasının oturumu kapandı ({{reason}}). Doğrulama kodları (OTP) ve bildirimler gönderilemiyor. Entegrasyonlar > WhatsApp ekranında QR kodu okutarak yeniden bağlayın.",
+	"email.whatsapp_alarm.logged_out.preheader": "Kodlar ve bildirimler durdu. QR kodu okutarak yeniden bağlayın.",
+	"email.whatsapp_alarm.banned.title":         "WhatsApp numarası geçici olarak engellendi",
+	"email.whatsapp_alarm.banned.body":          "WhatsApp numarası geçici olarak engellendi ({{reason}}). Gönderimler durdu. Engel kalkana kadar SMS yedeğini açmayı değerlendirin.",
+	"email.whatsapp_alarm.banned.preheader":     "Gönderimler durdu. SMS yedeğini açmayı değerlendirin.",
+	"email.fleet_report.subject":                "{{fleet}} filo raporu: {{period}}",
+	"email.fleet_report.body_attached":          "Merhaba,\n\n{{fleet}} filosunun {{period}} raporu ektedir.",
+	"email.fleet_report.body_link":              "Merhaba,\n\n{{fleet}} filosunun {{period}} raporu hazır. Dosya e-posta eki için çok büyük; raporu portaldan indirin.",
+	"email.fleet_report.button":                 "Raporu indir",
+	"email.fleet_report.preheader_attached":     "{{period}} raporu PDF olarak ektedir.",
+	"email.fleet_report.preheader_link":         "{{period}} raporu hazır; portaldan indirebilirsiniz.",
+
 	"warehouse.count.self_approval": "Sayımı oluşturan veya tüm taramaları tek başına yapan kişi onaylayamaz. Başka bir yetkili kişiden onay isteyin.",
 	"users.uuid":                    "UUID", "users.email": "E-posta", "users.name": "Ad",
 	"users.surname": "Soyad", "users.status": "Durum", "users.created_at": "Oluşturulma",
@@ -1310,6 +1333,29 @@ var trCatalog = map[string]string{
 }
 
 var enCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Open",
+	"email.link_fallback":                       "If the button doesn't work, open this link:",
+	"email.footer.reason":                       "You received this e-mail because of a notification about your {{brand}} account.",
+	"email.footer.reason_campaign":              "You received this e-mail because you agreed to campaign messages from {{brand}}.",
+	"email.campaign.details":                    "Details",
+	"email.unsubscribe.intro":                   "Don't want campaign messages?",
+	"email.unsubscribe.label":                   "Unsubscribe",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp disconnected",
+	"email.whatsapp_alarm.logged_out.body":      "The WhatsApp number was logged out ({{reason}}). Verification codes (OTP) and notifications cannot be sent. Reconnect by scanning the QR code under Integrations > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Codes and notifications have stopped. Scan the QR code to reconnect.",
+	"email.whatsapp_alarm.banned.title":         "WhatsApp number temporarily banned",
+	"email.whatsapp_alarm.banned.body":          "The WhatsApp number is temporarily banned ({{reason}}). Sending has stopped. Consider turning on the SMS fallback until the ban is lifted.",
+	"email.whatsapp_alarm.banned.preheader":     "Sending has stopped. Consider turning on the SMS fallback.",
+	"email.fleet_report.subject":                "{{fleet}} fleet report: {{period}}",
+	"email.fleet_report.body_attached":          "Hello,\n\nPlease find attached the {{fleet}} fleet report for {{period}}.",
+	"email.fleet_report.body_link":              "Hello,\n\nThe {{fleet}} fleet report for {{period}} is ready. The file is too large to attach; download it from the portal.",
+	"email.fleet_report.button":                 "Download report",
+	"email.fleet_report.preheader_attached":     "The {{period}} report is attached as a PDF.",
+	"email.fleet_report.preheader_link":         "The {{period}} report is ready to download from the portal.",
+
 	"warehouse.count.self_approval": "The count creator or sole scanner cannot approve it. Ask another authorized person.",
 	"users.uuid":                    "UUID", "users.email": "Email", "users.name": "First name",
 	"users.surname": "Last name", "users.status": "Status", "users.created_at": "Created",

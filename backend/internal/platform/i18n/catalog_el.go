@@ -3,6 +3,29 @@ package i18n
 // Greek label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var elCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Άνοιγμα",
+	"email.link_fallback":                       "Αν το κουμπί δεν λειτουργεί, ανοίξτε αυτόν τον σύνδεσμο:",
+	"email.footer.reason":                       "Λάβατε αυτό το email λόγω μιας ειδοποίησης για τον λογαριασμό σας στο {{brand}}.",
+	"email.footer.reason_campaign":              "Λάβατε αυτό το email επειδή συμφωνήσατε να λαμβάνετε μηνύματα προωθητικών ενεργειών από το {{brand}}.",
+	"email.campaign.details":                    "Λεπτομέρειες",
+	"email.unsubscribe.intro":                   "Δεν θέλετε να λαμβάνετε μηνύματα προωθητικών ενεργειών;",
+	"email.unsubscribe.label":                   "Απεγγραφή",
+	"email.whatsapp_alarm.logged_out.title":     "Η σύνδεση WhatsApp διακόπηκε",
+	"email.whatsapp_alarm.logged_out.body":      "Ο αριθμός WhatsApp αποσυνδέθηκε ({{reason}}). Οι κωδικοί επαλήθευσης (OTP) και οι ειδοποιήσεις δεν μπορούν να σταλούν. Συνδέστε ξανά σαρώνοντας τον κωδικό QR στο Ενσωματώσεις > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Οι κωδικοί και οι ειδοποιήσεις σταμάτησαν. Σαρώστε τον κωδικό QR για επανασύνδεση.",
+	"email.whatsapp_alarm.banned.title":         "Ο αριθμός WhatsApp αποκλείστηκε προσωρινά",
+	"email.whatsapp_alarm.banned.body":          "Ο αριθμός WhatsApp αποκλείστηκε προσωρινά ({{reason}}). Οι αποστολές σταμάτησαν. Εξετάστε την ενεργοποίηση της εφεδρικής αποστολής SMS μέχρι να αρθεί ο αποκλεισμός.",
+	"email.whatsapp_alarm.banned.preheader":     "Οι αποστολές σταμάτησαν. Εξετάστε την εφεδρική αποστολή SMS.",
+	"email.fleet_report.subject":                "Αναφορά στόλου {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Γεια σας,\n\nΕπισυνάπτεται η αναφορά του στόλου {{fleet}} για την περίοδο {{period}}.",
+	"email.fleet_report.body_link":              "Γεια σας,\n\nΗ αναφορά του στόλου {{fleet}} για την περίοδο {{period}} είναι έτοιμη. Το αρχείο είναι πολύ μεγάλο για συνημμένο· κατεβάστε το από την πύλη.",
+	"email.fleet_report.button":                 "Λήψη αναφοράς",
+	"email.fleet_report.preheader_attached":     "Η αναφορά για την περίοδο {{period}} επισυνάπτεται σε PDF.",
+	"email.fleet_report.preheader_link":         "Η αναφορά για την περίοδο {{period}} είναι έτοιμη για λήψη από την πύλη.",
+
 	"warehouse.count.self_approval": "Ο δημιουργός της απογραφής ή ο μοναδικός χρήστης που σάρωσε δεν μπορεί να την εγκρίνει. Ζητήστε έγκριση από άλλο εξουσιοδοτημένο άτομο.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "Email",

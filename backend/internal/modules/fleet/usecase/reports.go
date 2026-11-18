@@ -453,9 +453,9 @@ func (s *Service) reportMessage(ctx context.Context, f db.Organization, r db.Fle
 // e-mail preview, cmd/email-preview, uses it with sample rows).
 func ReportMessage(ctx context.Context, cfg ReportConfig, f db.Organization, r db.FleetReport, pdf []byte) (mail.Message, error) {
 	t, lang := reportLabelsFor(r.Locale)
-	vars := map[string]string{"fleet": f.Name, "period": periodLabel(t, reportPeriodOf(r)), "url": cfg.PortalURL}
-	subject := fill(t.MailSubject, vars)
-	body := fill(t.MailBody, vars)
+	vars := map[string]string{"fleet": f.Name, "period": periodLabel(t, reportPeriodOf(r))}
+	tr := func(key string) string { return i18n.TranslateParams(lang, "email.fleet_report."+key, vars) }
+	subject := tr("subject")
 	attach := len(pdf) > 0 && len(pdf) <= MaxReportAttachment
 	brand := MailBrand{Name: mail.DefaultBrandName}
 	if cfg.Brand != nil {
@@ -469,11 +469,18 @@ func ReportMessage(ctx context.Context, cfg ReportConfig, f db.Organization, r d
 		BrandName: brand.Name, LogoURL: brand.LogoURL, Color: brand.Color,
 		Reason: labels.ReasonFor(brand.Name),
 	}
+	body := tr("body_attached")
+	layout.Preheader = tr("preheader_attached")
 	if !attach {
-		// Too large to attach: the body says so (with the URL for the
-		// text part) and the button opens the portal reports page.
-		body += "\n\n" + fill(t.MailLink, vars)
-		layout.ButtonLabel, layout.ButtonURL = labels.Button, cfg.PortalURL
+		// Too large to attach: the button opens the portal reports page
+		// (the text part carries the URL on the button line).
+		body, layout.Preheader = tr("body_link"), tr("preheader_link")
+		if mail.SafeURL(cfg.PortalURL) {
+			layout.ButtonLabel, layout.ButtonURL = tr("button"), cfg.PortalURL
+			layout.Secondary, layout.SecondaryURL = labels.LinkFallback, cfg.PortalURL
+		} else if cfg.PortalURL != "" {
+			body += "\n\n" + cfg.PortalURL
+		}
 	}
 	layout.BodyHTML = msgtemplate.MarkdownToHTML(body)
 	layout.BodyText = msgtemplate.MarkdownToText(body)

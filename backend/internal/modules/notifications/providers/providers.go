@@ -100,7 +100,7 @@ type EmailProvider struct {
 
 // PayloadPreheader is the notification payload key of an explicit inbox
 // preview text; without it the preheader is derived from the body.
-const PayloadPreheader = "email_preheader"
+const PayloadPreheader = model.PayloadEmailPreheader
 
 func (EmailProvider) Channel() string { return model.ChannelEmail }
 
