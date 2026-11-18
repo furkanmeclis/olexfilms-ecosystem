@@ -4400,7 +4400,7 @@ export interface paths {
         };
         /**
          * Modules of the active organization (Özellikler page, menus, guards)
-         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it. TEC-508: every item carries its `description` in the request locale (Accept-Language; 13 languages), `free_default` (on by default, free, no service record), `price` (cheapest active `module_bundle` service catalog item containing the module, with the distributor override) or `contact_for_price` (paid, no bundle on sale) and the organization's newest module `request`.
+         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it. TEC-508: every item carries its `description` in the request locale (Accept-Language; 14 languages), `free_default` (on by default, free, no service record), `price` (cheapest active `module_bundle` service catalog item containing the module, with the distributor override) or `contact_for_price` (paid, no bundle on sale) and the organization's newest module `request`.
          */
         get: operations["listFeatures"];
         put?: never;
@@ -19915,7 +19915,7 @@ export interface components {
             scope: string;
         };
         /** @enum {string} */
-        LocaleCode: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
+        LocaleCode: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar" | "fa";
         /** @enum {string} */
         AnnouncementStatus: "draft" | "published" | "archived";
         /** @enum {string} */
@@ -20507,7 +20507,7 @@ export interface components {
          * @description Canonical locale code (K10). Inputs are normalized: "zh_CN", "zh-cn" and "zh" become zh-CN; a regional code falls back to its language ("tr-TR" -> tr). Unknown codes are rejected with 422.
          * @enum {string}
          */
-        Locale: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
+        Locale: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar" | "fa";
         MeLinks: {
             /** @example /v1/auth/profile */
             profile: string;
@@ -21858,10 +21858,10 @@ export interface components {
             /** @description Must be true (KVKK consent); false is 400 VALIDATION_ERROR. */
             kvkk_consent: boolean;
             /**
-             * @description Form language, one of the 13 locales (default tr).
+             * @description Form language, one of the 14 locales (default tr).
              * @enum {string}
              */
-            language?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
+            language?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar" | "fa";
             /** @description Honeypot; leave empty (hidden in the form). */
             website?: string;
         };
@@ -22875,7 +22875,7 @@ export interface components {
         };
         /** @enum {string} */
         ShowcaseStatus: "draft" | "pending_review" | "published" | "rejected";
-        /** @description Locale (13 UI locales) → text; empty entries are dropped. */
+        /** @description Locale (14 UI locales) → text; empty entries are dropped. */
         ShowcaseLocaleTexts: {
             [key: string]: string;
         };
@@ -23539,7 +23539,7 @@ export interface components {
         };
         /** @description TEC-508. A module state with the Özellikler page meta. */
         FeatureListItem: components["schemas"]["ModuleState"] & {
-            /** @description One-sentence description in the request locale (13 languages). */
+            /** @description One-sentence description in the request locale (14 languages). */
             description: string;
             /** @description On by default; free and needs no service record. */
             free_default: boolean;
@@ -62065,7 +62065,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description PDF language; defaults to the request language. */
-                lang?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh_CN" | "az" | "ar";
+                lang?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh_CN" | "az" | "ar" | "fa";
                 /** @description IANA timezone for order and issued-at timestamps; defaults to seller timezone. */
                 tz?: string;
             };
