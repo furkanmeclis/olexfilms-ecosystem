@@ -3,6 +3,29 @@ package i18n
 // Bulgarian label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var bgCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Отвори",
+	"email.link_fallback":                       "Ако бутонът не работи, отворете тази връзка:",
+	"email.footer.reason":                       "Получавате този имейл заради известие за вашия акаунт в {{brand}}.",
+	"email.footer.reason_campaign":              "Получавате този имейл, защото сте се съгласили да получавате съобщения за кампании от {{brand}}.",
+	"email.campaign.details":                    "Подробности",
+	"email.unsubscribe.intro":                   "Не желаете да получавате съобщения за кампании?",
+	"email.unsubscribe.label":                   "Отписване",
+	"email.whatsapp_alarm.logged_out.title":     "Връзката с WhatsApp е прекъсната",
+	"email.whatsapp_alarm.logged_out.body":      "Сесията на номера в WhatsApp е прекратена ({{reason}}). Кодовете за потвърждение (OTP) и известията не могат да се изпращат. Свържете отново, като сканирате QR кода в Интеграции > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Кодовете и известията са спрени. Сканирайте QR кода, за да свържете отново.",
+	"email.whatsapp_alarm.banned.title":         "Номерът в WhatsApp е временно блокиран",
+	"email.whatsapp_alarm.banned.body":          "Номерът в WhatsApp е временно блокиран ({{reason}}). Изпращането е спряно. Обмислете включването на резервния SMS канал, докато блокировката бъде премахната.",
+	"email.whatsapp_alarm.banned.preheader":     "Изпращането е спряно. Обмислете резервния SMS канал.",
+	"email.fleet_report.subject":                "Отчет за автопарка {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Здравейте,\n\nПриложен е отчетът на автопарка {{fleet}} за {{period}}.",
+	"email.fleet_report.body_link":              "Здравейте,\n\nОтчетът на автопарка {{fleet}} за {{period}} е готов. Файлът е твърде голям за прикачване; изтеглете го от портала.",
+	"email.fleet_report.button":                 "Изтегли отчета",
+	"email.fleet_report.preheader_attached":     "Отчетът за {{period}} е приложен като PDF.",
+	"email.fleet_report.preheader_link":         "Отчетът за {{period}} е готов за изтегляне от портала.",
+
 	"warehouse.count.self_approval": "Създателят на инвентаризацията или единственият сканиращ не може да я одобри. Поискайте одобрение от друг упълномощен служител.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "Имейл",

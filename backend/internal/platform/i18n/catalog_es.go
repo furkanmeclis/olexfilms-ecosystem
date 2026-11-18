@@ -3,6 +3,29 @@ package i18n
 // esCatalog holds the Spanish labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var esCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Abrir",
+	"email.link_fallback":                       "Si el botón no funciona, abra este enlace:",
+	"email.footer.reason":                       "Recibe este correo por una notificación sobre su cuenta de {{brand}}.",
+	"email.footer.reason_campaign":              "Recibe este correo porque aceptó recibir mensajes de campañas de {{brand}}.",
+	"email.campaign.details":                    "Más información",
+	"email.unsubscribe.intro":                   "¿No desea recibir mensajes de campañas?",
+	"email.unsubscribe.label":                   "Darse de baja",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp desconectado",
+	"email.whatsapp_alarm.logged_out.body":      "El número de WhatsApp cerró sesión ({{reason}}). No se pueden enviar códigos de verificación (OTP) ni notificaciones. Vuelva a conectarlo escaneando el código QR en Integraciones > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Los códigos y las notificaciones se detuvieron. Escanee el código QR para reconectar.",
+	"email.whatsapp_alarm.banned.title":         "Número de WhatsApp bloqueado temporalmente",
+	"email.whatsapp_alarm.banned.body":          "El número de WhatsApp está bloqueado temporalmente ({{reason}}). Los envíos se detuvieron. Considere activar el respaldo por SMS hasta que se levante el bloqueo.",
+	"email.whatsapp_alarm.banned.preheader":     "Los envíos se detuvieron. Considere el respaldo por SMS.",
+	"email.fleet_report.subject":                "Informe de la flota {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Hola:\n\nadjuntamos el informe de la flota {{fleet}} correspondiente a {{period}}.",
+	"email.fleet_report.body_link":              "Hola:\n\nel informe de la flota {{fleet}} correspondiente a {{period}} está listo. El archivo es demasiado grande para adjuntarlo; descárguelo en el portal.",
+	"email.fleet_report.button":                 "Descargar informe",
+	"email.fleet_report.preheader_attached":     "El informe de {{period}} va adjunto en PDF.",
+	"email.fleet_report.preheader_link":         "El informe de {{period}} está listo para descargar en el portal.",
+
 	"warehouse.count.self_approval": "Quien creó el recuento o realizó todos los escaneos por sí solo no puede aprobarlo. Solicite la aprobación de otra persona autorizada.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "Correo electrónico",

@@ -3,6 +3,29 @@ package i18n
 // deCatalog holds the German labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var deCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Öffnen",
+	"email.link_fallback":                       "Falls die Schaltfläche nicht funktioniert, öffnen Sie diesen Link:",
+	"email.footer.reason":                       "Sie erhalten diese E-Mail aufgrund einer Benachrichtigung zu Ihrem {{brand}}-Konto.",
+	"email.footer.reason_campaign":              "Sie erhalten diese E-Mail, weil Sie Kampagnennachrichten von {{brand}} zugestimmt haben.",
+	"email.campaign.details":                    "Details",
+	"email.unsubscribe.intro":                   "Sie möchten keine Kampagnennachrichten erhalten?",
+	"email.unsubscribe.label":                   "Abmelden",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp-Verbindung getrennt",
+	"email.whatsapp_alarm.logged_out.body":      "Die WhatsApp-Nummer wurde abgemeldet ({{reason}}). Bestätigungscodes (OTP) und Benachrichtigungen können nicht gesendet werden. Verbinden Sie sie unter Integrationen > WhatsApp per QR-Code neu.",
+	"email.whatsapp_alarm.logged_out.preheader": "Codes und Benachrichtigungen sind gestoppt. Scannen Sie den QR-Code, um neu zu verbinden.",
+	"email.whatsapp_alarm.banned.title":         "WhatsApp-Nummer vorübergehend gesperrt",
+	"email.whatsapp_alarm.banned.body":          "Die WhatsApp-Nummer ist vorübergehend gesperrt ({{reason}}). Der Versand ist gestoppt. Aktivieren Sie bis zur Aufhebung der Sperre am besten den SMS-Ersatzkanal.",
+	"email.whatsapp_alarm.banned.preheader":     "Der Versand ist gestoppt. Erwägen Sie den SMS-Ersatzkanal.",
+	"email.fleet_report.subject":                "Flottenbericht {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Guten Tag,\n\nim Anhang finden Sie den Bericht der Flotte {{fleet}} für {{period}}.",
+	"email.fleet_report.body_link":              "Guten Tag,\n\nder Bericht der Flotte {{fleet}} für {{period}} ist fertig. Die Datei ist für einen Anhang zu groß; laden Sie sie im Portal herunter.",
+	"email.fleet_report.button":                 "Bericht herunterladen",
+	"email.fleet_report.preheader_attached":     "Der Bericht für {{period}} liegt als PDF im Anhang.",
+	"email.fleet_report.preheader_link":         "Der Bericht für {{period}} steht im Portal zum Download bereit.",
+
 	"warehouse.count.self_approval": "Die Person, die die Zählung erstellt oder allein gescannt hat, darf sie nicht genehmigen. Bitten Sie eine andere berechtigte Person.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "E-Mail",

@@ -3,6 +3,29 @@ package i18n
 // Azerbaijani (Latin) label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var azCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Aç",
+	"email.link_fallback":                       "Düymə işləmirsə, bu keçidi açın:",
+	"email.footer.reason":                       "Bu e-poçtu {{brand}} hesabınızla bağlı bildiriş olduğu üçün aldınız.",
+	"email.footer.reason_campaign":              "Bu e-poçtu {{brand}} kampaniya mesajlarına razılıq verdiyiniz üçün aldınız.",
+	"email.campaign.details":                    "Ətraflı",
+	"email.unsubscribe.intro":                   "Kampaniya mesajları almaq istəmirsiniz?",
+	"email.unsubscribe.label":                   "Abunəlikdən çıx",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp bağlantısı kəsildi",
+	"email.whatsapp_alarm.logged_out.body":      "WhatsApp nömrəsinin sessiyası bağlandı ({{reason}}). Təsdiq kodları (OTP) və bildirişlər göndərilə bilmir. İnteqrasiyalar > WhatsApp bölməsində QR kodu skan edərək yenidən qoşun.",
+	"email.whatsapp_alarm.logged_out.preheader": "Kodlar və bildirişlər dayandı. Yenidən qoşulmaq üçün QR kodu skan edin.",
+	"email.whatsapp_alarm.banned.title":         "WhatsApp nömrəsi müvəqqəti bloklandı",
+	"email.whatsapp_alarm.banned.body":          "WhatsApp nömrəsi müvəqqəti bloklandı ({{reason}}). Göndərişlər dayandı. Blok götürülənədək SMS ehtiyat kanalını aktivləşdirməyi nəzərdən keçirin.",
+	"email.whatsapp_alarm.banned.preheader":     "Göndərişlər dayandı. SMS ehtiyat kanalını nəzərdən keçirin.",
+	"email.fleet_report.subject":                "{{fleet}} avtopark hesabatı: {{period}}",
+	"email.fleet_report.body_attached":          "Salam,\n\n{{fleet}} avtoparkının {{period}} dövrü üzrə hesabatı əlavədədir.",
+	"email.fleet_report.body_link":              "Salam,\n\n{{fleet}} avtoparkının {{period}} dövrü üzrə hesabatı hazırdır. Fayl e-poçt əlavəsi üçün çox böyükdür; hesabatı portaldan yükləyin.",
+	"email.fleet_report.button":                 "Hesabatı yüklə",
+	"email.fleet_report.preheader_attached":     "{{period}} hesabatı PDF olaraq əlavədədir.",
+	"email.fleet_report.preheader_link":         "{{period}} hesabatı portaldan yükləməyə hazırdır.",
+
 	"warehouse.count.self_approval": "Sayımı yaradan və ya bütün skanları təkbaşına edən şəxs onu təsdiqləyə bilməz. Başqa səlahiyyətli şəxsdən təsdiq istəyin.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "E-poçt",

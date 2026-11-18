@@ -6,6 +6,7 @@ package emailpreview
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html"
 	"sort"
@@ -235,6 +236,11 @@ func alarmSamples(ctx context.Context, locales []string) ([]Sample, error) {
 				Title: a.Title, Body: a.Body, Language: pgtype.Text{String: loc, Valid: true},
 				ActionUrl: pgtype.Text{String: whatsappusecase.AlarmActionURL, Valid: true},
 			}
+			payload, err := json.Marshal(a.Payload(state, state))
+			if err != nil {
+				return nil, err
+			}
+			n.Payload = payload
 			msg, l, err := render(ctx, p, n)
 			if err != nil {
 				return nil, err

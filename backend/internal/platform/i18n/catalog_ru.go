@@ -3,6 +3,29 @@ package i18n
 // ruCatalog holds the Russian labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var ruCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Открыть",
+	"email.link_fallback":                       "Если кнопка не работает, откройте эту ссылку:",
+	"email.footer.reason":                       "Вы получили это письмо из-за уведомления по вашей учётной записи {{brand}}.",
+	"email.footer.reason_campaign":              "Вы получили это письмо, так как согласились получать сообщения об акциях от {{brand}}.",
+	"email.campaign.details":                    "Подробнее",
+	"email.unsubscribe.intro":                   "Не хотите получать сообщения об акциях?",
+	"email.unsubscribe.label":                   "Отписаться",
+	"email.whatsapp_alarm.logged_out.title":     "Соединение с WhatsApp прервано",
+	"email.whatsapp_alarm.logged_out.body":      "Сеанс номера WhatsApp завершён ({{reason}}). Коды подтверждения (OTP) и уведомления не отправляются. Подключите номер заново, отсканировав QR-код в разделе Интеграции > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Коды и уведомления остановлены. Отсканируйте QR-код, чтобы подключиться снова.",
+	"email.whatsapp_alarm.banned.title":         "Номер WhatsApp временно заблокирован",
+	"email.whatsapp_alarm.banned.body":          "Номер WhatsApp временно заблокирован ({{reason}}). Отправка остановлена. До снятия блокировки стоит включить резервную отправку SMS.",
+	"email.whatsapp_alarm.banned.preheader":     "Отправка остановлена. Рассмотрите резервную отправку SMS.",
+	"email.fleet_report.subject":                "Отчёт автопарка {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Здравствуйте,\n\nво вложении отчёт автопарка {{fleet}} за {{period}}.",
+	"email.fleet_report.body_link":              "Здравствуйте,\n\nотчёт автопарка {{fleet}} за {{period}} готов. Файл слишком велик для вложения, скачайте его на портале.",
+	"email.fleet_report.button":                 "Скачать отчёт",
+	"email.fleet_report.preheader_attached":     "Отчёт за {{period}} во вложении в формате PDF.",
+	"email.fleet_report.preheader_link":         "Отчёт за {{period}} готов к скачиванию на портале.",
+
 	"warehouse.count.self_approval": "Создатель инвентаризации или единственный сотрудник, выполнивший сканирование, не может её утвердить. Обратитесь к другому уполномоченному сотруднику.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "Эл. почта",

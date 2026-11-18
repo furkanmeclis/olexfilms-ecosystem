@@ -97,21 +97,23 @@ func (e MailEmail) Message(ctx context.Context, m EmailMessage) (mail.Message, e
 			brand = b
 		}
 	}
-	t := emailTextsFor(m.Locale)
+	t := mail.LabelsFor(string(lang))
+	details := i18n.Translate(lang, "email.campaign.details")
 	body := strings.TrimSpace(m.Body)
 	l := mail.Layout{
 		Lang: string(lang), Dir: i18n.Dir(lang), Title: m.Subject,
 		BrandName: brand.Name, LogoURL: brand.LogoURL, Color: brand.Color,
+		Reason: t.CampaignReasonFor(brand.Name),
 	}
 	if mail.SafeURL(m.Deeplink) {
-		l.ButtonLabel, l.ButtonURL = t.details, m.Deeplink
+		l.ButtonLabel, l.ButtonURL = details, m.Deeplink
 	} else if m.Deeplink != "" {
-		body += "\n\n[" + t.details + "](" + m.Deeplink + ")"
+		body += "\n\n[" + details + "](" + m.Deeplink + ")"
 	}
 	if mail.SafeURL(m.UnsubscribeURL) {
-		l.UnsubscribeText, l.UnsubscribeLabel, l.UnsubscribeURL = t.unsubscribeIntro, t.unsubscribe, m.UnsubscribeURL
+		l.UnsubscribeText, l.UnsubscribeLabel, l.UnsubscribeURL = t.UnsubscribeIntro, t.Unsubscribe, m.UnsubscribeURL
 	} else if m.UnsubscribeURL != "" {
-		body += "\n\n" + t.unsubscribeIntro + " [" + t.unsubscribe + "](" + m.UnsubscribeURL + ")"
+		body += "\n\n" + t.UnsubscribeIntro + " [" + t.Unsubscribe + "](" + m.UnsubscribeURL + ")"
 	}
 	l.BodyHTML = msgtemplate.MarkdownToHTML(body)
 	l.BodyText = msgtemplate.MarkdownToText(body)

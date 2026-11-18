@@ -3,6 +3,29 @@ package i18n
 // Arabic label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var arCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "عرض",
+	"email.link_fallback":                       "إذا لم يعمل الزر، افتح هذا الرابط:",
+	"email.footer.reason":                       "وصلتك هذه الرسالة بسبب إشعار يخص حسابك في {{brand}}.",
+	"email.footer.reason_campaign":              "وصلتك هذه الرسالة لأنك وافقت على تلقي رسائل الحملات من {{brand}}.",
+	"email.campaign.details":                    "التفاصيل",
+	"email.unsubscribe.intro":                   "لا ترغب في تلقي رسائل الحملات؟",
+	"email.unsubscribe.label":                   "إلغاء الاشتراك",
+	"email.whatsapp_alarm.logged_out.title":     "انقطع اتصال واتساب",
+	"email.whatsapp_alarm.logged_out.body":      "تم تسجيل خروج رقم واتساب ({{reason}}). لا يمكن إرسال رموز التحقق (OTP) والإشعارات. أعد الربط بمسح رمز QR من التكاملات > واتساب.",
+	"email.whatsapp_alarm.logged_out.preheader": "توقف إرسال الرموز والإشعارات. امسح رمز QR لإعادة الربط.",
+	"email.whatsapp_alarm.banned.title":         "تم حظر رقم واتساب مؤقتًا",
+	"email.whatsapp_alarm.banned.body":          "تم حظر رقم واتساب مؤقتًا ({{reason}}). توقف الإرسال. فكّر في تفعيل الإرسال الاحتياطي عبر الرسائل القصيرة حتى يُرفع الحظر.",
+	"email.whatsapp_alarm.banned.preheader":     "توقف الإرسال. فكّر في الإرسال الاحتياطي عبر الرسائل القصيرة.",
+	"email.fleet_report.subject":                "تقرير الأسطول {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "مرحبًا،\n\nمرفق تقرير أسطول {{fleet}} عن الفترة {{period}}.",
+	"email.fleet_report.body_link":              "مرحبًا،\n\nتقرير أسطول {{fleet}} عن الفترة {{period}} جاهز. الملف كبير جدًا لإرفاقه بالبريد، لذا نزّله من البوابة.",
+	"email.fleet_report.button":                 "تنزيل التقرير",
+	"email.fleet_report.preheader_attached":     "تقرير الفترة {{period}} مرفق بصيغة PDF.",
+	"email.fleet_report.preheader_link":         "تقرير الفترة {{period}} جاهز للتنزيل من البوابة.",
+
 	"warehouse.count.self_approval": "لا يمكن لمن أنشأ الجرد أو أجرى جميع عمليات المسح بمفرده الموافقة عليه. اطلب الموافقة من شخص آخر مخوّل.",
 	"users.uuid":                    "المعرّف (UUID)",
 	"users.email":                   "البريد الإلكتروني",

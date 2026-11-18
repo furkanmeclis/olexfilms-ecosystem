@@ -3,6 +3,29 @@ package i18n
 // ukCatalog holds the Ukrainian labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var ukCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "Відкрити",
+	"email.link_fallback":                       "Якщо кнопка не працює, відкрийте це посилання:",
+	"email.footer.reason":                       "Ви отримали цей лист через сповіщення щодо вашого облікового запису {{brand}}.",
+	"email.footer.reason_campaign":              "Ви отримали цей лист, бо погодилися отримувати повідомлення про акції від {{brand}}.",
+	"email.campaign.details":                    "Докладніше",
+	"email.unsubscribe.intro":                   "Не бажаєте отримувати повідомлення про акції?",
+	"email.unsubscribe.label":                   "Відписатися",
+	"email.whatsapp_alarm.logged_out.title":     "З'єднання з WhatsApp розірвано",
+	"email.whatsapp_alarm.logged_out.body":      "Сеанс номера WhatsApp завершено ({{reason}}). Коди підтвердження (OTP) і сповіщення не надсилаються. Підключіть номер знову, відсканувавши QR-код у розділі Інтеграції > WhatsApp.",
+	"email.whatsapp_alarm.logged_out.preheader": "Коди й сповіщення зупинено. Відскануйте QR-код, щоб підключитися знову.",
+	"email.whatsapp_alarm.banned.title":         "Номер WhatsApp тимчасово заблоковано",
+	"email.whatsapp_alarm.banned.body":          "Номер WhatsApp тимчасово заблоковано ({{reason}}). Надсилання зупинено. До зняття блокування варто увімкнути резервне надсилання SMS.",
+	"email.whatsapp_alarm.banned.preheader":     "Надсилання зупинено. Розгляньте резервне надсилання SMS.",
+	"email.fleet_report.subject":                "Звіт автопарку {{fleet}}: {{period}}",
+	"email.fleet_report.body_attached":          "Вітаємо,\n\nдо листа додано звіт автопарку {{fleet}} за {{period}}.",
+	"email.fleet_report.body_link":              "Вітаємо,\n\nзвіт автопарку {{fleet}} за {{period}} готовий. Файл завеликий для вкладення, тож завантажте його на порталі.",
+	"email.fleet_report.button":                 "Завантажити звіт",
+	"email.fleet_report.preheader_attached":     "Звіт за {{period}} додано у форматі PDF.",
+	"email.fleet_report.preheader_link":         "Звіт за {{period}} готовий до завантаження на порталі.",
+
 	"warehouse.count.self_approval": "Автор інвентаризації або єдиний виконавець сканування не може її затвердити. Зверніться до іншого уповноваженого працівника.",
 	"users.uuid":                    "UUID",
 	"users.email":                   "Ел. пошта",

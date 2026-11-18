@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/jackc/pgx/v5"
@@ -296,38 +296,42 @@ func (s *Service) applyConnection(ctx context.Context, state, rawType, reason, j
 	return alarm, nil
 }
 
-var alarmTexts = map[string]map[string][2]string{
-	"tr": {
-		whatsapp.StateLoggedOut: {"WhatsApp bağlantısı koptu", "WhatsApp numarasının oturumu kapandı (%s). OTP ve bildirimler gönderilemiyor; Entegrasyonlar > WhatsApp ekranından QR ile yeniden bağlayın."},
-		whatsapp.StateBanned:    {"WhatsApp numarası geçici olarak engellendi", "WhatsApp numarası geçici olarak engellendi (%s). Gönderimler durdu; SMS yedeğini açmayı değerlendirin."},
-	},
-	"en": {
-		whatsapp.StateLoggedOut: {"WhatsApp disconnected", "The WhatsApp number was logged out (%s). OTPs and notifications cannot be sent; reconnect with a QR code under Integrations > WhatsApp."},
-		whatsapp.StateBanned:    {"WhatsApp number temporarily banned", "The WhatsApp number is temporarily banned (%s). Sending stopped; consider enabling the SMS fallback."},
-	},
-}
-
 // AlarmActionURL is the panel page an alarm notification opens.
 const AlarmActionURL = "/platform/integrations/whatsapp"
 
 // Alarm is the connection alarm text in one language.
 type Alarm struct {
-	Lang, Title, Body string
+	Lang, Title, Body, Preheader string
 }
 
 // AlarmText is the alarm of state (logged_out or banned) in the
-// recipient's language: tr when empty, en when unsupported.
+// recipient's language (i18n email.whatsapp_alarm.*): tr when empty, en
+// when unsupported.
 func AlarmText(locale, state, reason string) Alarm {
-	lang := locale
-	if lang == "" {
-		lang = "tr"
+	lang := i18n.DefaultLocale
+	if strings.TrimSpace(locale) != "" {
+		l, ok := i18n.Parse(locale)
+		if !ok {
+			l = i18n.FallbackLocale
+		}
+		lang = l
 	}
-	texts, ok := alarmTexts[lang]
-	if !ok {
-		lang, texts = "en", alarmTexts["en"]
+	if state != whatsapp.StateBanned {
+		state = whatsapp.StateLoggedOut
 	}
-	t := texts[state]
-	return Alarm{Lang: lang, Title: t[0], Body: fmt.Sprintf(t[1], reason)}
+	key := "email.whatsapp_alarm." + state + "."
+	return Alarm{
+		Lang:      string(lang),
+		Title:     i18n.Translate(lang, key+"title"),
+		Body:      i18n.TranslateParams(lang, key+"body", map[string]string{"reason": reason}),
+		Preheader: i18n.Translate(lang, key+"preheader"),
+	}
+}
+
+// Payload is the notification payload of the alarm (the e-mail preview
+// text included).
+func (a Alarm) Payload(state, reason string) map[string]any {
+	return map[string]any{"state": state, "reason": reason, notifmodel.PayloadEmailPreheader: a.Preheader}
 }
 
 func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
@@ -355,7 +359,7 @@ func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
 			ActionURL:   &actionURL,
 			SourceEvent: events.WhatsAppConnectionAlarm,
 			Language:    a.Lang,
-			Payload:     map[string]any{"state": state, "reason": reason},
+			Payload:     a.Payload(state, reason),
 		}); err != nil {
 			s.log.Warn("whatsapp_alarm_notify_failed", "user", r.ID, "error", err)
 		}

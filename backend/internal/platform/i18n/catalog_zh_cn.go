@@ -3,6 +3,29 @@ package i18n
 // Simplified Chinese label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var zhCNCatalog = map[string]string{
+	// TEC-1235: e-mail frame and code-owned e-mail texts (mail.LabelsFor,
+	// whatsapp alarm, fleet report). {{brand}}, {{reason}}, {{fleet}},
+	// {{period}} are TranslateParams placeholders.
+	"email.button.open":                         "查看",
+	"email.link_fallback":                       "如果按钮无法使用，请打开此链接：",
+	"email.footer.reason":                       "您收到此邮件，是因为您的 {{brand}} 账户有一条通知。",
+	"email.footer.reason_campaign":              "您收到此邮件，是因为您同意接收 {{brand}} 的活动消息。",
+	"email.campaign.details":                    "查看详情",
+	"email.unsubscribe.intro":                   "不想再收到活动消息？",
+	"email.unsubscribe.label":                   "退订",
+	"email.whatsapp_alarm.logged_out.title":     "WhatsApp 连接已断开",
+	"email.whatsapp_alarm.logged_out.body":      "WhatsApp 号码已退出登录（{{reason}}）。验证码（OTP）和通知无法发送。请在 集成 > WhatsApp 中扫描二维码重新连接。",
+	"email.whatsapp_alarm.logged_out.preheader": "验证码和通知已停止发送。请扫描二维码重新连接。",
+	"email.whatsapp_alarm.banned.title":         "WhatsApp 号码已被暂时封禁",
+	"email.whatsapp_alarm.banned.body":          "WhatsApp 号码已被暂时封禁（{{reason}}）。发送已停止。在解封之前，建议启用短信备用通道。",
+	"email.whatsapp_alarm.banned.preheader":     "发送已停止。建议启用短信备用通道。",
+	"email.fleet_report.subject":                "{{fleet}} 车队报告：{{period}}",
+	"email.fleet_report.body_attached":          "您好，\n\n附件是 {{fleet}} 车队 {{period}} 的报告。",
+	"email.fleet_report.body_link":              "您好，\n\n{{fleet}} 车队 {{period}} 的报告已生成。文件过大，无法作为附件发送，请在门户中下载。",
+	"email.fleet_report.button":                 "下载报告",
+	"email.fleet_report.preheader_attached":     "{{period}} 的报告已作为 PDF 附件发送。",
+	"email.fleet_report.preheader_link":         "{{period}} 的报告已可在门户中下载。",
+
 	"warehouse.count.self_approval": "创建盘点或独自完成所有扫描的人不能批准该盘点。请联系另一位有权限的人员。",
 	"users.uuid":                    "UUID",
 	"users.email":                   "电子邮箱",
