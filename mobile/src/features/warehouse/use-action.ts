@@ -12,7 +12,11 @@ export function useDocAction<T>(key: readonly unknown[]) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const run = async (name: string, fn: () => Promise<T | void>, opts: { done?: () => void } = {}) => {
+  const run = async (
+    name: string,
+    fn: () => Promise<T | void>,
+    opts: { done?: () => void; onError?: (e: unknown) => boolean } = {},
+  ) => {
     if (busy) return;
     setBusy(name);
     try {
@@ -24,7 +28,8 @@ export function useDocAction<T>(key: readonly unknown[]) {
       void qc.invalidateQueries({ queryKey: ['stock'] });
       opts.done?.();
     } catch (e) {
-      alertError(e);
+      // onError returns true when it handled the error (e.g. a step-up prompt).
+      if (!opts.onError?.(e)) alertError(e);
     } finally {
       setBusy(null);
     }

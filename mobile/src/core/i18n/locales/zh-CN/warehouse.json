@@ -958,5 +958,12 @@
   "split.left_on_roll": "卷上剩余",
   "split.remnant": "余料",
   "split.remnant_hint": "剩余长度低于最小切割长度，只能整体使用。",
-  "split.print": "打印标签"
+  "split.print": "打印标签",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "部分行在到货时未扫描。请扫描，或移除缺失项后确认。",
+  "labels.printed_title": "标签已打印吗？",
+  "labels.printed_description": "如已打印，{{count}} 个单元将标记为已打印。已打印标签的入库单无法取消。",
+  "labels.printed_confirm": "是，已打印",
+  "labels.mark_failed": "无法将标签标记为已打印。",
+  "m.added_not_placed": "{{barcode}} 已添加但未能上架",
+  "m.warehouse_totals_partial_products": "仅读取了该仓库的前 {{count}} 行产品；列表可能不完整。"
 }

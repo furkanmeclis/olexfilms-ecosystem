@@ -958,5 +958,12 @@
   "split.left_on_roll": "Rulonda qalan",
   "split.remnant": "Qalıq",
   "split.remnant_hint": "Qalan minimum kəsimdən azdır; yalnız tam istifadə oluna bilər.",
-  "split.print": "Etiketləri çap et"
+  "split.print": "Etiketləri çap et",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bəzi sətirlər qəbulda oxudulmayıb. Onları oxudun və ya çatışmayanları çıxarıb təsdiqləyin.",
+  "labels.printed_title": "Etiketlər çap olundu?",
+  "labels.printed_description": "Əgər çap olunubsa, {{count}} vahid \"çap olunub\" kimi qeyd edilir. Çap olunmuş etiketli sənəd ləğv edilə bilməz.",
+  "labels.printed_confirm": "Bəli, çap olundu",
+  "labels.mark_failed": "Etiketlər çap olunmuş kimi qeyd edilə bilmədi.",
+  "m.added_not_placed": "{{barcode}} əlavə olundu, amma yerləşdirilmədi",
+  "m.warehouse_totals_partial_products": "Bu anbarın yalnız ilk {{count}} məhsul sətri oxundu; siyahı natamam ola bilər."
 }

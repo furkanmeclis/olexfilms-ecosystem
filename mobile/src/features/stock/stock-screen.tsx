@@ -22,6 +22,7 @@ import {
   balanceParts,
   filterTotals,
   inStockTotals,
+  totalsTruncated,
   WAREHOUSE_TOTALS_MAX_PAGES,
   WAREHOUSE_TOTALS_PAGE,
   type WarehouseProductTotal,
@@ -186,6 +187,12 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
+              {/* TEC-1224: the totals stop after WAREHOUSE_TOTALS_MAX_PAGES pages; say so. */}
+              {warehouse && totalsData?.truncated ? (
+                <Text variant="footnote" tone="danger">
+                  {t('m.warehouse_totals_partial_products', { count: WAREHOUSE_TOTALS_PAGE * WAREHOUSE_TOTALS_MAX_PAGES })}
+                </Text>
+              ) : null}
             </View>
           }
           ListEmptyComponent={
@@ -305,6 +312,7 @@ function useWarehouseTotals(warehouse: string) {
     enabled: !!warehouse,
     queryFn: async () => {
       const items: StockWarehouseProduct[] = [];
+      let total: number | undefined;
       for (let page = 0; page < WAREHOUSE_TOTALS_MAX_PAGES; page++) {
         const r = await unwrap(
           api.GET('/v1/stock/warehouses/{uuid}/products', {
@@ -315,9 +323,10 @@ function useWarehouseTotals(warehouse: string) {
           }),
         );
         items.push(...r.items);
+        total = r.total;
         if (items.length >= r.total || r.items.length === 0) break;
       }
-      return { rows: warehouseProductTotals(items) };
+      return { rows: warehouseProductTotals(items), truncated: totalsTruncated(items.length, total) };
     },
   });
 }

@@ -958,5 +958,12 @@
   "split.left_on_roll": "Rulonda kalan",
   "split.remnant": "Ragle (artık)",
   "split.remnant_hint": "Kalan, ürünün en kısa kesim boyundan az; yalnız tamamı kullanılabilir.",
-  "split.print": "Etiketleri bas"
+  "split.print": "Etiketleri bas",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bazı satırlar varışta okutulmadı. Okutun ya da eksikleri fişten çıkarıp onaylayın.",
+  "labels.printed_title": "Etiketler basıldı mı?",
+  "labels.printed_description": "Basıldıysa {{count}} birim \"basıldı\" olarak işaretlenir. Basılmış etiketli fiş iptal edilemez.",
+  "labels.printed_confirm": "Evet, basıldı",
+  "labels.mark_failed": "Etiketler basıldı olarak işaretlenemedi.",
+  "m.added_not_placed": "{{barcode}} fişe eklendi ama yerleştirilemedi",
+  "m.warehouse_totals_partial_products": "Bu depodaki ilk {{count}} ürün satırı okundu; liste eksik olabilir."
 }

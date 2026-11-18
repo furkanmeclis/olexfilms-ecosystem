@@ -958,5 +958,12 @@
   "split.left_on_roll": "Resta sul rotolo",
   "split.remnant": "Scarto",
   "split.remnant_hint": "Il resto è sotto il taglio minimo; si può usare solo intero.",
-  "split.print": "Stampa etichette"
+  "split.print": "Stampa etichette",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Alcune righe non sono state scansionate all'arrivo. Scansionale o rimuovi le mancanti e conferma.",
+  "labels.printed_title": "Le etichette sono state stampate?",
+  "labels.printed_description": "Se sì, {{count}} unità vengono segnate come stampate. Un carico con etichette stampate non può essere annullato.",
+  "labels.printed_confirm": "Sì, stampate",
+  "labels.mark_failed": "Impossibile segnare le etichette come stampate.",
+  "m.added_not_placed": "{{barcode}} aggiunto ma non collocato",
+  "m.warehouse_totals_partial_products": "Sono state lette solo le prime {{count}} righe prodotto di questo magazzino; l'elenco può essere incompleto."
 }

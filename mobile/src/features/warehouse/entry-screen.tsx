@@ -18,6 +18,7 @@ import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
 import { entryApi, resolveScan, type StockEntry, useEntry, wk } from './api';
+import { entryLineBarcode } from './entry-scan';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, entryTone, formatDate, formatNumber, isCode, whError } from './format';
 import { useLabelPrint } from './label-print';
@@ -95,8 +96,10 @@ export function EntryScreen() {
         return { ok: false, title: t('scan_status.warehouse_mismatch', { warehouse: r.location?.path[0]?.name ?? '' }) };
       }
       if (r?.status === 'ok' && r.type === 'product') return { ok: false, title: t('m.scan_unit_not_product') };
-      const barcode = r?.unit?.barcode ?? code;
-      const onEntry = lines.some((l) => l.barcode.toUpperCase() === barcode.toUpperCase());
+      const scanned = r?.unit?.barcode ?? code;
+      // TEC-1224: the backend upper-cases codes; match the line case-insensitively.
+      const onEntry = entryLineBarcode(lines, scanned);
+      const barcode = onEntry ?? scanned;
       const fixed = r?.unit?.unit_kind === 'fixed';
       if (onEntry) {
         // Already a line (reserved or scanned before): only its shelf changes.
@@ -104,13 +107,23 @@ export function EntryScreen() {
         store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
       } else {
         if (x.mode === 'generate_new') return { ok: false, title: t('m.not_on_entry', { barcode }) };
-        let next = await entryApi.addLines(uuid, {
-          barcodes: [barcode],
-          ...lineDetails,
-          ...(fixed ? { fixed_quantity: qty } : {}),
-        });
-        if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
-        store(next);
+        // The line is kept even when placing it fails: store it first, then
+        // place; on a placing error refresh the entry and say so (TEC-1224).
+        store(
+          await entryApi.addLines(uuid, {
+            barcodes: [barcode],
+            ...lineDetails,
+            ...(fixed ? { fixed_quantity: qty } : {}),
+          }),
+        );
+        if (bin) {
+          try {
+            store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
+          } catch (e) {
+            void qc.invalidateQueries({ queryKey: wk.entry(uuid) });
+            return { ok: false, title: t('m.added_not_placed', { barcode }), detail: whError(e) };
+          }
+        }
       }
       const name = r?.product?.name ?? barcode;
       return {

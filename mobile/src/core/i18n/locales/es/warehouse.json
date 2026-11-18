@@ -958,5 +958,12 @@
   "split.left_on_roll": "Queda en el rollo",
   "split.remnant": "Retal",
   "split.remnant_hint": "Lo que queda es menor que el corte mínimo; solo puede usarse entero.",
-  "split.print": "Imprimir etiquetas"
+  "split.print": "Imprimir etiquetas",
+  "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Algunas líneas no se escanearon a la llegada. Escanéelas o quite las faltantes y confirme.",
+  "labels.printed_title": "¿Se imprimieron las etiquetas?",
+  "labels.printed_description": "Si es así, {{count}} unidades se marcan como impresas. Una entrada con etiquetas impresas no se puede cancelar.",
+  "labels.printed_confirm": "Sí, impresas",
+  "labels.mark_failed": "No se pudieron marcar las etiquetas como impresas.",
+  "m.added_not_placed": "{{barcode}} se añadió pero no se pudo ubicar",
+  "m.warehouse_totals_partial_products": "Solo se leyeron las primeras {{count}} filas de productos de este almacén; la lista puede estar incompleta."
 }

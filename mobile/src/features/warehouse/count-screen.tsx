@@ -28,6 +28,7 @@ import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, countTone, formatDate, formatNumber, isCode, whError } from './format';
 import { Card, Chips, ErrorState, Field, IconButton, ListSkeleton } from './parts';
 import { QtyStepper } from './qty-stepper';
+import { StepUpCard } from './step-up-card';
 import { useDocAction } from './use-action';
 
 /** Quantity is asked for fixed barcodes and SKUs (web rule: product_qty, unit_first). */
@@ -54,6 +55,7 @@ export function CountScreen() {
   const scans = useCountScans(uuid, !!c && (counting || c.status === 'pending_review'));
   const report = useCountReport(uuid, !!c && reviewing);
   const { busy, run } = useDocAction<StockCount>(wk.count(uuid));
+  const [stepUp, setStepUp] = useState<{ line_uuid: string; resolution: CountResolution }[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [qty, setQty] = useState(1);
   const [context, setContext] = useState<string | null>(null);
@@ -118,6 +120,26 @@ export function CountScreen() {
   const toResolve = (report.data?.lines ?? []).filter((l) => l.result !== 'matched');
   const selfCreated = !!me && c.created_by_user_uuid === me;
 
+  // TEC-1224: approval needs a recent step-up like the panel; on
+  // STEP_UP_REQUIRED the card asks for the password or a code and retries.
+  const sendApprove = (resolutions: { line_uuid: string; resolution: CountResolution }[]) =>
+    run(
+      'approve',
+      async () => {
+        const rep = await countApi.approve(uuid, { resolutions });
+        setStepUp(null);
+        qc.setQueryData(wk.countReport(uuid), rep);
+        return rep.count;
+      },
+      {
+        onError: (e) => {
+          if (!isCode(e, 'STEP_UP_REQUIRED')) return false;
+          setStepUp(resolutions);
+          return true;
+        },
+      },
+    );
+
   const approve = () => {
     const resolutions: { line_uuid: string; resolution: CountResolution }[] = [];
     for (const l of toResolve) {
@@ -129,12 +151,7 @@ export function CountScreen() {
       title: t('count.approve_title'),
       body: t('count.approve_description', { count: resolutions.length }),
       action: t('count.approve'),
-      onConfirm: () =>
-        void run('approve', async () => {
-          const rep = await countApi.approve(uuid, { resolutions });
-          qc.setQueryData(wk.countReport(uuid), rep);
-          return rep.count;
-        }),
+      onConfirm: () => void sendApprove(resolutions),
     });
   };
 
@@ -230,7 +247,15 @@ export function CountScreen() {
                     {t('count.self_approval_hint')}
                   </Text>
                 ) : null}
-                <Button size="lg" title={t('count.approve')} loading={busy === 'approve'} disabled={!report.data} onPress={approve} />
+                {stepUp ? (
+                  <StepUpCard
+                    action={t('count.approve')}
+                    onVerified={() => sendApprove(stepUp)}
+                    onCancel={() => setStepUp(null)}
+                  />
+                ) : (
+                  <Button size="lg" title={t('count.approve')} loading={busy === 'approve'} disabled={!report.data} onPress={approve} />
+                )}
               </>
             ) : null}
             <Button
