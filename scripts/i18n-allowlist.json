@@ -1,0 +1,17 @@
+{
+  "$comment": "TEC-1233 bilinçli i18n istisnaları (scripts/i18n-scan.mjs). Yapı: { alan: { dil | \"*\": { anahtar: gerekçe } } }. Alanlar: web ve mobile (anahtar \"namespace:anahtar\"), backend-labels (Go katalog anahtarı), backend-texts (dosya yolu). universal: her dilde aynı kalan ek kelimeler (marka, kısaltma, birim). Yeni giriş eklerken gerekçe yazın.",
+  "universal": [],
+  "web": {},
+  "mobile": {},
+  "backend-labels": {},
+  "backend-texts": {
+    "*": {
+      "backend/internal/modules/legacymobile/messages.go": "Eski mobil API uyumluluk katmanı yalnız tr/en döner (eski uygulama sözleşmesi).",
+      "backend/internal/platform/certtheme/certtheme.go": "Sertifika kapanış sayfaları yalnız tr/en/de/bg/ru tasarım varlıklarıyla gelir; diğer diller İngilizce sayfayı kullanır (pageLocales)."
+    },
+    "zh-CN": {
+      "backend/internal/migrator/olex_users.go": "Eski sistemden göç eşlemesi; zh-CN küçük harfli \"zh_cn\"/\"zh-cn\" anahtarlarıyla eşlenir.",
+      "backend/internal/modules/photostandard/usecase/policy.go": "Başlık haritası temel dil koduyla (\"zh\") aranır."
+    }
+  }
+}
