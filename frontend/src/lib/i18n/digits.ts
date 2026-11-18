@@ -48,6 +48,11 @@ export function intlLocale(
   locale: string,
   digits: DigitStyle = "arab",
 ): string {
+  // TEC-1233: Persian keeps Latin digits (ICU defaults "fa" to ۰-۹), so
+  // amounts, dates and counters match barcodes, plates and codes.
+  if (locale.split("-")[0]?.toLowerCase() === "fa") {
+    return `${locale}-u-nu-latn`;
+  }
   if (!hasDigitChoice(locale)) return locale;
   return `${locale}-u-nu-${digits}`;
 }

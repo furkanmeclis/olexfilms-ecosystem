@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollText } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { SUPPORTED_LOCALES, localeDir } from "@/config/i18n";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
@@ -34,23 +35,8 @@ import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/lib/toast";
 
-/** The 13 content languages of the backend (K10). */
-const TEXT_LOCALES = [
-  "tr",
-  "en",
-  "bg",
-  "de",
-  "el",
-  "uk",
-  "ru",
-  "fr",
-  "es",
-  "it",
-  "zh-CN",
-  "az",
-  "ar",
-] as const;
-const RTL = new Set(["ar"]);
+/** The content languages of the backend (K10 + fa, TEC-1233). */
+const TEXT_LOCALES = SUPPORTED_LOCALES;
 const KIND: LegalTextKind = "ai_guidelines";
 const QUERY_KEY = ["platform", "legal-texts", KIND] as const;
 
@@ -151,7 +137,7 @@ function Editor({ view }: { view: LegalTextAdmin }) {
               id="legal-body"
               rows={14}
               lang={locale}
-              dir={RTL.has(locale) ? "rtl" : "ltr"}
+              dir={localeDir(locale)}
               className="font-mono text-sm"
               value={body}
               onChange={(e) =>
@@ -172,7 +158,7 @@ function Editor({ view }: { view: LegalTextAdmin }) {
           <CardHeader>
             <CardTitle>{t("portal.legal.preview")}</CardTitle>
           </CardHeader>
-          <CardContent dir={RTL.has(locale) ? "rtl" : "ltr"} lang={locale}>
+          <CardContent dir={localeDir(locale)} lang={locale}>
             <Markdown source={body} />
           </CardContent>
         </Card>

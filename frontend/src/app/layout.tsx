@@ -31,6 +31,15 @@ const outfit = localFont({
   display: "swap",
 });
 
+// TEC-1233: Persian (fa) text; Arabic-script glyphs only, used for
+// html[lang="fa"] (src/styles/theme.css).
+const vazirmatn = localFont({
+  src: "./fonts/vazirmatn-wght.woff2",
+  variable: "--font-vazirmatn",
+  weight: "400 700",
+  display: "swap",
+});
+
 const jetbrainsMono = localFont({
   src: "./fonts/jetbrains-mono-wght.woff2",
   variable: "--font-jetbrains",
@@ -97,7 +106,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning className="h-full">
       <body
-        className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} min-h-full font-sans antialiased`}
+        className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} ${vazirmatn.variable} min-h-full font-sans antialiased`}
       >
         <AppProviders
           locale={locale}

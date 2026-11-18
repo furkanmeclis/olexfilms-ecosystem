@@ -15,6 +15,7 @@ import {
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { SUPPORTED_LOCALES, localeDir } from "@/config/i18n";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { EntityPage } from "@/components/entity";
@@ -60,21 +61,7 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/lib/toast";
 
-const LOCALES = [
-  "tr",
-  "en",
-  "bg",
-  "de",
-  "el",
-  "uk",
-  "ru",
-  "fr",
-  "es",
-  "it",
-  "zh-CN",
-  "az",
-  "ar",
-] as const;
+const LOCALES = SUPPORTED_LOCALES;
 
 const DAYS = [
   "monday",
@@ -407,7 +394,7 @@ function EditorInner({ slug, orgUuid }: { slug: string; orgUuid?: string }) {
                   key={l}
                   value={l}
                   className="space-y-3"
-                  dir={l === "ar" ? "rtl" : "ltr"}
+                  dir={localeDir(l)}
                 >
                   <div className="grid gap-2">
                     <Label htmlFor={`headline-${l}`}>
