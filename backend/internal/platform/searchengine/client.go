@@ -2,8 +2,10 @@ package searchengine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
@@ -59,12 +61,20 @@ func (c *Client) EnsureIndex(ctx context.Context, spec Spec) error {
 		return nil
 	}
 	uid := c.indexUID(spec.ID)
-	task, err := c.client.CreateIndexWithContext(ctx, &meilisearch.IndexConfig{Uid: uid, PrimaryKey: "id"})
-	if err != nil {
-		return fmt.Errorf("searchengine: create index %q: %w", uid, err)
-	}
-	if _, err := c.client.WaitForTaskWithContext(ctx, task.TaskUID, 0); err != nil {
-		return fmt.Errorf("searchengine: wait create index %q: %w", uid, err)
+	// Create the index only when it is missing: creating an existing one
+	// queues a task that fails with index_already_exists, which Meilisearch
+	// logs as an ERROR on every boot.
+	if _, err := c.client.GetIndexWithContext(ctx, uid); err != nil {
+		if !isIndexNotFound(err) {
+			return fmt.Errorf("searchengine: get index %q: %w", uid, err)
+		}
+		task, err := c.client.CreateIndexWithContext(ctx, &meilisearch.IndexConfig{Uid: uid, PrimaryKey: "id"})
+		if err != nil {
+			return fmt.Errorf("searchengine: create index %q: %w", uid, err)
+		}
+		if _, err := c.client.WaitForTaskWithContext(ctx, task.TaskUID, 0); err != nil {
+			return fmt.Errorf("searchengine: wait create index %q: %w", uid, err)
+		}
 	}
 
 	searchable := spec.Searchable
@@ -76,7 +86,7 @@ func (c *Client) EnsureIndex(ctx context.Context, spec Spec) error {
 		DisplayedAttributes:  []string{"id", "spec", "title", "subtitle", "keywords", "href", "icon", "organization_slug"},
 		FilterableAttributes: append([]string{"spec"}, spec.Filterable...),
 	}
-	task, err = c.client.Index(uid).UpdateSettingsWithContext(ctx, settings)
+	task, err := c.client.Index(uid).UpdateSettingsWithContext(ctx, settings)
 	if err != nil {
 		return fmt.Errorf("searchengine: update settings %q: %w", uid, err)
 	}
@@ -287,4 +297,13 @@ func (c *Client) SearchIDs(ctx context.Context, spec, q, filter string, limit, o
 		}
 	}
 	return ids, resp.EstimatedTotalHits, nil
+}
+
+// isIndexNotFound reports a 404 index_not_found answer of Meilisearch.
+func isIndexNotFound(err error) bool {
+	var me *meilisearch.Error
+	if errors.As(err, &me) {
+		return me.StatusCode == http.StatusNotFound || me.MeilisearchApiError.Code == "index_not_found"
+	}
+	return false
 }
