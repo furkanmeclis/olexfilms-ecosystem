@@ -6,6 +6,7 @@ import de from 'i18n-iso-countries/langs/de.json' with { type: 'json' };
 import el from 'i18n-iso-countries/langs/el.json' with { type: 'json' };
 import en from 'i18n-iso-countries/langs/en.json' with { type: 'json' };
 import es from 'i18n-iso-countries/langs/es.json' with { type: 'json' };
+import fa from 'i18n-iso-countries/langs/fa.json' with { type: 'json' };
 import fr from 'i18n-iso-countries/langs/fr.json' with { type: 'json' };
 import it from 'i18n-iso-countries/langs/it.json' with { type: 'json' };
 import ru from 'i18n-iso-countries/langs/ru.json' with { type: 'json' };
@@ -23,11 +24,11 @@ import examples from 'libphonenumber-js/mobile/examples';
 
 // Hermes has no Intl.DisplayNames, so region names come from a pure-JS package
 // with only the app's locales registered.
-for (const locale of [ar, az, bg, de, el, en, es, fr, it, ru, tr, uk, zh]) {
+for (const locale of [ar, az, bg, de, el, en, es, fa, fr, it, ru, tr, uk, zh]) {
   countries.registerLocale(locale);
 }
 
-const SUPPORTED = new Set(['ar', 'az', 'bg', 'de', 'el', 'en', 'es', 'fr', 'it', 'ru', 'tr', 'uk', 'zh']);
+const SUPPORTED = new Set(['ar', 'az', 'bg', 'de', 'el', 'en', 'es', 'fa', 'fr', 'it', 'ru', 'tr', 'uk', 'zh']);
 
 function languageOf(locale: string): string {
   const lang = locale.split(/[-_]/)[0].toLowerCase();

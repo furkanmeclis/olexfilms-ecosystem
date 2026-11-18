@@ -176,9 +176,9 @@ function PeriodSheet({
   );
 }
 
-/** First day of the week: Saturday in Arabic, Monday elsewhere. */
+/** First day of the week: Saturday in Arabic and Persian, Monday elsewhere. */
 function weekStartOf(locale: string) {
-  return locale.startsWith('ar') ? 6 : 1;
+  return locale.startsWith('ar') || locale.startsWith('fa') ? 6 : 1;
 }
 
 /** Month calendar for a range: first tap starts it, second closes it; months step back and forth. */

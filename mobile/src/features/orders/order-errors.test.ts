@@ -19,8 +19,8 @@ describe('PRODUCT_NOT_ORDERABLE text', () => {
       'codes.PRODUCT_NOT_ORDERABLE'
     ];
 
-  it('covers all 13 app languages', () => {
-    assert.equal(langs.length, 13);
+  it('covers all 14 app languages', () => {
+    assert.equal(langs.length, 14);
   });
 
   it('is translated in every app language', () => {

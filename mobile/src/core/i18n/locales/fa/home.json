@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "صبح بخیر، {{name}}",
+  "greeting_day": "عصر بخیر، {{name}}",
+  "greeting_evening": "شب بخیر، {{name}}",
+  "next_up": "کار بعدی",
+  "quick_actions": "اقدامات سریع",
+  "action.vehicle_intake": "پذیرش خودرو",
+  "action.measure": "اندازه‌گیری",
+  "action.customer": "مشتری",
+  "action.appointment": "نوبت",
+  "action.stock_entry": "ورود موجودی",
+  "action.transfer": "انتقال",
+  "action.count": "شمارش",
+  "action.prepare": "آماده‌سازی سفارش",
+  "nothing_next": "کاری در انتظار نیست. کارهای جدید اینجا نمایش داده می‌شوند."
+}
