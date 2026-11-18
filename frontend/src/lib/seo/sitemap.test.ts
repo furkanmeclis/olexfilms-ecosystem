@@ -37,13 +37,14 @@ import { buildSitemap, localeAlternates } from "./sitemap";
 const landing = `${site.url}/`;
 
 describe("localeAlternates (TEC-251)", () => {
-  it("lists the 13 languages via ?lang= plus x-default", () => {
+  it("lists the 14 languages via ?lang= plus x-default", () => {
     const langs = localeAlternates("https://olex.test/bayi/kadikoy");
     expect(Object.keys(langs)).toHaveLength(SUPPORTED_LOCALES.length + 1);
-    expect(SUPPORTED_LOCALES).toHaveLength(13);
+    expect(SUPPORTED_LOCALES).toHaveLength(14);
     expect(langs.tr).toBe("https://olex.test/bayi/kadikoy?lang=tr");
     expect(langs["zh-CN"]).toBe("https://olex.test/bayi/kadikoy?lang=zh-CN");
     expect(langs.ar).toBe("https://olex.test/bayi/kadikoy?lang=ar");
+    expect(langs.fa).toBe("https://olex.test/bayi/kadikoy?lang=fa");
     expect(langs["x-default"]).toBe("https://olex.test/bayi/kadikoy");
   });
 });

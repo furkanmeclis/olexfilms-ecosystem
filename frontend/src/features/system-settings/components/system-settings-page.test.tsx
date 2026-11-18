@@ -342,7 +342,7 @@ describe("SystemSettingsPage (TEC-222)", () => {
     const locales = readdirSync(dir).filter((l) =>
       existsSync(path.join(dir, l, "settings.json")),
     );
-    expect(locales).toHaveLength(13);
+    expect(locales).toHaveLength(14);
     for (const locale of locales) {
       const messages = JSON.parse(
         readFileSync(path.join(dir, locale, "settings.json"), "utf8"),

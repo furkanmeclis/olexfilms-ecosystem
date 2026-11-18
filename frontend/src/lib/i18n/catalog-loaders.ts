@@ -17,4 +17,5 @@ export const catalogLoaders: Record<AppLocale, () => Promise<LocaleCatalog>> = {
   "zh-CN": () => import("@/locales/zh-CN").then((m) => m.default),
   az: () => import("@/locales/az").then((m) => m.default),
   ar: () => import("@/locales/ar").then((m) => m.default),
+  fa: () => import("@/locales/fa").then((m) => m.default),
 };

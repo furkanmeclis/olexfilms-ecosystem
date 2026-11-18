@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollText } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { SUPPORTED_LOCALES, localeDir } from "@/config/i18n";
+import { SUPPORTED_LOCALES, localeDir, normalizeLocale } from "@/config/i18n";
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
@@ -137,7 +137,7 @@ function Editor({ view }: { view: LegalTextAdmin }) {
               id="legal-body"
               rows={14}
               lang={locale}
-              dir={localeDir(locale)}
+              dir={localeDir(normalizeLocale(locale) ?? "tr")}
               className="font-mono text-sm"
               value={body}
               onChange={(e) =>
@@ -158,7 +158,10 @@ function Editor({ view }: { view: LegalTextAdmin }) {
           <CardHeader>
             <CardTitle>{t("portal.legal.preview")}</CardTitle>
           </CardHeader>
-          <CardContent dir={localeDir(locale)} lang={locale}>
+          <CardContent
+            dir={localeDir(normalizeLocale(locale) ?? "tr")}
+            lang={locale}
+          >
             <Markdown source={body} />
           </CardContent>
         </Card>

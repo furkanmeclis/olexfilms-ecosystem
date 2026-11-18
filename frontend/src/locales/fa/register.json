@@ -1,0 +1,22 @@
+{
+  "title": "ثبت‌نام کسب‌وکار",
+  "description": "سازمان خود را در چند دقیقه در Olexfilms ایجاد کنید.",
+  "submit": "تکمیل ثبت‌نام",
+  "submitting": "در حال ایجاد حساب…",
+  "error": "ثبت‌نام تکمیل نشد. اطلاعات خود را بررسی کنید و دوباره تلاش کنید.",
+  "error_sign_in": "ثبت‌نام موفق بود اما ورود انجام نشد. از صفحهٔ ورود تلاش کنید.",
+  "fields.name": "نام فرد رابط",
+  "fields.surname": "نام خانوادگی فرد رابط",
+  "fields.organization_name": "نام کسب‌وکار",
+  "fields.city": "شهر",
+  "fields.district": "شهرستان",
+  "fields.phone": "تلفن",
+  "fields.email": "ایمیل",
+  "fields.address": "نشانی",
+  "fields.password": "رمز عبور",
+  "validation.organization_name_required": "نام کسب‌وکار الزامی است",
+  "validation.city_required": "شهر الزامی است",
+  "validation.district_required": "شهرستان الزامی است",
+  "validation.phone_required": "تلفن الزامی است",
+  "validation.address_required": "نشانی الزامی است"
+}

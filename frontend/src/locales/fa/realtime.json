@@ -1,0 +1,17 @@
+{
+  "reconnected": "اتصال بلادرنگ برقرار شد",
+  "offline": "شما آفلاین هستید — به‌روزرسانی بلادرنگ متوقف شد",
+  "event_fallback": "به‌روزرسانی: {{type}}",
+  "event_notifications_sent": "اعلان ارسال شد",
+  "event_notifications_delivered": "اعلان تحویل داده شد",
+  "event_notifications_failed": "ارسال اعلان ناموفق بود",
+  "event_jobs_completed": "کار تکمیل شد",
+  "event_jobs_failed": "کار ناموفق بود",
+  "event_imports_completed": "درون‌ریزی تکمیل شد",
+  "event_imports_failed": "درون‌ریزی ناموفق بود",
+  "event_exports_completed": "خروجی گرفتن تکمیل شد",
+  "event_exports_failed": "خروجی گرفتن ناموفق بود",
+  "event_exports_cancelled": "خروجی گرفتن لغو شد",
+  "event_reports_export_completed": "خروجی گزارش آماده است",
+  "event_reports_export_failed": "خروجی گرفتن از گزارش ناموفق بود"
+}
