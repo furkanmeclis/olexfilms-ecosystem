@@ -47,7 +47,7 @@ func NewService(d Deps) *notifusecase.Service {
 	q := d.Queries
 	provs := []providers.Provider{
 		providers.InappProvider{Pub: d.Realtime, Log: log},
-		providers.EmailProvider{Mail: d.Mail, Brand: emailBrand(q, notify)},
+		providers.EmailProvider{Mail: d.Mail, Brand: emailBrand(q, notify), BaseURL: d.Config.Auth.FrontendURL},
 		providers.ExpoProvider{
 			Store: q, URL: notify.ExpoPushURL, AccessToken: notify.ExpoAccessToken,
 			HTTP: &http.Client{Timeout: 10 * time.Second},
@@ -82,7 +82,7 @@ func NewWithWhatsApp(d Deps, pool *pgxpool.Pool, box whatsappusecase.SecretBox) 
 
 func emailBrand(q *db.Queries, cfg config.NotifyConfig) func(context.Context, int64) providers.EmailBrand {
 	return func(ctx context.Context, id int64) providers.EmailBrand {
-		out := providers.EmailBrand{Name: "Olex Films", LogoURL: cfg.EmailLogoURL, Color: cfg.EmailColor}
+		out := providers.EmailBrand{Name: mail.DefaultBrandName, LogoURL: cfg.EmailLogoURL, Color: cfg.EmailColor}
 		if q == nil || id <= 0 {
 			return out
 		}

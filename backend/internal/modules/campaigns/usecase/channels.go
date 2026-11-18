@@ -77,40 +77,49 @@ func (e MailEmail) SendCampaignEmail(ctx context.Context, m EmailMessage) error 
 	if e.Mail == nil {
 		return &PermanentError{Err: errors.New("campaigns: mail sender is not configured")}
 	}
-	body := EmailBody(m)
+	msg, err := e.Message(ctx, m)
+	if err != nil {
+		return &PermanentError{Err: err}
+	}
+	msg.To = []string{m.To}
+	return e.Mail.Send(ctx, msg)
+}
+
+// Message renders a campaign e-mail (no recipient): the content, the
+// details link as the primary button and the unsubscribe link in the
+// footer, in the recipient's language. A link that is not absolute
+// http(s) stays in the body as markdown, as before.
+func (e MailEmail) Message(ctx context.Context, m EmailMessage) (mail.Message, error) {
 	lang := i18n.Normalize(m.Locale)
-	brand := providers.EmailBrand{Name: "Olex Films"}
+	brand := providers.EmailBrand{Name: mail.DefaultBrandName}
 	if e.Brand != nil {
 		if b := e.Brand(ctx, m.BrandID); b.Name != "" {
 			brand = b
 		}
 	}
-	html, err := mail.Layout{
+	t := emailTextsFor(m.Locale)
+	body := strings.TrimSpace(m.Body)
+	l := mail.Layout{
 		Lang: string(lang), Dir: i18n.Dir(lang), Title: m.Subject,
 		BrandName: brand.Name, LogoURL: brand.LogoURL, Color: brand.Color,
-		BodyHTML: msgtemplate.MarkdownToHTML(body),
-	}.RenderHTML()
+	}
+	if mail.SafeURL(m.Deeplink) {
+		l.ButtonLabel, l.ButtonURL = t.details, m.Deeplink
+	} else if m.Deeplink != "" {
+		body += "\n\n[" + t.details + "](" + m.Deeplink + ")"
+	}
+	if mail.SafeURL(m.UnsubscribeURL) {
+		l.UnsubscribeText, l.UnsubscribeLabel, l.UnsubscribeURL = t.unsubscribeIntro, t.unsubscribe, m.UnsubscribeURL
+	} else if m.UnsubscribeURL != "" {
+		body += "\n\n" + t.unsubscribeIntro + " [" + t.unsubscribe + "](" + m.UnsubscribeURL + ")"
+	}
+	l.BodyHTML = msgtemplate.MarkdownToHTML(body)
+	l.BodyText = msgtemplate.MarkdownToText(body)
+	html, err := l.RenderHTML()
 	if err != nil {
-		return &PermanentError{Err: err}
+		return mail.Message{}, err
 	}
-	return e.Mail.Send(ctx, mail.Message{
-		To: []string{m.To}, Subject: m.Subject, Body: msgtemplate.MarkdownToText(body), HTMLBody: html,
-	})
-}
-
-// EmailBody is the markdown of a campaign e-mail: the content, the
-// details link and the unsubscribe paragraph.
-func EmailBody(m EmailMessage) string {
-	t := emailTextsFor(m.Locale)
-	var b strings.Builder
-	b.WriteString(strings.TrimSpace(m.Body))
-	if m.Deeplink != "" {
-		b.WriteString("\n\n[" + t.details + "](" + m.Deeplink + ")")
-	}
-	if m.UnsubscribeURL != "" {
-		b.WriteString("\n\n" + t.unsubscribeIntro + " [" + t.unsubscribe + "](" + m.UnsubscribeURL + ")")
-	}
-	return b.String()
+	return mail.Message{Subject: m.Subject, Body: l.RenderText(), HTMLBody: html}, nil
 }
 
 // ConversationWhatsApp hands campaign messages to the WhatsApp outgoing

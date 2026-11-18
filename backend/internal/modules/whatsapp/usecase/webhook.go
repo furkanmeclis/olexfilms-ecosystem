@@ -307,6 +307,29 @@ var alarmTexts = map[string]map[string][2]string{
 	},
 }
 
+// AlarmActionURL is the panel page an alarm notification opens.
+const AlarmActionURL = "/platform/integrations/whatsapp"
+
+// Alarm is the connection alarm text in one language.
+type Alarm struct {
+	Lang, Title, Body string
+}
+
+// AlarmText is the alarm of state (logged_out or banned) in the
+// recipient's language: tr when empty, en when unsupported.
+func AlarmText(locale, state, reason string) Alarm {
+	lang := locale
+	if lang == "" {
+		lang = "tr"
+	}
+	texts, ok := alarmTexts[lang]
+	if !ok {
+		lang, texts = "en", alarmTexts["en"]
+	}
+	t := texts[state]
+	return Alarm{Lang: lang, Title: t[0], Body: fmt.Sprintf(t[1], reason)}
+}
+
 func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
 	if s.notifier == nil {
 		return
@@ -319,27 +342,19 @@ func (s *Service) notifyAlarm(ctx context.Context, state, reason string) {
 	if reason == "" {
 		reason = state
 	}
-	actionURL := "/platform/integrations/whatsapp"
+	actionURL := AlarmActionURL
 	for _, r := range recipients {
-		lang := r.Locale.String
-		if lang == "" {
-			lang = "tr"
-		}
-		texts, ok := alarmTexts[lang]
-		if !ok {
-			lang, texts = "en", alarmTexts["en"]
-		}
-		t := texts[state]
+		a := AlarmText(r.Locale.String, state, reason)
 		uid := r.ID
 		if _, err := s.notifier.Enqueue(ctx, notifmodel.EnqueueInput{
 			UserID:      &uid,
 			Channels:    []string{notifmodel.ChannelInapp, notifmodel.ChannelEmail},
 			Priority:    notifmodel.PriorityCritical,
-			Title:       t[0],
-			Body:        fmt.Sprintf(t[1], reason),
+			Title:       a.Title,
+			Body:        a.Body,
 			ActionURL:   &actionURL,
 			SourceEvent: events.WhatsAppConnectionAlarm,
-			Language:    lang,
+			Language:    a.Lang,
 			Payload:     map[string]any{"state": state, "reason": reason},
 		}); err != nil {
 			s.log.Warn("whatsapp_alarm_notify_failed", "user", r.ID, "error", err)

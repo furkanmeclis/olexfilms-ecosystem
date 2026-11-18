@@ -19,6 +19,7 @@ make sqlc
 make create-super-admin
 make dev             # air on APP_HTTP_ADDR (default :8080)
 make health          # GET /healthz and /readyz
+make email-preview   # every e-mail x locale -> tmp/email-preview/index.html (no DB)
 ```
 
 Infra runs in Docker; the API runs on the host via `make dev` / `make run`.

@@ -44,12 +44,52 @@ func TestEmailProviderSendsRTLHTML(t *testing.T) {
 	if !strings.Contains(got.HTMLBody, "<strong>Tech Oto</strong>") || strings.Contains(got.HTMLBody, "<script>") {
 		t.Fatalf("html body not rendered safely: %s", got.HTMLBody)
 	}
-	if got.Body != "طلبت Tech Oto <script>x</script>" {
+	if !strings.HasPrefix(got.Body, "طلب وحدة\n\nطلبت Tech Oto <script>x</script>\n") || !strings.Contains(got.Body, "Olex") {
 		t.Fatalf("text part = %q", got.Body)
 	}
 	html, _ := p.HTML(context.Background(), db.Notification{Title: "x", Body: "y", Language: pgtype.Text{String: "tr", Valid: true}})
 	if !strings.Contains(html, `dir="ltr"`) {
 		t.Fatal("tr must be ltr")
+	}
+	if strings.Contains(html, "v:roundrect") {
+		t.Fatal("no action url, no button")
+	}
+}
+
+// TEC-1235: the action URL becomes the primary button (paths resolved
+// against the web origin); the text part carries "label: url".
+func TestEmailProviderActionButton(t *testing.T) {
+	m := &captureMail{}
+	p := EmailProvider{Mail: m, BaseURL: "https://app.example.test/"}
+	n := db.Notification{
+		Title: "Görev", Body: "Ayrıntılar panelde.",
+		Recipient: pgtype.Text{String: "a@example.com", Valid: true},
+		Language:  pgtype.Text{String: "tr", Valid: true},
+		ActionUrl: pgtype.Text{String: "/tasks/42", Valid: true},
+		Payload:   []byte(`{"email_preheader":"Kısa önizleme"}`),
+	}
+	if _, err := p.Deliver(context.Background(), n, nil); err != nil {
+		t.Fatal(err)
+	}
+	got := m.msgs[0]
+	if !strings.Contains(got.HTMLBody, `href="https://app.example.test/tasks/42"`) || !strings.Contains(got.HTMLBody, "v:roundrect") {
+		t.Fatalf("no button: %s", got.HTMLBody)
+	}
+	if !strings.Contains(got.HTMLBody, "Kısa önizleme") || !strings.Contains(got.Body, ": https://app.example.test/tasks/42") {
+		t.Fatalf("preheader / text cta missing: %q", got.Body)
+	}
+	// Without a base URL a relative path draws no button.
+	html, _ := EmailProvider{}.HTML(context.Background(), n)
+	if strings.Contains(html, "v:roundrect") {
+		t.Fatal("relative action url without base must not draw a button")
+	}
+	for in, want := range map[string]string{
+		"https://x.test/a": "https://x.test/a", "/a": "https://b.test/a", "//evil.test": "",
+		"javascript:alert(1)": "", "a": "", "": "",
+	} {
+		if got := AbsoluteURL("https://b.test", in); got != want {
+			t.Errorf("AbsoluteURL(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
