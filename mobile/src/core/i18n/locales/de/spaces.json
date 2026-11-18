@@ -5,7 +5,7 @@
   "kind.admin": "Admin",
   "kind.musteri": "Kunde",
   "org_type.center": "Zentrale",
-  "org_type.distributor": "Distributor",
+  "org_type.distributor": "Vertriebspartner",
   "org_type.dealer": "Händler",
   "active": "Offen",
   "switching": "Wird gewechselt…",

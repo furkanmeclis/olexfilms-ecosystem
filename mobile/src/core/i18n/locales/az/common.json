@@ -37,7 +37,7 @@
   "vehicle_picker.all_models": "Bütün modellər",
   "vehicle_picker.no_brand": "Marka tapılmadı.",
   "vehicle_picker.no_model": "Model tapılmadı.",
-  "vehicle_picker.model_count": "Model: {{count}}",
+  "vehicle_picker.model_count": "Modellər: {{count}}",
   "vehicle_picker.year_none": "İl göstərilməyib",
   "vehicle_picker.year_skip": "İl göstərmədən davam et",
   "vehicle_picker.year_span": "İstehsal illəri: {{span}}",

@@ -127,7 +127,7 @@
   "leave_draft_body": "Bu ölçmə hələ göndərilməyib. Saxla onu bu telefonda qaralama kimi saxlayır; Sil daxil etdiklərinizi ləğv edir.",
   "leave_draft_save": "Saxla",
   "leave_draft_discard": "Sil",
-  "ble.title": "SmartPTG cihazı",
+  "ble.title": "SmartPTG ölçü cihazı",
   "ble.hint": "Seçilmiş hissəni zonddan doldurmaq üçün cihazı qoşun.",
   "ble.waiting": "İlk ölçmə gözlənilir…",
   "ble.serial": "SN {{serial}}",

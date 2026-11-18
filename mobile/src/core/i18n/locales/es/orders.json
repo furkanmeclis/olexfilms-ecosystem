@@ -10,6 +10,7 @@
   "create_for_dealer": "Crear pedido",
   "price_missing_title": "Productos sin precio",
   "price_missing_body_one": "{{count}} producto no tenía precio; se añadió a 0 y se marcó.",
+  "price_missing_body_many": "{{count}} productos no tenían precio; se añadieron a 0 y se marcaron.",
   "price_missing_body_other": "{{count}} productos no tenían precio; se añadieron a 0 y se marcaron.",
   "errors.price_invalid": "Introduce un precio de 0 o más con hasta 4 decimales.",
   "confirm_submit_title": "¿Enviar el pedido? ({{count}} productos)",

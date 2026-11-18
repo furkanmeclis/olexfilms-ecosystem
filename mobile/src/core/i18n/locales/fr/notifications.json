@@ -2,6 +2,7 @@
   "title": "Notifications",
   "bell": "Notifications",
   "bell_unread_one": "Notifications, {{count}} non lue",
+  "bell_unread_many": "Notifications, {{count}} non lues",
   "bell_unread_other": "Notifications, {{count}} non lues",
   "filter.all": "Toutes",
   "filter.unread": "Non lues",
