@@ -1786,7 +1786,8 @@
       "suppliers.phone": "Almancada doğru (Telefon)",
       "warehouse.export.status": "Almancada aynı yazılır (Status)",
       "warranties.export.status": "Almancada aynı yazılır (Status)",
-      "warranty.certificate.status": "Almancada aynı yazılır (Status)"
+      "warranty.certificate.status": "Almancada aynı yazılır (Status)",
+      "email.campaign.details": "Almancada aynı yazılır (Details)"
     },
     "es": {
       "ai.actions.values.priority.normal": "İspanyolcada aynı yazılır (Normal)",

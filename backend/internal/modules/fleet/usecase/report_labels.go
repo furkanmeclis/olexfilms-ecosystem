@@ -129,9 +129,6 @@ var reportTexts = map[i18n.Locale]reportLabels{
 		Dealer: "نمایندگی", Vehicle: "خودرو", Plate: "پلاک", Services: "سرویس\u200cها", Part: "قطعه", Count: "تعداد",
 		Product: "محصول", Items: "اقلام", Pieces: "عدد", Meters: "متراژ", Ends: "پایان",
 		ServiceAmount: "مبلغ سرویس\u200cها", Payments: "پرداخت\u200cها", Balance: "مانده", Empty: "در این دوره رکوردی وجود ندارد.",
-		MailSubject: "گزارش ناوگان {fleet}: {period}",
-		MailBody:    "سلام،\n\nگزارش ناوگان {fleet} برای دوره {period} پیوست است.",
-		MailLink:    "فایل گزارش برای پیوست ایمیل بیش از حد بزرگ است. می\u200cتوانید آن را از پورتال دانلود کنید: {url}",
 	},
 }
 
