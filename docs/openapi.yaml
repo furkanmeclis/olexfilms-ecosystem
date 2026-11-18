@@ -7999,7 +7999,7 @@ paths:
         left out); `enabled` lists the keys that are on. The module catalog
         (keys, levels) comes from the backend; the frontend never duplicates it.
         TEC-508: every item carries its `description` in the request locale
-        (Accept-Language; 13 languages), `free_default` (on by default, free,
+        (Accept-Language; 14 languages), `free_default` (on by default, free,
         no service record), `price` (cheapest active `module_bundle` service
         catalog item containing the module, with the distributor override) or
         `contact_for_price` (paid, no bundle on sale) and the organization's
@@ -28771,7 +28771,7 @@ paths:
           description: PDF language; defaults to the request language.
           schema:
             type: string
-            enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar]
+            enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar, fa]
         - name: tz
           in: query
           description: IANA timezone for order and issued-at timestamps; defaults to seller timezone.
@@ -38047,7 +38047,7 @@ components:
         scope: { type: string, example: mcp }
     LocaleCode:
       type: string
-      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
+      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar, fa]
 
     AnnouncementStatus:
       type: string
@@ -38799,7 +38799,7 @@ components:
         Canonical locale code (K10). Inputs are normalized: "zh_CN", "zh-cn"
         and "zh" become zh-CN; a regional code falls back to its language
         ("tr-TR" -> tr). Unknown codes are rejected with 422.
-      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
+      enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar, fa]
 
     MeLinks:
       type: object
@@ -40779,8 +40779,8 @@ components:
           description: Must be true (KVKK consent); false is 400 VALIDATION_ERROR.
         language:
           type: string
-          description: Form language, one of the 13 locales (default tr).
-          enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]
+          description: Form language, one of the 14 locales (default tr).
+          enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar, fa]
         website:
           type: string
           description: Honeypot; leave empty (hidden in the form).
@@ -42101,7 +42101,7 @@ components:
 
     ShowcaseLocaleTexts:
       type: object
-      description: Locale (13 UI locales) → text; empty entries are dropped.
+      description: Locale (14 UI locales) → text; empty entries are dropped.
       additionalProperties: { type: string }
 
     ShowcaseWorkWindow:
@@ -42933,7 +42933,7 @@ components:
           properties:
             description:
               type: string
-              description: One-sentence description in the request locale (13 languages).
+              description: One-sentence description in the request locale (14 languages).
             free_default:
               type: boolean
               description: On by default; free and needs no service record.
