@@ -27,7 +27,7 @@ endef
 
 DB_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: tools run dev worker ping-job search-reindex inventory-rebuild roles-sync normalize-org-phones org-merge build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
+.PHONY: email-preview tools run dev worker ping-job search-reindex inventory-rebuild roles-sync normalize-org-phones org-merge build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
 
 tools:
 	@echo "go:            $$(go version)"
@@ -120,6 +120,11 @@ migrate-down:
 migrate-create:
 	@test -n "$(NAME)" || (echo "Usage: make migrate-create NAME=create_users"; exit 1)
 	$(MIGRATE) create -ext sql -dir migrations -seq $(NAME)
+
+# TEC-1235: render every e-mail (all locales, sample data, no DB/network)
+# to tmp/email-preview/index.html. LOCALES=tr,en,ar narrows it.
+email-preview:
+	go run ./cmd/email-preview -out ./tmp/email-preview $(if $(LOCALES),-locale $(LOCALES))
 
 health:
 	curl -sS http://127.0.0.1:8080/healthz && echo && curl -sS http://127.0.0.1:8080/readyz && echo

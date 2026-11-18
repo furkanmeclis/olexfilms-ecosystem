@@ -444,31 +444,44 @@ func reportRecipients(ctx context.Context, q *db.Queries, fleetOrgID int64, bill
 }
 
 // reportMessage builds the e-mail in the report language: the PDF attached
-// up to MaxReportAttachment, else a link to the portal reports page.
+// up to MaxReportAttachment, else a button to the portal reports page.
 func (s *Service) reportMessage(ctx context.Context, f db.Organization, r db.FleetReport, pdf []byte) (mail.Message, error) {
+	return ReportMessage(ctx, s.reports, f, r, pdf)
+}
+
+// ReportMessage builds the report e-mail without a database (the
+// e-mail preview, cmd/email-preview, uses it with sample rows).
+func ReportMessage(ctx context.Context, cfg ReportConfig, f db.Organization, r db.FleetReport, pdf []byte) (mail.Message, error) {
 	t, lang := reportLabelsFor(r.Locale)
-	vars := map[string]string{"fleet": f.Name, "period": periodLabel(t, reportPeriodOf(r)), "url": s.reports.PortalURL}
+	vars := map[string]string{"fleet": f.Name, "period": periodLabel(t, reportPeriodOf(r)), "url": cfg.PortalURL}
 	subject := fill(t.MailSubject, vars)
 	body := fill(t.MailBody, vars)
 	attach := len(pdf) > 0 && len(pdf) <= MaxReportAttachment
-	if !attach {
-		body += "\n\n" + fill(t.MailLink, vars)
-	}
-	brand := MailBrand{Name: "Olex Films"}
-	if s.reports.Brand != nil {
-		if b := s.reports.Brand(ctx, r.BrandID); b.Name != "" {
+	brand := MailBrand{Name: mail.DefaultBrandName}
+	if cfg.Brand != nil {
+		if b := cfg.Brand(ctx, r.BrandID); b.Name != "" {
 			brand = b
 		}
 	}
-	htmlBody, err := mail.Layout{
+	labels := mail.LabelsFor(string(lang))
+	layout := mail.Layout{
 		Lang: string(lang), Dir: i18n.Dir(lang), Title: subject,
 		BrandName: brand.Name, LogoURL: brand.LogoURL, Color: brand.Color,
-		BodyHTML: msgtemplate.MarkdownToHTML(body),
-	}.RenderHTML()
+		Reason: labels.ReasonFor(brand.Name),
+	}
+	if !attach {
+		// Too large to attach: the body says so (with the URL for the
+		// text part) and the button opens the portal reports page.
+		body += "\n\n" + fill(t.MailLink, vars)
+		layout.ButtonLabel, layout.ButtonURL = labels.Button, cfg.PortalURL
+	}
+	layout.BodyHTML = msgtemplate.MarkdownToHTML(body)
+	layout.BodyText = msgtemplate.MarkdownToText(body)
+	htmlBody, err := layout.RenderHTML()
 	if err != nil {
 		return mail.Message{}, fmt.Errorf("fleet: report mail layout: %w", err)
 	}
-	msg := mail.Message{Subject: subject, Body: msgtemplate.MarkdownToText(body), HTMLBody: htmlBody}
+	msg := mail.Message{Subject: subject, Body: layout.RenderText(), HTMLBody: htmlBody}
 	if attach {
 		msg.Attachments = []mail.Attachment{{Filename: reportFileName(r), ContentType: "application/pdf", Data: pdf}}
 	}

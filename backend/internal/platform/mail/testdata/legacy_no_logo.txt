@@ -1,0 +1,6 @@
+Test notification
+
+This is a test email.
+
+--
+Olex <Films>

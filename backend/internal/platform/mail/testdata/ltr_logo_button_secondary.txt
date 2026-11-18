@@ -1,0 +1,11 @@
+Size bir görev atandı: Aylık ziyaret
+
+Tech Oto ile ilgili Aylık ziyaret görevi size atandı.
+
+- Son tarih: 31.10.2026
+
+Görüntüle: https://app.example.test/tasks/42?a=1&b=2
+
+--
+Olex Films
+Bu e-postayı Olex Films hesabınızla ilgili bir bildirim olduğu için aldınız.

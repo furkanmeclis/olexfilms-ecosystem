@@ -18,6 +18,10 @@ var files embed.FS
 // upFile matches golang-migrate up files: <version>_<title>.up.sql.
 var upFile = regexp.MustCompile(`^([0-9]+)_.+\.up\.sql$`)
 
+// FS returns the embedded up migrations, read-only (the e-mail preview,
+// cmd/email-preview, reads the seeded notification templates from it).
+func FS() fs.FS { return files }
+
 // LatestVersion is the highest migration version embedded in the binary.
 func LatestVersion() (uint64, error) {
 	return latestVersion(files)

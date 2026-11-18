@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
@@ -86,11 +87,20 @@ type EmailBrand struct {
 
 // EmailProvider sends a multipart (text + HTML) e-mail. The body is the
 // rendered template markdown; the HTML frame takes dir from the language.
+// A notification with an action URL gets a primary button (relative paths
+// are resolved against BaseURL; without one the button is left out).
 type EmailProvider struct {
 	Mail mail.Sender
 	// Brand returns the frame for a brand id (0 = no brand). Optional.
 	Brand func(ctx context.Context, brandID int64) EmailBrand
+	// BaseURL is the public web origin (PUBLIC_FRONTEND_URL) that
+	// relative action URLs are resolved against. Optional.
+	BaseURL string
 }
+
+// PayloadPreheader is the notification payload key of an explicit inbox
+// preview text; without it the preheader is derived from the body.
+const PayloadPreheader = "email_preheader"
 
 func (EmailProvider) Channel() string { return model.ChannelEmail }
 
@@ -105,13 +115,12 @@ func (p EmailProvider) Deliver(ctx context.Context, n db.Notification, _ *uuid.U
 	if p.Mail == nil {
 		p.Mail = mail.NoopSender{}
 	}
-	html, err := p.HTML(ctx, n)
+	msg, err := p.Message(ctx, n)
 	if err != nil {
 		return DeliveryResult{}, err
 	}
-	if err := p.Mail.Send(ctx, mail.Message{
-		To: []string{to}, Subject: n.Title, Body: msgtemplate.MarkdownToText(n.Body), HTMLBody: html,
-	}); err != nil {
+	msg.To = []string{to}
+	if err := p.Mail.Send(ctx, msg); err != nil {
 		return DeliveryResult{}, err
 	}
 	return DeliveryResult{Status: model.StatusSent, Provider: "smtp"}, nil
@@ -119,11 +128,27 @@ func (p EmailProvider) Deliver(ctx context.Context, n db.Notification, _ *uuid.U
 
 // HTML renders the branded HTML part of a notification.
 func (p EmailProvider) HTML(ctx context.Context, n db.Notification) (string, error) {
+	return p.Layout(ctx, n).RenderHTML()
+}
+
+// Message renders the subject, the plain-text and the HTML part (no
+// recipient).
+func (p EmailProvider) Message(ctx context.Context, n db.Notification) (mail.Message, error) {
+	l := p.Layout(ctx, n)
+	html, err := l.RenderHTML()
+	if err != nil {
+		return mail.Message{}, err
+	}
+	return mail.Message{Subject: n.Title, Body: l.RenderText(), HTMLBody: html}, nil
+}
+
+// Layout is the e-mail frame of a notification in its language.
+func (p EmailProvider) Layout(ctx context.Context, n db.Notification) mail.Layout {
 	lang := i18n.DefaultLocale
 	if n.Language.Valid {
 		lang = i18n.Normalize(n.Language.String)
 	}
-	brand := EmailBrand{Name: "Olex Films"}
+	brand := EmailBrand{Name: mail.DefaultBrandName}
 	if p.Brand != nil {
 		var id int64
 		if n.BrandID.Valid {
@@ -133,11 +158,53 @@ func (p EmailProvider) HTML(ctx context.Context, n db.Notification) (string, err
 			brand = b
 		}
 	}
-	return mail.Layout{
+	labels := mail.LabelsFor(string(lang))
+	l := mail.Layout{
 		Lang: string(lang), Dir: i18n.Dir(lang), Title: n.Title,
 		BrandName: brand.Name, LogoURL: brand.LogoURL, Color: brand.Color,
-		BodyHTML: msgtemplate.MarkdownToHTML(n.Body),
-	}.RenderHTML()
+		BodyHTML: msgtemplate.MarkdownToHTML(n.Body), BodyText: msgtemplate.MarkdownToText(n.Body),
+		Preheader: payloadString(n.Payload, PayloadPreheader),
+		Reason:    labels.ReasonFor(brand.Name),
+	}
+	if n.ActionUrl.Valid {
+		if u := AbsoluteURL(p.BaseURL, n.ActionUrl.String); u != "" {
+			l.ButtonLabel, l.ButtonURL = labels.Button, u
+			l.Secondary, l.SecondaryURL = labels.LinkFallback, u
+		}
+	}
+	return l
+}
+
+// AbsoluteURL returns an absolute http(s) action URL: absolute URLs as
+// they are, paths ("/x") prefixed with base. Empty when neither works.
+func AbsoluteURL(base, u string) string {
+	u = strings.TrimSpace(u)
+	if u == "" {
+		return ""
+	}
+	if mail.SafeURL(u) {
+		return u
+	}
+	base = strings.TrimRight(strings.TrimSpace(base), "/")
+	if base == "" || !strings.HasPrefix(u, "/") || strings.HasPrefix(u, "//") {
+		return ""
+	}
+	if abs := base + u; mail.SafeURL(abs) {
+		return abs
+	}
+	return ""
+}
+
+func payloadString(raw []byte, key string) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return ""
+	}
+	s, _ := m[key].(string)
+	return strings.TrimSpace(s)
 }
 
 // SMSProvider sends the plain-text body as SMS to notifications.recipient
