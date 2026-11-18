@@ -3,11 +3,9 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { Chips, useDebounced } from '@/features/admin/kit';
 import { PickerField, PickerSheet } from '@/features/picker-sheet';
 import { Button } from '@/ui/button';
@@ -15,6 +13,7 @@ import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { dueDateToIso, QUICK_DUES, type QuickDue, quickDueDate, TASK_PRIORITIES, type TaskPriority, taskFormMissing } from './lib';
 
@@ -81,7 +80,7 @@ export function TaskNewScreen() {
       void qc.invalidateQueries({ queryKey: ['tasks', 'list'] });
       router.back();
     },
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
 
   return (

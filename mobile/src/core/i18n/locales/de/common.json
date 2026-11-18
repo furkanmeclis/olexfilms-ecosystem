@@ -71,5 +71,11 @@
   "placeholder_year": "2024",
   "placeholder_km": "45000 km",
   "related_empty": "Keine Einträge",
-  "related_more": "+{{count}} weitere"
+  "related_more": "+{{count}} weitere",
+  "toast.success": "Erfolg",
+  "toast.error": "Fehler",
+  "toast.warning": "Warnung",
+  "toast.info": "Hinweis",
+  "toast.loading": "Wird bearbeitet",
+  "toast.dismiss_hint": "Zum Schließen tippen oder wischen"
 }

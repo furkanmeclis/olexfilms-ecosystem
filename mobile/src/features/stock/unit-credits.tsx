@@ -2,13 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { useSession } from '@/core/auth/session';
-import { errorMessage } from '@/core/i18n';
 import { type ServiceStatus, serviceTone } from '@/features/services/lib';
 import { formatDate } from '@/features/warehouse/format';
 import { Card, Field } from '@/features/warehouse/parts';
@@ -17,6 +15,7 @@ import { Input } from '@/ui/input';
 import { SectionHeader } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { creditsText, parseCredits } from './credits';
 
@@ -109,7 +108,7 @@ function IncreaseForm({ barcode, unitUuid, onDone }: { barcode: string; unitUuid
       void qc.invalidateQueries({ queryKey: ['stock', 'units'] });
       onDone();
     },
-    onError: (e) => Alert.alert(t('stock.credits.increase_failed'), errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e, { title: t('stock.credits.increase_failed') }),
   });
 
   const submit = () => {

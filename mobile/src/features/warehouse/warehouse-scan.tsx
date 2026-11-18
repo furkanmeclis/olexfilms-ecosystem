@@ -24,6 +24,7 @@ import { alertError, go, whError } from './format';
 import { ScanResultCard } from './scan-result-card';
 import { WarehouseChip } from './warehouse-picker';
 import type { IconName } from '@/ui/icons';
+import { toast } from '@/ui/toast';
 
 const REPEAT_MS = 2500;
 
@@ -100,7 +101,7 @@ export function WarehouseScan() {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void qc.invalidateQueries({ queryKey: wk.transfer(uuid) });
         void qc.invalidateQueries({ queryKey: ['warehouse', 'transfers'] });
-        Alert.alert(t('m.added_to', { doc: no }));
+        toast.success(t('m.added_to', { doc: no }));
       } catch (e) {
         alertError(e);
       } finally {
@@ -124,7 +125,7 @@ export function WarehouseScan() {
         await countApi.scan(uuid, { code });
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void qc.invalidateQueries({ queryKey: wk.count(uuid) });
-        Alert.alert(t('m.added_to', { doc: label }));
+        toast.success(t('m.added_to', { doc: label }));
       } catch (e) {
         alertError(e);
       } finally {

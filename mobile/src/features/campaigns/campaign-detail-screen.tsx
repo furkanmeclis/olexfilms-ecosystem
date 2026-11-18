@@ -8,12 +8,13 @@ import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
 import { formatDateTime, formatNumber } from '@/features/services/lib';
 import { Sheet } from '@/features/services/sheet';
-import { Chips, DetailSkeleton, ErrorState, errorText, InfoRow, Section } from '@/features/services/ui';
+import { Chips, DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { campaignKeys } from './campaigns-list-screen';
 import {
@@ -62,13 +63,13 @@ export function CampaignDetailScreen() {
     qc.setQueryData(campaignKeys.detail(uuid), next);
     void qc.invalidateQueries({ queryKey: campaignKeys.all });
   };
-  const fail = (e: unknown) => Alert.alert(t('toast.failed'), errorText(e));
+  const fail = (e: unknown) => toast.apiError(e, { title: t('toast.failed') });
 
   const submit = useMutation({
     mutationFn: () => unwrap(api.POST('/v1/campaigns/{uuid}/submit', { params: { path: { uuid } } })),
     onSuccess: (next) => {
       written(next);
-      Alert.alert(t('toast.submitted'));
+      toast.success(t('toast.submitted'));
     },
     onError: fail,
   });
@@ -76,7 +77,7 @@ export function CampaignDetailScreen() {
     mutationFn: () => unwrap(api.POST('/v1/campaigns/{uuid}/cancel', { params: { path: { uuid } } })),
     onSuccess: (next) => {
       written(next);
-      Alert.alert(t('toast.cancelled'));
+      toast.success(t('toast.cancelled'));
     },
     onError: fail,
   });
@@ -90,7 +91,7 @@ export function CampaignDetailScreen() {
     onSuccess: (next) => {
       setDecisionOpen(false);
       written(next);
-      Alert.alert(t('approvals.toast_decided'));
+      toast.success(t('approvals.toast_decided'));
       if (router.canGoBack()) router.back();
     },
     onError: fail,

@@ -71,5 +71,11 @@
   "leave_body": "Çıkarsanız girdikleriniz silinir.",
   "leave_discard": "Çık",
   "related_empty": "Kayıt yok",
-  "related_more": "+{{count}} kayıt daha"
+  "related_more": "+{{count}} kayıt daha",
+  "toast.success": "Başarılı",
+  "toast.error": "Hata",
+  "toast.warning": "Uyarı",
+  "toast.info": "Bilgi",
+  "toast.loading": "İşleniyor",
+  "toast.dismiss_hint": "Kapatmak için dokun ya da kaydır"
 }

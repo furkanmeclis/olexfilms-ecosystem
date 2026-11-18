@@ -7,7 +7,6 @@ import { hasAmount } from '@/core/price-visibility';
 import { usePricesVisible } from '@/core/use-prices-visible';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
-import { errorMessage } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
@@ -18,6 +17,7 @@ import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
 
 import { useClaimLinks } from '@/features/warranty-claims/hooks';
+import { toast } from '@/ui/toast';
 
 import { ErrorState, useChildHref, useFormat } from './kit';
 
@@ -27,7 +27,7 @@ function useDecision(onDone: () => void) {
   return useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
     onSuccess: onDone,
-    onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
+    onError: (e) => toast.apiError(e),
   });
 }
 

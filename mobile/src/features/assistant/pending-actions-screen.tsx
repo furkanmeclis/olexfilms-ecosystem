@@ -12,6 +12,7 @@ import { Button } from '@/ui/button';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { ActionPreviewRows, useSecondsLeft } from './action-card';
 import { type AIActionCard, type ActionPreview, formatCountdown } from './chat-state';
@@ -58,19 +59,15 @@ export function PendingActionsScreen() {
           : api.POST('/v1/ai/pending-actions/{uuid}/cancel', { params: { path: { uuid: card.action_uuid } } }),
       ),
     onSuccess: (out, { confirm }) => {
-      if (!confirm) Alert.alert(t('approvals.rejected'));
-      else if (out.status === 'confirmed') Alert.alert(t('approvals.confirmed'));
-      else Alert.alert(t('approvals.failed'), out.message);
+      if (!confirm) toast.success(t('approvals.rejected'));
+      else if (out.status === 'confirmed') toast.success(t('approvals.confirmed'));
+      else toast.error(t('approvals.failed'), { description: out.message });
     },
-    onError: (e) =>
-      Alert.alert(
-        isApiError(e, 'AI_ACTION_EXPIRED')
-          ? t('approvals.expired')
-          : isApiError(e, 'AI_ACTION_RESOLVED')
-            ? t('approvals.resolved')
-            : t('approvals.failed'),
-        isApiError(e, 'AI_ACTION_EXPIRED') || isApiError(e, 'AI_ACTION_RESOLVED') ? undefined : errorText(e),
-      ),
+    onError: (e) => {
+      if (isApiError(e, 'AI_ACTION_EXPIRED')) toast.warning(t('approvals.expired'));
+      else if (isApiError(e, 'AI_ACTION_RESOLVED')) toast.warning(t('approvals.resolved'));
+      else toast.error(t('approvals.failed'), { description: errorText(e) });
+    },
     onSettled: () => void qc.invalidateQueries({ queryKey: aiKeys.pending }),
   });
 

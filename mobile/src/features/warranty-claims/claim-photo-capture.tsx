@@ -4,14 +4,14 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { uploadForm } from '@/core/api/client';
-import { errorText } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 export const claimKey = (uuid: string) => ['warranty-claims', 'detail', uuid] as const;
 
@@ -38,7 +38,7 @@ export function ClaimPhotoCapture({ claimUuid, onClose }: { claimUuid: string; o
       void qc.invalidateQueries({ queryKey: claimKey(claimUuid) });
       onClose();
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const take = async () => {
@@ -49,7 +49,7 @@ export function ClaimPhotoCapture({ claimUuid, onClose }: { claimUuid: string; o
       if (pic?.uri) setShot(pic.uri);
     } catch {
       // The device's own error text is technical (and often English).
-      Alert.alert(t('action_failed'), t('camera_failed'));
+      toast.error(t('action_failed'), { description: t('camera_failed') });
     } finally {
       setTaking(false);
     }

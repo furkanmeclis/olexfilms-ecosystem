@@ -11,11 +11,12 @@ import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { awaitingSignature, canCreateContract, CONTRACT_MODULE, type ContractState, contractState, contractWebUrl, showContract } from './contract';
 import { type Service, WEB_ORIGIN } from './lib';
 import { QrImage } from './qr-sheet';
-import { errorText, Section } from './ui';
+import { Section } from './ui';
 
 const TONE: Record<ContractState, StatusTone> = {
   none: 'problem',
@@ -64,7 +65,7 @@ export function ServiceContractCard({ s, onChanged }: { s: Service; onChanged: (
       return unwrap(api.GET('/v1/services/{uuid}', { params: { path: { uuid: s.uuid } } }));
     },
     onSuccess: onChanged,
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   if (!on || !showContract(s)) return null;

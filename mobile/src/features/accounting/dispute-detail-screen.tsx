@@ -6,12 +6,13 @@ import { Alert, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { formatDateTime } from '@/features/services/lib';
-import { Chips, DetailSkeleton, ErrorState, errorText, InfoRow, Section } from '@/features/services/ui';
+import { Chips, DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 import { PullRefresh } from '@/ui/pull-refresh';
+import { toast } from '@/ui/toast';
 
 import { accountingKey, useAccountingAccess, useCategoryLabels } from './hooks';
 import {
@@ -55,9 +56,9 @@ export function DisputeDetailScreen() {
     onSuccess: (resolved) => {
       qc.setQueryData([...key, 'dispute', uuid], resolved);
       void qc.invalidateQueries({ queryKey: key });
-      Alert.alert(t(`disputes.resolved.${resolved.status}`));
+      toast.success(t(`disputes.resolved.${resolved.status}`));
     },
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    onError: (e) => toast.apiError(e, { title: t('action_failed') }),
   });
 
   const submit = () => {

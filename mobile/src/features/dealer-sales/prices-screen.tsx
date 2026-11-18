@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
 import { CardRow, Chips, InfoRow, PagedList, useDebounced, useFormat } from '@/features/admin/kit';
@@ -12,6 +12,7 @@ import { Input } from '@/ui/input';
 import { List } from '@/ui/list';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
+import { toast } from '@/ui/toast';
 
 import { dealerSalesKeys, type PriceCatalogItem, type PricedFilter, setDealerPrice, usePriceCatalog } from './api';
 import { alertError, success } from './errors';
@@ -45,7 +46,7 @@ function PriceSheet({ item, onClose }: { item: PriceCatalogItem; onClose: () => 
       await setDealerPrice(item.product_uuid, price);
       await qc.invalidateQueries({ queryKey: dealerSalesKeys.all });
       success();
-      if (seeCost && isBelowCost(price, item.purchase_price)) Alert.alert(t('prices.below_cost_hint'));
+      if (seeCost && isBelowCost(price, item.purchase_price)) toast.warning(t('prices.below_cost_hint'));
       onClose();
     } catch (e) {
       alertError(e);
