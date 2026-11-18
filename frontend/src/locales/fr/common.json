@@ -32,6 +32,7 @@
   "passive": "Inactif",
   "saving": "Enregistrement…",
   "items_one": "{{count}} enregistrement",
+  "items_many": "{{count}} enregistrements",
   "items_other": "{{count}} enregistrements",
   "language": "Langue",
   "theme": "Thème",

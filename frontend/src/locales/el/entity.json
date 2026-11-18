@@ -22,7 +22,7 @@
   "kinds.transfer": "Μεταφορά",
   "kinds.organization": "Οργανισμός",
   "kinds.user": "Χρήστης",
-  "kinds.lead": "Lead",
+  "kinds.lead": "Υποψήφιος πελάτης",
   "kinds.appointment": "Ραντεβού",
   "kinds.task": "Εργασία",
   "kinds.measurement": "Μέτρηση",
@@ -61,7 +61,7 @@
   "related.tabs.service": "Υπηρεσίες",
   "related.tabs.warranty": "Εγγυήσεις",
   "related.tabs.appointment": "Ραντεβού",
-  "related.tabs.lead": "Leads",
+  "related.tabs.lead": "Υποψήφιοι πελάτες",
   "related.tabs.measurement": "Μετρήσεις",
   "related.tabs.contract": "Συμβάσεις",
   "related.columns.subject": "Αντικείμενο"

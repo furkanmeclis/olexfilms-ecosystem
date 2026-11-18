@@ -41,7 +41,7 @@
   "status_value.pending": "En attente",
   "status_value.closed": "Fermée",
   "ai_mode_value.auto": "Automatique",
-  "ai_mode_value.paused": "Pause",
+  "ai_mode_value.paused": "En pause",
   "ai_mode_value.off": "Désactivée",
   "actions.label": "Actions",
   "actions.open": "Ouvrir",

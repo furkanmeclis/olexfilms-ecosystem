@@ -213,6 +213,7 @@
   "actions.einvoice.buyer_profile_updated": "Alıcının faktura profili yeniləndi",
   "resources.einvoices": "E-fakturalar",
   "actions.services.created_on_behalf": "Diler adına xidmət açıldı",
+  "actions.catalog.product.roll_updated": "Məhsulun rulon ayarları yeniləndi",
   "actions.organizations.member_updated": "Təşkilat üzvünün rolları yeniləndi",
   "actions.organizations.member_removed": "Üzv təşkilatdan çıxarıldı",
   "resources.organizations": "Təşkilatlar",

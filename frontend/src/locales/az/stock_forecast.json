@@ -32,7 +32,7 @@
   "draft.success": "{{no}} sifariş taslağı yaradıldı.",
   "draft.failed": "Sifariş taslağı yaradıla bilmədi.",
   "draft.created": "Sifariş taslağı yaradıldı:",
-  "draft.open": "Taslağı aç",
+  "draft.open": "Qaralamanı aç",
   "draft.orders": "Sifarişlər",
   "threshold.saved": "Hədd yeniləndi.",
   "threshold.failed": "Hədd yenilənmədi.",

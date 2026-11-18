@@ -21,7 +21,7 @@
   "columns.request_id": "İstek ID",
   "columns.created_at": "Tarih",
   "columns.attrs": "Öznitelikler",
-  "levels.debug": "Debug",
+  "levels.debug": "Hata ayıklama",
   "levels.warn": "Uyarı",
   "levels.error": "Hata",
   "toast.deleted": "Log silindi.",

@@ -266,6 +266,6 @@
   "tenant_detail.counts": "Μετρητές",
   "tenant_detail.count.members": "Μέλη",
   "tenant_detail.count.customers": "Πελάτες",
-  "tenant_detail.count.leads": "Leads",
+  "tenant_detail.count.leads": "Υποψήφιοι πελάτες",
   "tenant_detail.count.warehouses": "Αποθήκες"
 }

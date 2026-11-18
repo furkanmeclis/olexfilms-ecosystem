@@ -217,5 +217,6 @@
   "labels.showcase.read": "Преглед на витрината",
   "labels.showcase.write": "Редактиране на витрината",
   "labels.platform.showcase.review": "Одобряване на витрините на дилърите",
-  "groups.dealer_showcase": "Витрина на дилъра"
+  "groups.dealer_showcase": "Витрина на дилъра",
+  "labels.stock.bulk": "Групови операции с баркодове"
 }

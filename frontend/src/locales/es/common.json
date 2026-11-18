@@ -32,6 +32,7 @@
   "passive": "Inactivo",
   "saving": "Guardando…",
   "items_one": "{{count}} registro",
+  "items_many": "{{count}} registros",
   "items_other": "{{count}} registros",
   "language": "Idioma",
   "theme": "Tema",

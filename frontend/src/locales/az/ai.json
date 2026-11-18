@@ -113,7 +113,7 @@
   "actions.fields.subject_organization": "Təşkilat",
   "actions.fields.target_type": "Potensial müştəri növü",
   "actions.fields.temperature": "Temperatur",
-  "actions.fields.time": "Saat",
+  "actions.fields.time": "Vaxt",
   "actions.fields.title": "Başlıq",
   "actions.warnings.order_draft_not_submitted": "Sifariş qaralama kimi saxlanılır və göndərilmir."
 }

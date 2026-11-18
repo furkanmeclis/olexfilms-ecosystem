@@ -217,5 +217,6 @@
   "labels.showcase.read": "Vitrinə bax",
   "labels.showcase.write": "Vitrini redaktə et",
   "labels.platform.showcase.review": "Diler vitrinlərini təsdiqlə",
-  "groups.dealer_showcase": "Diler vitrini"
+  "groups.dealer_showcase": "Diler vitrini",
+  "labels.stock.bulk": "Toplu barkod əməliyyatları"
 }

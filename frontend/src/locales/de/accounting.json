@@ -279,7 +279,7 @@
   "entry_detail.source_record": "Quelldatensatz",
   "entry_detail.source_ref": "{{source}} #{{id}}",
   "entry_detail.counterparty": "Gegenpartei-Organisation",
-  "entry_detail.revision": "Revision",
+  "entry_detail.revision": "Korrektur",
   "entry_detail.reversal_of": "Storniert Eintrag",
   "entry_detail.reversed_by": "Storniert durch Eintrag"
 }
