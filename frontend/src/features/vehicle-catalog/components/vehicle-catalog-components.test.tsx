@@ -8,14 +8,15 @@ const toastWarning = vi.fn();
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: {
+vi.mock("@/lib/toast", () => {
+  const t = {
     warning: (m: string) => toastWarning(m),
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
-  },
-}));
+  };
+  return { toast: t, appToast: t };
+});
 
 import { VehicleBrandLogo } from "./vehicle-brand-logo";
 import { VehicleImageField } from "./vehicle-image-field";

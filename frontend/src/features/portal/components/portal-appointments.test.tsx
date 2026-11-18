@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/portal/appointments",
   useRouter: () => router,
 }));
-vi.mock("@/lib/toast", () => ({ toast: toasts }));
+vi.mock("@/lib/toast", () => ({ toast: toasts, appToast: toasts }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

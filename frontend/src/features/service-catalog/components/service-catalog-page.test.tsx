@@ -32,9 +32,10 @@ vi.mock("@/providers/permission-provider", () => ({
 }));
 
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 
 vi.mock("@/features/modules/services/modules.service", () => ({
   modulesService: {

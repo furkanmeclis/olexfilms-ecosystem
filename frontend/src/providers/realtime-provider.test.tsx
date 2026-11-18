@@ -53,14 +53,15 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("@/lib/toast", () => ({
-  appToast: {
+vi.mock("@/lib/toast", () => {
+  const t = {
     info: vi.fn(),
     error: vi.fn(),
     success: vi.fn(),
     warning: vi.fn(),
-  },
-}));
+  };
+  return { toast: t, appToast: t };
+});
 
 import { RealtimeProvider } from "./realtime-provider";
 

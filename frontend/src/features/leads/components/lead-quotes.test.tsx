@@ -40,7 +40,10 @@ const router = vi.hoisted(() => ({ push: vi.fn() }));
 const tables = vi.hoisted(() => ({ props: [] as Record<string, unknown>[] }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string) => key,

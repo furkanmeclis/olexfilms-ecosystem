@@ -25,9 +25,10 @@ vi.mock("@/providers/locale-provider", () => ({
 vi.mock("@/providers/dialog-provider", () => ({
   useDialogs: () => ({ confirmDelete: vi.fn(async () => true) }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/components/entity", async (orig) => ({
   ...(await orig<object>()),
   EntityTable: (props: Record<string, unknown>) => {

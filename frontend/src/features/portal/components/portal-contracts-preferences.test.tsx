@@ -26,7 +26,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/portal/contracts",
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
-vi.mock("@/lib/toast", () => ({ toast: toasts }));
+vi.mock("@/lib/toast", () => ({ toast: toasts, appToast: toasts }));
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
   useIsXl: () => true,

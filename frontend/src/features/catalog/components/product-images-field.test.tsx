@@ -14,9 +14,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: mocks.toastError },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: mocks.toastError };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({
   ...(await orig<object>()),
   catalogService: {

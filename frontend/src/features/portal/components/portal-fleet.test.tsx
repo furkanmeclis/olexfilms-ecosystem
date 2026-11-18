@@ -24,7 +24,7 @@ vi.mock("next/link", () => ({
   } & Record<string, unknown>) =>
     createElement("a", { href, ...rest }, children as never),
 }));
-vi.mock("@/lib/toast", () => ({ toast: toasts }));
+vi.mock("@/lib/toast", () => ({ toast: toasts, appToast: toasts }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

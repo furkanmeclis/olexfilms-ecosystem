@@ -35,7 +35,10 @@ const router = vi.hoisted(() => ({ push: vi.fn() }));
 const auth = vi.hoisted(() => ({ user: null as AuthUser | null }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/providers/auth-provider", () => ({ useAuth: () => auth }));
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,

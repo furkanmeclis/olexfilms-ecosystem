@@ -64,9 +64,10 @@ vi.mock("@/features/modules/hooks/use-features", () => ({
 vi.mock("@/features/geo/hooks/use-geo", () => ({
   useProvinces: () => ({ data: [{ id: 34, name: "İstanbul" }] }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock(
   "@/features/performance/services/performance.service",
   async (orig) => ({

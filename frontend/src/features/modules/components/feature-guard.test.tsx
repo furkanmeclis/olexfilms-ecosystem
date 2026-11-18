@@ -16,9 +16,10 @@ vi.mock("@/providers/locale-provider", () => ({
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: () => true, canAny: () => true }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn() };
+  return { toast: t, appToast: t };
+});
 vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () => ({ uuid: "org-1", slug: "bayi-a" }),
 }));

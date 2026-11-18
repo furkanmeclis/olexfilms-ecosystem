@@ -39,7 +39,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/portal/profile",
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
 }));
-vi.mock("@/lib/toast", () => ({ toast: toasts }));
+vi.mock("@/lib/toast", () => ({ toast: toasts, appToast: toasts }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",

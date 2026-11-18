@@ -41,9 +41,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ slug: "olex" }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-vi.mock("@/lib/toast", () => ({
-  appToast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
-}));
+vi.mock("@/lib/toast", () => {
+  const t = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+  return { toast: t, appToast: t };
+});
 
 const JOB = "0b9c4c1e-0000-4000-8000-000000000759";
 
