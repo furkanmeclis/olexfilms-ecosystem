@@ -922,7 +922,7 @@ var trCatalog = map[string]string{
 	"services.parts.body_sag_arka_camurluk": "Sağ arka çamurluk",
 	"services.parts.window_on_cam":          "Ön cam",
 	"services.parts.window_arka_cam":        "Arka cam",
-	"services.parts.window_sunroof":         "Sunroof",
+	"services.parts.window_sunroof":         "Açılır tavan",
 	"services.parts.window_sol_on_kapi":     "Sol ön kapı camı",
 	"services.parts.window_sol_arka_kapi":   "Sol arka kapı camı",
 	"services.parts.window_sag_on_kapi":     "Sağ ön kapı camı",
