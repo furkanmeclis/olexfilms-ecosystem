@@ -1929,6 +1929,7 @@
   },
   "backend-texts": {
     "*": {
+      "backend/internal/emailpreview/preview.go": "Yalnız geliştirici e-posta önizleme aracının örnek içeriği (tr/en/ar); kullanıcıya gitmez.",
       "backend/internal/modules/legacymobile/messages.go": "Eski mobil API uyumluluk katmanı yalnız tr/en döner (eski uygulama sözleşmesi).",
       "backend/internal/platform/certtheme/certtheme.go": "Sertifika kapanış sayfaları yalnız tr/en/de/bg/ru tasarım varlıklarıyla gelir; diğer diller İngilizce sayfayı kullanır (pageLocales)."
     },
