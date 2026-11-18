@@ -133,7 +133,7 @@
   "settings.validation.series_reserved": "TMP seriyası qaralamalar üçün ayrılıb.",
   "settings.validation.series_same": "İki seriya fərqli olmalıdır.",
   "profile.title": "Faktura profili",
-  "profile.complete": "Tam",
+  "profile.complete": "Tamamla",
   "profile.incomplete": "Natamam",
   "profile.missing": "Faktura üçün hələ çatışmır: {{fields}}",
   "profile.id_hint": "VKN və ya TCKN-dən yalnız birini daxil edin.",

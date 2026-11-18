@@ -73,7 +73,7 @@
   "returns.decision_help.scrap": "Hurda sənədi açılır; təsdiqlənəndə vahid silinir.",
   "returns.decision_help.supplier_return": "Vahid təchizatçıya qayıdır və stokdan çıxır.",
   "returns.decisions.restock": "Stoka qaytar",
-  "returns.decisions.scrap": "Hurdaya ayır",
+  "returns.decisions.scrap": "Silinmə",
   "returns.decisions.supplier_return": "Təchizatçıya qaytar",
   "returns.description": "Qaytarmalar yoxlama gözləyir; bu müddətdə sayılmır və istifadə olunmur.",
   "returns.done.restock": "Vahid stoka qayıtdı.",
@@ -119,6 +119,6 @@
   "type.found": "Tapıldı",
   "type.loss": "İtki",
   "type.other": "Digər",
-  "type.scrap": "Hurda",
+  "type.scrap": "Silinmə",
   "type.waste": "Tullantı"
 }

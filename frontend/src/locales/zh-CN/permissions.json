@@ -217,5 +217,6 @@
   "labels.showcase.read": "查看展示页",
   "labels.showcase.write": "编辑展示页",
   "labels.platform.showcase.review": "审核经销商展示页",
-  "groups.dealer_showcase": "经销商展示页"
+  "groups.dealer_showcase": "经销商展示页",
+  "labels.stock.bulk": "批量条码操作"
 }

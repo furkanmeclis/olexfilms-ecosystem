@@ -217,5 +217,6 @@
   "labels.showcase.read": "Προβολή βιτρίνας",
   "labels.showcase.write": "Επεξεργασία βιτρίνας",
   "labels.platform.showcase.review": "Έγκριση βιτρινών αντιπροσώπων",
-  "groups.dealer_showcase": "Βιτρίνα αντιπροσώπου"
+  "groups.dealer_showcase": "Βιτρίνα αντιπροσώπου",
+  "labels.stock.bulk": "Μαζικές ενέργειες barcode"
 }

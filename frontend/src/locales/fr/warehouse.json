@@ -920,7 +920,7 @@
   "reorder.error.days": "Les jours doivent être entre 1 et 3650.",
   "reorder.error.empty": "Saisissez au moins un seuil.",
   "reorder.columns.level": "Niveau",
-  "reorder.columns.thresholds": "Min / point / max",
+  "reorder.columns.thresholds": "Min / seuil / max",
   "reorder.columns.days_left": "Jours restants",
   "reorder.columns.suggested": "Commande suggérée",
   "reorder.level.ok": "Suffisant",

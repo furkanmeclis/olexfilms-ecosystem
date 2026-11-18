@@ -78,7 +78,7 @@
   "apple.form.register_enabled": "Να επιτρέπεται αυτοεγγραφή με Apple",
   "apple.form.register_enabled_hint": "Απαιτεί επίσης γενική εγγραφή στις ρυθμίσεις σύνδεσης.",
   "apple.form.client_id": "Services ID",
-  "apple.form.client_id_hint": "Apple Services ID (client ID).",
+  "apple.form.client_id_hint": "Apple Services ID (αναγνωριστικό client).",
   "apple.form.client_secret": "Μυστικό πελάτη (JWT)",
   "apple.form.client_secret_hint": "Αφήστε κενό για να διατηρηθεί το τρέχον μυστικό. Δημιουργήστε το με τα εργαλεία κλειδιών της Apple.",
   "apple.form.secret_configured": "Ρυθμισμένο — αφήστε κενό για διατήρηση",

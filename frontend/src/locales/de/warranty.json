@@ -127,7 +127,7 @@
   "claim_reports.columns.part": "Teil",
   "claim_reports.columns.part_count": "Anzahl Teile",
   "claim_reports.org_type.center": "Zentrale",
-  "claim_reports.org_type.distributor": "Distributor",
+  "claim_reports.org_type.distributor": "Vertriebspartner",
   "claim_reports.org_type.dealer": "Händler",
   "claim_reports.export.format": "Exportformat",
   "claim_reports.export.button": "Exportieren",

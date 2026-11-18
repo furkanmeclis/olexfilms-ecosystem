@@ -107,7 +107,7 @@
   "whatsapp.connect.start": "Sessiyanı başlat / QR göstər",
   "whatsapp.connect.qr_alt": "WhatsApp QR kodu",
   "whatsapp.connect.waiting": "QR kod gözlənilir…",
-  "whatsapp.connect.connected": "Telefon bağlandı.",
+  "whatsapp.connect.connected": "Telefon qoşulub.",
   "whatsapp.pair.title": "Telefon nömrəsi ilə cütləşdir",
   "whatsapp.pair.hint": "QR koda alternativ: nömrəni daxil edin və kodu WhatsApp > Bağlı cihazlar > Telefon nömrəsi ilə bağla bölməsində yazın.",
   "whatsapp.pair.phone": "Telefon nömrəsi",

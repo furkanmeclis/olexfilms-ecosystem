@@ -20,7 +20,7 @@
   "sources.manual": "Əl ilə qeyd",
   "sources.order": "Sifariş",
   "sources.service": "Xidmət",
-  "sources.transfer": "Transfer",
+  "sources.transfer": "Köçürmə",
   "sources.opening_balance": "Açılış qalığı",
   "sources.account_opening": "Hesabın açılışı",
   "sources.staff_payment": "Personal ödənişi",
@@ -279,7 +279,7 @@
   "entry_detail.source_record": "Mənbə qeydi",
   "entry_detail.source_ref": "{{source}} #{{id}}",
   "entry_detail.counterparty": "Qarşı tərəf təşkilatı",
-  "entry_detail.revision": "Revizyon",
+  "entry_detail.revision": "Reviziya",
   "entry_detail.reversal_of": "Ləğv etdiyi qeyd",
   "entry_detail.reversed_by": "Ləğv edən qeyd"
 }
