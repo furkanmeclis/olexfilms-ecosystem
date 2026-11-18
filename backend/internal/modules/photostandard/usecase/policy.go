@@ -288,7 +288,7 @@ var intakeHeadings = map[string]string{
 	"de": "Fahrzeugannahme-Fotos", "el": "Φωτογραφίες παραλαβής οχήματος", "uk": "Фото приймання автомобіля",
 	"ru": "Фото приёмки автомобиля", "fr": "Photos de réception du véhicule", "es": "Fotos de recepción del vehículo",
 	"it": "Foto di accettazione del veicolo", "zh": "车辆接收照片", "az": "Avtomobilin qəbul fotoşəkilləri",
-	"ar": "صور استلام المركبة",
+	"ar": "صور استلام المركبة", "fa": "عکس\u200cهای پذیرش خودرو",
 }
 
 func intakeHeading(locale string) string {

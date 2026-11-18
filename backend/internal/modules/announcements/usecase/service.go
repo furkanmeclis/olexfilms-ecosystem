@@ -222,7 +222,7 @@ func textPtr(v pgtype.Text) *string {
 func normalizeLocale(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	switch v {
-	case "tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "zh-CN", "az", "ar":
+	case "tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "zh-CN", "az", "ar", "fa":
 		return v, nil
 	case "zh_CN":
 		return "zh-CN", nil

@@ -8,8 +8,8 @@ import (
 )
 
 func TestServiceSubscriptionTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 13 {
-		t.Fatalf("locales = %d, want 13", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 14 {
+		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
 	}
 	for _, code := range serviceSubscriptionEvents {
 		ev, ok := Lookup(code)

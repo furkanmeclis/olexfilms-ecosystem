@@ -51,6 +51,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{item_name}} xidməti {{organization_name}} üçün aktivləşdirildi. Bitmə tarixi: {{ends_on}}."},
 		"ar": {"تم تعيين اشتراك خدمة: {{item_name}}",
 			"تم تفعيل خدمة {{item_name}} لـ {{organization_name}}. تاريخ الانتهاء: {{ends_on}}."},
+		"fa": {"اشتراک خدمت تخصیص یافت: {{item_name}}",
+			"خدمت {{item_name}} برای {{organization_name}} فعال شد. تاریخ پایان: {{ends_on}}."},
 	},
 	EventServiceSubscriptionCancelRequested: {
 		"tr": {"Erken iptal talebi: {{item_name}}",
@@ -79,6 +81,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{organization_name}} {{item_name}} abunəliyinin vaxtından əvvəl ləğvini tələb etdi. Səbəb: {{reason}}"},
 		"ar": {"طلب إلغاء مبكر: {{item_name}}",
 			"طلب {{organization_name}} الإلغاء المبكر لاشتراك {{item_name}}. السبب: {{reason}}"},
+		"fa": {"درخواست لغو زودهنگام: {{item_name}}",
+			"{{organization_name}} درخواست لغو زودهنگام اشتراک {{item_name}} را داده است. دلیل: {{reason}}"},
 	},
 	EventServiceSubscriptionCancelled: {
 		"tr": {"Abonelik iptal edildi: {{item_name}}",
@@ -107,6 +111,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{item_name}} abunəliyi ləğv edildi. Ləğv haqqı: {{cancellation_fee}} {{currency}}."},
 		"ar": {"تم إلغاء الاشتراك: {{item_name}}",
 			"تم إلغاء اشتراك {{item_name}}. رسوم الإلغاء: {{cancellation_fee}} {{currency}}."},
+		"fa": {"اشتراک لغو شد: {{item_name}}",
+			"اشتراک {{item_name}} لغو شد. جریمه لغو: {{cancellation_fee}} {{currency}}."},
 	},
 	EventServiceSubscriptionCancelRejected: {
 		"tr": {"İptal talebi reddedildi: {{item_name}}",
@@ -135,6 +141,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{item_name}} abunəliyinin vaxtından əvvəl ləğv sorğusu rədd edildi."},
 		"ar": {"تم رفض طلب الإلغاء: {{item_name}}",
 			"تم رفض طلب الإلغاء المبكر لاشتراك {{item_name}}."},
+		"fa": {"درخواست لغو رد شد: {{item_name}}",
+			"درخواست لغو زودهنگام اشتراک {{item_name}} رد شد."},
 	},
 	EventServiceSubscriptionExpired: {
 		"tr": {"Abonelik sona erdi: {{item_name}}",
@@ -163,6 +171,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{organization_name}} üçün {{item_name}} abunəliyi {{ends_on}} tarixində başa çatdı."},
 		"ar": {"انتهى الاشتراك: {{item_name}}",
 			"انتهى اشتراك {{item_name}} الخاص بـ {{organization_name}} في {{ends_on}}."},
+		"fa": {"اشتراک به پایان رسید: {{item_name}}",
+			"اشتراک {{item_name}} مربوط به {{organization_name}} در تاریخ {{ends_on}} به پایان رسید."},
 	},
 	EventServiceSubscriptionExpiring: {
 		"tr": {"Abonelik {{days_before}} gün içinde bitiyor: {{item_name}}",
@@ -191,6 +201,8 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 			"{{organization_name}} üçün {{item_name}} abunəliyi {{ends_on}} tarixində başa çatacaq."},
 		"ar": {"ينتهي الاشتراك خلال {{days_before}} يومًا: {{item_name}}",
 			"ينتهي اشتراك {{item_name}} الخاص بـ {{organization_name}} في {{ends_on}}."},
+		"fa": {"اشتراک ظرف {{days_before}} روز به پایان می\u200cرسد: {{item_name}}",
+			"اشتراک {{item_name}} مربوط به {{organization_name}} در تاریخ {{ends_on}} به پایان می\u200cرسد."},
 	},
 }
 

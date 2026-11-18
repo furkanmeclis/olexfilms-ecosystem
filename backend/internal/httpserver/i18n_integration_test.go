@@ -36,7 +36,7 @@ func (it *itest) meLocale(method, path, host, bearer string, body any) meLocale 
 }
 
 // TEC-136: users.locale NULL inherits the org; PATCH normalizes zh_CN and
-// rejects unknown codes / timezones with 422; DB CHECKs hold the 13 codes.
+// rejects unknown codes / timezones with 422; DB CHECKs hold the 14 codes.
 func TestIntegrationLocaleTimezone(t *testing.T) {
 	it := newIntegration(t)
 	ctx := context.Background()

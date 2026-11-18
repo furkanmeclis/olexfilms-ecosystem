@@ -123,6 +123,16 @@ var reportTexts = map[i18n.Locale]reportLabels{
 		Product: "المنتج", Items: "البنود", Pieces: "القطع", Meters: "الأمتار", Ends: "ينتهي في",
 		ServiceAmount: "مبلغ الخدمات", Payments: "المدفوعات", Balance: "الرصيد", Empty: "لا توجد سجلات في هذه الفترة.",
 	},
+	i18n.LocaleFA: {
+		Months:  [12]string{"ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن", "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"},
+		Quarter: "فصل {q} سال {year}", DateLayout: "2006-01-02",
+		Dealer: "نمایندگی", Vehicle: "خودرو", Plate: "پلاک", Services: "سرویس\u200cها", Part: "قطعه", Count: "تعداد",
+		Product: "محصول", Items: "اقلام", Pieces: "عدد", Meters: "متراژ", Ends: "پایان",
+		ServiceAmount: "مبلغ سرویس\u200cها", Payments: "پرداخت\u200cها", Balance: "مانده", Empty: "در این دوره رکوردی وجود ندارد.",
+		MailSubject: "گزارش ناوگان {fleet}: {period}",
+		MailBody:    "سلام،\n\nگزارش ناوگان {fleet} برای دوره {period} پیوست است.",
+		MailLink:    "فایل گزارش برای پیوست ایمیل بیش از حد بزرگ است. می\u200cتوانید آن را از پورتال دانلود کنید: {url}",
+	},
 }
 
 // reportLabelsFor returns the labels of a report locale (fleet_reports

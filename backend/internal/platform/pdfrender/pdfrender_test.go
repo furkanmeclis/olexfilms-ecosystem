@@ -248,6 +248,23 @@ func TestDocumentCSPAndDirection(t *testing.T) {
 		t.Fatal("ar document must embed Noto Sans Arabic")
 	}
 
+	if strings.Contains(ar, `"Vazirmatn";font-style`) {
+		t.Fatal("ar document must not embed Vazirmatn")
+	}
+
+	// TEC-1233: Persian is rtl, Vazirmatn first with Noto Sans Arabic as the fallback.
+	fa := Document{Lang: "fa-IR", Title: "سرویس", Body: "<p>سلام</p>"}.HTML()
+	if !strings.Contains(fa, `<html lang="fa-IR" dir="rtl">`) {
+		t.Fatal("fa document must be rtl")
+	}
+	if !strings.Contains(fa, `font-family:"Vazirmatn";font-style:normal;font-weight:700`) ||
+		!strings.Contains(fa, `"Noto Sans Arabic";font-style`) {
+		t.Fatal("fa document must embed Vazirmatn and Noto Sans Arabic")
+	}
+	if !strings.Contains(fa, `"Noto Sans","Vazirmatn","Noto Sans Arabic"`) {
+		t.Fatal("fa font stack")
+	}
+
 	// Arabic text in an LTR document still pulls the Arabic faces.
 	mixed := Document{Lang: "en", Body: "<p>Customer: محمد</p>"}.HTML()
 	if !strings.Contains(mixed, `"Noto Sans Arabic";font-style`) {

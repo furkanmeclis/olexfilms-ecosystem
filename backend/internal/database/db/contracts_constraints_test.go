@@ -120,7 +120,7 @@ func TestContractTemplateConstraints(t *testing.T) {
 		return err
 	})
 
-	// Locales: one row per (template, locale), 13 locales only; the upsert
+	// Locales: one row per (template, locale), 14 locales only; the upsert
 	// bumps the version.
 	loc := db.UpsertContractTemplateLocaleParams{
 		TemplateID: first.ID, OrganizationID: first.OrganizationID, BrandID: first.BrandID,

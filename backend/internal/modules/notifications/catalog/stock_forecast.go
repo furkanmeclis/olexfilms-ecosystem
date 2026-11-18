@@ -20,6 +20,7 @@ var stockForecastLowTexts = map[string]localizedText{
 	"zh-CN": {"库存偏低：{{product_name}}", "{{organization_name}} 的 {{product_name}} 库存还可用 {{days_left}} 天（{{status}}）。"},
 	"az":    {"Stok azalır: {{product_name}}", "{{organization_name}} üzrə {{product_name}} stoku {{days_left}} gün qalıb ({{status}})."},
 	"ar":    {"انخفاض المخزون: {{product_name}}", "تبقى مخزون {{product_name}} لدى {{organization_name}} لمدة {{days_left}} يومًا ({{status}})."},
+	"fa":    {"موجودی رو به اتمام است: {{product_name}}", "موجودی {{product_name}} در {{organization_name}} برای {{days_left}} روز دیگر کافی است ({{status}})."},
 }
 
 func stockForecastLowTemplates() []DefaultTemplate {

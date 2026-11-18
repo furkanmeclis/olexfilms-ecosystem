@@ -7,7 +7,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // center's members holding platform.showcase.review; the decision
 // (approved and published, or rejected with a note) reaches the owners of
 // the dealer. Both sides are panel users, so the defaults are in-app and
-// e-mail. Default templates ship in all 13 locales and are seeded with
+// e-mail. Default templates ship in all 14 locales and are seeded with
 // InsertNotificationTemplateIfMissing by SyncCatalog (no migration).
 const (
 	EventShowcaseReviewRequested = "SHOWCASE_REVIEW_REQUESTED"
@@ -49,6 +49,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"{{organization_name}} diler vitrinini təsdiqinizə təqdim etdi. Zəhmət olmasa paneldə nəzərdən keçirib təsdiqləyin və ya rədd edin."},
 		"ar": {"واجهة عرض بانتظار المراجعة: {{organization_name}}",
 			"قدّمت {{organization_name}} واجهة عرض الوكيل للحصول على موافقتك. يرجى مراجعتها في اللوحة والموافقة عليها أو رفضها."},
+		"fa": {"ویترین در انتظار بررسی: {{organization_name}}",
+			"{{organization_name}} ویترین نمایندگی خود را برای تأیید شما ارسال کرده است. لطفاً آن را در پنل بررسی کنید و تأیید یا رد کنید."},
 	},
 	EventShowcaseApproved: {
 		"tr": {"Vitrininiz onaylandı ve yayında",
@@ -77,6 +79,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"{{organization_name}} vitrini mərkəz tərəfindən təsdiqləndi və artıq açıq diler səhifənizdə yayımdadır."},
 		"ar": {"تمت الموافقة على واجهة العرض ونشرها",
 			"وافق المركز على واجهة عرض {{organization_name}} وأصبحت منشورة الآن على صفحة الوكيل العامة."},
+		"fa": {"ویترین شما تأیید و منتشر شد",
+			"ویترین {{organization_name}} از سوی مرکز تأیید شد و اکنون در صفحه عمومی نمایندگی شما منتشر شده است."},
 	},
 	EventShowcaseRejected: {
 		"tr": {"Vitrininiz reddedildi",
@@ -105,6 +109,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"{{organization_name}} vitrini mərkəz tərəfindən rədd edildi. Qeyd: {{reason}}. Onu redaktə edib yenidən təqdim edə bilərsiniz."},
 		"ar": {"تم رفض واجهة العرض",
 			"رفض المركز واجهة عرض {{organization_name}}. ملاحظة: {{reason}}. يمكنك تعديلها وتقديمها مرة أخرى."},
+		"fa": {"ویترین شما رد شد",
+			"ویترین {{organization_name}} از سوی مرکز رد شد. یادداشت: {{reason}}. می\u200cتوانید آن را ویرایش و دوباره ارسال کنید."},
 	},
 }
 

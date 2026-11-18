@@ -7,7 +7,7 @@ import (
 )
 
 func TestLocalizedSamplesCoverBatchB(t *testing.T) {
-	locales := []i18n.Locale{i18n.LocaleBG, i18n.LocaleEL, i18n.LocaleZhCN, i18n.LocaleAZ, i18n.LocaleAR}
+	locales := []i18n.Locale{i18n.LocaleBG, i18n.LocaleEL, i18n.LocaleZhCN, i18n.LocaleAZ, i18n.LocaleAR, i18n.LocaleFA}
 	for key, byLocale := range localizedSamples {
 		for _, l := range locales {
 			if byLocale[l] == "" {
@@ -16,7 +16,7 @@ func TestLocalizedSamplesCoverBatchB(t *testing.T) {
 		}
 	}
 	todo, _ := Lookup("todo.reminder")
-	cases := map[string]string{"tr": "15 dakika sonra", "en": "in 15 minutes", "ar": "بعد 15 دقيقة", "zh-CN": "15分钟后"}
+	cases := map[string]string{"tr": "15 dakika sonra", "en": "in 15 minutes", "ar": "بعد 15 دقيقة", "fa": "15 دقیقه دیگر", "zh-CN": "15分钟后"}
 	for loc, want := range cases {
 		if got := todo.SampleVars(loc)["due_in"]; got != want {
 			t.Errorf("%s due_in = %q, want %q", loc, got, want)

@@ -40,6 +40,7 @@ var serviceReviewRequestInappTexts = map[string]localizedText{
 	"zh-CN": {"请评价我们的服务", "您可以评价 {{organization_name}} 为车辆 {{plate}} 提供的服务。"},
 	"az":    {"Xidmətimizi qiymətləndirərdiniz?", "{{organization_name}} tərəfindən {{plate}} avtomobilinə göstərilən xidməti qiymətləndirə bilərsiniz."},
 	"ar":    {"كيف كانت خدمتنا؟", "يمكنك تقييم الخدمة التي قدمتها {{organization_name}} للمركبة {{plate}}."},
+	"fa":    {"از خدمات ما راضی بودید؟", "می\u200cتوانید سرویسی را که {{organization_name}} روی {{plate}} انجام داده است ارزیابی کنید."},
 }
 
 var customerWelcomeInappTexts = map[string]localizedText{
@@ -56,6 +57,7 @@ var customerWelcomeInappTexts = map[string]localizedText{
 	"zh-CN": {"欢迎", "您好 {{customer_name}}，{{organization_name}} 已为您创建客户账户。您可以在这里查看您的车辆、服务和质保。"},
 	"az":    {"Xoş gəlmisiniz", "Salam {{customer_name}}, {{organization_name}} müştəri hesabınızı yaratdı. Avtomobillərinizi, xidmətlərinizi və zəmanətlərinizi burada izləyə bilərsiniz."},
 	"ar":    {"مرحبًا بك", "مرحبًا {{customer_name}}، أنشأت {{organization_name}} حساب العميل الخاص بك. يمكنك هنا متابعة مركباتك وخدماتك وضماناتك."},
+	"fa":    {"خوش آمدید", "سلام {{customer_name}}، {{organization_name}} حساب مشتری شما را ایجاد کرده است. می\u200cتوانید خودروها، سرویس\u200cها و گارانتی\u200cهای خود را از اینجا پیگیری کنید."},
 }
 
 var quoteSentInappTexts = map[string]localizedText{
@@ -72,4 +74,5 @@ var quoteSentInappTexts = map[string]localizedText{
 	"zh-CN": {"您的报价已准备好", "{{organization_name}} 的报价已准备好。总计：{{total_amount}}。打开查看详情。"},
 	"az":    {"Təklifiniz hazırdır", "{{organization_name}} təklifiniz hazırdır. Cəmi: {{total_amount}}. Təfərrüatlara baxmaq üçün açın."},
 	"ar":    {"عرض السعر جاهز", "عرض السعر من {{organization_name}} جاهز. الإجمالي: {{total_amount}}. افتحه لعرض التفاصيل."},
+	"fa":    {"پیش\u200cفاکتور شما آماده است", "پیش\u200cفاکتور شما از {{organization_name}} آماده است. جمع کل: {{total_amount}}. برای دیدن جزئیات آن را باز کنید."},
 }

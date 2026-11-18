@@ -337,6 +337,7 @@ var priceListLabelSet = map[string]priceListLabels{
 	"zh_CN": {"建议零售价目表", "货号", "产品", "价格", "下一价格", "生效日期", "所有国家", "2006-01-02"},
 	"az":    {"Tövsiyə olunan satış qiymətləri siyahısı", "Məhsul kodu", "Məhsul", "Qiymət", "Növbəti qiymət", "Qüvvəyə minir", "Bütün ölkələr", "02.01.2006"},
 	"ar":    {"قائمة أسعار البيع الموصى بها", "رمز المنتج", "المنتج", "السعر", "السعر التالي", "اعتبارًا من", "جميع الدول", "2006-01-02"},
+	"fa":    {"فهرست قیمت پیشنهادی خرده\u200cفروشی", "SKU", "محصول", "قیمت", "قیمت بعدی", "تاریخ اعمال", "همه کشورها", "2006-01-02"},
 }
 
 func priceListLabelsFor(lang string) priceListLabels {

@@ -26,6 +26,7 @@ var appointmentCreatedTexts = map[string]localizedText{
 	"zh-CN": {"预约已创建", "您好，您在 {{organization_name}} 的预约时间为 {{starts_at}}。车辆：{{plate}}"},
 	"az":    {"Görüş yaradıldı", "Salam, {{organization_name}} görüşünüz {{starts_at}} vaxtına təyin edildi. Avtomobil: {{plate}}"},
 	"ar":    {"تم إنشاء الموعد", "مرحبًا، تم تحديد موعدك لدى {{organization_name}} في {{starts_at}}. المركبة: {{plate}}"},
+	"fa":    {"نوبت ثبت شد", "سلام، نوبت شما نزد {{organization_name}} برای {{starts_at}} ثبت شد. خودرو: {{plate}}"},
 }
 
 var appointmentCancelledTexts = map[string]localizedText{
@@ -42,6 +43,7 @@ var appointmentCancelledTexts = map[string]localizedText{
 	"zh-CN": {"预约已取消", "您好，您在 {{organization_name}} 的预约已取消。时间：{{starts_at}} 车辆：{{plate}}"},
 	"az":    {"Görüş ləğv edildi", "Salam, {{organization_name}} görüşünüz ləğv edildi. Vaxt: {{starts_at}} Avtomobil: {{plate}}"},
 	"ar":    {"تم إلغاء الموعد", "مرحبًا، تم إلغاء موعدك لدى {{organization_name}}. الوقت: {{starts_at}} المركبة: {{plate}}"},
+	"fa":    {"نوبت لغو شد", "سلام، نوبت شما نزد {{organization_name}} لغو شد. زمان: {{starts_at}} خودرو: {{plate}}"},
 }
 
 var appointmentReminderTexts = map[string]localizedText{
@@ -58,6 +60,7 @@ var appointmentReminderTexts = map[string]localizedText{
 	"zh-CN": {"预约提醒", "您好，您在 {{organization_name}} 的预约即将开始：{{starts_at}}。车辆：{{plate}}"},
 	"az":    {"Görüş xatırlatması", "Salam, {{organization_name}} görüşünüz yaxınlaşır: {{starts_at}}. Avtomobil: {{plate}}"},
 	"ar":    {"تذكير بالموعد", "مرحبًا، موعدك لدى {{organization_name}} يقترب: {{starts_at}}. المركبة: {{plate}}"},
+	"fa":    {"یادآوری نوبت", "سلام، نوبت شما نزد {{organization_name}} در {{starts_at}} نزدیک است. خودرو: {{plate}}"},
 }
 
 func appointmentTemplates(texts map[string]localizedText) []DefaultTemplate {

@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Center task notifications (TEC-221, F1-11b). tasks.assigned (the task use
 // case) and tasks.due_soon / tasks.overdue (tasks:due_scan) carry the
 // recipients in notify_user_ids; these catalog events reach center members,
-// so the defaults are in-app and e-mail. Default templates ship in all 13
+// so the defaults are in-app and e-mail. Default templates ship in all 14
 // locales and are seeded with InsertNotificationTemplateIfMissing by
 // SyncCatalog (no migration).
 const (
@@ -48,6 +48,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"{{subject_name}} ilə bağlı \"{{task_title}}\" tapşırığı sizə təyin edildi. Ətraflı məlumat üçün paneli açın."},
 		"ar": {"تم إسناد مهمة إليك: {{task_title}}",
 			"تم إسناد المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} إليك. افتح اللوحة للاطلاع على التفاصيل."},
+		"fa": {"وظیفه\u200cای به شما محول شد: {{task_title}}",
+			"وظیفه «{{task_title}}» درباره {{subject_name}} به شما محول شد. برای جزئیات، پنل را باز کنید."},
 	},
 	EventTaskDueSoon: {
 		"tr": {"Görevin son tarihi yaklaşıyor: {{task_title}}",
@@ -76,6 +78,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"{{subject_name}} ilə bağlı \"{{task_title}}\" tapşırığının son tarixi {{due_date}}. Zəhmət olmasa vaxtında tamamlayın."},
 		"ar": {"اقترب موعد استحقاق المهمة: {{task_title}}",
 			"موعد استحقاق المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} هو {{due_date}}. يرجى إنجازها في الوقت المحدد."},
+		"fa": {"سررسید وظیفه نزدیک است: {{task_title}}",
+			"سررسید وظیفه «{{task_title}}» درباره {{subject_name}}، {{due_date}} است. لطفاً آن را به\u200cموقع انجام دهید."},
 	},
 	EventTaskOverdue: {
 		"tr": {"Görevin son tarihi geçti: {{task_title}}",
@@ -104,6 +108,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"{{subject_name}} ilə bağlı \"{{task_title}}\" tapşırığının son tarixi ({{due_date}}) keçib və tapşırıq hələ açıqdır."},
 		"ar": {"تأخرت المهمة: {{task_title}}",
 			"كان موعد استحقاق المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} هو {{due_date}} وما زالت مفتوحة."},
+		"fa": {"سررسید وظیفه گذشته است: {{task_title}}",
+			"سررسید وظیفه «{{task_title}}» درباره {{subject_name}}، {{due_date}} بود و هنوز باز است."},
 	},
 }
 

@@ -3,7 +3,7 @@ package i18n
 // ModuleDescription returns the one-sentence description of a module (TEC-508,
 // GET /v1/features) in the locale, falling back to en, then to "". Keys are
 // the module keys of the features catalog; features.TestModuleDescriptions
-// checks that every module has a description in all 13 locales.
+// checks that every module has a description in every supported locale.
 func ModuleDescription(locale Locale, key string) string {
 	if v := moduleDescriptions[locale][key]; v != "" {
 		return v
@@ -518,5 +518,44 @@ var moduleDescriptions = map[Locale]map[string]string{
 		"photo_standard":    "زوايا الصور الإلزامية عند استلام المركبة.",
 		"e_invoice":         "الفواتير الإلكترونية وفواتير الأرشيف الإلكتروني وفق UBL-TR (تركيا).",
 		"short_url":         "روابط مختصرة لرسائل العملاء.",
+	},
+	LocaleFA: {
+		"organizations":     "درخت سازمانی، اعضا، نقش\u200cها و صفحه «ویژگی\u200cها».",
+		"regions":           "مناطق توزیع\u200cکنندگان و نمایندگی\u200cها و تعریف مناطق.",
+		"catalog":           "کاتالوگ محصولات، دسته\u200cبندی\u200cها، بارکدها و فهرست قیمت\u200cها.",
+		"stock":             "واحدهای موجودی، جابه\u200cجایی\u200cها و شمارش\u200cها.",
+		"warehouse":         "مکان\u200cهای انبار، دریافت کالا و ارسال.",
+		"orders":            "سفارش\u200cها میان مرکز، توزیع\u200cکنندگان و نمایندگی\u200cها.",
+		"services":          "سوابق سرویس: پذیرش خودرو، اجرا، تکمیل و گارانتی.",
+		"customers":         "مشتریان و خودروهایشان (CRM).",
+		"notifications":     "مرکز اعلان\u200cها: درون\u200cبرنامه\u200cای، ایمیل، پوش، پیامک و WhatsApp.",
+		"accounting":        "حساب\u200cهای جاری، دریافت، پرداخت و امور مالی.",
+		"search":            "جست\u200cوجوی سراسری در همه رکوردها.",
+		"import_export":     "ورود و خروج فهرست\u200cها (CSV، XLSX، PDF).",
+		"tasks":             "وظایف و پیگیری\u200cها.",
+		"system_settings":   "تنظیمات سیستم، ظاهر برند و یکپارچه\u200cسازی\u200cها.",
+		"intake_contracts":  "قراردادهای پذیرش خودرو با امضای دیجیتال.",
+		"measurements":      "اندازه\u200cگیری ضخامت رنگ و گزارش\u200cهای اندازه\u200cگیری.",
+		"leads":             "مشتریان بالقوه و پیش\u200cفاکتورها (قیف فروش).",
+		"appointments":      "تقویم نوبت\u200cها و یادآوری\u200cها.",
+		"announcements":     "اطلاعیه\u200cها و مرکز اسناد.",
+		"warranty_claims":   "درخواست\u200cهای گارانتی و رسیدگی به آن\u200cها.",
+		"dealer_accounting": "پیگیری درآمد و هزینه نمایندگی و پرداخت\u200cهای کارکنان.",
+		"service_catalog":   "خدمات غیرکالایی مرکز و اشتراک بسته\u200cهای ماژول.",
+		"dealer_transfers":  "انتقال موجودی میان نمایندگی\u200cها.",
+		"reviews":           "ارزیابی مشتریان پس از سرویس.",
+		"ai_assistant":      "دستیار هوش مصنوعی که داده\u200cهای شما را می\u200cخواند، به پرسش\u200cها پاسخ می\u200cدهد و اقدام پیشنهاد می\u200cکند.",
+		"whatsapp_gateway":  "پیام\u200cرسانی WhatsApp از طریق شماره مرکز.",
+		"mcp":               "دسترسی به سرور MCP برای کلاینت\u200cهای هوش مصنوعی بیرونی.",
+		"dealer_showcase":   "صفحه عمومی نمایندگی: خدمات، گالری، ساعات کاری، امتیاز Google و فرم درخواست پیش\u200cفاکتور.",
+		"fleet":             "حساب\u200cهای ناوگان: خودروها، برنامه\u200cهای سرویس گروهی و گزارش\u200cهای دوره\u200cای.",
+		"certificates":      "گواهی\u200cنامه\u200cهای کارکنان و سیاست سرویس بدون گواهی\u200cنامه.",
+		"stock_forecast":    "پیش\u200cبینی اتمام موجودی و پیشنهاد سفارش.",
+		"performance":       "شاخص\u200cهای عملکرد، اهداف، رتبه\u200cبندی\u200cها و پاداش\u200cها.",
+		"efficiency":        "بهره\u200cوری مصرف فیلم و تحلیل پرت.",
+		"campaigns":         "کمپین\u200cهای مشتریان از طریق پیامک، WhatsApp و ایمیل.",
+		"photo_standard":    "زاویه\u200cهای عکس الزامی در پذیرش خودرو.",
+		"e_invoice":         "فاکتور الکترونیکی و e-Arşiv بر اساس UBL-TR (ترکیه).",
+		"short_url":         "لینک\u200cهای کوتاه برای پیام\u200cهای مشتریان.",
 	},
 }

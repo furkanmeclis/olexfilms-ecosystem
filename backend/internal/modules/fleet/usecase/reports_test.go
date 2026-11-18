@@ -603,10 +603,10 @@ func TestDueReportPeriod(t *testing.T) {
 	}
 }
 
-// Acceptance (TEC-476): the report labels and e-mail texts exist in all 13
+// Acceptance (TEC-476): the report labels and e-mail texts exist in all 14
 // languages with no empty key; ar is Arabic script.
 func TestReportLabelsEveryLocale(t *testing.T) {
-	if len(i18n.Supported) != 13 {
+	if len(i18n.Supported) != 14 {
 		t.Fatalf("locales = %d", len(i18n.Supported))
 	}
 	for _, l := range i18n.Supported {

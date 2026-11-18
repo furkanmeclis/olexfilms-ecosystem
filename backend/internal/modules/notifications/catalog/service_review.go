@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // service:review_request task writes service.review_requested once per
 // service; the bus handler dispatches this event to the service customer
 // over WhatsApp (wuzapi, K16/K21). form_url is the platform review form and
-// review_url is the optional dealer Google link. Default templates ship in all 13 locales and are
+// review_url is the optional dealer Google link. Default templates ship in all 14 locales and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const EventServiceReviewRequest = "SERVICE_REVIEW_REQUEST"
 
@@ -42,6 +42,8 @@ var serviceReviewRequestTexts = map[string]localizedText{
 		"Salam, {{organization_name}} xidmətini buradan qiymətləndirə bilərsiniz: {{form_url}} Google rəy linki: {{review_url}} Təşəkkür edirik!"},
 	"ar": {"كيف كانت خدمتنا؟",
 		"مرحبًا، يمكنك تقييم خدمة {{organization_name}} من هنا: {{form_url}} رابط تقييم Google: {{review_url}} شكرًا لك!"},
+	"fa": {"از خدمات ما راضی بودید؟",
+		"سلام، می\u200cتوانید خدمات {{organization_name}} را از اینجا ارزیابی کنید: {{form_url}} لینک نظر ما در Google: {{review_url}} سپاسگزاریم!"},
 }
 
 func serviceReviewTemplates() []DefaultTemplate {

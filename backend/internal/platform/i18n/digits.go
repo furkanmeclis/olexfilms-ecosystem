@@ -9,7 +9,7 @@ import "strings"
 // digits is stored as Latin (LatinDigits).
 
 // Digits writes the ASCII digits of a formatted value in the locale's
-// digits: Arabic-Indic for ar, unchanged otherwise.
+// digits: Arabic-Indic for ar, unchanged otherwise (fa included, see above).
 func Digits(locale Locale, s string) string {
 	if locale != LocaleAR || !strings.ContainsAny(s, "0123456789") {
 		return s

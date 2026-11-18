@@ -9,7 +9,7 @@ import (
 )
 
 // TEC-461: the card is rendered in the conversation language; a language
-// outside the 13 locales (or none) gets en, not the tr default.
+// outside the 14 locales (or none) gets en, not the tr default.
 func TestCardTextLocale(t *testing.T) {
 	card := aiusecase.Card{ToolName: "create_appointment", Preview: aitools.Preview{
 		Action: "create_appointment", Summary: "stored summary",

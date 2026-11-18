@@ -26,6 +26,7 @@ var quoteSentTexts = map[string]localizedText{
 	"zh-CN": {"您的报价已准备好", "您好 {{recipient_name}}，{{organization_name}} 的报价已准备好：{{quote_url}} 总计：{{total_amount}}"},
 	"az":    {"Təklifiniz hazırdır", "Salam {{recipient_name}}, {{organization_name}} təklifiniz hazırdır: {{quote_url}} Cəmi: {{total_amount}}"},
 	"ar":    {"عرض السعر جاهز", "مرحبًا {{recipient_name}}، عرض السعر من {{organization_name}} جاهز: {{quote_url}} الإجمالي: {{total_amount}}"},
+	"fa":    {"پیش\u200cفاکتور شما آماده است", "سلام {{recipient_name}}، پیش\u200cفاکتور شما از {{organization_name}} آماده است: {{quote_url}} جمع کل: {{total_amount}}"},
 }
 
 func quoteSentTemplates() []DefaultTemplate {

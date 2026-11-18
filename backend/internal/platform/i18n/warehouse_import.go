@@ -444,6 +444,40 @@ func init() {
 	} {
 		catalogs[LocaleAR][key] = value
 	}
+	for key, value := range map[string]string{
+		"warehouse_import.room_code":                            "کد اتاق",
+		"warehouse_import.room_name":                            "نام اتاق",
+		"warehouse_import.aisle_code":                           "کد راهرو",
+		"warehouse_import.shelf_code":                           "کد قفسه",
+		"warehouse_import.bin_code":                             "کد خانه",
+		"warehouse_import.name":                                 "نام پایین\u200cترین مکان",
+		"warehouse_import.active":                               "فعال",
+		"warehouse_import.title":                                "ایجاد مکان\u200cها از Excel",
+		"warehouse_import.confirm":                              "{{rooms}} اتاق، {{aisles}} راهرو، {{shelves}} قفسه و {{bins}} خانه ایجاد می\u200cشود؛ {{existing}} ردیف از قبل وجود دارد و نادیده گرفته می\u200cشود.",
+		"warehouse_import.confirm_action":                       "ایجاد مکان\u200cها",
+		"warehouse_import.print_labels":                         "چاپ برچسب\u200cها",
+		"warehouse_import.hint.room_code":                       "کد اتاق الزامی است؛ A-Z، 0-9 یا خط زیر، حداکثر 32 نویسه.",
+		"warehouse_import.hint.room_name":                       "اگر خالی باشد کد اتاق استفاده می\u200cشود.",
+		"warehouse_import.hint.aisle_code":                      "کد راهرو؛ قفسه می\u200cتواند مستقیماً در اتاق هم باشد.",
+		"warehouse_import.hint.shelf_code":                      "کد قفسه؛ برای خانه الزامی است.",
+		"warehouse_import.hint.bin_code":                        "کد خانه.",
+		"warehouse_import.hint.name":                            "نام عمیق\u200cترین سطح؛ اگر خالی باشد کد آن استفاده می\u200cشود.",
+		"warehouse_import.hint.active":                          "بله یا خیر؛ پیش\u200cفرض بله است.",
+		"warehouse_import.status.new":                           "جدید",
+		"warehouse_import.status.exists":                        "موجود",
+		"warehouse_import.status.invalid":                       "نامعتبر",
+		"warehouse_import.status.conflict":                      "تعارض",
+		"warehouse_import.status.applied":                       "ایجادشده",
+		"warehouse_import.status.undone":                        "برگشت\u200cخورده",
+		"warehouse_import.status.undo_rejected":                 "برگشت رد شد",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_PATH":   "اتاق و دست\u200cکم یک سطح مکان الزامی است؛ خانه به قفسه نیاز دارد.",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_CODE":   "کد یا نام نامعتبر است.",
+		"warehouse_import.error.LOCATION_IMPORT_DUPLICATE":      "همین مسیر دو بار در فایل آمده است.",
+		"warehouse_import.error.LOCATION_IMPORT_TYPE_CONFLICT":  "این کد از قبل برای نوع مکان دیگری استفاده شده است.",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_ACTIVE": "مقدار «فعال» باید بله یا خیر باشد.",
+	} {
+		catalogs[LocaleFA][key] = value
+	}
 }
 
 func init() {
@@ -473,4 +507,6 @@ func init() {
 	catalogs[LocaleAZ]["imports.template.notes.tenant.warehouse.locations"] = "Hər sətir bir yer yolunu təyin edir. Otaq kodu tələb olunur. Rəf otaqda və ya dəhlizdə ola bilər; xana üçün rəf lazımdır. Mövcud yollar buraxılır."
 	catalogs[LocaleAR]["resources.tenant.warehouse.locations"] = "مواقع المستودع"
 	catalogs[LocaleAR]["imports.template.notes.tenant.warehouse.locations"] = "يحدد كل صف مسار موقع. رمز الغرفة مطلوب. يمكن أن يكون الرف في غرفة أو ممر؛ وتحتاج الخانة إلى رف. يتم تخطي المسارات الموجودة."
+	catalogs[LocaleFA]["resources.tenant.warehouse.locations"] = "مکان\u200cهای انبار"
+	catalogs[LocaleFA]["imports.template.notes.tenant.warehouse.locations"] = "هر ردیف یک مسیر مکان را تعریف می\u200cکند. کد اتاق الزامی است. قفسه می\u200cتواند در اتاق یا راهرو باشد؛ خانه به قفسه نیاز دارد. مسیرهای موجود نادیده گرفته می\u200cشوند."
 }
