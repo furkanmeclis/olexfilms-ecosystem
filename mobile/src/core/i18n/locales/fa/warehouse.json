@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "این یک جعبه بسته است؛ باز کردن آن را تأیید کنید.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "تکه از ردیف کوتاه‌تر است؛ ارسال چندتکه را تأیید و یادداشت وارد کنید.",
   "errors.CUT_BELOW_MIN_CUT": "برش از حداقل برش محصول کوتاه‌تر است.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "این ردیف یک ردیف متری بریده‌شده از جعبه نیست."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "این ردیف یک ردیف متری بریده‌شده از جعبه نیست.",
+  "orders.cut.note_placeholder": "چرا چندتکه؟ (مثلاً هیچ رولی کافی نبود)"
 }

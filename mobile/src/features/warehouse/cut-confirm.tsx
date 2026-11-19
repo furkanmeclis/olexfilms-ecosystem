@@ -191,6 +191,8 @@ export function CutConfirm({
               onChangeText={setNote}
               maxLength={500}
               multiline
+              placeholder={t('orders.cut.note_placeholder')}
+              placeholderTextColorClassName="accent-muted-foreground"
               className="min-h-16 rounded-md border border-border px-2 py-2 text-[17px] text-foreground"
             />
           </View>
@@ -211,6 +213,7 @@ export function CutConfirm({
             ref={enter}
             autoFocus
             showSoftInputOnFocus={false}
+            placeholder={t('scan:input.ready')}
             caretHidden
             blurOnSubmit={false}
             value=""

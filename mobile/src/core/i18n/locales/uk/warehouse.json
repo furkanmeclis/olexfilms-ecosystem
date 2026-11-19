@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Це закрита коробка; підтвердьте відкриття.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Шматок коротший за рядок; підтвердьте надсилання частинами й додайте примітку.",
   "errors.CUT_BELOW_MIN_CUT": "Відріз коротший за мінімальний відріз товару.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Цей рядок не є метражним рядком із коробки."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Цей рядок не є метражним рядком із коробки.",
+  "orders.cut.note_placeholder": "Чому частинами? (напр., жоден рулон не підійшов)"
 }

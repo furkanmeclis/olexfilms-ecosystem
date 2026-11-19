@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "This is a closed box; confirm opening it.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "The piece is shorter than the line; confirm sending in pieces and add a note.",
   "errors.CUT_BELOW_MIN_CUT": "The cut is shorter than the product's minimum cut.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "This line is not a meter line cut from a box."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "This line is not a meter line cut from a box.",
+  "orders.cut.note_placeholder": "Why in pieces? (e.g. no single roll was long enough)"
 }

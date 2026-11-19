@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Es una caja cerrada; confirme que desea abrirla.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "La pieza es más corta que la línea; confirme el envío en piezas con una nota.",
   "errors.CUT_BELOW_MIN_CUT": "El corte es más corto que el corte mínimo del producto.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Esta línea no es una línea por metros cortada de una caja."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Esta línea no es una línea por metros cortada de una caja.",
+  "orders.cut.note_placeholder": "¿Por qué en piezas? (p. ej. ningún rollo alcanzaba)"
 }

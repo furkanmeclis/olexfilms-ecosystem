@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Это закрытая коробка; подтвердите вскрытие.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Кусок короче строки; подтвердите отправку частями и добавьте примечание.",
   "errors.CUT_BELOW_MIN_CUT": "Отрез короче минимального отреза товара.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Эта строка не является метражной строкой из коробки."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Эта строка не является метражной строкой из коробки.",
+  "orders.cut.note_placeholder": "Почему частями? (напр., ни один рулон не подошёл)"
 }

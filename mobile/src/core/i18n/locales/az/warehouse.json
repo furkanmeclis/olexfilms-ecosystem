@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Bu bağlı qutudur; açmağı təsdiqləyin.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Hissə sətirdən qısadır; hissələrlə göndərməni təsdiqləyib qeyd yazın.",
   "errors.CUT_BELOW_MIN_CUT": "Kəsim məhsulun minimum kəsimindən qısadır.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu sətir qutudan kəsilən metr sətri deyil."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu sətir qutudan kəsilən metr sətri deyil.",
+  "orders.cut.note_placeholder": "Niyə hissələrlə? (məs. heç bir rulon çatmadı)"
 }

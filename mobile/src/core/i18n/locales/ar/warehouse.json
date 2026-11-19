@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "هذا صندوق مغلق؛ أكّد فتحه.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "القطعة أقصر من السطر؛ أكّد الإرسال على قطع وأضف ملاحظة.",
   "errors.CUT_BELOW_MIN_CUT": "القص أقصر من الحد الأدنى لقص المنتج.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "هذا السطر ليس سطر أمتار مقصوصًا من صندوق."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "هذا السطر ليس سطر أمتار مقصوصًا من صندوق.",
+  "orders.cut.note_placeholder": "لماذا على قطع؟ (مثلًا لم تكفِ أي لفة)"
 }

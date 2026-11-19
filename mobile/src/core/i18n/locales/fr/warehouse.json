@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "C’est un carton fermé ; confirmez son ouverture.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "La pièce est plus courte que la ligne ; confirmez l’envoi en pièces avec une note.",
   "errors.CUT_BELOW_MIN_CUT": "La découpe est plus courte que la découpe minimale du produit.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Cette ligne n’est pas une ligne au mètre découpée d’un carton."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Cette ligne n’est pas une ligne au mètre découpée d’un carton.",
+  "orders.cut.note_placeholder": "Pourquoi en pièces ? (ex. aucun rouleau assez long)"
 }

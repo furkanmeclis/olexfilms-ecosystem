@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "È una scatola chiusa; confermane l’apertura.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Il pezzo è più corto della riga; conferma l’invio in pezzi con una nota.",
   "errors.CUT_BELOW_MIN_CUT": "Il taglio è più corto del taglio minimo del prodotto.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Questa riga non è una riga a metri tagliata da una scatola."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Questa riga non è una riga a metri tagliata da una scatola.",
+  "orders.cut.note_placeholder": "Perché in pezzi? (es. nessun rotolo bastava)"
 }

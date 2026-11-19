@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Това е затворен кашон; потвърдете отварянето.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Парчето е по-късо от реда; потвърдете изпращане на части с бележка.",
   "errors.CUT_BELOW_MIN_CUT": "Рязането е по-късо от минималното за продукта.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Този ред не е метров ред, рязан от кашон."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Този ред не е метров ред, рязан от кашон.",
+  "orders.cut.note_placeholder": "Защо на части? (напр. нито една ролка не стигаше)"
 }

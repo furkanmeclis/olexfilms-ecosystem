@@ -996,5 +996,6 @@
   "errors.BOX_OPEN_CONFIRM_REQUIRED": "Bu kapalı kutu; açmak için onaylayın.",
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Parça satırdan kısa; parçalı gönderimi onaylayıp not girin.",
   "errors.CUT_BELOW_MIN_CUT": "Kesim ürünün minimum kesiminden kısa.",
-  "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu satır kutudan kesilen bir metre satırı değil."
+  "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu satır kutudan kesilen bir metre satırı değil.",
+  "orders.cut.note_placeholder": "Neden iki parça? (ör. tek rulo yetmedi)"
 }
