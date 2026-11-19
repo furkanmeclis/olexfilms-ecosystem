@@ -1,0 +1,19 @@
+{
+  "title": "संगठन बदलें",
+  "kind.bayi": "डीलर",
+  "kind.depo": "गोदाम",
+  "kind.admin": "एडमिन",
+  "kind.musteri": "ग्राहक",
+  "org_type.center": "केंद्र",
+  "org_type.distributor": "वितरक",
+  "org_type.dealer": "डीलर",
+  "active": "खुला",
+  "switching": "बदला जा रहा है…",
+  "none_title": "कोई स्पेस उपलब्ध नहीं",
+  "none_body": "आपका खाता अभी किसी संगठन से लिंक नहीं है। अपने एडमिनिस्ट्रेटर से संपर्क करें।",
+  "workplace": "कार्यस्थल",
+  "title_spaces": "स्पेस और संगठन",
+  "switch_hint": "दूसरे स्पेस पर जाने के लिए दबाकर रखें",
+  "spaces_title": "स्पेस",
+  "orgs_title": "संगठन"
+}

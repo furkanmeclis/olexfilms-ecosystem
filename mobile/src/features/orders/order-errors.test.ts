@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
+
+import { LANGUAGES } from '../../../scripts/i18n-languages.mjs';
 
 /**
  * TEC-1061: a dealer order with a product closed to dealer orders fails with
@@ -11,9 +13,10 @@ import { describe, it } from 'node:test';
  * language must carry its own text there.
  */
 describe('PRODUCT_NOT_ORDERABLE text', () => {
-  const MOBILE = fileURLToPath(new URL('../../core/i18n/locales/', import.meta.url));
   const WEB = fileURLToPath(new URL('../../../../frontend/src/locales/', import.meta.url));
-  const langs = readdirSync(MOBILE).filter((l) => !l.startsWith('.'));
+  // App languages from the shared list: a locales folder that is not wired up yet
+  // (TEC-1247: hi, until TEC-1249) is not an app language.
+  const langs: readonly string[] = LANGUAGES;
   const text = (lang: string) =>
     (JSON.parse(readFileSync(join(WEB, lang, 'errors.json'), 'utf8')) as Record<string, string>)[
       'codes.PRODUCT_NOT_ORDERABLE'
