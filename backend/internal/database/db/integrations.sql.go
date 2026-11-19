@@ -1222,9 +1222,10 @@ SET category_id = $1,
     active = $7,
     external_id = $8,
     connection_id = $9,
-    locked_fields = $10::text[],
-    -- TEC-1238 (K1): a product synced from Glorian is not sold by the meter.
-    sellable_by_meter = false
+    -- TEC-1251 (K1, 19.11): the meter sale settings (sellable_by_meter,
+    -- default_roll_meters, min_cut_meters, product_prices.meter_price) are
+    -- local and never rewritten by the pull.
+    locked_fields = $10::text[]
 WHERE id = $11 AND brand_id = $12
 RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct, dealer_orderable, usage_credits, sellable_by_meter
 `

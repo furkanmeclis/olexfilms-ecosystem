@@ -420,7 +420,7 @@ func (s *Service) UpdateProduct(ctx context.Context, org orgctx.Scope, id uuid.U
 	if cur.SellableByMeter {
 		// TEC-1238: the switch is turned off first (roll card).
 		verr := &ValidationError{}
-		checkSellableByMeter(verr, p.UnitType, p.UsesFixedBarcode, false)
+		checkSellableByMeter(verr, p.UnitType, p.UsesFixedBarcode)
 		if err := verr.orNil(); err != nil {
 			return model.Product{}, err
 		}
@@ -805,9 +805,6 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 
 // Field error codes of the "sold by the meter" switch (TEC-1238, K1).
 const (
-	// CodeGlorianSynced: a product synced from Glorian is not sold by the
-	// meter (its cut pieces would be lost to the hub sync).
-	CodeGlorianSynced = "glorian_synced"
 	// CodeNotPieceProduct: a roll_meter product is always sold by the
 	// meter; the switch is for piece (box) products.
 	CodeNotPieceProduct = "not_piece_product"
@@ -818,11 +815,10 @@ const (
 )
 
 // checkSellableByMeter adds the reasons a product cannot be sold by the
-// meter (chk_products_sellable_by_meter).
-func checkSellableByMeter(verr *ValidationError, unitType string, fixed, synced bool) {
+// meter (chk_products_sellable_by_meter). TEC-1251 (K1, 19.11): a product
+// synced from Glorian is sold by the meter as well.
+func checkSellableByMeter(verr *ValidationError, unitType string, fixed bool) {
 	switch {
-	case synced:
-		verr.add("sellable_by_meter", CodeGlorianSynced, "a product synced from Glorian is not sold by the meter")
 	case unitType != model.UnitPiece:
 		verr.add("sellable_by_meter", CodeNotPieceProduct, "a roll product is always sold by the meter")
 	case fixed:
@@ -861,7 +857,7 @@ func (s *Service) UpdateRollSettings(ctx context.Context, org orgctx.Scope, id u
 		sellable = *in.SellableByMeter
 	}
 	if sellable {
-		checkSellableByMeter(verr, cur.UnitType, cur.UsesFixedBarcode, cur.ConnectionID.Valid)
+		checkSellableByMeter(verr, cur.UnitType, cur.UsesFixedBarcode)
 		if in.DefaultMeters == nil {
 			verr.add("default_meters", CodeBoxMetersRequired, "a product sold by the meter needs its box length")
 		}

@@ -459,10 +459,12 @@ func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, 
 	return in, nil
 }
 
-// outboundUnit reports a unit Glorian knows (TEC-1244, K1): a synced
-// product is never sold by the meter, so a unit on a meter line (a cut
-// piece with a barcode printed here) is never sent; the box lines go as
-// before.
+// outboundUnit reports a unit Glorian knows (TEC-1244, K1). TEC-1251
+// (19.11): a synced product may be sold by the meter now, but the hub has
+// no meter line or cut piece model yet; a unit on a meter line (a cut
+// piece, or an opened box going whole) is left out of the hub order and
+// logged (createInput), the box lines go as before. Glorian's own support
+// is planned separately.
 func outboundUnit(u db.ListGlorianOrderUnitsRow) bool {
 	return u.SaleMeasure != "meter"
 }

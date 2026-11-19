@@ -188,6 +188,13 @@ func (p *Pusher) nextBatch(ctx context.Context, conn db.IntegrationConnection, c
 			if barcode == "" || product == "" || seen[barcode] {
 				continue
 			}
+			// TEC-1251 (K1): an opened box or a cut piece of a synced product
+			// sold by the meter has no Glorian model yet; never pushed as a
+			// box.
+			if r.MeteredPiece {
+				p.log.Warn("glorian_push_metered_piece_skipped", "connection", conn.Uuid, "barcode", barcode, "movement_id", r.MovementID)
+				continue
+			}
 			seen[barcode] = true
 			out = append(out, BarcodeUpsert{
 				Barcode: barcode, ProductID: product,
@@ -246,6 +253,12 @@ func (p *Pusher) PatchMovement(ctx context.Context, movementID int64) error {
 	}
 	patch, ok := PatchFor(mv.Type)
 	if !ok || mv.UnitKind != "serial" || !mv.ConnectionID.Valid {
+		return nil
+	}
+	// TEC-1251 (K1): a cut piece is unknown to the hub (it would 404 and
+	// retry forever); an opened box is no longer the box the hub holds.
+	if mv.MeteredPiece {
+		p.log.Warn("glorian_patch_metered_piece_skipped", "movement_id", movementID, "barcode", mv.Barcode)
 		return nil
 	}
 	conn, err := p.connection(ctx, mv.ConnectionID.Int64)

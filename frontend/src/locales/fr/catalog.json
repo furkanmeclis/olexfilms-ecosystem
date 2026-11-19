@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "Activé, le produit se commande aussi au mètre en plus du carton ; la pièce est coupée dans un carton de longueur par défaut.",
   "roll.sellable_needs_meters": "La vente au mètre nécessite la longueur par défaut (mètres du carton).",
   "roll.sellable_min_cut_hint": "Une coupe minimale est recommandée ; une ligne de commande ne peut pas être plus courte.",
-  "roll.sellable_glorian": "Un produit synchronisé avec Glorian ne peut pas être vendu au mètre.",
   "roll.sellable_roll_product": "Les produits en rouleau sont toujours vendus au mètre.",
   "roll.sellable_fixed": "Un produit à code-barres fixe ne peut pas être vendu au mètre.",
   "prices.meter_price": "Prix catalogue au mètre",

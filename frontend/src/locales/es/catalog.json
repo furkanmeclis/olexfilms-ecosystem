@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "Si está activo, el producto también se pide por metro además de la caja; la pieza se corta de una caja de longitud predeterminada.",
   "roll.sellable_needs_meters": "Vender por metro requiere la longitud predeterminada (metros de la caja).",
   "roll.sellable_min_cut_hint": "Se recomienda un corte mínimo; una línea de pedido no puede ser más corta.",
-  "roll.sellable_glorian": "Un producto sincronizado con Glorian no se puede vender por metro.",
   "roll.sellable_roll_product": "Los productos en rollo siempre se venden por metro.",
   "roll.sellable_fixed": "Un producto con código de barras fijo no se puede vender por metro.",
   "prices.meter_price": "Precio de lista por metro",

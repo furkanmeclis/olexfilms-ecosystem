@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "开启后，该产品除整箱外还可按米订购；按默认长度的整箱裁切。",
   "roll.sellable_needs_meters": "按米销售需要默认长度（每箱米数）。",
   "roll.sellable_min_cut_hint": "建议填写最小裁切长度；订单行不能更短。",
-  "roll.sellable_glorian": "与 Glorian 同步的产品不能按米销售。",
   "roll.sellable_roll_product": "卷材产品始终按米销售。",
   "roll.sellable_fixed": "固定条码产品不能按米销售。",
   "prices.meter_price": "每米目录价",
