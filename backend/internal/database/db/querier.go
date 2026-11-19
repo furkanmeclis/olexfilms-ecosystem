@@ -1502,7 +1502,8 @@ type Querier interface {
 	// TEC-1214: the last order line a unit was bought on from the supplier, in
 	// whatever currency the order was placed (a brand currency change leaves
 	// older orders in the old currency); rate_snapshot carries the rate frozen
-	// at approval to the buyer's ledger currency.
+	// at approval to the buyer's ledger currency. TEC-1244: meter_line tells
+	// the price is per meter (a meter line), else per piece / box.
 	GetUnitLastOrderCost(ctx context.Context, arg GetUnitLastOrderCostParams) (GetUnitLastOrderCostRow, error)
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.

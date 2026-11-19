@@ -212,3 +212,45 @@ func TestIntegrationKMReturnAmounts(t *testing.T) {
 		t.Fatalf("return total = %s", total)
 	}
 }
+
+// TEC-1244 acceptance (bayi muhasebesi maliyeti): the dealer's purchase
+// cost of a unit is meters × the meter cost for a cut piece (the meter
+// line it was bought on, else the dealer's meter price) and the box price
+// for a closed box. Before, a cut piece cost one meter's price.
+func TestIntegrationKMDealerCost(t *testing.T) {
+	it := newIntegration(t)
+	f := newKMMoney(t, it, "t1244c")
+	ctx := context.Background()
+	var dealerCur string
+	if err := it.pool.QueryRow(ctx, `SELECT currency FROM organizations WHERE id = $1`, f.dealer.ID).Scan(&dealerCur); err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(dealerCur) != f.cur {
+		t.Skipf("dealer currency %s differs from the brand currency %s", dealerCur, f.cur)
+	}
+	cost := func(u db.Unit) string {
+		t.Helper()
+		look := decodeData[struct {
+			PurchasePrice *string `json:"purchase_price"`
+		}](t, mustDo(t, it, "GET", "/v1/product-sales/lookup?barcode="+u.Barcode, f.dealerTok, nil, http.StatusOK))
+		if look.PurchasePrice == nil {
+			t.Fatalf("%s: no purchase price", u.Barcode)
+		}
+		return *look.PurchasePrice
+	}
+	cases := []struct {
+		unit db.Unit
+		want string
+	}{
+		{f.shipped(t, f.film, "", "box"), "400"},
+		{f.shipped(t, f.film, "3.50", "meter"), "105"},       // 3.5 m × 30 (meter line)
+		{f.shipped(t, f.computed, "3.50", "meter"), "93.33"}, // 3.5 m × 26.6667
+		{f.shipped(t, f.film, "2.50", ""), "75"},             // 2.5 m × 30 (price list)
+		{f.shipped(t, f.computed, "", ""), "400"},
+	}
+	for _, c := range cases {
+		if got := cost(c.unit); !sameAmount(&got, c.want) {
+			t.Errorf("%s cost = %s, want %s", c.unit.Barcode, got, c.want)
+		}
+	}
+}
