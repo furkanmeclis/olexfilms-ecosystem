@@ -21878,7 +21878,7 @@ export interface components {
             /** @description Must be true (KVKK consent); false is 400 VALIDATION_ERROR. */
             kvkk_consent: boolean;
             /**
-             * @description Form language, one of the 14 locales (default tr).
+             * @description Form language, one of the 15 locales (default tr).
              * @enum {string}
              */
             language?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar" | "fa" | "hi";
@@ -58491,7 +58491,7 @@ export interface operations {
                 organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
                 from?: string;
                 to?: string;
-                /** @description Label language override (one of the 13 app languages) */
+                /** @description Label language override (one of the 15 app languages) */
                 locale?: string;
             };
             header?: never;

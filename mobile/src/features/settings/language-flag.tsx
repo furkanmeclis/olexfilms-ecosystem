@@ -23,6 +23,7 @@ const FLAGS: Record<Language, number> = {
   az: require('../../../assets/images/flags/az.png'),
   ar: require('../../../assets/images/flags/sa.png'),
   fa: require('../../../assets/images/flags/ir.png'),
+  hi: require('../../../assets/images/flags/in.png'),
 };
 
 /** Same-size tile for every flag (their ratios differ), with a hairline so white stripes keep an edge. */

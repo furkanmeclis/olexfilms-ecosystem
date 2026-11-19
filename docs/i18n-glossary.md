@@ -6,7 +6,7 @@ Uygulamanın 15 dilinde alan terimlerinin kullanılan karşılıkları. Tablo we
 
 - Marka ve ürün adları çevrilmez: Olexfilms, Olex, Olex Films®, Glorian, NexPTG, SmartPTG, WhatsApp.
 - Kısaltmalar ve birimler çevrilmez: PPF, PDF, CSV, VIN, SKU, QR, OTP, IBAN, ZPL; mm, m, m², µm, mil, kg.
-- `{{param}}` yer tutucuları birebir korunur; çoğul biçimleri dilin CLDR kategorilerine uyar (ar: zero/one/two/few/many/other; ru/uk: one/few/many/other; fr/es/it: one/many/other; zh-CN: other; fa: one/other).
+- `{{param}}` yer tutucuları birebir korunur; çoğul biçimleri dilin CLDR kategorilerine uyar (ar: zero/one/two/few/many/other; ru/uk: one/few/many/other; fr/es/it: one/many/other; zh-CN: other; fa, hi: one/other).
 - Barkod, plaka, kod ve tutar alanlarında rakamlar Latin kalır. Arapçada kullanıcı Arap-Hint rakamlarını seçebilir; Farsça (fa) her yerde Latin rakam kullanır (karar: TEC-1233).
 - Hintçe (hi) her yerde Latin rakam kullanır; yön LTR (TEC-1245).
 - RTL diller: ar, fa (`RTL_LOCALES`: web `frontend/src/config/i18n.ts`, mobil `mobile/src/core/i18n/index.ts`, backend `i18n.IsRTL`).

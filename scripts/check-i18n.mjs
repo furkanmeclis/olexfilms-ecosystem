@@ -15,7 +15,7 @@
  *   - ioengine LabelKey → backend catalog (PDF/CSV/XLSX)
  *   - bulkengine / searchengine LabelKey → frontend locales
  *   - backend i18n catalog en/tr parity
- *   - languages from frontend/src/config/i18n.ts (SUPPORTED_LOCALES, 13):
+ *   - languages from frontend/src/config/i18n.ts (SUPPORTED_LOCALES, 15):
  *     tr/en must match key for key (error); any other language may miss
  *     keys (warning, error with --strict) but never has extra keys
  *   - {{param}} sets equal to en in every language

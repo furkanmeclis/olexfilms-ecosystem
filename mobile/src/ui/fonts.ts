@@ -7,6 +7,11 @@ import { isLoaded } from 'expo-font';
  * weight is its own static file (mobile/scripts/build-fonts.py) and its own
  * family name. Text picks the family from the weight class instead of
  * setting fontWeight, which would make Android fake-bold an already bold face.
+ *
+ * None of these files has Arabic or Devanagari glyphs, so Arabic, Persian and
+ * Hindi text falls back whole to the system font (iOS SF Arabic / Kohinoor
+ * Devanagari, Android Noto Sans Arabic / Devanagari); no font is bundled for
+ * them (TEC-1233, TEC-1249). Digits stay Latin and keep the brand font.
  */
 export const fontAssets = {
   'PlusJakartaSans-Regular': require('../../assets/fonts/PlusJakartaSans-Regular.ttf'),

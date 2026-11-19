@@ -23,6 +23,7 @@ describe('parsePhone', () => {
 
   it('parses other countries', () => {
     assert.equal(parsePhone('030 1234567', 'DE'), '+49301234567');
+    assert.equal(parsePhone('98765 43210', 'IN'), '+919876543210');
   });
 
   it('returns null for invalid or empty input', () => {
@@ -49,6 +50,16 @@ describe('listCountries', () => {
   it('uses English names for en and for unknown locales', () => {
     assert.equal(listCountries('en').find((c) => c.code === 'DE')!.name, 'Germany');
     assert.equal(listCountries('xx').find((c) => c.code === 'DE')!.name, 'Germany');
+  });
+
+  it('names countries in Hindi and lists India as +91 (TEC-1249)', () => {
+    const hi = listCountries('hi-IN');
+    const india = hi.find((c) => c.code === 'IN')!;
+    assert.equal(india.name, 'भारत');
+    assert.equal(india.dial, '+91');
+    assert.equal(india.flag, '🇮🇳');
+    assert.equal(hi.find((c) => c.code === 'DE')!.name, 'जर्मनी');
+    assert.deepEqual(filterCountries(hi, '+91').map((c) => c.code), ['IN']);
   });
 
   it('maps zh_CN to zh', () => {

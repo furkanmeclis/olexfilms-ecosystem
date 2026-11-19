@@ -1,9 +1,7 @@
 {
   "$comment": "TEC-1233 bilinçli i18n istisnaları (scripts/i18n-scan.mjs). Yapı: { alan: { dil | \"*\": { anahtar: gerekçe } } }. Alanlar: web ve mobile (anahtar \"namespace:anahtar\"), backend-labels (Go katalog anahtarı), backend-texts (dosya yolu). universal: her dilde aynı kalan ek kelimeler (marka, kısaltma, birim). Yeni giriş eklerken gerekçe yazın.",
   "universal": [],
-  "mobile-pending": {
-    "hi": "TEC-1248: Hintçe web ve backend'e bağlandı; mobil bağlantı ve 15 dilli mobil CI koruması TEC-1249'da. TEC-1249 bu girdiyi siler."
-  },
+  "mobile-pending": {},
   "web": {
     "de": {
       "accounting:account_types.bank": "Almancada aynı yazılır (Bank)",
@@ -1772,6 +1770,11 @@
       "widgets:service.steps.completed": "Azərbaycan dilində də eyni yazılır (\"Tamamlandı\")"
     },
     "fa": {
+      "leads:phone_placeholder": "Türkiye telefon biçimi örneği (uygulamanın varsayılan ülke kodu)",
+      "onboarding:film_p1_eyebrow": "Marka adı (Olex Films®)",
+      "warehouse:labels.output.zpl": "Yazıcı dili adı (ZPL)"
+    },
+    "hi": {
       "leads:phone_placeholder": "Türkiye telefon biçimi örneği (uygulamanın varsayılan ülke kodu)",
       "onboarding:film_p1_eyebrow": "Marka adı (Olex Films®)",
       "warehouse:labels.output.zpl": "Yazıcı dili adı (ZPL)"

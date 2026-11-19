@@ -341,6 +341,11 @@ function localeListFindings() {
   const out = [];
   const mobileList = fs.readFileSync(path.join(ROOT, "mobile/scripts/i18n-languages.mjs"), "utf8");
   const mob = [...(mobileList.match(/\[([^\]]*)\]/)?.[1] ?? "").matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  // TEC-1249: the app's own picker list (mobile/src/core/i18n/index.ts) too.
+  const mobileApp = fs.readFileSync(path.join(ROOT, "mobile/src/core/i18n/index.ts"), "utf8");
+  const mobApp = [
+    ...(mobileApp.match(/export const LANGUAGES = \[([\s\S]*?)\] as const/)?.[1] ?? "").matchAll(/code: '([^']+)'/g),
+  ].map((m) => m[1]);
   const goSrc = fs.readFileSync(path.join(BACKEND_I18N, "locale.go"), "utf8");
   const goSupported = goSrc.match(/var Supported = \[\]Locale\{([\s\S]*?)\}/)?.[1] ?? "";
   const goConsts = Object.fromEntries(
@@ -349,6 +354,7 @@ function localeListFindings() {
   const be = [...goSupported.matchAll(/Locale[A-Za-z]+/g)].map((m) => goConsts[m[0]]).filter(Boolean);
   for (const [name, list] of [
     ["mobile/scripts/i18n-languages.mjs", mob],
+    ["mobile/src/core/i18n/index.ts LANGUAGES", mobApp],
     ["backend/internal/platform/i18n/locale.go Supported", be],
   ]) {
     const miss = SUPPORTED.filter(

@@ -1,2 +1,2 @@
-// Same list and order as frontend/src/config/i18n.ts (K10: 12 languages + Arabic, TEC-1233: + Persian).
-export const LANGUAGES = ['tr', 'en', 'bg', 'de', 'el', 'uk', 'ru', 'fr', 'es', 'it', 'zh-CN', 'az', 'ar', 'fa'];
+// Same list and order as frontend/src/config/i18n.ts (K10: 12 languages + Arabic, TEC-1233: + Persian, TEC-1249: + Hindi).
+export const LANGUAGES = ['tr', 'en', 'bg', 'de', 'el', 'uk', 'ru', 'fr', 'es', 'it', 'zh-CN', 'az', 'ar', 'fa', 'hi'];

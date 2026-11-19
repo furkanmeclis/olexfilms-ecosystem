@@ -13,6 +13,14 @@ describe('digits', () => {
     setDigitStyle('arab');
   });
 
+  it('keeps Latin digits in Persian and Hindi (TEC-1233, TEC-1249)', () => {
+    assert.equal(intlLocale('hi'), 'hi-u-nu-latn');
+    assert.equal(new Intl.NumberFormat(intlLocale('hi')).format(1234567), '12,34,567');
+    assert.equal(new Intl.NumberFormat(intlLocale('hi-IN')).format(7), '7');
+    assert.equal(new Intl.NumberFormat(intlLocale('fa')).format(12), '12');
+    assert.equal(formatDigits(2025, 'hi'), '2025');
+  });
+
   it('formats plain numbers for texts: years without grouping, Latin outside Arabic', () => {
     setDigitStyle('arab');
     assert.equal(formatDigits(2025, 'ar'), '٢٠٢٥');
@@ -51,6 +59,7 @@ describe('digits', () => {
   it('normalizes typed digits to Latin', () => {
     assert.equal(toLatinDigits('٣٤ ABC ١٢'), '34 ABC 12');
     assert.equal(toLatinDigits('۱۲۳'), '123');
+    assert.equal(toLatinDigits('०१२३४५६७८९'), '0123456789');
     assert.equal(toLatinDigits('WBA123'), 'WBA123');
   });
 });
