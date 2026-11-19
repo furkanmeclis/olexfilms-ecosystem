@@ -41,13 +41,13 @@ const (
 )
 
 var (
-	ErrForbidden           = errors.New("dealer accounting: forbidden")
-	ErrProductNotFound     = errors.New("dealer accounting: product not found")
-	ErrCustomerNotFound    = errors.New("dealer accounting: customer not found")
-	ErrSupplierNotFound    = errors.New("dealer accounting: supplier not found")
-	ErrSaleNotFound        = errors.New("dealer accounting: sale not found")
-	ErrPurchaseNotFound    = errors.New("dealer accounting: purchase not found")
-	ErrStockUnavailable    = errors.New("dealer accounting: stock unavailable")
+	ErrForbidden        = errors.New("dealer accounting: forbidden")
+	ErrProductNotFound  = errors.New("dealer accounting: product not found")
+	ErrCustomerNotFound = errors.New("dealer accounting: customer not found")
+	ErrSupplierNotFound = errors.New("dealer accounting: supplier not found")
+	ErrSaleNotFound     = errors.New("dealer accounting: sale not found")
+	ErrPurchaseNotFound = errors.New("dealer accounting: purchase not found")
+	ErrStockUnavailable = errors.New("dealer accounting: stock unavailable")
 	// ErrCutPieceNotSellable: the scanned barcode is a cut piece (TEC-1242,
 	// K13), used only in services (CUT_PIECE_NOT_SELLABLE).
 	ErrCutPieceNotSellable = errors.New("dealer accounting: cut piece not sellable")
