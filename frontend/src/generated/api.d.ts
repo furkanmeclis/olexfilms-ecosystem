@@ -14768,7 +14768,7 @@ export interface paths {
         };
         /**
          * Preview cutting a scanned roll or closed box for a meter line (seller, orders.ship)
-         * @description TEC-1241. Read only, the same checks as POST .../units without writing: whether the unit is a closed box to open, the box length or the roll's remaining meters, the cut, what stays in stock, whether the remainder is a remnant (shorter than the minimum cut, "ragle"), whether the piece is partial and the credits it would carry. Only for a meter line of a piece product (409 ORDER_ITEM_NOT_CUT_LINE) while preparing. No price is returned.
+         * @description TEC-1241. Read only, the same checks as POST .../units without writing: whether the unit is a closed box to open, the box length or the roll's remaining meters, the cut, what stays in stock, whether the remainder is a remnant (shorter than the minimum cut), whether the piece is partial and the credits it would carry. Only for a meter line of a piece product (409 ORDER_ITEM_NOT_CUT_LINE) while preparing. No price is returned.
          */
         get: operations["previewOrderCut"];
         put?: never;
@@ -24696,7 +24696,7 @@ export interface components {
             cut_meters: string;
             /**
              * Format: int64
-             * @description TEC-1243: rest below the product's minimum cut (ragle).
+             * @description TEC-1243: rest below the product's minimum cut.
              */
             remnants: number;
             remnant_meters: string;
@@ -24863,7 +24863,7 @@ export interface components {
             quarantine_meters: string;
             measures: components["schemas"]["StockMeasures"];
         };
-        /** @description TEC-1243 (K14): the on-hand stock split. boxes are the closed boxes (serial units without meters plus fixed barcode pieces). Metered units are remnants ("ragle", rest below the product's min_cut_meters; not offered, not counted in the meter threshold), cut pieces (cut off another unit, or reserved for an order line) or open rolls (the rest: a box opened or entered as a roll). available_boxes subtracts the box reservations; available_meters is the open roll and cut piece meters minus their reserved meters (the reorder meter threshold reads it). Meters are decimal strings. No prices. */
+        /** @description TEC-1243 (K14): the on-hand stock split. boxes are the closed boxes (serial units without meters plus fixed barcode pieces). Metered units are remnants (rest below the product's min_cut_meters; not offered, not counted in the meter threshold), cut pieces (cut off another unit, or reserved for an order line) or open rolls (the rest: a box opened or entered as a roll). available_boxes subtracts the box reservations; available_meters is the open roll and cut piece meters minus their reserved meters (the reorder meter threshold reads it). Meters are decimal strings. No prices. */
         StockMeasures: {
             /** Format: int64 */
             boxes: number;
@@ -25080,7 +25080,7 @@ export interface components {
             /** @description Roll length (decimal string, 2 places) */
             initial_meters: string | null;
             remaining_meters: string | null;
-            /** @description TEC-1230: a roll with meters left but fewer than the product's minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle"). */
+            /** @description TEC-1230: a roll with meters left but fewer than the product's minimum cut (`min_cut_meters`), shown apart as a remnant. */
             remnant?: boolean;
             product: {
                 /** Format: uuid */
@@ -26866,7 +26866,7 @@ export interface components {
             remaining_meters: string;
             /** @description Label print endpoint of the unit (TEC-202; set on the new unit of a split) */
             label_url?: string;
-            /** @description TEC-1230: meters are left but fewer than the product's minimum cut (a remnant, "ragle"). */
+            /** @description TEC-1230: meters are left but fewer than the product's minimum cut (a remnant). */
             remnant?: boolean;
         };
         StockSplit: {
@@ -30633,7 +30633,7 @@ export interface components {
             replayed: boolean;
             /** @description TEC-1241: the source was a closed box opened for the cut */
             box_opened?: boolean;
-            /** @description TEC-1241: what is left is shorter than the minimum cut (ragle) */
+            /** @description TEC-1241: what is left is shorter than the minimum cut */
             source_remnant?: boolean;
         };
         /** @description TEC-1241. What assigning the scanned unit to a meter line does. */
@@ -30659,7 +30659,7 @@ export interface components {
             remaining_meters: string;
             /** @description The whole roll or box goes; no new barcode */
             whole: boolean;
-            /** @description The remainder is shorter than the minimum cut (ragle, K7) */
+            /** @description The remainder is shorter than the minimum cut (K7) */
             remnant: boolean;
             min_cut_meters: string | null;
             /** @description What the line still needs */
@@ -46275,7 +46275,7 @@ export interface operations {
                 updated_to?: components["parameters"]["UpdatedTo"];
                 /** @description TEC-1078: list the split family of this barcode (the roll and every part cut from it) instead of the on-hand units. */
                 family?: string;
-                /** @description TEC-1230: `true` keeps only remnants (rolls with meters left but fewer than the product's `min_cut_meters`, "ragle"), `false` leaves them out. Searches Postgres, not the index. */
+                /** @description TEC-1230: `true` keeps only remnants (rolls with meters left but fewer than the product's `min_cut_meters`), `false` leaves them out. Searches Postgres, not the index. */
                 remnant?: boolean;
             };
             header?: never;

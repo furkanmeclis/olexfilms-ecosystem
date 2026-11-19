@@ -90,7 +90,7 @@ export function UnitRow({ unit, onPress, showProduct }: { unit: StockUnitRow; on
       ) : null}
       <View className="flex-row items-center gap-2">
         <StatusPill tone={unitStatusTone(unit.status)} label={t(`stock.status.${unit.status}`)} />
-        {/* TEC-1243: a remnant ("ragle") is not offered to orders. */}
+        {/* TEC-1243: a remnant is not offered to orders. */}
         {unit.remnant ? <StatusPill tone="progress" label={t('split.remnant')} /> : null}
         {credits && credits.credits_remaining <= 0 ? (
           <StatusPill tone="problem" label={t('stock.credits.exhausted_short')} />

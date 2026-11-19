@@ -87,7 +87,7 @@ export function useProductUnits(org: string, product: string) {
 }
 
 /**
- * TEC-1243: the remnants ("ragle") of the organization: rolls with meters
+ * TEC-1243: the remnants of the organization: rolls with meters
  * left but fewer than the product's minimum cut (GET …/units?remnant=true).
  */
 export function useRemnantUnits(org: string) {

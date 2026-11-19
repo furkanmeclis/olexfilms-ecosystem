@@ -965,11 +965,11 @@
   "home.stock_boxes": "Kapalı kutu",
   "home.stock_open": "Açık rulo",
   "home.stock_cut": "Kesik parça",
-  "home.stock_remnants": "Ragle",
+  "home.stock_remnants": "Artık parçalar",
   "eod.boxes": "Kapalı kutu (açılış → kapanış)",
   "eod.rolls": "Metreli birim (açılış → kapanış)",
   "reorder.min_meters": "Minimum metre",
-  "reorder.min_meters_hint": "Açık rulo ve kesik parça metresi; ragle sayılmaz. Kutu eşiğinden ayrı uyarır.",
+  "reorder.min_meters_hint": "Açık rulo ve kesik parça metresi; artık parça sayılmaz. Kutu eşiğinden ayrı uyarır.",
   "reorder.error.meters": "Metre 0,01 ile 100000 arasında olmalı (en çok 2 ondalık).",
   "reorder.columns.meters": "Metre (açık + kesik)",
   "reorder.meter_level.below_min": "Metre minimumun altında"

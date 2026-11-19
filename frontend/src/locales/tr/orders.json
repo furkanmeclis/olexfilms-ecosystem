@@ -470,7 +470,7 @@
   "cut.rest": "Stokta kalan",
   "cut.box_open": "Bu kapalı kutu. Açılıp {{cut}} m kesilecek, kalan {{rest}} m açık rulo olarak stokta kalacak.",
   "cut.box_whole": "Bu kapalı kutu. Açılıp tamamı ({{box}} m) gönderilecek.",
-  "cut.remnant": "Kalan {{rest}} m ragle olacak (minimum kesim {{min}} m). Ragle stokta ayrı kalır, siparişe önerilmez.",
+  "cut.remnant": "Kalan {{rest}} m artık parça olacak (minimum kesim {{min}} m). Artık parça stokta ayrı kalır, siparişe önerilmez.",
   "cut.partial_short": "Bu birimden yalnız {{cut}} m kesilebilir; satır {{missing}} m istiyor. Parçalı göndermek için onay ve not gerekir.",
   "cut.credits": "Kesilen parça {{credits}} hak taşıyacak (satır: {{line}} hak).",
   "cut.partial_button": "Parçalı gönder",

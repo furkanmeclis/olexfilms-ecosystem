@@ -4,7 +4,7 @@ package ledger
 // roll of the product may be cut to. The rule is enforced where a roll is
 // cut by hand (POST /v1/stock/splits) and where a service consumes part of
 // a roll; taking the whole remainder of a roll is always allowed, so a
-// short leftover (a remnant, "ragle") can still be used up.
+// short leftover (a remnant) can still be used up.
 
 import (
 	"errors"
@@ -34,7 +34,7 @@ func CheckMinCut(cutCm, remainingCm int64, minCut pgtype.Numeric) error {
 }
 
 // IsRemnant reports whether a roll with remaining meters left is a remnant
-// ("ragle"/artık): something is left but less than the product's minimum
+// (artık parça): something is left but less than the product's minimum
 // cut. A unit without meters or a product without a minimum is never one.
 func IsRemnant(remaining, minCut pgtype.Numeric) bool {
 	if !remaining.Valid || !minCut.Valid {

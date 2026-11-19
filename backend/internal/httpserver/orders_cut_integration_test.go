@@ -61,7 +61,7 @@ type cutAssign struct {
 // line of a box product is picked by cutting one piece — from the smallest
 // open roll that covers it, or from a closed box opened on confirmation
 // (open and cut in one transaction); a remainder shorter than the minimum
-// cut is flagged as a remnant ("ragle"); a shorter piece needs the partial
+// cut is flagged as a remnant; a shorter piece needs the partial
 // confirmation and a note and gets its share of the line credits; a box
 // reserved by another order is refused before it is opened; the warehouse
 // role sees no price; cut pieces left after a cancel are listed.

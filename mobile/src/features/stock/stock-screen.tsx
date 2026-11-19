@@ -134,7 +134,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
           <Icon name="forward" tone="muted-foreground" size={16} />
         </Pressable>
       ) : null}
-      {/* TEC-1243: the remnants ("ragle") on hand. */}
+      {/* TEC-1243: the remnants on hand. */}
       {canCritical ? (
         <Pressable
           accessibilityRole="link"
@@ -269,7 +269,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
 
 /**
  * TEC-1243 (K14): "Kapalı kutu 12 · Açık 2 rulo / 18,4 m · Kesik 3 parça /
- * 9 m · Ragle 1,2 m" under a product holding metered units (none for a
+ * 9 m · Artık 1,2 m" under a product holding metered units (none for a
  * box-only product, its amount already says it).
  */
 export function measureText(

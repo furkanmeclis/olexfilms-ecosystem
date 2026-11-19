@@ -27,7 +27,7 @@ type Roll = { barcode: string; product: string; remaining: string };
  * Standalone roll cut (TEC-1230): scan a roll on hand, enter the meters,
  * cut them off as a new unit (POST /v1/stock/splits) and print the labels.
  * The backend applies the product's minimum cut; a roll left under it is a
- * remnant ("ragle") and is shown as such.
+ * remnant and is shown as such.
  */
 export function SplitScreen() {
   const { t } = useTranslation('warehouse');

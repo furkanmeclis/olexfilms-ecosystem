@@ -119,7 +119,7 @@ export function hasMetered(m: MeasuresLike | null | undefined): m is MeasuresLik
 
 /**
  * TEC-1243 (K14): the parts of the stock line "Kapalı kutu 12 · Açık 2 rulo
- * / 18,4 m · Kesik 3 parça / 9 m · Ragle 1,2 m". Closed boxes always come
+ * / 18,4 m · Kesik 3 parça / 9 m · Artık 1,2 m". Closed boxes always come
  * first; the metered groups only when present. Keys are i18n keys of the
  * warehouse namespace; meters are numbers for the caller to format.
  */

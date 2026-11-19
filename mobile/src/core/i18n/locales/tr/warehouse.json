@@ -957,7 +957,7 @@
   "split.new_unit": "Yeni barkod",
   "split.new_meters": "Kesilen parça",
   "split.left_on_roll": "Rulonda kalan",
-  "split.remnant": "Ragle (artık)",
+  "split.remnant": "Artık parça",
   "split.remnant_hint": "Kalan, ürünün en kısa kesim boyundan az; yalnız tamamı kullanılabilir.",
   "split.print": "Etiketleri bas",
   "errors.STOCK_ENTRY_ARRIVAL_MISSING": "Bazı satırlar varışta okutulmadı. Okutun ya da eksikleri fişten çıkarıp onaylayın.",
@@ -975,7 +975,7 @@
   "orders.cut.rest": "Stokta kalan",
   "orders.cut.box_open": "Bu kapalı kutu. Açılıp {{cut}} m kesilecek, kalan {{rest}} m açık rulo olarak stokta kalacak.",
   "orders.cut.box_whole": "Bu kapalı kutu. Açılıp tamamı ({{box}} m) gönderilecek.",
-  "orders.cut.remnant": "Kalan {{rest}} m ragle olacak (minimum kesim {{min}} m). Ragle stokta ayrı kalır, siparişe önerilmez.",
+  "orders.cut.remnant": "Kalan {{rest}} m artık parça olacak (minimum kesim {{min}} m). Artık parça stokta ayrı kalır, siparişe önerilmez.",
   "orders.cut.partial_short": "Bu birimden yalnız {{cut}} m kesilebilir; satır {{missing}} m istiyor. Parçalı göndermek için onay ve not gerekir.",
   "orders.cut.credits": "Kesilen parça {{credits}} hak taşıyacak (satır: {{line}} hak).",
   "orders.cut.partial_button": "Parçalı gönder",
@@ -1002,10 +1002,10 @@
   "m.measure_boxes": "Kapalı kutu {{count}}",
   "m.measure_open": "Açık {{count}} rulo / {{meters}} m",
   "m.measure_cut": "Kesik {{count}} parça / {{meters}} m",
-  "m.measure_remnant": "Ragle {{meters}} m",
+  "m.measure_remnant": "Artık {{meters}} m",
   "m.reorder_meters": "Metre (açık + kesik): {{available}} / eşik {{min}} m",
   "m.level_meters_below_min": "Metre minimumun altında",
-  "m.remnants_title": "Ragle listesi",
+  "m.remnants_title": "Artık parçalar",
   "m.remnants_hint": "Minimum kesimden kısa kalan parçalar; siparişe önerilmez. Fire için stok düzeltme belgesi kullanın.",
-  "m.remnants_empty": "Ragle yok."
+  "m.remnants_empty": "Artık parça yok."
 }

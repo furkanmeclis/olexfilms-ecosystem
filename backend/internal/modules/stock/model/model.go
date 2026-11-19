@@ -361,7 +361,7 @@ type StockBalance struct {
 // product in a scope:
 //   - Boxes: closed boxes, the serial units without meters plus fixed
 //     barcode pieces (on-hand quantity minus the metered units).
-//   - Remnants ("ragle"): metered units whose rest is below the product's
+//   - Remnants: metered units whose rest is below the product's
 //     minimum cut (the unit list's remnant filter, TEC-1230); they are not
 //     offered and not counted in the meter threshold.
 //   - Cut pieces: other metered units cut off another unit (for an order, a
@@ -449,7 +449,7 @@ type StockUnitRow struct {
 	InitialMeters   *string   `json:"initial_meters"`
 	RemainingMeters *string   `json:"remaining_meters"`
 	// Remnant (TEC-1230): a roll with meters left but fewer than the
-	// product's minimum cut ("ragle"/artık).
+	// product's minimum cut (artık parça).
 	Remnant bool       `json:"remnant"`
 	Product ProductRef `json:"product"`
 	// Category of the product (TEC-870: the transfer form's stock picker).

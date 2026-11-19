@@ -1009,7 +1009,7 @@ var trCatalog = map[string]string{
 	"stock.measure.boxes":                          "Kapalı kutu",
 	"stock.measure.open":                           "Açık",
 	"stock.measure.cut":                            "Kesik",
-	"stock.measure.remnant":                        "Ragle",
+	"stock.measure.remnant":                        "Artık",
 	"stock.measure.rolls":                          "rulo",
 	"stock.measure.pieces":                         "parça",
 	"warehouse.eod.opening_quantity":               "Açılış adet",
