@@ -497,7 +497,9 @@ RETURNING *;
 -- at approval to the buyer's ledger currency. TEC-1244: meter_line tells
 -- the price is per meter (a meter line), else per piece / box.
 SELECT oi.unit_price, o.currency::text AS currency, o.rate_snapshot,
-       (oi.sale_measure = 'meter')::bool AS meter_line
+       (oi.sale_measure = 'meter')::bool AS meter_line,
+       -- TEC-1250 (K7): the line's meters cap a piece that went whole.
+       oi.meters AS line_meters
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id

@@ -51655,6 +51655,14 @@ components:
             TEC-1241: the product's minimum cut on meter lines (null on box
             lines or without a minimum); clients warn when a partial piece
             or a partial shipment leaves less.
+        excess_meters:
+          type: [string, "null"]
+          example: "0.50"
+          description: >-
+            TEC-1250 (K7): the meters the line's pieces carry over the line
+            (a whole roll whose rest was shorter than the minimum cut); they
+            go free, the line is billed its own meters. Null when the pieces
+            do not exceed the line.
         list_unit_price:
           type: [string, "null"]
           description: >-
@@ -52200,7 +52208,7 @@ components:
       type: object
       description: TEC-1241. What assigning the scanned unit to a meter line does.
       required: [item_uuid, unit_uuid, barcode, closed_box, source_meters, cut_meters, remaining_meters,
-        whole, remnant, min_cut_meters, missing_meters, partial, credits, line_credits, plotter_cut, location_code]
+        whole, remnant, excess_meters, min_cut_meters, missing_meters, partial, credits, line_credits, plotter_cut, location_code]
       properties:
         item_uuid: { type: string, format: uuid }
         unit_uuid: { type: string, format: uuid }
@@ -52210,7 +52218,14 @@ components:
         cut_meters: { type: string, example: "3.00" }
         remaining_meters: { type: string, description: What stays in stock as an open roll, example: "12.00" }
         whole: { type: boolean, description: The whole roll or box goes; no new barcode }
-        remnant: { type: boolean, description: "The remainder is shorter than the minimum cut (K7)" }
+        remnant: { type: boolean, description: "The remainder is shorter than the minimum cut; only a partial piece leaves one (K7)" }
+        excess_meters:
+          type: string
+          example: "0.50"
+          description: >-
+            TEC-1250 (K7): the rest after the line would be shorter than the
+            minimum cut, so the whole roll or box goes (whole) and these
+            meters go free of charge; "0.00" when the piece fits the line.
         min_cut_meters: { type: [string, "null"] }
         missing_meters: { type: string, description: What the line still needs }
         partial: { type: boolean, description: The piece is shorter than missing_meters (needs partial and a note) }
@@ -52307,6 +52322,13 @@ components:
           description: >-
             TEC-1241: a closed box to open and cut for a meter line
             (remaining_meters is the box length); apply it with open_box.
+        excess_meters:
+          type: [string, "null"]
+          description: >-
+            TEC-1250 (K7): the whole roll or box goes to the line because
+            the rest would be shorter than the minimum cut; meters is the
+            whole length and excess_meters what goes free. Null when the
+            piece is cut to the line.
 
     OrderSuggestions:
       type: object

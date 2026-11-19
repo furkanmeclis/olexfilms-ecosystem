@@ -39,7 +39,11 @@ import { useStoreOrder } from "@/features/orders/components/order-action-dialog"
 import { lineAmount } from "@/features/orders/lib/access";
 import { MeasureBadge } from "@/features/orders/components/order-line-measure";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
-import { itemMeasure, orderStatusTone } from "@/features/orders/lib/form";
+import {
+  itemMeasure,
+  lineCovered,
+  orderStatusTone,
+} from "@/features/orders/lib/form";
 import {
   ordersService,
   type Order,
@@ -70,7 +74,7 @@ export function shortLines(order: Order): ShortLine[] {
   return (order.items ?? [])
     .map((it) => {
       const want = lineAmount(it);
-      const picked = Number(it.assigned) || 0;
+      const picked = lineCovered(it);
       const rest = want - picked;
       const min = it.min_cut_meters ? Number(it.min_cut_meters) : 0;
       const below =

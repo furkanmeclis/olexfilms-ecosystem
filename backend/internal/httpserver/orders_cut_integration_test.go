@@ -22,6 +22,7 @@ type cutPreview struct {
 	RemainingMeters string  `json:"remaining_meters"`
 	Whole           bool    `json:"whole"`
 	Remnant         bool    `json:"remnant"`
+	ExcessMeters    string  `json:"excess_meters"`
 	MinCutMeters    *string `json:"min_cut_meters"`
 	MissingMeters   string  `json:"missing_meters"`
 	Partial         bool    `json:"partial"`
@@ -42,6 +43,7 @@ type cutAssign struct {
 	Items []struct {
 		UUID         string  `json:"uuid"`
 		Assigned     string  `json:"assigned"`
+		ExcessMeters *string `json:"excess_meters"`
 		MinCutMeters *string `json:"min_cut_meters"`
 		UnitPrice    *string `json:"unit_price"`
 		Units        []struct {
@@ -60,8 +62,8 @@ type cutAssign struct {
 // TEC-1241 acceptance (kutu/metraj 4/7, K5/K7/K11/K12 of TEC-1236): a meter
 // line of a box product is picked by cutting one piece — from the smallest
 // open roll that covers it, or from a closed box opened on confirmation
-// (open and cut in one transaction); a remainder shorter than the minimum
-// cut is flagged as a remnant; a shorter piece needs the partial
+// (open and cut in one transaction); a roll whose rest would be shorter
+// than the minimum cut goes whole (TEC-1250, K7); a shorter piece needs the partial
 // confirmation and a note and gets its share of the line credits; a box
 // reserved by another order is refused before it is opened; the warehouse
 // role sees no price; cut pieces left after a cancel are listed.
@@ -183,26 +185,35 @@ func TestIntegrationOrdersCutMeterLine(t *testing.T) {
 	}
 
 	// 2. 11 m from the 12 m open roll: smallest covering roll suggested;
-	// the 1 m left is shorter than the 2 m minimum cut -> remnant.
+	// the 1 m left would be shorter than the 2 m minimum cut, so the whole
+	// roll goes and the extra 1 m is free (TEC-1250, K7).
 	o2 := it.openPreparing(distTok, staffTok, []any{map[string]any{"product_uuid": film.Uuid.String(), "meters": "11"}})
 	l2 := o2.Items[0].UUID
 	code, env = it.do("GET", "/v1/orders/"+o2.UUID+"/items/"+l2+"/suggestions?include_unlocated=true", hostOlex, whTok, nil)
 	if code != http.StatusOK || !strings.Contains(string(env.Data), boxA.Barcode) || strings.Contains(string(env.Data), `"open_box":true`) {
 		t.Fatalf("roll suggestion = %d %s", code, env.Data)
 	}
+	if !strings.Contains(string(env.Data), `"excess_meters":"1.00"`) {
+		t.Fatalf("roll suggestion without the excess = %s", env.Data)
+	}
 	code, ec, p = preview(o2.UUID, l2, boxA.Barcode, "")
-	if code != http.StatusOK || p.ClosedBox || p.CutMeters != "11.00" || p.RemainingMeters != "1.00" || !p.Remnant {
-		t.Fatalf("remnant preview = %d %s %+v", code, ec, p)
+	if code != http.StatusOK || p.ClosedBox || p.CutMeters != "12.00" || p.RemainingMeters != "0.00" || p.Remnant ||
+		!p.Whole || p.ExcessMeters != "1.00" || p.Partial {
+		t.Fatalf("whole roll preview = %d %s %+v", code, ec, p)
 	}
 	code, ec, a = assign(o2.UUID, l2, map[string]any{"barcode": boxA.Barcode})
-	if code != http.StatusOK || a.Split == nil || a.Split.BoxOpened || !a.Split.SourceRemnant || a.Split.SourceRemainingMeters != "1.00" {
-		t.Fatalf("cut leaving a remnant = %d %s %+v", code, ec, a.Split)
+	if code != http.StatusOK || a.Split != nil || a.Items[0].Assigned != "12.00" ||
+		a.Items[0].ExcessMeters == nil || *a.Items[0].ExcessMeters != "1.00" {
+		t.Fatalf("whole roll = %d %s %+v", code, ec, a.Items)
 	}
-	// The remnant is never suggested: a new 3 m line proposes the box.
+	// A remnant already in stock (1.5 m < 2 m) is never suggested: a new
+	// 3 m line proposes the box.
+	remnant := chain.rollUnit(center, film, 12419, "1.50")
+	chain.post(ledger.TypeEntry, remnant, chain.nextRef(), loc)
 	o3 := it.openPreparing(distTok, staffTok, []any{map[string]any{"product_uuid": film.Uuid.String(), "meters": "3"}})
 	l3 := o3.Items[0].UUID
 	code, env = it.do("GET", "/v1/orders/"+o3.UUID+"/items/"+l3+"/suggestions?include_unlocated=true", hostOlex, whTok, nil)
-	if code != http.StatusOK || !strings.Contains(string(env.Data), boxB.Barcode) || strings.Contains(string(env.Data), boxA.Barcode) {
+	if code != http.StatusOK || !strings.Contains(string(env.Data), boxB.Barcode) || strings.Contains(string(env.Data), remnant.Barcode) {
 		t.Fatalf("suggestion skips the remnant = %d %s", code, env.Data)
 	}
 

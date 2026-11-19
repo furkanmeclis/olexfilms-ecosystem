@@ -692,13 +692,26 @@ function Items({
             const item = row.original;
             const meter = itemMeasure(item) === "meter";
             return (
-              <Badge
-                variant={lineFullyAssigned(item) ? "success" : "warning"}
-                data-testid="line-assigned"
-              >
-                {item.assigned} / {meter ? item.meters : item.quantity}
-                {meter ? ` ${t("orders.unit.m")}` : ""}
-              </Badge>
+              <>
+                <Badge
+                  variant={lineFullyAssigned(item) ? "success" : "warning"}
+                  data-testid="line-assigned"
+                >
+                  {item.assigned} / {meter ? item.meters : item.quantity}
+                  {meter ? ` ${t("orders.unit.m")}` : ""}
+                </Badge>
+                {item.excess_meters ? (
+                  <Badge
+                    variant="secondary"
+                    className="ms-1"
+                    data-testid="line-excess"
+                  >
+                    {t("orders.cut.excess_free", {
+                      excess: item.excess_meters,
+                    })}
+                  </Badge>
+                ) : null}
+              </>
             );
           },
         }) as ColumnDef<OrderItem, unknown>,

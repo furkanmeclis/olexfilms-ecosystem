@@ -22,6 +22,7 @@ import (
 	"html"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -479,11 +480,20 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		return ShippingDoc{}, fmt.Errorf("orders: assigned units: %w", err)
 	}
 	byItem := map[int64][]string{}
+	// TEC-1250 (K7): the real meters of the pieces of each meter line; a
+	// whole roll may carry more than the line (the extra goes free).
+	pieceMeters := map[int64]*big.Rat{}
 	for _, u := range units {
 		bc := u.Barcode
 		switch {
 		case u.Meters.Valid:
 			bc += " (" + meterAmount(loc, u.Meters) + ")"
+			if r := numericRat(u.Meters); r != nil {
+				if pieceMeters[u.OrderItemID] == nil {
+					pieceMeters[u.OrderItemID] = new(big.Rat)
+				}
+				pieceMeters[u.OrderItemID].Add(pieceMeters[u.OrderItemID], r)
+			}
 		case u.UnitKind == "fixed" && u.Quantity.Valid:
 			bc += " ×" + strconv.Itoa(int(u.Quantity.Int32))
 		}
@@ -498,7 +508,7 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		note := ""
 		if it.Meters.Valid {
 			amount = meterAmount(loc, it.Meters)
-			note = lineCreditsNote(loc, it.LineCredits)
+			note = joinNotes(lineCreditsNote(loc, it.LineCredits), excessNote(loc, it.Meters, pieceMeters[it.ID]))
 		}
 		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Note: note, Barcodes: byItem[it.ID], IsGift: it.IsGift, itemID: it.ID})
 	}
@@ -529,6 +539,36 @@ func decimalComma(loc i18n.Locale) bool {
 		return false
 	}
 	return true
+}
+
+// excessNote is the free extra meters note of a meter line whose pieces
+// carry more than the line (TEC-1250, K7: "Fazla 0,5 m ücretsiz"); ""
+// when they do not.
+func excessNote(loc i18n.Locale, line pgtype.Numeric, pieces *big.Rat) string {
+	lm := numericRat(line)
+	if pieces == nil || lm == nil {
+		return ""
+	}
+	ex := new(big.Rat).Sub(pieces, lm)
+	if ex.Sign() <= 0 {
+		return ""
+	}
+	n, err := numeric(ex.FloatString(2))
+	if err != nil {
+		return ""
+	}
+	return i18n.TranslateParams(loc, "orders.pdf.excess_free", map[string]string{"meters": meterAmount(loc, n)})
+}
+
+// joinNotes joins the non-empty notes of a line.
+func joinNotes(notes ...string) string {
+	out := make([]string, 0, len(notes))
+	for _, n := range notes {
+		if n != "" {
+			out = append(out, n)
+		}
+	}
+	return strings.Join(out, " · ")
 }
 
 // lineCreditsNote is the usage credits note of a meter line of a piece

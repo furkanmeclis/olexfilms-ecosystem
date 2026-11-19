@@ -30249,6 +30249,11 @@ export interface components {
             /** @description TEC-1241: the product's minimum cut on meter lines (null on box lines or without a minimum); clients warn when a partial piece or a partial shipment leaves less. */
             min_cut_meters?: string | null;
             /**
+             * @description TEC-1250 (K7): the meters the line's pieces carry over the line (a whole roll whose rest was shorter than the minimum cut); they go free, the line is billed its own meters. Null when the pieces do not exceed the line.
+             * @example 0.50
+             */
+            excess_meters?: string | null;
+            /**
              * @description TEC-1064: the buyer's purchase price before the discount (NUMERIC(14,4)). Seller side with pricing.sale.read only; null for the buyer, without a list price or without the permission.
              * @example 100.0000
              */
@@ -30659,8 +30664,13 @@ export interface components {
             remaining_meters: string;
             /** @description The whole roll or box goes; no new barcode */
             whole: boolean;
-            /** @description The remainder is shorter than the minimum cut (K7) */
+            /** @description The remainder is shorter than the minimum cut; only a partial piece leaves one (K7) */
             remnant: boolean;
+            /**
+             * @description TEC-1250 (K7): the rest after the line would be shorter than the minimum cut, so the whole roll or box goes (whole) and these meters go free of charge; "0.00" when the piece fits the line.
+             * @example 0.50
+             */
+            excess_meters: string;
             min_cut_meters: string | null;
             /** @description What the line still needs */
             missing_meters: string;
@@ -30756,6 +30766,8 @@ export interface components {
             entered_at: string;
             /** @description TEC-1241: a closed box to open and cut for a meter line (remaining_meters is the box length); apply it with open_box. */
             open_box?: boolean;
+            /** @description TEC-1250 (K7): the whole roll or box goes to the line because the rest would be shorter than the minimum cut; meters is the whole length and excess_meters what goes free. Null when the piece is cut to the line. */
+            excess_meters?: string | null;
         };
         OrderSuggestions: {
             /** Format: uuid */

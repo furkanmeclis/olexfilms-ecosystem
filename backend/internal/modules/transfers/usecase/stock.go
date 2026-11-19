@@ -397,7 +397,7 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 			// the unit's meters; a unit without meters on it (never cut)
 			// falls back to the purchase price below.
 			if err == nil && (!op.MeterLine || meterPiece(it)) {
-				price, amount = numericRat(op.UnitPrice), orderLineAmount(it, op.MeterLine)
+				price, amount = numericRat(op.UnitPrice), orderLineAmount(it, op.MeterLine, op.LineMeters)
 				// TEC-229: the order line this return line reverses.
 				orderItem = pgtype.Int8{Int64: op.OrderItemID, Valid: true}
 			}
@@ -465,12 +465,18 @@ func lineAmount(it db.ListTransferRequestItemsRow) *big.Rat {
 // orderLineAmount is the priced amount of a return line at its order line
 // price (TEC-1244): a meter line is priced per meter (meters × the line's
 // meter price), a box / piece line per piece or the fixed quantity.
-func orderLineAmount(it db.ListTransferRequestItemsRow, meterLine bool) *big.Rat {
+// TEC-1250 (K7): a piece that went whole with free extra meters is priced
+// at most the line's meters (the buyer paid the line).
+func orderLineAmount(it db.ListTransferRequestItemsRow, meterLine bool, lineMeters pgtype.Numeric) *big.Rat {
 	switch {
 	case it.Quantity.Valid:
 		return new(big.Rat).SetInt64(int64(it.Quantity.Int32))
 	case meterLine && meterPiece(it):
-		return numericRat(it.Meters)
+		m := numericRat(it.Meters)
+		if lm := numericRat(lineMeters); lm != nil && lm.Sign() > 0 && m.Cmp(lm) > 0 {
+			return lm
+		}
+		return m
 	}
 	return big.NewRat(1, 1)
 }

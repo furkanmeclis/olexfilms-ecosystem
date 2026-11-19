@@ -498,6 +498,7 @@ var azCatalog = map[string]string{
 	"orders.pdf.barcodes":                     "Barkodlar",
 	"orders.pdf.unit_pcs":                     "əd.",
 	"orders.pdf.line_credits":                 "İstifadə krediti: hər parça üçün {{credits}}",
+	"orders.pdf.excess_free":                  "Artıq {{meters}} ödənişsiz",
 	"orders.pdf.delivered_by":                 "Təhvil verən",
 	"orders.pdf.received_by":                  "Təhvil alan",
 	"orders.pdf.generated_at":                 "Yaradılıb",

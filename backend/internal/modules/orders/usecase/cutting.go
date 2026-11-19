@@ -17,8 +17,14 @@ package usecase
 // A reserved box, a box on another order or on an open warehouse transfer
 // is refused before anything is opened (checkSerialStock under the unit
 // row lock). The minimum cut (products.min_cut_meters) applies to every cut
-// except taking the whole remainder; a remainder shorter than the minimum
-// becomes a remnant (K7) and the preview warns about it.
+// except taking the whole remainder.
+//
+// K7 (TEC-1250, 19.11): a piece that completes the line is not cut when
+// what would stay is shorter than the minimum cut: the whole roll (or box)
+// goes to the line and the extra meters go free (excess). The buyer pays
+// the line's meters; invoices, the account and returns use the line's
+// meters, the ledger moves the roll's real meters. Only a partial piece the
+// warehouse typed shorter can still leave a remnant (the preview warns).
 //
 // One piece covers the line by default. A shorter piece is a partial piece
 // ("parçalı gönder", K11): the client confirms it (partial) with a note.
@@ -92,8 +98,12 @@ type CutPreviewView struct {
 	RemainingMeters string `json:"remaining_meters"`
 	// Whole: the whole roll (or box) goes to the line; no new barcode.
 	Whole bool `json:"whole"`
-	// Remnant: the remainder is shorter than the minimum cut.
-	Remnant      bool    `json:"remnant"`
+	// Remnant: the remainder is shorter than the minimum cut (only a
+	// partial piece leaves one, K7).
+	Remnant bool `json:"remnant"`
+	// ExcessMeters (TEC-1250, K7): the meters over the line that go with
+	// the whole roll free of charge; "0.00" when the piece fits the line.
+	ExcessMeters string  `json:"excess_meters"`
 	MinCutMeters *string `json:"min_cut_meters"`
 	// MissingMeters is what the line still needs; Partial is true when the
 	// piece is shorter (partial and a note are required).
@@ -112,7 +122,7 @@ type cutPlan struct {
 	product              db.Product
 	closedBox, whole     bool
 	sourceCm, cutCm      int64
-	missingCm            int64
+	missingCm, excessCm  int64
 	partial, remnant     bool
 	credits              int32
 	explicitPieceCredits bool
@@ -173,7 +183,7 @@ func (s *Service) planCut(ctx context.Context, q *db.Queries, o db.Order, it db.
 			return p, &ValidationError{Field: "barcode", Code: CodeBoxLengthUnknown, Message: "the product has no box length"}
 		}
 	}
-	done, err := reservedOnLine(ctx, q, it.ID)
+	done, err := reservedOnLine(ctx, q, it)
 	if err != nil {
 		return p, err
 	}
@@ -192,9 +202,19 @@ func (s *Service) planCut(ctx context.Context, q *db.Queries, o db.Order, it db.
 		if p.cutCm > p.sourceCm {
 			return p, fmt.Errorf("%w: %s m left", ErrRollMetersExceed, cmString(p.sourceCm))
 		}
-		if p.cutCm > p.missingCm {
+		// The whole roll may be typed when the rest after the line would
+		// be shorter than the minimum cut (K7).
+		if p.cutCm > p.missingCm && (p.cutCm != p.sourceCm || !ledger.IsRemnant(cmToNumeric(p.sourceCm-p.missingCm), prod.MinCutMeters)) {
 			return p, ErrOverAssigned
 		}
+	}
+	// K7 (TEC-1250): the piece completing the line takes the whole roll
+	// when the rest would be shorter than the minimum cut; the extra meters
+	// go free.
+	if p.cutCm >= p.missingCm && p.sourceCm > p.missingCm &&
+		ledger.IsRemnant(cmToNumeric(p.sourceCm-p.missingCm), prod.MinCutMeters) {
+		p.cutCm = p.sourceCm
+		p.excessCm = p.sourceCm - p.missingCm
 	}
 	p.whole = p.cutCm == p.sourceCm
 	if err := ledger.CheckMinCut(p.cutCm, p.sourceCm, prod.MinCutMeters); err != nil {
@@ -310,6 +330,7 @@ func (s *Service) CutPreview(ctx context.Context, c Caller, orderUUID, itemUUID 
 			ItemUUID: it.Uuid, UnitUUID: u.Uuid, Barcode: u.Barcode, ClosedBox: p.closedBox,
 			SourceMeters: cmString(p.sourceCm), CutMeters: cmString(p.cutCm),
 			RemainingMeters: cmString(p.sourceCm - p.cutCm), Whole: p.whole, Remnant: p.remnant,
+			ExcessMeters: cmString(p.excessCm),
 			MinCutMeters: numericTextPtr(p.product.MinCutMeters, 2), MissingMeters: cmString(p.missingCm),
 			Partial: p.partial, Credits: p.credits, LineCredits: it.LineCredits.Int32,
 			PlotterCut: it.PlotterCut, LocationCode: p.locationCode,

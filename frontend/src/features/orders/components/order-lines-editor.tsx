@@ -22,6 +22,7 @@ import {
   convertToBoxes,
   formIsValid,
   isCutLine,
+  lineCovered,
   lineKey,
   lineMeasure,
   linesBelowAssigned,
@@ -65,7 +66,7 @@ export function OrderLinesEditor({
   const valid = formIsValid(errors) && below.size === 0;
   const picked = useMemo(() => new Set(lines.map(lineKey)), [lines]);
   const assignedOf = (line: OrderFormLine) =>
-    Number(orderItemOf(order, line)?.assigned ?? 0);
+    lineCovered(orderItemOf(order, line) ?? {});
 
   const save = useMutation({
     mutationFn: () =>

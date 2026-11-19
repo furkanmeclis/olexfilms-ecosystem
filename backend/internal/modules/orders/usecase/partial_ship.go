@@ -93,7 +93,7 @@ func (s *Service) PartialShip(ctx context.Context, c Caller, orderUUID uuid.UUID
 		splits := make([]pickedSplit, 0, len(items))
 		anyPicked, anyShort := false, false
 		for _, it := range items {
-			done, err := reservedOnLine(ctx, q, it.ID)
+			done, err := reservedOnLine(ctx, q, it)
 			if err != nil {
 				return err
 			}
