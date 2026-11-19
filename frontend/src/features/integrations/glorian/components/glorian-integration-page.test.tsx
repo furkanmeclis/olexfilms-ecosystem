@@ -112,6 +112,7 @@ const reconcileRun: GlorianSyncRun = {
     status_drift: 0,
     product_drift: 3,
     owner_drift: 4,
+    meter_drift: 1,
     remote: 10,
     local: 9,
     pages: 1,
@@ -122,6 +123,7 @@ const reconcileRun: GlorianSyncRun = {
       status_drift: [],
       product_drift: [],
       owner_drift: [],
+      meter_drift: [],
     },
   },
   error: null,
@@ -282,6 +284,7 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
         "status_drift",
         "product_drift",
         "owner_drift",
+        "meter_drift",
       ].map((cat) => [
         cat,
         byTestId(`drift-count-${cat}`)?.querySelector("dd")?.textContent,
@@ -293,6 +296,7 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
       status_drift: "0",
       product_drift: "3",
       owner_drift: "4",
+      meter_drift: "1",
     });
     expect(container.textContent).toContain("GL-0001");
   });

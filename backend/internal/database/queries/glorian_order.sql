@@ -9,18 +9,28 @@ WHERE id = sqlc.arg(id);
 -- name: ListGlorianOrderUnits :many
 -- Serial units assigned to the order's lines whose product is synced from
 -- a connection, in line order. Olex and local products have no connection
--- and never appear. TEC-1244: sale_measure lets the outbound leave out a
--- meter line (K1: a synced product is never sold by the meter; a cut piece
--- has no Glorian barcode).
+-- and never appear. TEC-1252: a meter line goes to the hub with its
+-- meters, credits and plotter mark; each unit is a piece: piece_meters is
+-- what the line took (the assignment's meters, a whole roll's remaining),
+-- piece_credits its share of the line's credits (NULL: not spread) and
+-- source_barcode the roll it was cut from (empty for a whole box or roll).
 SELECT i.id AS order_item_id,
        p.connection_id::bigint AS connection_id,
        p.external_id::text AS product_external_id,
        u.barcode,
-       i.sale_measure::text AS sale_measure
+       i.sale_measure::text AS sale_measure,
+       COALESCE(i.meters::text, '')::text AS line_meters,
+       i.line_credits,
+       i.plotter_cut,
+       COALESCE(oiu.meters::text, u.remaining_meters::text, '')::text AS piece_meters,
+       oiu.credits AS piece_credits,
+       COALESCE(su.barcode, '')::text AS source_barcode
 FROM order_items i
 JOIN products p ON p.id = i.product_id
 JOIN order_item_units oiu ON oiu.order_item_id = i.id
 JOIN units u ON u.id = oiu.unit_id
+LEFT JOIN stock_splits ss ON ss.new_unit_id = u.id
+LEFT JOIN units su ON su.id = ss.source_unit_id
 WHERE i.order_id = sqlc.arg(order_id)
   AND p.connection_id IS NOT NULL
   AND p.external_id IS NOT NULL

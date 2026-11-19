@@ -420,6 +420,46 @@ type bulkItem struct {
 	DealerID  *string `json:"dealer_id"`
 	Location  string  `json:"location"`
 	Status    string  `json:"status"`
+	// TEC-1252 (inventory-api.md §10.6) meter fields.
+	InitialMeters   *float64 `json:"initial_meters"`
+	RemainingMeters *float64 `json:"remaining_meters"`
+	SourceBarcode   string   `json:"source_barcode"`
+	Credits         *int     `json:"credits"`
+	Opened          bool     `json:"opened"`
+}
+
+// applyMeters records the meter fields of a bulk row (or an order piece)
+// on a hub row the way the hub does (§10.6): a closed box with meters
+// becomes an opened box, a new barcode with a source is a cut piece, the
+// absolute remaining wins. A new cut piece lowers its source's remaining.
+func (s *Server) applyMeters(row Row, it bulkItem, created bool) {
+	if it.InitialMeters == nil && it.RemainingMeters == nil && it.SourceBarcode == "" && it.Credits == nil && !it.Opened {
+		return
+	}
+	if row["initial_meters"] == nil && it.InitialMeters != nil {
+		row["initial_meters"] = *it.InitialMeters
+		row["remaining_meters"] = *it.InitialMeters
+	}
+	if it.RemainingMeters != nil {
+		row["remaining_meters"] = *it.RemainingMeters
+	}
+	if it.Credits != nil {
+		row["credits"] = *it.Credits
+	}
+	switch {
+	case it.SourceBarcode != "" && row["source_barcode"] == nil:
+		row["kind"], row["source_barcode"] = glorian.StockKindCutPiece, it.SourceBarcode
+		if src, ok := s.stock[it.SourceBarcode]; ok && created && it.InitialMeters != nil {
+			if rem, ok := src["remaining_meters"].(float64); ok {
+				src["remaining_meters"] = max(0, rem-*it.InitialMeters)
+			}
+			if src["kind"] == nil || src["kind"] == glorian.StockKindBox {
+				src["kind"] = glorian.StockKindOpenedBox
+			}
+		}
+	case row["kind"] == nil || row["kind"] == glorian.StockKindBox:
+		row["kind"] = glorian.StockKindOpenedBox
+	}
 }
 
 func (s *Server) bulkUpsert(w http.ResponseWriter, body []byte, reqID string) {
@@ -431,6 +471,10 @@ func (s *Server) bulkUpsert(w http.ResponseWriter, body []byte, reqID string) {
 		return
 	}
 	created, updated, conflicts := []any{}, []any{}, []any{}
+	// The hub records the cut pieces of a request first (§10.6).
+	sort.SliceStable(in.Items, func(a, b int) bool {
+		return in.Items[a].SourceBarcode != "" && in.Items[b].SourceBarcode == ""
+	})
 	for i, it := range in.Items {
 		if it.Barcode == "" || it.ProductID == "" {
 			s.validation(w, fmt.Sprintf("items.%d", i), "barcode and product_id are required.", reqID)
@@ -455,15 +499,18 @@ func (s *Server) bulkUpsert(w http.ResponseWriter, body []byte, reqID string) {
 				continue
 			}
 			cur["product_id"], cur["dealer_id"], cur["location"], cur["status"] = it.ProductID, dealer, loc, status
+			s.applyMeters(cur, it, false)
 			cur["updated_at"] = s.ts()
 			updated = append(updated, it.Barcode)
 			continue
 		}
 		s.nextStock++
-		s.stock[it.Barcode] = Row{
+		row := Row{
 			"id": strconv.Itoa(s.nextStock), "barcode": it.Barcode, "product_id": it.ProductID,
 			"dealer_id": dealer, "status": status, "location": loc, "updated_at": s.ts(),
 		}
+		s.applyMeters(row, it, true)
+		s.stock[it.Barcode] = row
 		created = append(created, it.Barcode)
 	}
 	s.ok(w, http.StatusOK, Row{"created": created, "updated": updated, "conflicts": conflicts}, reqID)
@@ -476,12 +523,16 @@ func (s *Server) patchStock(w http.ResponseWriter, barcode string, body []byte, 
 		return
 	}
 	var in struct {
-		Status   string `json:"status"`
-		Location string `json:"location"`
+		Status          string   `json:"status"`
+		Location        string   `json:"location"`
+		RemainingMeters *float64 `json:"remaining_meters"`
 	}
 	if err := json.Unmarshal(body, &in); err != nil {
 		s.validation(w, "status", "Invalid body.", reqID)
 		return
+	}
+	if in.RemainingMeters != nil {
+		cur["remaining_meters"] = *in.RemainingMeters
 	}
 	switch str(cur["status"]) {
 	case glorian.StockStatusReserved, glorian.StockStatusUsed:
@@ -499,6 +550,14 @@ func (s *Server) patchStock(w http.ResponseWriter, barcode string, body []byte, 
 	s.ok(w, http.StatusOK, cur, reqID)
 }
 
+// orderPiece is a piece of a meter line of POST /orders (§10.6).
+type orderPiece struct {
+	Barcode       string   `json:"barcode"`
+	Meters        *float64 `json:"meters"`
+	SourceBarcode string   `json:"source_barcode"`
+	Credits       *int     `json:"credits"`
+}
+
 func (s *Server) createOrder(w http.ResponseWriter, body []byte, reqID string) {
 	var in struct {
 		DealerID          string  `json:"dealer_id"`
@@ -509,6 +568,13 @@ func (s *Server) createOrder(w http.ResponseWriter, body []byte, reqID string) {
 			ProductID string   `json:"product_id"`
 			Quantity  int      `json:"quantity"`
 			Barcodes  []string `json:"barcodes"`
+			// TEC-1252 meter line (§10.6).
+			SaleMeasure    string         `json:"sale_measure"`
+			Meters         *float64       `json:"meters"`
+			LineCredits    *int           `json:"line_credits"`
+			Plotter        bool           `json:"plotter"`
+			Pieces         []orderPiece   `json:"pieces"`
+			BarcodeCredits map[string]int `json:"barcode_credits"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(body, &in); err != nil || in.DealerID == "" || len(in.Items) == 0 {
@@ -519,7 +585,44 @@ func (s *Server) createOrder(w http.ResponseWriter, body []byte, reqID string) {
 		s.ok(w, http.StatusOK, s.orders[id], reqID)
 		return
 	}
+	seenMeasure := map[string]bool{}
 	for _, it := range in.Items {
+		measure := it.SaleMeasure
+		if measure == "" {
+			measure = glorian.SaleMeasureBox
+		}
+		if seenMeasure[it.ProductID+"|"+measure] {
+			s.validation(w, "items", "One line per product and sale measure.", reqID)
+			return
+		}
+		seenMeasure[it.ProductID+"|"+measure] = true
+		if measure == glorian.SaleMeasureBox && (it.Meters != nil || it.LineCredits != nil || len(it.Pieces) > 0 || len(it.BarcodeCredits) > 0) {
+			s.validation(w, "items", "A box line takes no meter fields.", reqID)
+			return
+		}
+		if measure == glorian.SaleMeasureMeter && (it.Meters == nil || *it.Meters <= 0) {
+			s.validation(w, "items", "A meter line needs meters.", reqID)
+			return
+		}
+		if len(it.Barcodes) > 0 && len(it.Barcodes) != it.Quantity {
+			s.validation(w, "items", "Barcodes count must match quantity for each item.", reqID)
+			return
+		}
+	}
+	for _, it := range in.Items {
+		for _, pc := range it.Pieces {
+			if _, ok := s.stock[pc.Barcode]; ok {
+				s.applyMeters(s.stock[pc.Barcode], bulkItem{RemainingMeters: pc.Meters, Opened: true}, false)
+				continue
+			}
+			s.nextStock++
+			row := Row{
+				"id": strconv.Itoa(s.nextStock), "barcode": pc.Barcode, "product_id": it.ProductID, "dealer_id": nil,
+				"status": glorian.StockStatusAvailable, "location": glorian.StockLocationCenter, "updated_at": s.ts(),
+			}
+			s.applyMeters(row, bulkItem{InitialMeters: pc.Meters, SourceBarcode: pc.SourceBarcode, Opened: true}, true)
+			s.stock[pc.Barcode] = row
+		}
 		for _, bc := range it.Barcodes {
 			row, ok := s.stock[bc]
 			if !ok || str(row["status"]) != glorian.StockStatusAvailable || str(row["location"]) != glorian.StockLocationCenter {
@@ -545,13 +648,24 @@ func (s *Server) createOrder(w http.ResponseWriter, body []byte, reqID string) {
 				row["status"] = glorian.StockStatusReserved
 				row["updated_at"] = s.ts()
 			}
+			if c, ok := it.BarcodeCredits[bc]; ok {
+				row["credits"] = c
+			}
 			ids = append(ids, row["id"])
 			barcodes = append(barcodes, bc)
 		}
-		items = append(items, Row{
+		line := Row{
 			"id": strconv.Itoa(i + 1), "product_id": it.ProductID, "quantity": it.Quantity,
-			"stock_item_ids": ids, "barcodes": barcodes,
-		})
+			"stock_item_ids": ids, "barcodes": barcodes, "sale_measure": glorian.SaleMeasureBox,
+			"meters": nil, "line_credits": nil, "plotter": it.Plotter,
+		}
+		if it.SaleMeasure == glorian.SaleMeasureMeter {
+			line["sale_measure"], line["meters"] = glorian.SaleMeasureMeter, *it.Meters
+			if it.LineCredits != nil {
+				line["line_credits"] = *it.LineCredits
+			}
+		}
+		items = append(items, line)
 	}
 	var ref any
 	if in.ExternalReference != "" {

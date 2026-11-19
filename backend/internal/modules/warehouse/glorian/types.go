@@ -10,7 +10,10 @@
 // ClientResolver, which never falls back silently to another connection.
 package glorian
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // APIVersion is the X-Inventory-Api-Version this client speaks.
 const APIVersion = "1"
@@ -130,26 +133,51 @@ const (
 	StockLocationDealer = "dealer"
 )
 
-// StockItem is a stock-items (barcode unit) resource.
+// Stock item kinds of the hub (TEC-1252, inventory-api.md §10.6).
+const (
+	StockKindBox       = "box"
+	StockKindOpenedBox = "opened_box"
+	StockKindCutPiece  = "cut_piece"
+)
+
+// StockItem is a stock-items (barcode unit) resource. TEC-1252: the meter
+// fields are null on a closed box (every unit of a hub without the meter
+// model).
 type StockItem struct {
-	ID        string  `json:"id"`
-	Barcode   string  `json:"barcode"`
-	ProductID string  `json:"product_id"`
-	DealerID  *string `json:"dealer_id"`
-	Status    string  `json:"status"`
-	Location  string  `json:"location"`
-	UpdatedAt string  `json:"updated_at"`
+	ID              string       `json:"id"`
+	Barcode         string       `json:"barcode"`
+	ProductID       string       `json:"product_id"`
+	DealerID        *string      `json:"dealer_id"`
+	Status          string       `json:"status"`
+	Location        string       `json:"location"`
+	Kind            string       `json:"kind,omitempty"`
+	InitialMeters   *json.Number `json:"initial_meters,omitempty"`
+	RemainingMeters *json.Number `json:"remaining_meters,omitempty"`
+	SourceBarcode   *string      `json:"source_barcode,omitempty"`
+	Credits         *int32       `json:"credits,omitempty"`
+	UpdatedAt       string       `json:"updated_at"`
 }
 
 // BarcodeUpsert is one row of POST /stock-items/bulk. Empty optional fields
 // are omitted so the hub applies its defaults (location=center,
 // status=available, dealer_id=null).
+//
+// TEC-1252 (§10.6): the meter fields of an opened box or a cut piece; all
+// optional, a closed box sends none of them and the hub behaves as before.
+// RemainingMeters is absolute (the warehouse has the last word). A cut
+// piece is a new barcode with SourceBarcode and InitialMeters; Credits is
+// the piece's usage credits (1–1000, omitted when unknown).
 type BarcodeUpsert struct {
-	Barcode   string  `json:"barcode"`
-	ProductID string  `json:"product_id"`
-	DealerID  *string `json:"dealer_id,omitempty"`
-	Location  string  `json:"location,omitempty"`
-	Status    string  `json:"status,omitempty"`
+	Barcode         string      `json:"barcode"`
+	ProductID       string      `json:"product_id"`
+	DealerID        *string     `json:"dealer_id,omitempty"`
+	Location        string      `json:"location,omitempty"`
+	Status          string      `json:"status,omitempty"`
+	InitialMeters   json.Number `json:"initial_meters,omitempty"`
+	RemainingMeters json.Number `json:"remaining_meters,omitempty"`
+	SourceBarcode   string      `json:"source_barcode,omitempty"`
+	Credits         int32       `json:"credits,omitempty"`
+	Opened          bool        `json:"opened,omitempty"`
 }
 
 // BulkConflict is a soft conflict of the bulk upsert (HTTP 200 envelope).
@@ -167,16 +195,45 @@ type BulkUpsertResult struct {
 }
 
 // StockItemPatch is the body of PATCH /stock-items/by-barcode/{barcode}.
+// TEC-1252: RemainingMeters (absolute) is accepted on an available unit.
 type StockItemPatch struct {
-	Status   string `json:"status,omitempty"`
-	Location string `json:"location,omitempty"`
+	Status          string      `json:"status,omitempty"`
+	Location        string      `json:"location,omitempty"`
+	RemainingMeters json.Number `json:"remaining_meters,omitempty"`
 }
 
+// Sale measures of an order line (TEC-1252, K10).
+const (
+	SaleMeasureBox   = "box"
+	SaleMeasureMeter = "meter"
+)
+
 // OrderItemInput is one line of POST /orders.
+//
+// TEC-1252 (§10.6): a meter line sends SaleMeasure=meter, the line's
+// Meters, LineCredits and Plotter, and one Piece per barcode; a box line
+// sends none of them (the hub defaults to box). BarcodeCredits spreads
+// the line's credits over its pieces (K11); omitted, the hub gives a
+// single piece the whole line and splits evenly between several.
 type OrderItemInput struct {
-	ProductID string   `json:"product_id"`
-	Quantity  int      `json:"quantity"`
-	Barcodes  []string `json:"barcodes,omitempty"`
+	ProductID      string           `json:"product_id"`
+	Quantity       int              `json:"quantity"`
+	Barcodes       []string         `json:"barcodes,omitempty"`
+	SaleMeasure    string           `json:"sale_measure,omitempty"`
+	Meters         json.Number      `json:"meters,omitempty"`
+	LineCredits    *int32           `json:"line_credits,omitempty"`
+	Plotter        bool             `json:"plotter,omitempty"`
+	Pieces         []OrderPiece     `json:"pieces,omitempty"`
+	BarcodeCredits map[string]int32 `json:"barcode_credits,omitempty"`
+}
+
+// OrderPiece is a piece of a meter line: a cut piece (SourceBarcode set)
+// or a whole box or roll (empty SourceBarcode); Meters is what goes.
+type OrderPiece struct {
+	Barcode       string      `json:"barcode"`
+	Meters        json.Number `json:"meters"`
+	SourceBarcode string      `json:"source_barcode,omitempty"`
+	Credits       *int32      `json:"credits,omitempty"`
 }
 
 // CreateOrderInput is the body of POST /orders. ExternalReference is the
@@ -190,13 +247,18 @@ type CreateOrderInput struct {
 	Items             []OrderItemInput `json:"items"`
 }
 
-// OrderItem is one line of an order resource.
+// OrderItem is one line of an order resource (TEC-1252: SaleMeasure and
+// the meter fields, empty on a hub without the meter model).
 type OrderItem struct {
-	ID           string   `json:"id"`
-	ProductID    string   `json:"product_id"`
-	Quantity     int      `json:"quantity"`
-	StockItemIDs []string `json:"stock_item_ids"`
-	Barcodes     []string `json:"barcodes"`
+	ID           string       `json:"id"`
+	ProductID    string       `json:"product_id"`
+	Quantity     int          `json:"quantity"`
+	StockItemIDs []string     `json:"stock_item_ids"`
+	Barcodes     []string     `json:"barcodes"`
+	SaleMeasure  string       `json:"sale_measure,omitempty"`
+	Meters       *json.Number `json:"meters,omitempty"`
+	LineCredits  *int32       `json:"line_credits,omitempty"`
+	Plotter      bool         `json:"plotter,omitempty"`
 }
 
 // Order is an orders resource.

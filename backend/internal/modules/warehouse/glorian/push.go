@@ -2,6 +2,7 @@ package glorian
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -167,14 +168,27 @@ type pushCursor struct {
 
 // nextBatch reads up to MaxBulkItems distinct barcodes after cur and moves
 // cur past the movements it read.
+//
+// TEC-1252: an opened box or a cut piece of a piece product goes with its
+// meters (pushRow); a cut piece brings its source roll into the same batch
+// (one bulk call), so the hub's absolute remaining of the source follows
+// the piece it records first.
 func (p *Pusher) nextBatch(ctx context.Context, conn db.IntegrationConnection, cur *pushCursor) ([]BarcodeUpsert, error) {
 	var out []BarcodeUpsert
 	seen := map[string]bool{}
-	for len(out) < MaxBulkItems {
+	add := func(row BarcodeUpsert) {
+		if seen[row.Barcode] {
+			return
+		}
+		seen[row.Barcode] = true
+		out = append(out, row)
+	}
+	// A row may add two barcodes (the piece and its source).
+	for len(out) < MaxBulkItems-1 {
 		rows, err := p.q.ListGlorianPushUnits(ctx, db.ListGlorianPushUnitsParams{
 			BrandID: conn.BrandID, ConnectionID: conn.ID,
 			AfterCreatedAt: pgtype.Timestamptz{Time: cur.at, Valid: true}, AfterID: cur.id,
-			RowLimit: int32(MaxBulkItems - len(out)),
+			RowLimit: int32(max(1, (MaxBulkItems-len(out))/2)),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("glorian push: list units: %w", err)
@@ -184,25 +198,56 @@ func (p *Pusher) nextBatch(ctx context.Context, conn db.IntegrationConnection, c
 		}
 		for _, r := range rows {
 			cur.at, cur.id = r.CreatedAt.Time, r.MovementID
-			barcode, product := strings.TrimSpace(r.Barcode), strings.TrimSpace(r.ProductExternalID)
-			if barcode == "" || product == "" || seen[barcode] {
+			unit, source, ok := pushRows(r)
+			if !ok {
 				continue
 			}
-			// TEC-1251 (K1): an opened box or a cut piece of a synced product
-			// sold by the meter has no Glorian model yet; never pushed as a
-			// box.
-			if r.MeteredPiece {
-				p.log.Warn("glorian_push_metered_piece_skipped", "connection", conn.Uuid, "barcode", barcode, "movement_id", r.MovementID)
-				continue
+			add(unit)
+			if source != nil {
+				add(*source)
 			}
-			seen[barcode] = true
-			out = append(out, BarcodeUpsert{
-				Barcode: barcode, ProductID: product,
-				Location: StockLocationCenter, Status: StockStatusAvailable,
-			})
 		}
 	}
 	return out, nil
+}
+
+// pushRows maps one push row to the bulk rows: the unit and, for a cut
+// piece, its source roll (absolute meters). A closed box (or a unit of a
+// product not sold by the piece) goes as before, without meter fields.
+func pushRows(r db.ListGlorianPushUnitsRow) (BarcodeUpsert, *BarcodeUpsert, bool) {
+	barcode, product := strings.TrimSpace(r.Barcode), strings.TrimSpace(r.ProductExternalID)
+	if barcode == "" || product == "" {
+		return BarcodeUpsert{}, nil, false
+	}
+	unit := BarcodeUpsert{
+		Barcode: barcode, ProductID: product,
+		Location: StockLocationCenter, Status: StockStatusAvailable,
+	}
+	if !r.MeteredPiece || r.InitialMeters == "" {
+		return unit, nil, true
+	}
+	unit.InitialMeters = json.Number(r.InitialMeters)
+	unit.RemainingMeters = json.Number(r.RemainingMeters)
+	if r.Credits > 0 {
+		unit.Credits = r.Credits
+	}
+	sourceBarcode := strings.TrimSpace(r.SourceBarcode)
+	if sourceBarcode == "" {
+		// An opened box (or a roll that was never a piece of another).
+		unit.Opened = true
+		return unit, nil, true
+	}
+	unit.SourceBarcode = sourceBarcode
+	if r.SourceInitialMeters == "" {
+		return unit, nil, true
+	}
+	return unit, &BarcodeUpsert{
+		Barcode: sourceBarcode, ProductID: product,
+		Location: StockLocationCenter, Status: StockStatusAvailable,
+		InitialMeters:   json.Number(r.SourceInitialMeters),
+		RemainingMeters: json.Number(r.SourceRemainingMeters),
+		Opened:          true,
+	}, true
 }
 
 // Patch of a movement type: the hub state of a unit after it.
@@ -255,12 +300,9 @@ func (p *Pusher) PatchMovement(ctx context.Context, movementID int64) error {
 	if !ok || mv.UnitKind != "serial" || !mv.ConnectionID.Valid {
 		return nil
 	}
-	// TEC-1251 (K1): a cut piece is unknown to the hub (it would 404 and
-	// retry forever); an opened box is no longer the box the hub holds.
-	if mv.MeteredPiece {
-		p.log.Warn("glorian_patch_metered_piece_skipped", "movement_id", movementID, "barcode", mv.Barcode)
-		return nil
-	}
+	// TEC-1252: an opened box or a cut piece is patched like a box; the
+	// bulk push registers it on the hub (a 404 means the push is pending:
+	// a transient error, retried).
 	conn, err := p.connection(ctx, mv.ConnectionID.Int64)
 	if errors.Is(err, ErrConnectionNotFound) {
 		p.log.Warn("glorian_patch_held", "movement_id", movementID, "barcode", mv.Barcode, "reason", "connection_missing")

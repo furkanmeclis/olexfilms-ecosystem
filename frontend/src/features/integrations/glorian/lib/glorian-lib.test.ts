@@ -109,13 +109,14 @@ describe("glorian connection form schema (TEC-274)", () => {
 });
 
 describe("drift report (glorian.ReconcileCounts)", () => {
-  it("reads the five category counts and their rows", () => {
+  it("reads the six category counts and their rows", () => {
     const report = parseDriftReport({
       only_remote: 2,
       only_local: 1,
       status_drift: 0,
       product_drift: 3,
       owner_drift: 4,
+      meter_drift: 1,
       remote: 120,
       local: 119,
       pages: 3,
@@ -126,6 +127,9 @@ describe("drift report (glorian.ReconcileCounts)", () => {
         status_drift: [],
         product_drift: [],
         owner_drift: [],
+        meter_drift: [
+          { barcode: "GL-3", local_remaining_meters: "12.00", remote_remaining_meters: "15" },
+        ],
       },
     });
     expect(report.counts).toEqual({
@@ -134,13 +138,18 @@ describe("drift report (glorian.ReconcileCounts)", () => {
       status_drift: 0,
       product_drift: 3,
       owner_drift: 4,
+      meter_drift: 1,
     });
-    expect(report.total).toBe(10);
+    expect(report.total).toBe(11);
     expect(report.remote).toBe(120);
     expect(report.local).toBe(119);
     expect(report.skipped).toBe(1);
     expect(report.details.only_remote).toHaveLength(1);
     expect(report.details.owner_drift).toEqual([]);
+    expect(driftRowEntries(report.details.meter_drift[0])).toEqual([
+      ["local_remaining_meters", "12.00"],
+      ["remote_remaining_meters", "15"],
+    ]);
   });
 
   it("tolerates a running run with empty counts", () => {
