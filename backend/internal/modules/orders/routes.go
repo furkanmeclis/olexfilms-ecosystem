@@ -65,6 +65,8 @@ func RegisterRoutes(
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)
 	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))
 	mux.Handle("DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}", route(h.UnassignUnit, ship))
+	// TEC-1241: what a scanned roll or closed box does on a meter line.
+	mux.Handle("GET /v1/orders/{uuid}/items/{item_uuid}/cut-preview", route(h.CutPreview, ship))
 	// TEC-768: barcode suggestions, pick locations, pick list, shipping
 	// documents and the delivery method catalog.
 	mux.Handle("GET /v1/orders/{uuid}/items/{item_uuid}/suggestions", route(h.Suggest, ship))

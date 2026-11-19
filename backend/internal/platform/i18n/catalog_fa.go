@@ -1247,6 +1247,7 @@ var faCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":                 "چند خانه با این کد مطابقت دارند؛ از کد کامل استفاده کنید.",
 	"entry_import.error.product_mismatch":                   "این بارکد متعلق به محصول دیگری است.",
 	"entry_import.error.unit_not_enterable":                 "این واحد برچسب چاپ\u200cشده قابل ورود نیست.",
+	"labels.unit.credits":                                   "{{n}} حق استفاده", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":                   "یک بارکد موجود طبق سیاست تعریف\u200cشده نادیده گرفته شد.",
 	"entry_import.error.center_only":                        "فقط مرکز برند می\u200cتواند واحد جدید ایجاد کند.",
 	"entry_import.error.roll_meters_required":               "رول جدید به متراژ نیاز دارد (ستون متراژ یا طول پیش\u200cفرض رول محصول).",

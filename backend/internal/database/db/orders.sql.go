@@ -621,13 +621,14 @@ const createOrderItemUnit = `-- name: CreateOrderItemUnit :one
 
 INSERT INTO order_item_units (
     order_item_id, organization_id, brand_id, unit_id, quantity, meters,
-    reservation_id, movement_id, assigned_by_user_id
+    reservation_id, movement_id, assigned_by_user_id, credits, piece_note
 )
 SELECT i.id, i.organization_id, i.brand_id, $1, $2, $3,
-       $4, $5, $6
+       $4, $5, $6,
+       $7, $8
 FROM order_items i
-WHERE i.id = $7
-RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at
+WHERE i.id = $9
+RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note
 `
 
 type CreateOrderItemUnitParams struct {
@@ -637,6 +638,8 @@ type CreateOrderItemUnitParams struct {
 	ReservationID    pgtype.Int8    `json:"reservation_id"`
 	MovementID       pgtype.Int8    `json:"movement_id"`
 	AssignedByUserID pgtype.Int8    `json:"assigned_by_user_id"`
+	Credits          pgtype.Int4    `json:"credits"`
+	PieceNote        pgtype.Text    `json:"piece_note"`
 	OrderItemID      int64          `json:"order_item_id"`
 }
 
@@ -650,6 +653,8 @@ func (q *Queries) CreateOrderItemUnit(ctx context.Context, arg CreateOrderItemUn
 		arg.ReservationID,
 		arg.MovementID,
 		arg.AssignedByUserID,
+		arg.Credits,
+		arg.PieceNote,
 		arg.OrderItemID,
 	)
 	var i OrderItemUnit
@@ -667,6 +672,8 @@ func (q *Queries) CreateOrderItemUnit(ctx context.Context, arg CreateOrderItemUn
 		&i.AssignedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Credits,
+		&i.PieceNote,
 	)
 	return i, err
 }
@@ -1206,7 +1213,7 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUID
 }
 
 const getOrderItemUnit = `-- name: GetOrderItemUnit :one
-SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at FROM order_item_units
+SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note FROM order_item_units
 WHERE order_item_id = $1 AND unit_id = $2
 `
 
@@ -1232,6 +1239,8 @@ func (q *Queries) GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitPara
 		&i.AssignedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Credits,
+		&i.PieceNote,
 	)
 	return i, err
 }
@@ -1494,6 +1503,60 @@ func (q *Queries) ListActiveReservationsByItem(ctx context.Context, orderItemID 
 	return items, nil
 }
 
+const listOrderDetachedCutPieces = `-- name: ListOrderDetachedCutPieces :many
+SELECT u.uuid, u.barcode, u.remaining_meters, sp.meters AS cut_meters, sp.created_at
+FROM stock_splits sp
+JOIN order_items i ON i.id = sp.reference_id
+JOIN units u ON u.id = sp.new_unit_id
+WHERE sp.reference_type = 'order_item'
+  AND i.order_id = $1
+  AND NOT EXISTS (
+    SELECT 1 FROM order_item_units oiu
+    LEFT JOIN stock_reservations r ON r.id = oiu.reservation_id
+    WHERE oiu.unit_id = u.id AND oiu.order_item_id = i.id
+      AND (oiu.movement_id IS NOT NULL OR r.status = 'active')
+  )
+ORDER BY sp.id
+`
+
+type ListOrderDetachedCutPiecesRow struct {
+	Uuid            uuid.UUID          `json:"uuid"`
+	Barcode         string             `json:"barcode"`
+	RemainingMeters pgtype.Numeric     `json:"remaining_meters"`
+	CutMeters       pgtype.Numeric     `json:"cut_meters"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+// TEC-1241: the cut pieces split off for the order's lines (ledger splits
+// of the order flow) that are no longer assigned to their line: after a
+// cancel (the assignment stays, its reservation is released) or an
+// unassign they stay in stock as separate units.
+func (q *Queries) ListOrderDetachedCutPieces(ctx context.Context, orderID int64) ([]ListOrderDetachedCutPiecesRow, error) {
+	rows, err := q.db.Query(ctx, listOrderDetachedCutPieces, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrderDetachedCutPiecesRow{}
+	for rows.Next() {
+		var i ListOrderDetachedCutPiecesRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Barcode,
+			&i.RemainingMeters,
+			&i.CutMeters,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrderFacts = `-- name: ListOrderFacts :many
 SELECT o.id AS order_id,
        COALESCE((SELECT SUM(i.quantity) FROM order_items i WHERE i.order_id = o.id), 0)::bigint AS total_quantity,
@@ -1589,7 +1652,7 @@ func (q *Queries) ListOrderFacts(ctx context.Context, orderIds []int64) ([]ListO
 }
 
 const listOrderItemUnitsByItem = `-- name: ListOrderItemUnitsByItem :many
-SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at FROM order_item_units
+SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note FROM order_item_units
 WHERE order_item_id = $1
 ORDER BY id
 `
@@ -1617,6 +1680,8 @@ func (q *Queries) ListOrderItemUnitsByItem(ctx context.Context, orderItemID int6
 			&i.AssignedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Credits,
+			&i.PieceNote,
 		); err != nil {
 			return nil, err
 		}
@@ -1629,7 +1694,7 @@ func (q *Queries) ListOrderItemUnitsByItem(ctx context.Context, orderItemID int6
 }
 
 const listOrderItemUnitsByOrder = `-- name: ListOrderItemUnitsByOrder :many
-SELECT oiu.id, oiu.order_item_id, oiu.organization_id, oiu.brand_id, oiu.unit_id, oiu.quantity, oiu.meters, oiu.reservation_id, oiu.movement_id, oiu.assigned_by_user_id, oiu.assigned_at, oiu.created_at, oiu.updated_at, u.barcode, u.unit_kind, u.uuid AS unit_uuid
+SELECT oiu.id, oiu.order_item_id, oiu.organization_id, oiu.brand_id, oiu.unit_id, oiu.quantity, oiu.meters, oiu.reservation_id, oiu.movement_id, oiu.assigned_by_user_id, oiu.assigned_at, oiu.created_at, oiu.updated_at, oiu.credits, oiu.piece_note, u.barcode, u.unit_kind, u.uuid AS unit_uuid
 FROM order_item_units oiu
 JOIN order_items i ON i.id = oiu.order_item_id
 JOIN units u ON u.id = oiu.unit_id
@@ -1651,6 +1716,8 @@ type ListOrderItemUnitsByOrderRow struct {
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Credits          pgtype.Int4        `json:"credits"`
+	PieceNote        pgtype.Text        `json:"piece_note"`
 	Barcode          string             `json:"barcode"`
 	UnitKind         string             `json:"unit_kind"`
 	UnitUuid         uuid.UUID          `json:"unit_uuid"`
@@ -1679,6 +1746,8 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 			&i.AssignedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Credits,
+			&i.PieceNote,
 			&i.Barcode,
 			&i.UnitKind,
 			&i.UnitUuid,
@@ -3006,7 +3075,7 @@ const setOrderItemUnitMovement = `-- name: SetOrderItemUnitMovement :one
 UPDATE order_item_units
 SET movement_id = $1
 WHERE id = $2
-RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at
+RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note
 `
 
 type SetOrderItemUnitMovementParams struct {
@@ -3031,6 +3100,8 @@ func (q *Queries) SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItem
 		&i.AssignedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Credits,
+		&i.PieceNote,
 	)
 	return i, err
 }
@@ -3647,7 +3718,7 @@ const updateOrderItemUnitQuantity = `-- name: UpdateOrderItemUnitQuantity :one
 UPDATE order_item_units
 SET quantity = $1, reservation_id = $2
 WHERE id = $3
-RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at
+RETURNING id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note
 `
 
 type UpdateOrderItemUnitQuantityParams struct {
@@ -3675,6 +3746,8 @@ func (q *Queries) UpdateOrderItemUnitQuantity(ctx context.Context, arg UpdateOrd
 		&i.AssignedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Credits,
+		&i.PieceNote,
 	)
 	return i, err
 }

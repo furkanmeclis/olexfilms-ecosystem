@@ -1297,6 +1297,7 @@ var azCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Kod bir neçə gözə uyğundur; tam kodu istifadə edin.",
 	"entry_import.error.product_mismatch":       "Barkod başqa məhsula aiddir.",
 	"entry_import.error.unit_not_enterable":     "Vahid qəbul edilə bilən çap edilmiş etiket deyil.",
+	"labels.unit.credits":                       "{{n}} istifadə haqqı", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Mövcud barkod qaydaya görə ötürüldü.",
 	"entry_import.error.center_only":            "Yeni vahidi yalnız mərkəz yarada bilər.",
 	"entry_import.error.roll_meters_required":   "Yeni rulon üçün uzunluq lazımdır; stok idxalından istifadə edin.",

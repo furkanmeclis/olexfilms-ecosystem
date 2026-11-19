@@ -2429,6 +2429,11 @@ type Querier interface {
 	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
 	// The backorders split from an order, oldest first.
 	ListOrderBackorders(ctx context.Context, arg ListOrderBackordersParams) ([]Order, error)
+	// TEC-1241: the cut pieces split off for the order's lines (ledger splits
+	// of the order flow) that are no longer assigned to their line: after a
+	// cancel (the assignment stays, its reservation is released) or an
+	// unassign they stay in stock as separate units.
+	ListOrderDetachedCutPieces(ctx context.Context, orderID int64) ([]ListOrderDetachedCutPiecesRow, error)
 	// TEC-1054: list facts of a page of orders: the line amounts (pieces and
 	// roll meters apart), the seller warehouse and the last actor. TEC-1060:
 	// the last actor is the user of the latest step with a user — a status

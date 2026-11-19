@@ -93,6 +93,14 @@ type AssignInput struct {
 	Quantity       *int64
 	Meters         *string
 	IdempotencyKey string
+	// TEC-1241, cut lines (a meter line of a piece product): OpenBox
+	// confirms opening a closed box; Partial confirms a piece shorter than
+	// the rest of the line (K11) with Note; Credits overrides the piece's
+	// share of the line credits.
+	OpenBox bool
+	Partial bool
+	Note    string
+	Credits *int64
 }
 
 // MaxAssignKeyLen bounds AssignInput.IdempotencyKey.
@@ -259,6 +267,16 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 			return ErrUnitAlreadyAssigned
 		} else if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("orders: assignment: %w", err)
+		}
+
+		// TEC-1241: a meter line of a piece product is cut from a roll or
+		// a closed box (cutting.go).
+		if isCutLine(it) {
+			split, err = s.assignCutLocked(ctx, q, tx, c, o, it, u, in)
+			return err
+		}
+		if in.OpenBox || in.Partial || in.Credits != nil {
+			return invalid("barcode", "open_box, partial and credits apply to meter lines of box products only")
 		}
 
 		splitKey, err := assignSplitKey(it, in.IdempotencyKey)
