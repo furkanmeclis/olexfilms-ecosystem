@@ -20,7 +20,11 @@ WHERE id = sqlc.arg(id);
 SELECT m.id AS movement_id,
        m.created_at,
        u.barcode,
-       p.external_id::text AS product_external_id
+       p.external_id::text AS product_external_id,
+       -- TEC-1251 (K1): a unit with meters of a piece product (an opened
+       -- box or a cut piece) has no Glorian model yet; the push leaves it
+       -- out and logs it.
+       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id
 JOIN products p ON p.id = m.product_id
@@ -45,7 +49,9 @@ SELECT m.id AS movement_id,
        u.barcode,
        u.unit_kind,
        p.connection_id,
-       p.external_id
+       p.external_id,
+       -- TEC-1251 (K1): see ListGlorianPushUnits.
+       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id
 JOIN products p ON p.id = m.product_id

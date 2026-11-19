@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "Açıkken ürün kutu yanında metre olarak da sipariş edilir; parça, varsayılan uzunluktaki kutudan kesilir.",
   "roll.sellable_needs_meters": "Metreyle satış için varsayılan uzunluk (kutu metresi) gerekli.",
   "roll.sellable_min_cut_hint": "Minimum kesim girmeniz önerilir; sipariş satırı bundan kısa olamaz.",
-  "roll.sellable_glorian": "Glorian ile senkron üründe metreyle satış açılamaz.",
   "roll.sellable_roll_product": "Rulo ürünler her zaman metreyle satılır.",
   "roll.sellable_fixed": "Sabit barkodlu üründe metreyle satış açılamaz.",
   "prices.meter_price": "Metre liste fiyatı",

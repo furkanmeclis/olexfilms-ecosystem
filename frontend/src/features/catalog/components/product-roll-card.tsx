@@ -37,11 +37,10 @@ const toNumber = (v: string): number | null => {
 
 /**
  * TEC-1238 (K1): why a product cannot be sold by the meter (i18n key), or
- * null. A Glorian synced product (external_id) keeps the switch off, a
- * roll product is always sold by the meter, a fixed barcode has no box.
+ * null. A roll product is always sold by the meter, a fixed barcode has no
+ * box. TEC-1251 (19.11): a Glorian synced product is sold by the meter too.
  */
 export function sellableBlockReason(product: Product): string | null {
-  if (product.external_id) return "catalog.roll.sellable_glorian";
   if (product.unit_type === "roll_meter")
     return "catalog.roll.sellable_roll_product";
   if (product.uses_fixed_barcode) return "catalog.roll.sellable_fixed";

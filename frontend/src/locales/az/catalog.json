@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "Açıq olduqda məhsul qutu ilə yanaşı metrlə də sifariş edilir; parça standart uzunluqlu qutudan kəsilir.",
   "roll.sellable_needs_meters": "Metrlə satış üçün standart uzunluq (qutu metri) lazımdır.",
   "roll.sellable_min_cut_hint": "Minimum kəsim daxil etmək tövsiyə olunur; sifariş sətri bundan qısa ola bilməz.",
-  "roll.sellable_glorian": "Glorian ilə sinxron məhsul metrlə satıla bilməz.",
   "roll.sellable_roll_product": "Rulon məhsullar həmişə metrlə satılır.",
   "roll.sellable_fixed": "Sabit barkodlu məhsul metrlə satıla bilməz.",
   "prices.meter_price": "Metr üzrə siyahı qiyməti",

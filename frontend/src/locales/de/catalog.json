@@ -324,7 +324,6 @@
   "roll.sellable_by_meter_hint": "Wenn aktiv, wird das Produkt neben dem Karton auch meterweise bestellt; das Stück wird aus einem Karton der Standardlänge geschnitten.",
   "roll.sellable_needs_meters": "Für den Meterverkauf ist die Standardlänge (Kartonmeter) erforderlich.",
   "roll.sellable_min_cut_hint": "Ein Mindestzuschnitt wird empfohlen; eine Bestellzeile darf nicht kürzer sein.",
-  "roll.sellable_glorian": "Ein mit Glorian synchronisiertes Produkt kann nicht meterweise verkauft werden.",
   "roll.sellable_roll_product": "Rollenprodukte werden immer meterweise verkauft.",
   "roll.sellable_fixed": "Ein Produkt mit festem Barcode kann nicht meterweise verkauft werden.",
   "prices.meter_price": "Meter-Listenpreis",

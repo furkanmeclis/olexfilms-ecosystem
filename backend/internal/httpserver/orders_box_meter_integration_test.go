@@ -62,8 +62,8 @@ func (o boxMeterOrder) line(t *testing.T, measure string) boxMeterLine {
 }
 
 // TEC-1238 acceptance (kutu/metraj 1/7, K1-K14 of TEC-1236): the center
-// turns on "sold by the meter" on the product card (refused for a Glorian
-// synced product); the dealer orders 1 box and 3 m of the same product on
+// turns on "sold by the meter" on the product card (TEC-1251: a Glorian
+// synced product too); the dealer orders 1 box and 3 m of the same product on
 // one order; the meter price carries the dealer's discount like the box
 // price (400 -> 360, meter list 30 -> 27); a meter line below the minimum
 // cut and a meter line of a product not sold by the meter are refused; the
@@ -125,8 +125,9 @@ func TestIntegrationOrdersBoxAndMeterLines(t *testing.T) {
 		!strings.Contains(body, "box_meters_required") {
 		t.Fatalf("no box length = %d %s", code, body)
 	}
-	if code, body := roll(synced, map[string]any{"sellable_by_meter": true, "default_meters": 15}); code != http.StatusUnprocessableEntity ||
-		!strings.Contains(body, "glorian_synced") {
+	// TEC-1251 (K1, 19.11): a Glorian synced product is sold by the meter too.
+	if code, body := roll(synced, map[string]any{"sellable_by_meter": true, "default_meters": 15}); code != http.StatusOK ||
+		!strings.Contains(body, `"sellable_by_meter":true`) {
 		t.Fatalf("glorian product = %d %s", code, body)
 	}
 	code, body := roll(film, map[string]any{"sellable_by_meter": true, "default_meters": 15, "min_cut_meters": 2})
