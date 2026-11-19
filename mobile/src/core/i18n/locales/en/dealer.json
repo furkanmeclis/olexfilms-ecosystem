@@ -71,6 +71,8 @@
   "stock_empty_body": "Only units your dealer holds can be added.",
   "on_hand": "On hand: {{count}}",
   "meters_left": "Left: {{value}} m",
+  "cut_piece": "Cut piece · {{value}} m",
+  "cut_piece_info": "{{value}} m cut piece: it is not cut again and is used whole in the service.",
   "credits.left": "Credits: {{value}}",
   "credits.finish": "I finished the product",
   "credits.use_one_hint": "This service takes 1 credit from the barcode.",

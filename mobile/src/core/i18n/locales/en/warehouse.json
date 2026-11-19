@@ -450,6 +450,7 @@
   "stock.credits.remaining": "Remaining / total",
   "stock.credits.used": "Services used in",
   "stock.credits.exhausted": "No credits left; the barcode cannot be selected in a new service.",
+  "stock.credits.exhausted_short": "No credits left",
   "stock.credits.services": "Services it was used in",
   "stock.credits.finished": "Product finished",
   "stock.credits.taken": "{{value}} credits",

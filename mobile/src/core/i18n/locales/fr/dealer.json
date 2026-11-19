@@ -71,6 +71,8 @@
   "stock_empty_body": "Seules les unités détenues par votre revendeur peuvent être ajoutées.",
   "on_hand": "En stock : {{count}}",
   "meters_left": "Reste : {{value}} m",
+  "cut_piece": "Pièce découpée · {{value}} m",
+  "cut_piece_info": "Pièce découpée de {{value}} m : elle n'est pas recoupée, elle est utilisée entière dans la prestation.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Pièces : {{count}}",

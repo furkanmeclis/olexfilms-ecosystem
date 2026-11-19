@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "Εισαγάγετε ακέραιο από 1 έως 1000.",
   "stock.credits.amount_placeholder": "Π.χ. 2",
   "stock.credits.exhausted": "Δεν υπάρχουν πιστώσεις· ο κώδικας δεν μπορεί να επιλεγεί σε νέα υπηρεσία.",
+  "stock.credits.exhausted_short": "Χωρίς πιστώσεις",
   "stock.credits.finished": "Το προϊόν τελείωσε",
   "stock.credits.increase": "Προσθήκη πιστώσεων",
   "stock.credits.increase_failed": "Οι πιστώσεις δεν προστέθηκαν",

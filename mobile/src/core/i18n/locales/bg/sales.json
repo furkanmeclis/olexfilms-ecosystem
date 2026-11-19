@@ -59,6 +59,7 @@
   "quick_sale.empty_cart": "Сканирайте баркод, за да добавите ред.",
   "quick_sale.already_added": "Баркод {{barcode}} вече е в продажбата.",
   "quick_sale.not_in_stock": "Този продукт не е в наличността ви.",
+  "quick_sale.cut_piece": "Този баркод е изрязано парче; изрязаните парчета не се продават, а само се използват в услуги.",
   "quick_sale.not_found": "Продуктът не е намерен.",
   "quick_sale.increase": "Увеличи количеството",
   "quick_sale.decrease": "Намали количеството",

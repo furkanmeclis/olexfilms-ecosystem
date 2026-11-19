@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "Introduzca un número entero de 1 a 1000.",
   "stock.credits.amount_placeholder": "P. ej. 2",
   "stock.credits.exhausted": "Sin créditos; el código de barras no puede elegirse en un servicio nuevo.",
+  "stock.credits.exhausted_short": "Sin créditos",
   "stock.credits.finished": "Producto terminado",
   "stock.credits.increase": "Añadir créditos",
   "stock.credits.increase_failed": "No se pudieron añadir los créditos",

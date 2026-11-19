@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "请输入 1 到 1000 的整数。",
   "stock.credits.amount_placeholder": "例如 2",
   "stock.credits.exhausted": "次数已用完；该条码不能在新服务中选择。",
+  "stock.credits.exhausted_short": "额度已用完",
   "stock.credits.finished": "产品已用完",
   "stock.credits.increase": "增加次数",
   "stock.credits.increase_failed": "无法增加次数",

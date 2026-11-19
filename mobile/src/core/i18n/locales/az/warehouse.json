@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "1-dən 1000-ə qədər tam ədəd daxil edin.",
   "stock.credits.amount_placeholder": "Məs. 2",
   "stock.credits.exhausted": "Kredit qalmayıb; barkod yeni xidmətdə seçilə bilməz.",
+  "stock.credits.exhausted_short": "Kredit bitib",
   "stock.credits.finished": "Məhsul bitirildi",
   "stock.credits.increase": "Kredit əlavə et",
   "stock.credits.increase_failed": "Kredit əlavə edilə bilmədi",

@@ -71,6 +71,8 @@
   "stock_empty_body": "Nur Einheiten Ihres Händlers können hinzugefügt werden.",
   "on_hand": "Vorrätig: {{count}}",
   "meters_left": "Rest: {{value}} m",
+  "cut_piece": "Zuschnitt · {{value}} m",
+  "cut_piece_info": "Zuschnitt mit {{value}} m: wird nicht weiter geschnitten, sondern im Service vollständig verwendet.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Teile: {{count}}",

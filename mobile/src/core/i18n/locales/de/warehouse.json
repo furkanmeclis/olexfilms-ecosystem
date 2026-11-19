@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "Geben Sie eine ganze Zahl von 1 bis 1000 ein.",
   "stock.credits.amount_placeholder": "z. B. 2",
   "stock.credits.exhausted": "Kein Guthaben mehr; der Barcode kann in keinem neuen Auftrag gewählt werden.",
+  "stock.credits.exhausted_short": "Kein Guthaben",
   "stock.credits.finished": "Produkt aufgebraucht",
   "stock.credits.increase": "Guthaben hinzufügen",
   "stock.credits.increase_failed": "Guthaben konnte nicht hinzugefügt werden",

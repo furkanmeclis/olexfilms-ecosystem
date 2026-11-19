@@ -59,6 +59,7 @@
   "quick_sale.empty_cart": "Scansiona un codice a barre per aggiungere una riga.",
   "quick_sale.already_added": "Il codice a barre {{barcode}} è già nella vendita.",
   "quick_sale.not_in_stock": "Questo prodotto non è nel tuo magazzino.",
+  "quick_sale.cut_piece": "Questo codice a barre è un pezzo tagliato; i pezzi tagliati non si vendono, si usano solo nei servizi.",
   "quick_sale.not_found": "Prodotto non trovato.",
   "quick_sale.increase": "Aumenta quantità",
   "quick_sale.decrease": "Diminuisci quantità",

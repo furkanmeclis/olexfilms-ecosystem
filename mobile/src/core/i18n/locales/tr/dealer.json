@@ -71,6 +71,8 @@
   "stock_empty_body": "Yalnızca bayinizdeki birimler eklenebilir.",
   "on_hand": "Eldeki: {{count}}",
   "meters_left": "Kalan: {{value}} m",
+  "cut_piece": "Kesik parça · {{value}} m",
+  "cut_piece_info": "{{value}} m kesik parça: kesilmez, hizmette bütün olarak kullanılır.",
   "credits.left": "Kredi: {{value}}",
   "credits.finish": "Ürünü bitirdim",
   "credits.use_one_hint": "Bu hizmet barkoddan 1 kredi düşer.",

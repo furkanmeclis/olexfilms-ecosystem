@@ -71,6 +71,8 @@
   "stock_empty_body": "Si possono aggiungere solo unità del tuo rivenditore.",
   "on_hand": "Disponibili: {{count}}",
   "meters_left": "Restano: {{value}} m",
+  "cut_piece": "Pezzo tagliato · {{value}} m",
+  "cut_piece_info": "Pezzo tagliato da {{value}} m: non si taglia di nuovo, si usa intero nel servizio.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Parti: {{count}}",

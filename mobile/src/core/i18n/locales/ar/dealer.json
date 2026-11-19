@@ -71,6 +71,8 @@
   "stock_empty_body": "يمكن إضافة الوحدات التي يملكها وكيلك فقط.",
   "on_hand": "المتوفر: {{count}}",
   "meters_left": "المتبقي: {{value}} م",
+  "cut_piece": "قطعة مقصوصة · {{value}} م",
+  "cut_piece_info": "قطعة مقصوصة بطول {{value}} م: لا تُقص مرة أخرى وتُستخدم كاملة في الخدمة.",
   "meters_value": "{{value}} م",
   "quantity_value": "× {{value}}",
   "parts_count": "الأجزاء: {{count}}",

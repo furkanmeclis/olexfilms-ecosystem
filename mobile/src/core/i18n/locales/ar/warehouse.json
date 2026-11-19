@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "أدخل عددًا صحيحًا من 1 إلى 1000.",
   "stock.credits.amount_placeholder": "مثال: 2",
   "stock.credits.exhausted": "لا يوجد رصيد؛ لا يمكن اختيار الباركود في خدمة جديدة.",
+  "stock.credits.exhausted_short": "لا أرصدة متبقية",
   "stock.credits.finished": "تم إنهاء المنتج",
   "stock.credits.increase": "إضافة رصيد",
   "stock.credits.increase_failed": "تعذّرت إضافة الرصيد",

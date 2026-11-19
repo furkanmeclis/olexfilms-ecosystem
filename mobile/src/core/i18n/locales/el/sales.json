@@ -59,6 +59,7 @@
   "quick_sale.empty_cart": "Σαρώστε ένα barcode για να προσθέσετε γραμμή.",
   "quick_sale.already_added": "Το barcode {{barcode}} είναι ήδη στην πώληση.",
   "quick_sale.not_in_stock": "Αυτό το προϊόν δεν είναι στο απόθεμά σας.",
+  "quick_sale.cut_piece": "Αυτός ο γραμμωτός κώδικας είναι κομμένο κομμάτι· τα κομμένα κομμάτια δεν πωλούνται, χρησιμοποιούνται μόνο σε υπηρεσίες.",
   "quick_sale.not_found": "Το προϊόν δεν βρέθηκε.",
   "quick_sale.increase": "Αύξηση ποσότητας",
   "quick_sale.decrease": "Μείωση ποσότητας",

@@ -11,7 +11,7 @@ import { WedgeInput } from '@/features/scanner/wedge-input';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
-import { creditsText, hasCreditsLeft } from '@/features/stock/credits';
+import { creditsText, hasCreditsLeft, isCutPiece } from '@/features/stock/credits';
 import { usePartLabel, VehiclePartPicker } from '@/features/vehicle-parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -156,9 +156,11 @@ export function AddItemScreen() {
                     u.barcode,
                     u.unit_kind === 'fixed'
                       ? t('on_hand', { count: u.quantity_on_hand })
-                      : u.remaining_meters
-                        ? t('meters_left', { value: u.remaining_meters })
-                        : null,
+                      : isCutPiece(u)
+                        ? t('cut_piece', { value: u.remaining_meters })
+                        : u.remaining_meters
+                          ? t('meters_left', { value: u.remaining_meters })
+                          : null,
                     u.credits ? t('credits.left', { value: creditsText(u.credits) }) : null,
                   ]
                     .filter(Boolean)
@@ -233,7 +235,9 @@ function UnitForm({
 }) {
   const { t } = useTranslation('dealer');
   const fixed = unit.unit_kind === 'fixed';
-  const roll = !fixed && unit.remaining_meters !== null;
+  // TEC-1242 (K4): a cut piece with credits is used whole, never cut.
+  const cut = isCutPiece(unit);
+  const roll = !fixed && unit.remaining_meters !== null && !cut;
   // A roll is usually cut: the meters field is open from the start.
   const [kind, setKind] = useState<Kind>(roll ? 'partial' : 'full');
   const [quantity, setQuantity] = useState('1');
@@ -279,6 +283,11 @@ function UnitForm({
         {unit.credits ? (
           <Text variant="footnote" tone="muted">
             {t('credits.left', { value: creditsText(unit.credits) })}
+          </Text>
+        ) : null}
+        {cut ? (
+          <Text variant="footnote" tone="muted">
+            {t('cut_piece_info', { value: unit.remaining_meters })}
           </Text>
         ) : null}
       </View>

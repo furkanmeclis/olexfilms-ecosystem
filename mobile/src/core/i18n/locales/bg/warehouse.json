@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "Въведете цяло число от 1 до 1000.",
   "stock.credits.amount_placeholder": "Напр. 2",
   "stock.credits.exhausted": "Няма кредити; баркодът не може да бъде избран в нова услуга.",
+  "stock.credits.exhausted_short": "Няма кредити",
   "stock.credits.finished": "Продуктът е изразходван",
   "stock.credits.increase": "Добави кредити",
   "stock.credits.increase_failed": "Кредитите не можаха да бъдат добавени",
