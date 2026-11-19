@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rollen und feste Barcodes haben kein Nutzungsguthaben.",
   "codes.ORDER_ALREADY_CLAIMED": "Jemand anderes hat diesen Auftrag übernommen.",
   "codes.ORDER_NOT_CLAIMABLE": "Nur eine bestätigte, noch nicht versandte Bestellung ist ein Lagerauftrag.",
-  "codes.ORDER_SCHEDULE_LOCKED": "Priorität und Termin können in diesem Status nicht geändert werden."
+  "codes.ORDER_SCHEDULE_LOCKED": "Priorität und Termin können in diesem Status nicht geändert werden.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "Die Meter dürfen den Mindestzuschnitt des Produkts nicht unterschreiten.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Dieses Produkt wird nicht nach Meter verkauft; als Karton hinzufügen."
 }

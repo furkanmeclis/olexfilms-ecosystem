@@ -44,7 +44,7 @@ test('linesBelowAssigned: an amount under the assigned units is refused on the c
   const lines = linesFromItems([item(), roll], true);
   assert.equal(linesBelowAssigned(lines).size, 0);
   const lower = lines.map((l) => (l.product_uuid === 'p1' ? { ...l, amount: '1' } : { ...l, amount: '9,5' }));
-  assert.deepEqual([...linesBelowAssigned(lower)].sort(), ['p1', 'p2']);
+  assert.deepEqual([...linesBelowAssigned(lower)].sort(), ['p1:box', 'p2:meter']);
   // Equal to the assigned amount is allowed; an empty amount is the line's own error.
   const same = lines.map((l) => (l.product_uuid === 'p1' ? { ...l, amount: '2' } : { ...l, amount: '' }));
   assert.equal(linesBelowAssigned(same).size, 0);
@@ -65,7 +65,19 @@ test('addEditLine / editChanged', () => {
   assert.equal(editChanged(initial, initial), false);
   const added = addEditLine(initial, { uuid: 'p9', sku: 'X', name: 'New', unit_type: 'piece' }, true);
   assert.equal(added.length, 2);
-  assert.deepEqual(added[1], { product_uuid: 'p9', sku: 'X', name: 'New', unit_type: 'piece', amount: '1', assigned: 0, plotter_cut: false });
+  assert.deepEqual(added[1], {
+    product_uuid: 'p9',
+    sku: 'X',
+    name: 'New',
+    unit_type: 'piece',
+    amount: '1',
+    assigned: 0,
+    plotter_cut: false,
+    measure: 'box',
+    box_meters: null,
+    min_cut: null,
+    sellable_by_meter: false,
+  });
   assert.equal(addEditLine(added, { uuid: 'p9', sku: 'X', name: 'New', unit_type: 'piece' }, true), added);
   assert.equal(editChanged(initial, added), true);
   assert.equal(editChanged(initial, [{ ...initial[0]!, amount: '5.0' }]), false);

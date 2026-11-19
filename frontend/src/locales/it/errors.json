@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rotoli e codici a barre fissi non hanno crediti di utilizzo.",
   "codes.ORDER_ALREADY_CLAIMED": "Qualcun altro ha preso questo lavoro.",
   "codes.ORDER_NOT_CLAIMABLE": "Solo un ordine approvato e non spedito è un lavoro di magazzino.",
-  "codes.ORDER_SCHEDULE_LOCKED": "Priorità e scadenza non possono cambiare in questo stato."
+  "codes.ORDER_SCHEDULE_LOCKED": "Priorità e scadenza non possono cambiare in questo stato.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "I metri non possono essere inferiori al taglio minimo del prodotto.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Questo prodotto non è venduto a metro; aggiungilo come scatola."
 }

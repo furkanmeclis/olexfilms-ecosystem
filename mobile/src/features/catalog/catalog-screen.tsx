@@ -11,7 +11,9 @@ import { activeMembership, useCan } from '@/core/spaces';
 import { stockState } from '@/features/orders/order-summary';
 import { productUsesCredits } from '@/features/stock/credits';
 import { ErrorState, ListSkeleton, PagedList, useDebounced, useFormat } from '@/features/admin/kit';
-import { useCart } from '@/features/orders/cart';
+import { inCart as cartHas, useCart } from '@/features/orders/cart';
+import { MeasureAddButtons } from '@/features/orders/line-fields';
+import { isRoll } from '@/features/orders/order-lines';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
@@ -154,7 +156,9 @@ export function ProductsScreen() {
         keyOf={(p) => p.uuid}
         empty={{ icon: 'package', title: query ? t('no_results') : t('empty') }}
         renderItem={({ item }) => {
-          const inCart = lines.some((l) => l.product_uuid === item.uuid);
+          // TEC-1240: a product sold by the meter is added as a box or a meter line with one tap.
+          const byMeter = item.roll?.sellable_by_meter === true && !isRoll(item.unit_type);
+          const inCart = cartHas(lines, item.uuid, isRoll(item.unit_type) ? 'meter' : 'box');
           return (
             <Pressable
               accessibilityRole="button"
@@ -169,8 +173,13 @@ export function ProductsScreen() {
                   {[brand, item.sku, t(`unit_type.${item.unit_type}`)].filter(Boolean).join(' · ')}
                 </Text>
                 <StockMark state={stockState(stock.data?.map, item.uuid, stock.data?.complete ?? false)} f={f} />
+                {canOrder && byMeter ? (
+                  <View className="mt-1.5 self-start">
+                    <MeasureAddButtons compact has={(m) => cartHas(lines, item.uuid, m)} onAdd={(m) => add(item, m)} />
+                  </View>
+                ) : null}
               </View>
-              {canOrder ? (
+              {canOrder && !byMeter ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={inCart ? t('in_cart') : t('add_to_cart')}
@@ -180,7 +189,7 @@ export function ProductsScreen() {
                     add(item);
                     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
-                  className="size-9 items-center justify-center rounded-full bg-secondary active:opacity-70">
+                  className="size-11 items-center justify-center rounded-full bg-secondary active:opacity-70">
                   <Icon name={inCart ? 'check' : 'add'} tone="primary" size={18} />
                 </Pressable>
               ) : null}
@@ -246,9 +255,11 @@ export function ProductDetailScreen() {
   const space = (useSegments() as string[])[1] ?? 'bayi';
   const stockOn = useModule('stock');
   const canStock = useCan('stock.read') && stockOn;
-  const inCart = useCart((s) => s.lines.some((l) => l.product_uuid === uuid));
+  const lines = useCart((s) => s.lines);
   const add = useCart((s) => s.add);
   const p = q.data;
+  const byMeter = !!p && p.roll?.sellable_by_meter === true && !isRoll(p.unit_type);
+  const inCart = !!p && cartHas(lines, p.uuid, isRoll(p.unit_type) ? 'meter' : 'box');
 
   return (
     <>
@@ -316,7 +327,21 @@ export function ProductDetailScreen() {
                 </Text>
               </>
             ) : null}
-            {canOrder ? (
+            {/* TEC-1240: [Box | Meter] of a product sold by the meter, each one tap; a line already in the cart shows a check. */}
+            {canOrder && byMeter ? (
+              <View className="gap-2">
+                <Text variant="footnote" tone="muted">
+                  {t('orders:measure.pick_hint', {
+                    box: p.roll?.default_meters ?? '–',
+                    min: p.roll?.min_cut_meters ?? '–',
+                  })}
+                </Text>
+                <MeasureAddButtons has={(m) => cartHas(lines, p.uuid, m)} onAdd={(m) => add(p, m)} />
+                {lines.some((l) => l.product_uuid === p.uuid) ? (
+                  <Button title={t('in_cart_open')} icon="cart" size="lg" variant="secondary" onPress={() => router.push(NEW_ORDER as never)} />
+                ) : null}
+              </View>
+            ) : canOrder ? (
               <Button
                 title={inCart ? t('in_cart_open') : t('add_to_cart')}
                 icon={inCart ? 'cart' : 'add'}
