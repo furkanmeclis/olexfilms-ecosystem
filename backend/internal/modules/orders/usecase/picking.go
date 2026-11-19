@@ -56,6 +56,9 @@ type SuggestionView struct {
 	LocationUUID    *uuid.UUID `json:"location_uuid"`
 	LocationCode    *string    `json:"location_code"`
 	EnteredAt       time.Time  `json:"entered_at"`
+	// OpenBox (TEC-1241): a closed box to open and cut for a meter line;
+	// RemainingMeters is then the box length.
+	OpenBox bool `json:"open_box"`
 }
 
 // SuggestionsView answers a suggestion request for one line.
@@ -107,6 +110,8 @@ func (s *Service) suggest(ctx context.Context, q *db.Queries, o db.Order, it db.
 		switch {
 		case p.UsesFixedBarcode:
 			out.Suggestions, err = s.suggestFixed(ctx, q, o, it, missing, in, covered)
+		case isCutLine(it):
+			out.Suggestions, err = suggestCut(ctx, q, o, it, p, missing, in, covered)
 		case it.Meters.Valid:
 			out.Suggestions, err = suggestRolls(ctx, q, o, it, missing, in, covered)
 		default:
@@ -219,6 +224,61 @@ func suggestRolls(ctx context.Context, q *db.Queries, o db.Order, it db.OrderIte
 	return out, nil
 }
 
+// suggestCut (TEC-1241): one piece for a cut line — the smallest open roll
+// that covers the missing meters (a remnant is never proposed), else a
+// closed box to open. Nothing when no single roll or box covers the line
+// (the warehouse may ship partial pieces by hand, K11).
+func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, p db.Product, missing *big.Rat, in SuggestInput, covered *big.Rat) ([]SuggestionView, error) {
+	rows, err := serialCandidates(ctx, q, o, it, in)
+	if err != nil {
+		return nil, err
+	}
+	m := missing.FloatString(2)
+	var best *db.ListOrderSuggestSerialCandidatesRow
+	var bestMeters *big.Rat
+	for i := range rows {
+		r := &rows[i]
+		if !r.RemainingMeters.Valid || ledger.IsRemnant(r.RemainingMeters, p.MinCutMeters) {
+			continue
+		}
+		rm := numericRat(r.RemainingMeters)
+		if rm == nil || rm.Cmp(missing) < 0 {
+			continue
+		}
+		if best == nil || rm.Cmp(bestMeters) < 0 {
+			best, bestMeters = r, rm
+		}
+	}
+	if best != nil {
+		v := serialSuggestion(*best)
+		v.Meters = &m
+		covered.Add(covered, missing)
+		return []SuggestionView{v}, nil
+	}
+	box := numericRat(p.DefaultRollMeters)
+	if box == nil || box.Cmp(missing) < 0 {
+		return []SuggestionView{}, nil
+	}
+	for _, r := range rows {
+		if r.RemainingMeters.Valid {
+			continue
+		}
+		u, err := q.GetUnitByUUID(ctx, r.Uuid)
+		if err != nil {
+			return nil, fmt.Errorf("orders: unit: %w", err)
+		}
+		if u.InitialMeters.Valid {
+			continue
+		}
+		v := serialSuggestion(r)
+		v.Meters, v.OpenBox = &m, true
+		v.RemainingMeters = numericTextPtr(p.DefaultRollMeters, 2)
+		covered.Add(covered, missing)
+		return []SuggestionView{v}, nil
+	}
+	return []SuggestionView{}, nil
+}
+
 // suggestFixed: quantities from the seller's unreserved fixed holdings.
 func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, missing *big.Rat, in SuggestInput, covered *big.Rat) ([]SuggestionView, error) {
 	rows, err := q.ListOrderSuggestFixedCandidates(ctx, db.ListOrderSuggestFixedCandidatesParams{
@@ -289,6 +349,8 @@ type ApplyInput struct {
 	UnitUUID string
 	Quantity *int64
 	Meters   *string
+	// OpenBox confirms opening a proposed closed box (TEC-1241).
+	OpenBox bool
 }
 
 // ApplySuggestions assigns the confirmed units to the line in one
@@ -314,7 +376,7 @@ func (s *Service) ApplySuggestions(ctx context.Context, c Caller, orderUUID, ite
 		}
 		for i, u := range units {
 			split, err := s.assignLocked(ctx, q, tx, c, o, it, AssignInput{
-				UnitUUID: u.UnitUUID, Quantity: u.Quantity, Meters: u.Meters,
+				UnitUUID: u.UnitUUID, Quantity: u.Quantity, Meters: u.Meters, OpenBox: u.OpenBox,
 			})
 			if err != nil {
 				var ve *ValidationError

@@ -14750,9 +14750,29 @@ export interface paths {
         put?: never;
         /**
          * Assign a unit to an order line and reserve it (seller, orders.ship)
-         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (TEC-1078: `<roll barcode>-<meters>M`, `-3M-2` for the same length again, legacy `-S<n>` past 64 characters), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED.
+         * @description Only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). The unit is named by barcode (scan) or unit_uuid and must be of the line's product and in the seller's stock (409 ORDER_UNIT_NOT_AVAILABLE). Serial pieces count as 1; a serial unit reserved by another order answers 409 ORDER_UNIT_RESERVED. Rolls take meters: without meters (or with the remaining meters) the whole roll is assigned; fewer meters first split the roll (TEC-184): the meters leave as a new unit with its own barcode (TEC-1078: `<roll barcode>-<meters>M`, `-3M-2` for the same length again, legacy `-S<n>` past 64 characters), which is assigned and returned in `split` (label printing: TEC-95), while the roll keeps the rest. More meters than the roll has answer 422 ROLL_METERS_EXCEED_REMAINING. An `idempotency_key` makes a split assignment retry-safe (a retry returns the same split, `split.replayed` = true). Fixed barcodes take a quantity; the seller's active reservations may not exceed what it holds (409 ORDER_INSUFFICIENT_STOCK). The line amount may not be exceeded (409 ORDER_ITEM_OVER_ASSIGNED); a unit already on the line answers 409 ORDER_UNIT_ALREADY_ASSIGNED. TEC-1241 — a meter line of a piece product (line_credits set) is cut: without meters one piece of the missing meters is cut from the scanned open roll (the whole remainder goes without a cut) or from a closed box, which is opened in the same transaction (measure_conversion, reason box_opened) only with `open_box` (else 409 BOX_OPEN_CONFIRM_REQUIRED). A box reserved by another order or on an open transfer is refused before it is opened (409 ORDER_UNIT_RESERVED). A cut below the product's minimum cut that is not the whole remainder answers 422 CUT_BELOW_MIN_CUT. A piece shorter than the rest of the line needs `partial` and a `note` (409 PARTIAL_PIECE_CONFIRM_REQUIRED); it carries its meter share of the line credits rounded, or `credits` (the pieces never carry more than the line, 400 CREDITS_EXCEED_LINE). Preview the outcome with GET .../cut-preview.
          */
         post: operations["assignOrderUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items/{item_uuid}/cut-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview cutting a scanned roll or closed box for a meter line (seller, orders.ship)
+         * @description TEC-1241. Read only, the same checks as POST .../units without writing: whether the unit is a closed box to open, the box length or the roll's remaining meters, the cut, what stays in stock, whether the remainder is a remnant (shorter than the minimum cut, "ragle"), whether the piece is partial and the credits it would carry. Only for a meter line of a piece product (409 ORDER_ITEM_NOT_CUT_LINE) while preparing. No price is returned.
+         */
+        get: operations["previewOrderCut"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -14788,7 +14808,7 @@ export interface paths {
         };
         /**
          * Suggest units for the rest of a preparing line (seller, orders.ship)
-         * @description TEC-768. Read only, nothing is reserved; only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). Candidates are the seller's units of the line's product in stock (available/placed), not reserved and not on an open warehouse transfer. Placed units (a warehouse location owns them) come first, then the oldest entry (FIFO on the unit's creation). Units the organization holds without a location join only with include_unlocated=true. Pieces: one unit per missing piece. Rolls: the first roll that covers the missing meters (a longer roll is split on assignment); without one, whole rolls in order and the last one cut to the rest. Fixed barcodes: a quantity of the unreserved holding that one owner can ship. `complete` is false when the suggestions do not cover `missing`.
+         * @description TEC-768. Read only, nothing is reserved; only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). Candidates are the seller's units of the line's product in stock (available/placed), not reserved and not on an open warehouse transfer. Placed units (a warehouse location owns them) come first, then the oldest entry (FIFO on the unit's creation). Units the organization holds without a location join only with include_unlocated=true. Pieces: one unit per missing piece. Rolls: the first roll that covers the missing meters (a longer roll is split on assignment); without one, whole rolls in order and the last one cut to the rest. Fixed barcodes: a quantity of the unreserved holding that one owner can ship. TEC-1241: a meter line of a piece product gets one piece — the smallest open roll that covers the missing meters (a remnant is never proposed), else a closed box with open_box = true. `complete` is false when the suggestions do not cover `missing`.
          */
         get: operations["suggestOrderUnits"];
         put?: never;
@@ -30133,6 +30153,10 @@ export interface components {
             shipped: boolean;
             /** Format: date-time */
             assigned_at: string;
+            /** @description TEC-1241: the credits of a piece when the line's credits are split across pieces (K11); null = the line's line_credits. */
+            credits?: number | null;
+            /** @description TEC-1241: the note of a partial piece */
+            piece_note?: string | null;
         };
         /** @description Give either barcode or unit_uuid. */
         OrderUnitAssignInput: {
@@ -30146,6 +30170,14 @@ export interface components {
             meters?: string;
             /** @description Optional; a retried split assignment with the same key returns the earlier split */
             idempotency_key?: string;
+            /** @description TEC-1241: confirms opening a closed box for a meter line */
+            open_box?: boolean;
+            /** @description TEC-1241: confirms a piece shorter than the rest of the line (K11) */
+            partial?: boolean;
+            /** @description TEC-1241: required with partial */
+            note?: string;
+            /** @description TEC-1241: the piece's share of the line credits (default: the meter share rounded) */
+            credits?: number;
         };
         OrderItem: {
             /**
@@ -30155,6 +30187,8 @@ export interface components {
             sale_measure: "box" | "meter";
             /** @description TEC-1238 (K3/K12): usage credits each cut piece of a meter line of a piece product carries (shared with its plotter mark); null on box and roll_meter lines. */
             line_credits: number | null;
+            /** @description TEC-1241: the product's minimum cut on meter lines (null on box lines or without a minimum); clients warn when a partial piece or a partial shipment leaves less. */
+            min_cut_meters?: string | null;
             /**
              * @description TEC-1064: the buyer's purchase price before the discount (NUMERIC(14,4)). Seller side with pricing.sale.read only; null for the buyer, without a list price or without the permission.
              * @example 100.0000
@@ -30433,6 +30467,14 @@ export interface components {
             split?: components["schemas"]["OrderRollSplit"];
             /** @description Roll splits of an applied suggestion (TEC-768) */
             splits?: components["schemas"]["OrderRollSplit"][];
+            /** @description TEC-1241 (seller side, detail only; omitted when empty): pieces cut for this order's lines that are no longer on their line (the order was cancelled or the piece unassigned). They stay in stock as separate units. */
+            detached_cut_pieces?: {
+                /** Format: uuid */
+                unit_uuid: string;
+                barcode: string;
+                cut_meters: string;
+                remaining_meters: string | null;
+            }[];
             /** Format: date-time */
             received_at: string | null;
             /** @description Delivery method chosen at shipping (TEC-768) */
@@ -30455,7 +30497,7 @@ export interface components {
             at: string;
             user: components["schemas"]["OrderUserRef"] | null;
         };
-        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned, updated (line edit) or plotter_marked (TEC-1058: product and plotter_cut), and (TEC-1228) schedule_updated (priority, due_date), claimed, claim_taken_over and claim_released (previous_picker when it was someone else's). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. */
+        /** @description TEC-1060: one step of an order. action is created, a status the order moved to, unit_assigned, unit_unassigned, updated (line edit) or plotter_marked (TEC-1058: product and plotter_cut), and (TEC-1228) schedule_updated (priority, due_date), claimed, claim_taken_over and claim_released (previous_picker when it was someone else's). The unit steps carry product, barcode and the amount of that step (quantity or meters; a fixed barcode scanned again counts the growth); a status step may carry from_status and reason; an edit carries the number of lines and (TEC-1056) the changed lines. TEC-1241: box_opened (barcode, meters = the box length) when picking opened a closed box for a meter line. */
         OrderTimelineEntry: {
             /** @example unit_assigned */
             action: string;
@@ -30530,6 +30572,52 @@ export interface components {
             new_unit_uuid: string;
             new_barcode: string;
             replayed: boolean;
+            /** @description TEC-1241: the source was a closed box opened for the cut */
+            box_opened?: boolean;
+            /** @description TEC-1241: what is left is shorter than the minimum cut (ragle) */
+            source_remnant?: boolean;
+        };
+        /** @description TEC-1241. What assigning the scanned unit to a meter line does. */
+        OrderCutPreview: {
+            /** Format: uuid */
+            item_uuid: string;
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @description The unit is a closed box; assigning it opens the box (open_box) */
+            closed_box: boolean;
+            /**
+             * @description The box length or the roll's remaining meters
+             * @example 15.00
+             */
+            source_meters: string;
+            /** @example 3.00 */
+            cut_meters: string;
+            /**
+             * @description What stays in stock as an open roll
+             * @example 12.00
+             */
+            remaining_meters: string;
+            /** @description The whole roll or box goes; no new barcode */
+            whole: boolean;
+            /** @description The remainder is shorter than the minimum cut (ragle, K7) */
+            remnant: boolean;
+            min_cut_meters: string | null;
+            /** @description What the line still needs */
+            missing_meters: string;
+            /** @description The piece is shorter than missing_meters (needs partial and a note) */
+            partial: boolean;
+            /** @description Credits the piece carries */
+            credits: number;
+            line_credits: number;
+            plotter_cut: boolean;
+            location_code: string | null;
+        };
+        EnvelopeOrderCutPreview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrderCutPreview"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         /** @description The delivery method an order shipped with (TEC-768). */
         OrderDeliveryMethodRef: {
@@ -30607,6 +30695,8 @@ export interface components {
             location_code: string | null;
             /** Format: date-time */
             entered_at: string;
+            /** @description TEC-1241: a closed box to open and cut for a meter line (remaining_meters is the box length); apply it with open_box. */
+            open_box?: boolean;
         };
         OrderSuggestions: {
             /** Format: uuid */
@@ -30631,6 +30721,8 @@ export interface components {
                 /** Format: int64 */
                 quantity?: number;
                 meters?: string;
+                /** @description TEC-1241: confirms opening a proposed closed box */
+                open_box?: boolean;
             }[];
         };
         OrderPickLocation: {
@@ -61954,6 +62046,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    previewOrderCut: {
+        parameters: {
+            query?: {
+                barcode?: string;
+                unit_uuid?: string;
+                /** @description The piece length; default the missing meters of the line (at most the source) */
+                meters?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cut */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderCutPreview"];
                 };
             };
             400: components["responses"]["BadRequest"];

@@ -72,6 +72,7 @@ type applyUnitBody struct {
 	UnitUUID string       `json:"unit_uuid"`
 	Quantity *int64       `json:"quantity"`
 	Meters   *json.Number `json:"meters"`
+	OpenBox  bool         `json:"open_box"`
 }
 
 type applyBody struct {
@@ -91,7 +92,7 @@ func (h *Handler) ApplySuggestions(w http.ResponseWriter, r *http.Request) {
 	}
 	units := make([]ord.ApplyInput, 0, len(body.Units))
 	for _, u := range body.Units {
-		in := ord.ApplyInput{UnitUUID: u.UnitUUID, Quantity: u.Quantity}
+		in := ord.ApplyInput{UnitUUID: u.UnitUUID, Quantity: u.Quantity, OpenBox: u.OpenBox}
 		if u.Meters != nil {
 			m := u.Meters.String()
 			in.Meters = &m

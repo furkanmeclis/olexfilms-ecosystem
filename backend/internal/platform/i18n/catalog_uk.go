@@ -1297,6 +1297,7 @@ var ukCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Код відповідає кільком коміркам; використайте повний код.",
 	"entry_import.error.product_mismatch":       "Штрихкод належить іншому товару.",
 	"entry_import.error.unit_not_enterable":     "Одиниця не є доступною друкованою етикеткою.",
+	"labels.unit.credits":                       "{{n}} використань", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Наявний штрихкод пропущено за правилом.",
 	"entry_import.error.center_only":            "Нові одиниці створює лише центр.",
 	"entry_import.error.roll_meters_required":   "Для нового рулону потрібна довжина; скористайтеся імпортом запасів.",

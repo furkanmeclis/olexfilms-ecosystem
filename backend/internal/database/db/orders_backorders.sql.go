@@ -116,7 +116,7 @@ func (q *Queries) CreateOrderReceiptDiscrepancy(ctx context.Context, arg CreateO
 }
 
 const getOrderItemUnitByID = `-- name: GetOrderItemUnitByID :one
-SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at FROM order_item_units WHERE id = $1
+SELECT id, order_item_id, organization_id, brand_id, unit_id, quantity, meters, reservation_id, movement_id, assigned_by_user_id, assigned_at, created_at, updated_at, credits, piece_note FROM order_item_units WHERE id = $1
 `
 
 func (q *Queries) GetOrderItemUnitByID(ctx context.Context, id int64) (OrderItemUnit, error) {
@@ -136,6 +136,8 @@ func (q *Queries) GetOrderItemUnitByID(ctx context.Context, id int64) (OrderItem
 		&i.AssignedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Credits,
+		&i.PieceNote,
 	)
 	return i, err
 }
