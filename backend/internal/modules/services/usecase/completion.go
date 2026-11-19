@@ -153,7 +153,12 @@ func (s *Service) consume(ctx context.Context, q *db.Queries, tx pgx.Tx, l *ledg
 		return post(ctx, l, tx, m, item)
 	}
 
-	if credits.Applies(unit) {
+	// TEC-1242: a cut piece with line credits follows the credit rule too.
+	creditUnit, err := credits.Carries(ctx, q, unit)
+	if err != nil {
+		return db.StockMovement{}, err
+	}
+	if creditUnit {
 		if done, err := s.creditUnitStaysInStock(ctx, q, svc, item, unit); err != nil || done {
 			if err == nil {
 				err = errNoConsumption

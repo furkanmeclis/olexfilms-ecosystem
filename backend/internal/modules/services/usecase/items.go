@@ -167,6 +167,16 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 		if err := checkParts(ctx, q, product, parts); err != nil {
 			return err
 		}
+		// TEC-1221 / TEC-1242 (K4): a credit unit — a piece, or a cut piece
+		// shipped on a meter line — is used whole, one credit per service;
+		// its meters are never cut. Rolls keep the meter consumption.
+		creditUnit, err := credits.Carries(ctx, q, unit)
+		if err != nil {
+			return err
+		}
+		if creditUnit && kind == KindPartial {
+			return invalid("kind", "a unit with usage credits is used whole (one credit per service), not cut")
+		}
 		params := db.CreateServiceItemParams{
 			ServiceID: svc.ID, ProductID: product.ID, UnitID: unit.ID, Kind: kind,
 			AppliedParts: mustJSON(parts), Notes: textOrNull(in.Notes),
@@ -223,7 +233,6 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 				return err
 			}
 		}
-		creditUnit := credits.Applies(unit)
 		if in.FinishProduct && !creditUnit {
 			return invalid("finish_product", "only a unit with usage credits can be finished")
 		}

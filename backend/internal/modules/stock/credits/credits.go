@@ -2,7 +2,10 @@
 // karar TEC-1084).
 //
 // A serial piece unit (a barcode without meters) can be used in as many
-// services as it has credits; rolls and fixed barcodes carry none. Every
+// services as it has credits; rolls and fixed barcodes carry none. A cut
+// piece shipped on a meter line carries that line's credits (TEC-1238,
+// K3/K4) and is used the same way: one credit per service, its meters are
+// never cut (TEC-1242). Every
 // change is an append-only unit_credit_movements row and the current value
 // is the unit_credit_balances projection, written in the caller's
 // transaction:
@@ -278,7 +281,9 @@ func UseForItem(ctx context.Context, q *db.Queries, u db.Unit, a Actor, ref Ref,
 // RefundItem gives back what the service item took (its use and finish).
 // An item that took nothing, or was already refunded, is a no-op.
 func RefundItem(ctx context.Context, q *db.Queries, u db.Unit, a Actor, ref Ref, reason string) (Balance, bool, error) {
-	if !Applies(u) {
+	// TEC-1242: a cut piece with line credits refunds too; a roll's items
+	// took nothing, so the sum below answers the no-op.
+	if !mayCarry(u) {
 		return Balance{}, false, nil
 	}
 	sum, err := q.SumUnitCreditsByItem(ctx, pgtype.Int8{Int64: ref.ServiceItemID, Valid: true})

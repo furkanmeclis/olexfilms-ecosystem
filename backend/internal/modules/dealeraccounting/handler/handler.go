@@ -18,9 +18,11 @@ import (
 )
 
 const (
-	CodeStockUnavailable  = "STOCK_UNAVAILABLE"
-	CodeVoidWindowExpired = "VOID_WINDOW_EXPIRED"
-	CodeSaleVoided        = "PRODUCT_SALE_VOIDED"
+	CodeStockUnavailable = "STOCK_UNAVAILABLE"
+	// CodeCutPieceNotSellable: TEC-1242 (K13), a cut piece is used only in services.
+	CodeCutPieceNotSellable = "CUT_PIECE_NOT_SELLABLE"
+	CodeVoidWindowExpired   = "VOID_WINDOW_EXPIRED"
+	CodeSaleVoided          = "PRODUCT_SALE_VOIDED"
 )
 
 type Handler struct {
@@ -75,6 +77,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Product sale not found")
 	case errors.Is(err, da.ErrPurchaseNotFound):
 		response.NotFound(w, r, "Purchase not found")
+	case errors.Is(err, da.ErrCutPieceNotSellable):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeCutPieceNotSellable, "A cut piece is used in services and cannot be sold")
 	case errors.Is(err, da.ErrStockUnavailable):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeStockUnavailable, "Requested stock is not available")
 	case errors.Is(err, da.ErrSaleAlreadyVoided):

@@ -149,7 +149,7 @@ type SaleLookup struct {
 
 // LookupSaleItem resolves a barcode (or a product) to the first unit the
 // dealer holds, in the same order CreateProductSale consumes them. Nothing
-// held → ErrStockUnavailable.
+// held → ErrStockUnavailable; only a cut piece → ErrCutPieceNotSellable.
 func (s *Service) LookupSaleItem(ctx context.Context, c Caller, barcode string, productUUID *uuid.UUID, purchaseVisible bool) (SaleLookup, error) {
 	o, err := s.activeDealer(ctx, c)
 	if err != nil {
@@ -175,6 +175,9 @@ func (s *Service) LookupSaleItem(ctx context.Context, c Caller, barcode string, 
 	})
 	if err != nil {
 		return SaleLookup{}, fmt.Errorf("dealer accounting: stock candidates: %w", err)
+	}
+	if rows, err = saleCandidates(rows); err != nil {
+		return SaleLookup{}, err
 	}
 	if len(rows) == 0 {
 		return SaleLookup{}, ErrStockUnavailable

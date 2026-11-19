@@ -12131,7 +12131,7 @@ export interface paths {
         };
         /**
          * Resolve a barcode or product to the unit a quick sale would consume
-         * @description TEC-348. Same unit order as POST /v1/product-sales. Nothing held by the dealer → 422 STOCK_UNAVAILABLE. purchase_price is the cost the sale would snapshot (null without pricing.purchase.read).
+         * @description TEC-348. Same unit order as POST /v1/product-sales. Nothing held by the dealer → 422 STOCK_UNAVAILABLE. purchase_price is the cost the sale would snapshot (null without pricing.purchase.read). TEC-1242 (K13): cut pieces are never offered; a cut piece's barcode is 422 CUT_PIECE_NOT_SELLABLE (also on POST /v1/product-sales).
          */
         get: operations["lookupProductSaleItem"];
         put?: never;
@@ -13640,7 +13640,7 @@ export interface paths {
         put?: never;
         /**
          * Add a stock unit to a service (by barcode)
-         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts. TEC-1221 (kredili kod): a serial piece unit takes one usage credit per service (finish_product takes all the rest) and may sit in several open services while it has credits; with none left it is 409 UNIT_CREDITS_EXHAUSTED, twice in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or cancelling the service gives the credits back; completion consumes the unit only when its last credit is used and no other open service holds it. TEC-1230: a partial cut shorter than the product's `min_cut_meters` answers 422 SERVICE_ITEM_BELOW_MIN_CUT unless it takes the whole rest of the roll (a remnant).
+         * @description Only while the service is draft, pending or processing (409 SERVICE_NOT_EDITABLE). The unit must be held by the service organization (serial: available or placed; fixed barcode: enough pieces on hand), else 409 SERVICE_UNIT_NOT_AVAILABLE. A serial unit already in an open service (this one included) is 409 SERVICE_UNIT_IN_USE; a roll may be cut (partial, meters) for several services but a whole roll excludes other uses. applied_parts must be in the product category's available_parts. TEC-1221 (kredili kod): a serial piece unit takes one usage credit per service (finish_product takes all the rest) and may sit in several open services while it has credits; with none left it is 409 UNIT_CREDITS_EXHAUSTED, twice in the same service 409 SERVICE_UNIT_IN_USE. Removing the item or cancelling the service gives the credits back; completion consumes the unit only when its last credit is used and no other open service holds it. TEC-1230: a partial cut shorter than the product's `min_cut_meters` answers 422 SERVICE_ITEM_BELOW_MIN_CUT unless it takes the whole rest of the roll (a remnant). TEC-1242 (K4): a cut piece shipped on a meter line carries that line's credits (`credits` in the stock picker) and is used like a credit piece — kind full, one credit per service, its meters are never cut; kind partial on it is 400 (field kind). A roll without line credits keeps the meter consumption.
          */
         post: operations["addServiceItem"];
         delete?: never;
@@ -13682,7 +13682,7 @@ export interface paths {
         };
         /**
          * Stock picker of the service organization
-         * @description Units the service organization can add as items (TEC-180): serial units it holds (available or placed) that no open service has taken (a roll that is only cut stays listed) and fixed barcodes with pieces on hand. barcode is an exact barcode (scanner lookup), product_uuid narrows to one product, min_meters lists only rolls with at least that many meters left, q matches a part of the product name, SKU or barcode (TEC-182 product search). Each product carries its category's available_parts, the parts a new item may apply. Needs services.write on the service; a service outside the read scope is 404.
+         * @description Units the service organization can add as items (TEC-180): serial units it holds (available or placed) that no open service has taken (a roll that is only cut stays listed) and fixed barcodes with pieces on hand. barcode is an exact barcode (scanner lookup), product_uuid narrows to one product, min_meters lists only rolls with at least that many meters left (never a credit cut piece, TEC-1242), q matches a part of the product name, SKU or barcode (TEC-182 product search). Each product carries its category's available_parts, the parts a new item may apply. Needs services.write on the service; a service outside the read scope is 404.
          */
         get: operations["listServiceStockUnits"];
         put?: never;

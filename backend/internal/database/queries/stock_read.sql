@@ -229,9 +229,11 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        c.uuid AS category_uuid, c.name AS category_name,
        l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name,
        -- TEC-1221: credits of a serial piece unit (-1: none), uses so far.
-       COALESCE(cb.credits_total, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+       -- TEC-1242: a cut piece shows the credits of its meter line
+       -- (unit_credit_default is NULL for a roll without one).
+       COALESCE(cb.credits_total, CASE WHEN u.unit_kind = 'serial'
                 THEN unit_credit_default(u.id) END, -1)::int AS credits_total,
-       COALESCE(cb.credits_remaining, CASE WHEN u.unit_kind = 'serial' AND u.initial_meters IS NULL
+       COALESCE(cb.credits_remaining, CASE WHEN u.unit_kind = 'serial'
                 THEN unit_credit_default(u.id) END, -1)::int AS credits_remaining,
        COALESCE(cb.used_count, 0)::int AS credits_used
 FROM held
