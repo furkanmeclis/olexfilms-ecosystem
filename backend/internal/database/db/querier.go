@@ -3491,7 +3491,8 @@ type Querier interface {
 	// shelves and bins are unique by full_code).
 	MigratorFindLocation(ctx context.Context, arg MigratorFindLocationParams) (uuid.UUID, error)
 	MigratorFindOrderByExternalReference(ctx context.Context, arg MigratorFindOrderByExternalReferenceParams) (uuid.UUID, error)
-	// TEC-1238: legacy lines are box (quantity) lines.
+	// TEC-1238/TEC-1244: a legacy line maps to the line of its product and
+	// measure (legacyLineMeasure: box, or meter for a roll product).
 	MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error)
 	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
 	// Products of the brand with the name (case insensitive); the warehouse

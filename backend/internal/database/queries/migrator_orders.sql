@@ -60,9 +60,10 @@ SELECT id, order_id, product_id, quantity FROM order_items
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
 
 -- name: MigratorFindOrderItem :one
--- TEC-1238: legacy lines are box (quantity) lines.
+-- TEC-1238/TEC-1244: a legacy line maps to the line of its product and
+-- measure (legacyLineMeasure: box, or meter for a roll product).
 SELECT uuid FROM order_items
-WHERE order_id = sqlc.arg(order_id) AND product_id = sqlc.arg(product_id) AND sale_measure = 'box';
+WHERE order_id = sqlc.arg(order_id) AND product_id = sqlc.arg(product_id) AND sale_measure = sqlc.arg(sale_measure)::text;
 
 -- name: MigratorInsertOrderItem :one
 -- Legacy orders carry no prices: the line is frozen at 0, so a later receipt

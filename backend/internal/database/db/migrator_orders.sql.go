@@ -42,17 +42,19 @@ func (q *Queries) MigratorFindOrderByExternalReference(ctx context.Context, arg 
 
 const migratorFindOrderItem = `-- name: MigratorFindOrderItem :one
 SELECT uuid FROM order_items
-WHERE order_id = $1 AND product_id = $2 AND sale_measure = 'box'
+WHERE order_id = $1 AND product_id = $2 AND sale_measure = $3::text
 `
 
 type MigratorFindOrderItemParams struct {
-	OrderID   int64 `json:"order_id"`
-	ProductID int64 `json:"product_id"`
+	OrderID     int64  `json:"order_id"`
+	ProductID   int64  `json:"product_id"`
+	SaleMeasure string `json:"sale_measure"`
 }
 
-// TEC-1238: legacy lines are box (quantity) lines.
+// TEC-1238/TEC-1244: a legacy line maps to the line of its product and
+// measure (legacyLineMeasure: box, or meter for a roll product).
 func (q *Queries) MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, migratorFindOrderItem, arg.OrderID, arg.ProductID)
+	row := q.db.QueryRow(ctx, migratorFindOrderItem, arg.OrderID, arg.ProductID, arg.SaleMeasure)
 	var uuid uuid.UUID
 	err := row.Scan(&uuid)
 	return uuid, err
