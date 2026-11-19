@@ -17,23 +17,41 @@ WHERE id = sqlc.arg(id);
 -- Serial units entered or placed into a warehouse bin after the keyset
 -- (created_at, id), for the products synced from the connection. A unit
 -- placed twice comes twice; the caller deduplicates by barcode.
+--
+-- TEC-1252: a piece product sold by the meter also pushes the units a box
+-- opening (measure_conversion) or a cut (split, both the roll and the new
+-- piece) touched in a warehouse bin. The meter columns are the unit's
+-- current state (absolute, so a repeated push is harmless); a cut piece
+-- carries its source roll and the source's current meters, which go in
+-- the same bulk call (the hub records the piece first, then the source's
+-- absolute remaining). credits is what the piece would carry
+-- (unit_credit_default: the meter line's share), 0 before it is
+-- assigned.
 SELECT m.id AS movement_id,
        m.created_at,
        u.barcode,
        p.external_id::text AS product_external_id,
-       -- TEC-1251 (K1): a unit with meters of a piece product (an opened
-       -- box or a cut piece) has no Glorian model yet; the push leaves it
-       -- out and logs it.
-       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
+       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece,
+       COALESCE(u.initial_meters::text, '')::text AS initial_meters,
+       COALESCE(u.remaining_meters::text, '')::text AS remaining_meters,
+       COALESCE(su.barcode, '')::text AS source_barcode,
+       COALESCE(su.initial_meters::text, '')::text AS source_initial_meters,
+       COALESCE(su.remaining_meters::text, '')::text AS source_remaining_meters,
+       COALESCE(unit_credit_default(u.id), 0)::int AS credits
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id
 JOIN products p ON p.id = m.product_id
+LEFT JOIN stock_splits ss ON ss.new_unit_id = u.id
+LEFT JOIN units su ON su.id = ss.source_unit_id
 WHERE m.brand_id = sqlc.arg(brand_id)
   AND p.connection_id = sqlc.arg(connection_id)::bigint
   AND p.external_id IS NOT NULL
-  AND m.type IN ('entry', 'placement')
   AND m.to_owner_type = 'warehouse_location'
   AND u.unit_kind = 'serial'
+  AND (
+      m.type IN ('entry', 'placement')
+      OR (m.type IN ('split', 'measure_conversion') AND p.unit_type = 'piece')
+  )
   AND (m.created_at, m.id) > (sqlc.arg(after_created_at)::timestamptz, sqlc.arg(after_id)::bigint)
 ORDER BY m.created_at, m.id
 LIMIT sqlc.arg(row_limit);
@@ -50,7 +68,8 @@ SELECT m.id AS movement_id,
        u.unit_kind,
        p.connection_id,
        p.external_id,
-       -- TEC-1251 (K1): see ListGlorianPushUnits.
+       -- TEC-1252: an opened box or a cut piece of a piece product; the
+       -- hub knows it now (bulk push), its exit is patched like a box.
        (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id

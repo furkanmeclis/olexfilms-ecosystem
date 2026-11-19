@@ -256,10 +256,10 @@ func (c glorianReconcileCheck) connection(ctx context.Context, conn db.Integrati
 	}
 	s := counts.ReconcileSummary
 	if s.Total() > 0 {
-		return fmt.Sprintf("connection %s: reconcile run %s has %d drift (%s=%d %s=%d %s=%d %s=%d %s=%d)",
+		return fmt.Sprintf("connection %s: reconcile run %s has %d drift (%s=%d %s=%d %s=%d %s=%d %s=%d %s=%d)",
 			conn.Uuid, run.Uuid, s.Total(),
 			glorian.DriftOnlyRemote, s.OnlyRemote, glorian.DriftOnlyLocal, s.OnlyLocal, glorian.DriftStatus, s.StatusDrift,
-			glorian.DriftProduct, s.ProductDrift, glorian.DriftOwner, s.OwnerDrift), false
+			glorian.DriftProduct, s.ProductDrift, glorian.DriftOwner, s.OwnerDrift, glorian.DriftMeter, s.MeterDrift), false
 	}
 	if !run.FinishedAt.Valid {
 		return fmt.Sprintf("connection %s: reconcile run %s has no finished_at", conn.Uuid, run.Uuid), false

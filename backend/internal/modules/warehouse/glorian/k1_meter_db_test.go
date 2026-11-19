@@ -6,6 +6,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian/fake"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -60,14 +61,14 @@ func TestPullKeepsMeterSaleSettings(t *testing.T) {
 	}
 }
 
-// TEC-1251 (K1): an opened box or a cut piece of a synced product has no
-// Glorian model yet: the bulk push leaves it out and its exit sends no
-// PATCH (the hub would answer 404 forever); the closed boxes go as before.
-func TestPushLeavesOutMeteredPieces(t *testing.T) {
+// TEC-1252: an opened box of a synced product goes to the hub with its
+// meters (opened, absolute remaining) next to the closed boxes, which go
+// as before; its exit is patched like a box (the hub knows the barcode).
+func TestPushSendsOpenedBoxWithMeters(t *testing.T) {
 	f := newPullFixture(t, true)
 	s := f.pushUnits(t, f.glorian, 2, true)
-	cut := s.units[1]
-	if _, err := f.tx.Exec(f.ctx, `UPDATE units SET initial_meters = 3, remaining_meters = 3 WHERE id = $1`, cut.ID); err != nil {
+	opened := s.units[1]
+	if _, err := f.tx.Exec(f.ctx, `UPDATE units SET initial_meters = 15, remaining_meters = 12 WHERE id = $1`, opened.ID); err != nil {
 		t.Fatal(err)
 	}
 	f.enter(t, s, f.glorian)
@@ -83,14 +84,101 @@ func TestPushLeavesOutMeteredPieces(t *testing.T) {
 	if err := calls[0].JSON(&body); err != nil {
 		t.Fatal(err)
 	}
-	if len(body.Items) != 1 || body.Items[0].Barcode != s.units[0].Barcode {
-		t.Fatalf("bulk items = %+v; want the closed box only", body.Items)
+	if len(body.Items) != 2 {
+		t.Fatalf("bulk items = %+v; want the closed and the opened box", body.Items)
 	}
-	mv, _ := f.post(t, ledger.Movement{Type: ledger.TypeExternalOutbound, UnitID: cut.ID})
+	box, roll := body.Items[0], body.Items[1]
+	if box.Barcode != s.units[0].Barcode || box.InitialMeters != "" || box.RemainingMeters != "" || box.Opened || box.SourceBarcode != "" {
+		t.Fatalf("closed box = %+v; want no meter fields", box)
+	}
+	if roll.Barcode != opened.Barcode || roll.InitialMeters != "15.00" || roll.RemainingMeters != "12.00" || !roll.Opened || roll.SourceBarcode != "" {
+		t.Fatalf("opened box = %+v", roll)
+	}
+	if row, _ := f.srv.StockItem(opened.Barcode); row["kind"] != glorian.StockKindOpenedBox || row["remaining_meters"] != 12.0 {
+		t.Fatalf("hub row of the opened box = %+v", row)
+	}
+	mv, _ := f.post(t, ledger.Movement{Type: ledger.TypeExternalOutbound, UnitID: opened.ID})
 	if err := p.PatchTask(f.ctx, mv.ID); err != nil {
 		t.Fatalf("patch: %v", err)
 	}
-	if n := len(f.srv.RequestsTo(http.MethodPatch, "/stock-items/by-barcode/"+cut.Barcode)); n != 0 {
-		t.Fatalf("patch calls for the cut piece = %d; want 0", n)
+	if n := len(f.srv.RequestsTo(http.MethodPatch, "/stock-items/by-barcode/"+opened.Barcode)); n != 1 {
+		t.Fatalf("patch calls for the opened box = %d; want 1", n)
+	}
+	if row, _ := f.srv.StockItem(opened.Barcode); row["status"] != glorian.StockStatusExternalOutbound {
+		t.Fatalf("hub status after the exit = %v", row["status"])
+	}
+}
+
+// TEC-1252 (K5): a closed box opened in a bin and cut. The opening pushes
+// the box as opened (15 m); the cut pushes the new piece with its source
+// barcode and the source's absolute remaining in the same bulk call, so
+// the hub ends at the warehouse's meters (12 m) whatever it had; the
+// piece's exit is patched.
+func TestPushOpenAndCutFlowsToHub(t *testing.T) {
+	f := newPullFixture(t, true)
+	s := f.pushUnits(t, f.glorian, 1, true)
+	box := s.units[0]
+	f.enter(t, s, f.glorian)
+	p := f.pusher()
+	if err := p.PushTask(f.ctx, f.conn.ID); err != nil {
+		t.Fatalf("push: %v", err)
+	}
+	if row, _ := f.srv.StockItem(box.Barcode); row["initial_meters"] != nil {
+		t.Fatalf("closed box on the hub = %+v; want no meters", row)
+	}
+
+	l := ledger.New(f.q, &captureOutbox{})
+	if _, err := l.ConvertMeasure(f.ctx, f.tx, ledger.MeasureConversion{
+		UnitID: box.ID, Centimeters: 1500, HolderOrgID: f.glorian.ID,
+		Source: "test", RefType: "t1252", RefID: 1, Reason: "box_opened",
+	}); err != nil {
+		t.Fatalf("open box: %v", err)
+	}
+	if err := p.PushTask(f.ctx, f.conn.ID); err != nil {
+		t.Fatalf("push after opening: %v", err)
+	}
+	if row, _ := f.srv.StockItem(box.Barcode); row["kind"] != glorian.StockKindOpenedBox || row["remaining_meters"] != 15.0 {
+		t.Fatalf("hub row after opening = %+v", row)
+	}
+
+	res, err := l.Split(f.ctx, f.tx, ledger.SplitCommand{
+		SourceUnitID: box.ID, Centimeters: 300, HolderOrgID: f.glorian.ID, IdempotencyKey: "t1252-cut-" + f.suffix,
+	})
+	if err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	piece := res.New
+	if err := p.PushTask(f.ctx, f.conn.ID); err != nil {
+		t.Fatalf("push after the cut: %v", err)
+	}
+	calls := f.srv.RequestsTo(http.MethodPost, "/stock-items/bulk")
+	var body bulkBody
+	if err := calls[len(calls)-1].JSON(&body); err != nil {
+		t.Fatal(err)
+	}
+	byBarcode := map[string]glorian.BarcodeUpsert{}
+	for _, it := range body.Items {
+		byBarcode[it.Barcode] = it
+	}
+	got, ok := byBarcode[piece.Barcode]
+	if !ok || got.SourceBarcode != box.Barcode || got.InitialMeters != "3.00" || got.RemainingMeters != "3.00" || got.Opened {
+		t.Fatalf("cut piece in the bulk = %+v (%v); items %+v", got, ok, body.Items)
+	}
+	if src := byBarcode[box.Barcode]; src.RemainingMeters != "12.00" || src.InitialMeters != "15.00" || !src.Opened {
+		t.Fatalf("source in the same bulk = %+v", src)
+	}
+	if row, _ := f.srv.StockItem(piece.Barcode); row["kind"] != glorian.StockKindCutPiece || row["source_barcode"] != box.Barcode || row["initial_meters"] != 3.0 {
+		t.Fatalf("hub row of the piece = %+v", row)
+	}
+	if row, _ := f.srv.StockItem(box.Barcode); row["remaining_meters"] != 12.0 {
+		t.Fatalf("hub remaining of the source = %v; want 12", row["remaining_meters"])
+	}
+
+	mv, _ := f.post(t, ledger.Movement{Type: ledger.TypeExternalOutbound, UnitID: piece.ID})
+	if err := p.PatchTask(f.ctx, mv.ID); err != nil {
+		t.Fatalf("patch the piece: %v", err)
+	}
+	if row, _ := f.srv.StockItem(piece.Barcode); row["status"] != glorian.StockStatusExternalOutbound {
+		t.Fatalf("hub status of the piece after the exit = %v", row["status"])
 	}
 }

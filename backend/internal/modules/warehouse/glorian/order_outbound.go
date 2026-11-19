@@ -2,6 +2,7 @@ package glorian
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -167,7 +168,7 @@ func (o *OrderOutbounder) EnsureOutbounds(ctx context.Context, order db.Order) (
 		return nil, fmt.Errorf("glorian order: units: %w", err)
 	}
 	for _, u := range units {
-		if have[u.ConnectionID] || !outboundUnit(u) {
+		if have[u.ConnectionID] {
 			continue
 		}
 		have[u.ConnectionID] = true
@@ -421,8 +422,14 @@ func (o *OrderOutbounder) record(ctx context.Context, ob db.OrderOutbound, state
 	return nil
 }
 
-// createInput is the POST /orders body: one line per synced product with
-// the assigned serial barcodes of the connection.
+// createInput is the POST /orders body: one line per synced order line
+// with the assigned serial barcodes of the connection.
+//
+// TEC-1252 (§10.6): a meter line goes as a meter line (meters, credits,
+// plotter) with one piece per unit: a cut piece names its source roll (the
+// hub records it and lowers the source if the bulk push has not yet), a
+// whole box or roll goes with the meters it took (K7). The credits of the
+// pieces (K11) go as barcode_credits when every piece has its share.
 func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, order db.Order, dealer string) (CreateOrderInput, error) {
 	units, err := o.q.ListGlorianOrderUnits(ctx, order.ID)
 	if err != nil {
@@ -430,23 +437,42 @@ func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, 
 	}
 	var items []OrderItemInput
 	index := map[int64]int{}
+	spread := map[int64]bool{}
 	for _, u := range units {
 		if u.ConnectionID != ob.ConnectionID {
-			continue
-		}
-		if !outboundUnit(u) {
-			o.log.Warn("glorian order: meter line of a synced product left out",
-				"order_id", order.ID, "order_item_id", u.OrderItemID, "barcode", u.Barcode)
 			continue
 		}
 		i, ok := index[u.OrderItemID]
 		if !ok {
 			i = len(items)
 			index[u.OrderItemID] = i
-			items = append(items, OrderItemInput{ProductID: u.ProductExternalID})
+			items = append(items, lineInput(u))
+			spread[u.OrderItemID] = true
 		}
 		items[i].Barcodes = append(items[i].Barcodes, u.Barcode)
 		items[i].Quantity++
+		if items[i].SaleMeasure != SaleMeasureMeter {
+			continue
+		}
+		piece := OrderPiece{Barcode: u.Barcode, Meters: json.Number(u.PieceMeters), SourceBarcode: strings.TrimSpace(u.SourceBarcode)}
+		if u.PieceCredits.Valid {
+			c := u.PieceCredits.Int32
+			piece.Credits = &c
+			if items[i].BarcodeCredits == nil {
+				items[i].BarcodeCredits = map[string]int32{}
+			}
+			items[i].BarcodeCredits[u.Barcode] = c
+		} else {
+			spread[u.OrderItemID] = false
+		}
+		items[i].Pieces = append(items[i].Pieces, piece)
+	}
+	// Credits of only some pieces: let the hub spread the line evenly
+	// rather than send a partial map.
+	for id, i := range index {
+		if !spread[id] {
+			items[i].BarcodeCredits = nil
+		}
 	}
 	prepare := true
 	in := CreateOrderInput{
@@ -459,14 +485,21 @@ func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, 
 	return in, nil
 }
 
-// outboundUnit reports a unit Glorian knows (TEC-1244, K1). TEC-1251
-// (19.11): a synced product may be sold by the meter now, but the hub has
-// no meter line or cut piece model yet; a unit on a meter line (a cut
-// piece, or an opened box going whole) is left out of the hub order and
-// logged (createInput), the box lines go as before. Glorian's own support
-// is planned separately.
-func outboundUnit(u db.ListGlorianOrderUnitsRow) bool {
-	return u.SaleMeasure != "meter"
+// lineInput is the hub line of an order line: a box line as before, a
+// meter line (TEC-1252) with its meters, credits and plotter mark.
+func lineInput(u db.ListGlorianOrderUnitsRow) OrderItemInput {
+	in := OrderItemInput{ProductID: u.ProductExternalID}
+	if u.SaleMeasure != SaleMeasureMeter || u.LineMeters == "" {
+		return in
+	}
+	in.SaleMeasure = SaleMeasureMeter
+	in.Meters = json.Number(u.LineMeters)
+	if u.LineCredits.Valid {
+		c := u.LineCredits.Int32
+		in.LineCredits = &c
+	}
+	in.Plotter = u.PlotterCut
+	return in
 }
 
 func shipInput(order db.Order) TransitionInput {

@@ -325,3 +325,44 @@ func TestDiffStockSkipsBlankAndKeepsLastDuplicate(t *testing.T) {
 		t.Fatalf("report = %+v", rep)
 	}
 }
+
+// TEC-1252: meter_drift compares the remaining meters of an opened box or
+// a cut piece held at the center with the hub's. A roll cut to the end is
+// used and in the trash locally while the hub keeps it available with
+// 0 m: not compared, no drift. Closed boxes and dealer units are not
+// compared either.
+func TestDiffStockMeterDrift(t *testing.T) {
+	num := func(s string) *json.Number { n := json.Number(s); return &n }
+	center := func(barcode, meters string) glorian.ReconcileUnit {
+		return glorian.ReconcileUnit{
+			Barcode: barcode, ExternalStatus: "available", ProductExternalID: "10",
+			OwnerType: "warehouse_location", OwnerID: 1, HolderOrgID: recCenterOrg, RemainingMeters: meters,
+		}
+	}
+	hub := func(id, barcode string, meters *json.Number) glorian.StockItem {
+		return glorian.StockItem{ID: id, Barcode: barcode, ProductID: "10", Status: "available", Location: "center", RemainingMeters: meters}
+	}
+	depleted := center("R-USED", "0.00")
+	depleted.OwnerType, depleted.OwnerID = "trash", 5
+	dealer := center("R-DEALER", "4.00")
+	dealer.OwnerType, dealer.HolderOrgID = "organization", recDealerOrg
+	local := []glorian.ReconcileUnit{
+		center("R-DRIFT", "12.00"), center("R-SAME", "3.00"), depleted, dealer, center("BOX", ""),
+	}
+	remote := []glorian.StockItem{
+		hub("1", "R-DRIFT", num("15")), hub("2", "R-SAME", num("3")), hub("3", "R-USED", num("0")),
+		{ID: "4", Barcode: "R-DEALER", ProductID: "10", Status: "available", Location: "dealer", RemainingMeters: num("1")},
+		hub("5", "BOX", nil),
+	}
+	rep := glorian.DiffStock(remote, local, recCenterOrg)
+	if rep.Summary.MeterDrift != 1 || len(rep.MeterDrift) != 1 {
+		t.Fatalf("meter drift = %+v", rep.MeterDrift)
+	}
+	row := rep.MeterDrift[0]
+	if row.Barcode != "R-DRIFT" || row.LocalRemainingMeters != "12.00" || row.RemoteRemainingMeters != "15" {
+		t.Fatalf("meter drift row = %+v", row)
+	}
+	if rep.Summary.Total() != 1 {
+		t.Fatalf("summary = %+v; want only the meter drift", rep.Summary)
+	}
+}

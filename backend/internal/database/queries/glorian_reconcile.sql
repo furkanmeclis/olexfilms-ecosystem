@@ -13,7 +13,9 @@ SELECT u.id,
        p.external_id AS product_external_id,
        s.owner_type,
        s.owner_id,
-       s.holder_org_id
+       s.holder_org_id,
+       -- TEC-1252: the meters of an opened box or a cut piece (meter_drift).
+       COALESCE(u.remaining_meters::text, '')::text AS remaining_meters
 FROM units u
 JOIN products p ON p.id = u.product_id
 LEFT JOIN unit_current_state s ON s.unit_id = u.id
@@ -36,7 +38,9 @@ SELECT u.id,
        p.external_id AS product_external_id,
        s.owner_type,
        s.owner_id,
-       s.holder_org_id
+       s.holder_org_id,
+       -- TEC-1252: the meters of an opened box or a cut piece (meter_drift).
+       COALESCE(u.remaining_meters::text, '')::text AS remaining_meters
 FROM units u
 JOIN products p ON p.id = u.product_id
 LEFT JOIN unit_current_state s ON s.unit_id = u.id

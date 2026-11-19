@@ -95,6 +95,7 @@ func printText(w io.Writer, rep glorian.ReconcileReport, limit int) {
 		{glorian.DriftStatus, s.StatusDrift, d.StatusDrift},
 		{glorian.DriftProduct, s.ProductDrift, d.ProductDrift},
 		{glorian.DriftOwner, s.OwnerDrift, d.OwnerDrift},
+		{glorian.DriftMeter, s.MeterDrift, d.MeterDrift},
 	} {
 		_, _ = fmt.Fprintf(w, "  %-14s %d\n", c.name, c.count)
 		for _, row := range c.rows {

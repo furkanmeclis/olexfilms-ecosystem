@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +37,12 @@ import (
 //     organization means location=center without a dealer, another
 //     organization means location=dealer. Units in a service, in the trash
 //     or without a state (printed labels) are not compared.
+//   - meter_drift (TEC-1252): an opened box or a cut piece held at the
+//     center whose remaining meters differ from the hub's (both sides
+//     must carry meters; the hub item must be available). A roll cut to
+//     the end is used and in the trash locally while the hub keeps it
+//     available with 0 m (the hub writes used only on a service): the
+//     trash is not compared, so it is no drift.
 
 // KindReconcile is the sync run kind of the drift report.
 const KindReconcile = "reconcile"
@@ -46,6 +54,7 @@ const (
 	DriftStatus       = "status_drift"
 	DriftProduct      = "product_drift"
 	DriftOwner        = "owner_drift"
+	DriftMeter        = "meter_drift"
 	reconcilePageSize = 1000
 )
 
@@ -77,6 +86,8 @@ type ReconcileUnit struct {
 	OwnerType   string
 	OwnerID     int64
 	HolderOrgID int64
+	// RemainingMeters is empty for a closed box (TEC-1252).
+	RemainingMeters string
 }
 
 // DriftRow is one entry of a drift category. Only the fields relevant to
@@ -98,6 +109,9 @@ type DriftRow struct {
 	ExpectedLocation string `json:"expected_location,omitempty"`
 	RemoteLocation   string `json:"remote_location,omitempty"`
 	RemoteDealerID   string `json:"remote_dealer_id,omitempty"`
+
+	LocalRemainingMeters  string `json:"local_remaining_meters,omitempty"`
+	RemoteRemainingMeters string `json:"remote_remaining_meters,omitempty"`
 }
 
 // ReconcileSummary are the per-category counts.
@@ -107,11 +121,12 @@ type ReconcileSummary struct {
 	StatusDrift  int `json:"status_drift"`
 	ProductDrift int `json:"product_drift"`
 	OwnerDrift   int `json:"owner_drift"`
+	MeterDrift   int `json:"meter_drift"`
 }
 
 // Total is the number of drift rows of every category.
 func (s ReconcileSummary) Total() int {
-	return s.OnlyRemote + s.OnlyLocal + s.StatusDrift + s.ProductDrift + s.OwnerDrift
+	return s.OnlyRemote + s.OnlyLocal + s.StatusDrift + s.ProductDrift + s.OwnerDrift + s.MeterDrift
 }
 
 // ReconcileDetails are the drift rows of every category.
@@ -121,6 +136,7 @@ type ReconcileDetails struct {
 	StatusDrift  []DriftRow `json:"status_drift"`
 	ProductDrift []DriftRow `json:"product_drift"`
 	OwnerDrift   []DriftRow `json:"owner_drift"`
+	MeterDrift   []DriftRow `json:"meter_drift"`
 }
 
 // Limit returns a copy holding at most n rows per category.
@@ -136,7 +152,7 @@ func (d ReconcileDetails) Limit(n int) ReconcileDetails {
 	}
 	return ReconcileDetails{
 		OnlyRemote: cut(d.OnlyRemote), OnlyLocal: cut(d.OnlyLocal), StatusDrift: cut(d.StatusDrift),
-		ProductDrift: cut(d.ProductDrift), OwnerDrift: cut(d.OwnerDrift),
+		ProductDrift: cut(d.ProductDrift), OwnerDrift: cut(d.OwnerDrift), MeterDrift: cut(d.MeterDrift),
 	}
 }
 
@@ -321,7 +337,8 @@ func (r *Reconciler) reconcile(ctx context.Context, conn db.IntegrationConnectio
 	counts.Details = rep.Limit(ReconcileDetailLimit)
 	r.log.Info("glorian_reconcile_done", "connection", conn.Uuid, "remote", rep.Remote, "local", rep.Local,
 		DriftOnlyRemote, rep.Summary.OnlyRemote, DriftOnlyLocal, rep.Summary.OnlyLocal,
-		DriftStatus, rep.Summary.StatusDrift, DriftProduct, rep.Summary.ProductDrift, DriftOwner, rep.Summary.OwnerDrift)
+		DriftStatus, rep.Summary.StatusDrift, DriftProduct, rep.Summary.ProductDrift, DriftOwner, rep.Summary.OwnerDrift,
+		DriftMeter, rep.Summary.MeterDrift)
 	if err := run.finish(finishCtx, counts, time.Time{}, nil); err != nil {
 		return ReconcileReport{}, err
 	}
@@ -393,6 +410,7 @@ func reconcileUnit(row db.GetGlorianReconcileUnitByBarcodeRow) ReconcileUnit {
 		ExternalID: row.ExternalID.String, ExternalStatus: row.ExternalStatus.String,
 		ProductExternalID: row.ProductExternalID.String,
 		OwnerType:         row.OwnerType.String, OwnerID: row.OwnerID.Int64, HolderOrgID: row.HolderOrgID.Int64,
+		RemainingMeters: row.RemainingMeters,
 	}
 }
 
@@ -405,7 +423,7 @@ func barcodeKey(barcode string) string { return strings.ToUpper(strings.TrimSpac
 func DiffStock(remote []StockItem, local []ReconcileUnit, centerOrgID int64) ReconcileReport {
 	rep := ReconcileReport{ReconcileDetails: ReconcileDetails{
 		OnlyRemote: []DriftRow{}, OnlyLocal: []DriftRow{}, StatusDrift: []DriftRow{},
-		ProductDrift: []DriftRow{}, OwnerDrift: []DriftRow{},
+		ProductDrift: []DriftRow{}, OwnerDrift: []DriftRow{}, MeterDrift: []DriftRow{},
 	}}
 	var order []string
 	byKey := make(map[string]StockItem, len(remote))
@@ -463,6 +481,11 @@ func DiffStock(remote []StockItem, local []ReconcileUnit, centerOrgID int64) Rec
 				rep.OwnerDrift = append(rep.OwnerDrift, row)
 			}
 		}
+		if local, remote, drift := meterDrift(u, it, centerOrgID); drift {
+			row := base
+			row.LocalRemainingMeters, row.RemoteRemainingMeters = local, remote
+			rep.MeterDrift = append(rep.MeterDrift, row)
+		}
 	}
 	for _, key := range localOrder {
 		u, ok := localByKey[key]
@@ -475,12 +498,12 @@ func DiffStock(remote []StockItem, local []ReconcileUnit, centerOrgID int64) Rec
 			LocalOwnerType: u.OwnerType, LocalOwnerID: u.OwnerID,
 		})
 	}
-	for _, rows := range [][]DriftRow{rep.OnlyRemote, rep.OnlyLocal, rep.StatusDrift, rep.ProductDrift, rep.OwnerDrift} {
+	for _, rows := range [][]DriftRow{rep.OnlyRemote, rep.OnlyLocal, rep.StatusDrift, rep.ProductDrift, rep.OwnerDrift, rep.MeterDrift} {
 		slices.SortStableFunc(rows, func(a, b DriftRow) int { return strings.Compare(a.Barcode, b.Barcode) })
 	}
 	rep.Summary = ReconcileSummary{
 		OnlyRemote: len(rep.OnlyRemote), OnlyLocal: len(rep.OnlyLocal), StatusDrift: len(rep.StatusDrift),
-		ProductDrift: len(rep.ProductDrift), OwnerDrift: len(rep.OwnerDrift),
+		ProductDrift: len(rep.ProductDrift), OwnerDrift: len(rep.OwnerDrift), MeterDrift: len(rep.MeterDrift),
 	}
 	return rep
 }
@@ -496,4 +519,29 @@ func expectedLocation(u ReconcileUnit, centerOrgID int64) string {
 		return StockLocationDealer
 	}
 	return ""
+}
+
+// meterDrift compares the remaining meters of a unit held at the center
+// with the hub's (TEC-1252). Only an available hub item and a local unit
+// with meters in a center bin or at the center are compared; a closed box
+// on either side, a dealer's unit or a unit in the trash is not.
+func meterDrift(u ReconcileUnit, it StockItem, centerOrgID int64) (string, string, bool) {
+	if u.RemainingMeters == "" || it.RemainingMeters == nil || strings.TrimSpace(it.Status) != StockStatusAvailable {
+		return "", "", false
+	}
+	if expectedLocation(u, centerOrgID) != StockLocationCenter {
+		return "", "", false
+	}
+	local, err := strconv.ParseFloat(u.RemainingMeters, 64)
+	if err != nil {
+		return "", "", false
+	}
+	remote, err := it.RemainingMeters.Float64()
+	if err != nil {
+		return "", "", false
+	}
+	if math.Abs(local-remote) < 0.005 {
+		return "", "", false
+	}
+	return u.RemainingMeters, it.RemainingMeters.String(), true
 }

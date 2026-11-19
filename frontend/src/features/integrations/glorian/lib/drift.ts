@@ -1,6 +1,6 @@
 /**
  * Reconcile drift report of a sync run (glorian.ReconcileCounts, TEC-271):
- * the five category counts sit flat in `counts`, `details` holds the first
+ * the six category counts (meter_drift: TEC-1252) sit flat in `counts`, `details` holds the first
  * rows of every category.
  */
 
@@ -10,6 +10,7 @@ export const DRIFT_CATEGORIES = [
   "status_drift",
   "product_drift",
   "owner_drift",
+  "meter_drift",
 ] as const;
 
 export type DriftCategory = (typeof DRIFT_CATEGORIES)[number];
@@ -28,6 +29,8 @@ export type DriftRow = {
   expected_location?: string;
   remote_location?: string;
   remote_dealer_id?: string;
+  local_remaining_meters?: string;
+  remote_remaining_meters?: string;
 };
 
 export type DriftReport = {
@@ -84,6 +87,8 @@ export const DRIFT_ROW_FIELDS = [
   "expected_location",
   "remote_location",
   "remote_dealer_id",
+  "local_remaining_meters",
+  "remote_remaining_meters",
 ] as const satisfies readonly (keyof DriftRow)[];
 
 export type DriftRowField = (typeof DRIFT_ROW_FIELDS)[number];

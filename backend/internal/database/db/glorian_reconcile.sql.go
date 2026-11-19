@@ -21,7 +21,9 @@ SELECT u.id,
        p.external_id AS product_external_id,
        s.owner_type,
        s.owner_id,
-       s.holder_org_id
+       s.holder_org_id,
+       -- TEC-1252: the meters of an opened box or a cut piece (meter_drift).
+       COALESCE(u.remaining_meters::text, '')::text AS remaining_meters
 FROM units u
 JOIN products p ON p.id = u.product_id
 LEFT JOIN unit_current_state s ON s.unit_id = u.id
@@ -45,6 +47,7 @@ type GetGlorianReconcileUnitByBarcodeRow struct {
 	OwnerType         pgtype.Text `json:"owner_type"`
 	OwnerID           pgtype.Int8 `json:"owner_id"`
 	HolderOrgID       pgtype.Int8 `json:"holder_org_id"`
+	RemainingMeters   string      `json:"remaining_meters"`
 }
 
 // A serial unit of the brand outside the synced set (e.g. its product is
@@ -63,6 +66,7 @@ func (q *Queries) GetGlorianReconcileUnitByBarcode(ctx context.Context, arg GetG
 		&i.OwnerType,
 		&i.OwnerID,
 		&i.HolderOrgID,
+		&i.RemainingMeters,
 	)
 	return i, err
 }
@@ -77,7 +81,9 @@ SELECT u.id,
        p.external_id AS product_external_id,
        s.owner_type,
        s.owner_id,
-       s.holder_org_id
+       s.holder_org_id,
+       -- TEC-1252: the meters of an opened box or a cut piece (meter_drift).
+       COALESCE(u.remaining_meters::text, '')::text AS remaining_meters
 FROM units u
 JOIN products p ON p.id = u.product_id
 LEFT JOIN unit_current_state s ON s.unit_id = u.id
@@ -106,6 +112,7 @@ type ListGlorianReconcileUnitsRow struct {
 	OwnerType         pgtype.Text `json:"owner_type"`
 	OwnerID           pgtype.Int8 `json:"owner_id"`
 	HolderOrgID       pgtype.Int8 `json:"holder_org_id"`
+	RemainingMeters   string      `json:"remaining_meters"`
 }
 
 // TEC-272 (F2-02g): Glorian reconcile (read only). The local side of the
@@ -137,6 +144,7 @@ func (q *Queries) ListGlorianReconcileUnits(ctx context.Context, arg ListGlorian
 			&i.OwnerType,
 			&i.OwnerID,
 			&i.HolderOrgID,
+			&i.RemainingMeters,
 		); err != nil {
 			return nil, err
 		}

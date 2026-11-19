@@ -2279,9 +2279,11 @@ type Querier interface {
 	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
-	// and never appear. TEC-1244: sale_measure lets the outbound leave out a
-	// meter line (K1: a synced product is never sold by the meter; a cut piece
-	// has no Glorian barcode).
+	// and never appear. TEC-1252: a meter line goes to the hub with its
+	// meters, credits and plotter mark; each unit is a piece: piece_meters is
+	// what the line took (the assignment's meters, a whole roll's remaining),
+	// piece_credits its share of the line's credits (NULL: not spread) and
+	// source_barcode the roll it was cut from (empty for a whole box or roll).
 	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
 	// Order outbounds of a connection with their order (TEC-367 list contract,
 	// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
@@ -2292,6 +2294,16 @@ type Querier interface {
 	// Serial units entered or placed into a warehouse bin after the keyset
 	// (created_at, id), for the products synced from the connection. A unit
 	// placed twice comes twice; the caller deduplicates by barcode.
+	//
+	// TEC-1252: a piece product sold by the meter also pushes the units a box
+	// opening (measure_conversion) or a cut (split, both the roll and the new
+	// piece) touched in a warehouse bin. The meter columns are the unit's
+	// current state (absolute, so a repeated push is harmless); a cut piece
+	// carries its source roll and the source's current meters, which go in
+	// the same bulk call (the hub records the piece first, then the source's
+	// absolute remaining). credits is what the piece would carry
+	// (unit_credit_default: the meter line's share), 0 before it is
+	// assigned.
 	ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushUnitsParams) ([]ListGlorianPushUnitsRow, error)
 	// TEC-272 (F2-02g): Glorian reconcile (read only). The local side of the
 	// drift report: serial units of the connection's brand that belong to the
