@@ -367,11 +367,17 @@ WHERE p.brand_id = sqlc.arg(brand_id)
 ORDER BY p.id;
 
 -- name: GetStockForecastOnHand :one
-SELECT COALESCE(quantity, 0)::int AS quantity,
-       COALESCE(meters, 0)::numeric(14,2) AS meters
-FROM organization_product_stocks
-WHERE organization_id = sqlc.arg(organization_id)
-  AND product_id = sqlc.arg(product_id);
+-- metered is the number of metered serial units on hand (TEC-1243): the
+-- closed boxes are quantity - metered.
+SELECT COALESCE(ops.quantity, 0)::int AS quantity,
+       COALESCE(ops.meters, 0)::numeric(14,2) AS meters,
+       (SELECT COUNT(*) FROM unit_current_state st JOIN units u ON u.id = st.unit_id
+        WHERE st.holder_org_id = ops.organization_id AND u.product_id = ops.product_id
+          AND st.status IN ('available', 'placed') AND st.owner_type IN ('warehouse_location', 'organization')
+          AND u.initial_meters IS NOT NULL)::int AS metered
+FROM organization_product_stocks ops
+WHERE ops.organization_id = sqlc.arg(organization_id)
+  AND ops.product_id = sqlc.arg(product_id);
 
 -- name: GetStockForecastFirstMovementDate :one
 SELECT MIN(created_at)::date
@@ -380,9 +386,19 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND brand_id = sqlc.arg(brand_id);
 
 -- name: GetStockForecastConsumptionTotals :one
+-- qty / meters: the consumption of the period (pieces and roll meters).
+-- TEC-1243: metered_qty is the part of qty that left as metered units (a
+-- cut piece or an opened roll leaving whole: quantity -1, meters 0) and
+-- metered_meters their meters (the unit's initial meters, the cut length
+-- of a cut piece), so a product sold by the meter can count them as box
+-- equivalents.
+SELECT COALESCE(SUM(x.q), 0)::numeric AS qty,
+       COALESCE(SUM(x.m), 0)::numeric AS meters,
+       COALESCE(SUM(x.q) FILTER (WHERE x.init IS NOT NULL), 0)::numeric AS metered_qty,
+       COALESCE(SUM(x.q * x.init) FILTER (WHERE x.init IS NOT NULL), 0)::numeric AS metered_meters
+FROM (
 SELECT
-  COALESCE(SUM(
-    CASE
+  CASE
       WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
         THEN GREATEST(-sm.quantity_delta, 0)
       WHEN sqlc.arg(include_order_out)::bool AND sm.type = 'order_out'
@@ -392,10 +408,8 @@ SELECT
       WHEN sqlc.arg(include_order_out)::bool AND sm.type = 'order_cancel_restore'
         THEN -GREATEST(sm.quantity_delta, 0)
       ELSE 0
-    END
-  ), 0)::numeric AS qty,
-  COALESCE(SUM(
-    CASE
+    END AS q,
+  CASE
       WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
         THEN GREATEST(-sm.meters_delta, 0)
       WHEN sqlc.arg(include_order_out)::bool AND sm.type = 'order_out'
@@ -405,9 +419,10 @@ SELECT
       WHEN sqlc.arg(include_order_out)::bool AND sm.type = 'order_cancel_restore'
         THEN -GREATEST(sm.meters_delta, 0)
       ELSE 0
-    END
-  ), 0)::numeric AS meters
+    END AS m,
+  u.initial_meters AS init
 FROM stock_movements sm
+JOIN units u ON u.id = sm.unit_id
 WHERE sm.brand_id = sqlc.arg(brand_id)
   AND sm.product_id = sqlc.arg(product_id)
   AND (
@@ -428,7 +443,8 @@ WHERE sm.brand_id = sqlc.arg(brand_id)
     )
   )
   AND sm.created_at >= sqlc.arg(from_at)::timestamptz
-  AND sm.created_at < sqlc.arg(to_at)::timestamptz;
+  AND sm.created_at < sqlc.arg(to_at)::timestamptz
+) x;
 
 -- name: GetStockForecastSeasonalityTotals :one
 SELECT

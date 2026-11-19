@@ -272,9 +272,13 @@ func (q *Queries) GetLatestStockForecastByProductUUID(ctx context.Context, arg G
 }
 
 const getStockForecastConsumptionTotals = `-- name: GetStockForecastConsumptionTotals :one
+SELECT COALESCE(SUM(x.q), 0)::numeric AS qty,
+       COALESCE(SUM(x.m), 0)::numeric AS meters,
+       COALESCE(SUM(x.q) FILTER (WHERE x.init IS NOT NULL), 0)::numeric AS metered_qty,
+       COALESCE(SUM(x.q * x.init) FILTER (WHERE x.init IS NOT NULL), 0)::numeric AS metered_meters
+FROM (
 SELECT
-  COALESCE(SUM(
-    CASE
+  CASE
       WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
         THEN GREATEST(-sm.quantity_delta, 0)
       WHEN $1::bool AND sm.type = 'order_out'
@@ -284,10 +288,8 @@ SELECT
       WHEN $1::bool AND sm.type = 'order_cancel_restore'
         THEN -GREATEST(sm.quantity_delta, 0)
       ELSE 0
-    END
-  ), 0)::numeric AS qty,
-  COALESCE(SUM(
-    CASE
+    END AS q,
+  CASE
       WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
         THEN GREATEST(-sm.meters_delta, 0)
       WHEN $1::bool AND sm.type = 'order_out'
@@ -297,9 +299,10 @@ SELECT
       WHEN $1::bool AND sm.type = 'order_cancel_restore'
         THEN -GREATEST(sm.meters_delta, 0)
       ELSE 0
-    END
-  ), 0)::numeric AS meters
+    END AS m,
+  u.initial_meters AS init
 FROM stock_movements sm
+JOIN units u ON u.id = sm.unit_id
 WHERE sm.brand_id = $2
   AND sm.product_id = $3
   AND (
@@ -321,6 +324,7 @@ WHERE sm.brand_id = $2
   )
   AND sm.created_at >= $5::timestamptz
   AND sm.created_at < $6::timestamptz
+) x
 `
 
 type GetStockForecastConsumptionTotalsParams struct {
@@ -333,10 +337,18 @@ type GetStockForecastConsumptionTotalsParams struct {
 }
 
 type GetStockForecastConsumptionTotalsRow struct {
-	Qty    pgtype.Numeric `json:"qty"`
-	Meters pgtype.Numeric `json:"meters"`
+	Qty           pgtype.Numeric `json:"qty"`
+	Meters        pgtype.Numeric `json:"meters"`
+	MeteredQty    pgtype.Numeric `json:"metered_qty"`
+	MeteredMeters pgtype.Numeric `json:"metered_meters"`
 }
 
+// qty / meters: the consumption of the period (pieces and roll meters).
+// TEC-1243: metered_qty is the part of qty that left as metered units (a
+// cut piece or an opened roll leaving whole: quantity -1, meters 0) and
+// metered_meters their meters (the unit's initial meters, the cut length
+// of a cut piece), so a product sold by the meter can count them as box
+// equivalents.
 func (q *Queries) GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error) {
 	row := q.db.QueryRow(ctx, getStockForecastConsumptionTotals,
 		arg.IncludeOrderOut,
@@ -347,7 +359,12 @@ func (q *Queries) GetStockForecastConsumptionTotals(ctx context.Context, arg Get
 		arg.ToAt,
 	)
 	var i GetStockForecastConsumptionTotalsRow
-	err := row.Scan(&i.Qty, &i.Meters)
+	err := row.Scan(
+		&i.Qty,
+		&i.Meters,
+		&i.MeteredQty,
+		&i.MeteredMeters,
+	)
 	return i, err
 }
 
@@ -371,11 +388,15 @@ func (q *Queries) GetStockForecastFirstMovementDate(ctx context.Context, arg Get
 }
 
 const getStockForecastOnHand = `-- name: GetStockForecastOnHand :one
-SELECT COALESCE(quantity, 0)::int AS quantity,
-       COALESCE(meters, 0)::numeric(14,2) AS meters
-FROM organization_product_stocks
-WHERE organization_id = $1
-  AND product_id = $2
+SELECT COALESCE(ops.quantity, 0)::int AS quantity,
+       COALESCE(ops.meters, 0)::numeric(14,2) AS meters,
+       (SELECT COUNT(*) FROM unit_current_state st JOIN units u ON u.id = st.unit_id
+        WHERE st.holder_org_id = ops.organization_id AND u.product_id = ops.product_id
+          AND st.status IN ('available', 'placed') AND st.owner_type IN ('warehouse_location', 'organization')
+          AND u.initial_meters IS NOT NULL)::int AS metered
+FROM organization_product_stocks ops
+WHERE ops.organization_id = $1
+  AND ops.product_id = $2
 `
 
 type GetStockForecastOnHandParams struct {
@@ -386,12 +407,15 @@ type GetStockForecastOnHandParams struct {
 type GetStockForecastOnHandRow struct {
 	Quantity int32          `json:"quantity"`
 	Meters   pgtype.Numeric `json:"meters"`
+	Metered  int32          `json:"metered"`
 }
 
+// metered is the number of metered serial units on hand (TEC-1243): the
+// closed boxes are quantity - metered.
 func (q *Queries) GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error) {
 	row := q.db.QueryRow(ctx, getStockForecastOnHand, arg.OrganizationID, arg.ProductID)
 	var i GetStockForecastOnHandRow
-	err := row.Scan(&i.Quantity, &i.Meters)
+	err := row.Scan(&i.Quantity, &i.Meters, &i.Metered)
 	return i, err
 }
 
