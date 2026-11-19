@@ -1506,6 +1506,8 @@ type Querier interface {
 	GetUnitLastOrderCost(ctx context.Context, arg GetUnitLastOrderCostParams) (GetUnitLastOrderCostRow, error)
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
+	// TEC-1244: meter_line tells the price is per meter (a meter line of a
+	// roll or of a piece product sold by the meter), else per piece / box.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
 	GetUnitLotNote(ctx context.Context, id int64) (GetUnitLotNoteRow, error)
 	// The roll a unit was cut from (TEC-1078), with its current holder.
