@@ -1,6 +1,9 @@
 {
   "$comment": "TEC-1233 bilinçli i18n istisnaları (scripts/i18n-scan.mjs). Yapı: { alan: { dil | \"*\": { anahtar: gerekçe } } }. Alanlar: web ve mobile (anahtar \"namespace:anahtar\"), backend-labels (Go katalog anahtarı), backend-texts (dosya yolu). universal: her dilde aynı kalan ek kelimeler (marka, kısaltma, birim). Yeni giriş eklerken gerekçe yazın.",
   "universal": [],
+  "mobile-pending": {
+    "hi": "TEC-1248: Hintçe web ve backend'e bağlandı; mobil bağlantı ve 15 dilli mobil CI koruması TEC-1249'da. TEC-1249 bu girdiyi siler."
+  },
   "web": {
     "de": {
       "accounting:account_types.bank": "Almancada aynı yazılır (Bank)",
@@ -210,7 +213,8 @@
       "warranty:detail.service": "Sözlük terimi; Almancada aynı (Service)",
       "warranty:list.columns.status": "Almancada aynı yazılır (Status)",
       "warranty:list.status": "Almancada aynı yazılır (Status)",
-      "warranty:public.package": "Almancada doğru (Paket)"
+      "warranty:public.package": "Almancada doğru (Paket)",
+      "documents:languages.hi": "Dil adı bu dilde de \"Hindi\" yazılır."
     },
     "es": {
       "announcements:audience.role": "İspanyolca doğru (Rol)",
@@ -264,7 +268,8 @@
       "users:overview.realm.panel": "İspanyolcada aynı yazılır (Panel)",
       "users:role": "İspanyolca doğru (Rol)",
       "warehouse:eod.kind.manual": "İspanyolcada aynı yazılır (Manual)",
-      "warehouse:scan.no": "İspanyolcada aynı yazılır (No)"
+      "warehouse:scan.no": "İspanyolcada aynı yazılır (No)",
+      "documents:languages.hi": "Dil adı bu dilde de \"Hindi\" yazılır."
     },
     "fr": {
       "accounting:fields.date": "Fransızcada aynı yazılır (Date)",
@@ -465,7 +470,8 @@
       "warranty:claims.photos.label": "Fransızcada aynı yazılır (Photos)",
       "warranty:claims.photos.title": "Fransızcada aynı yazılır (Photos)",
       "warranty:public.status.active": "Fransızcada aynı yazılır (Active, dişil sıfat)",
-      "warranty:status.active": "Fransızcada aynı yazılır (Active, dişil sıfat)"
+      "warranty:status.active": "Fransızcada aynı yazılır (Active, dişil sıfat)",
+      "documents:languages.hi": "Dil adı bu dilde de \"Hindi\" yazılır."
     },
     "it": {
       "ai_admin:columns.tokens": "İtalyancada yerleşik teknik terim (token)",
@@ -505,7 +511,8 @@
       "users:member.email": "İtalyancada yerleşik kullanım (Email)",
       "vehicles:columns.logo": "İtalyancada aynı yazılır (Logo)",
       "vehicles:fields.logo": "İtalyancada aynı yazılır (Logo)",
-      "warehouse:scan.no": "İtalyancada aynı yazılır (No)"
+      "warehouse:scan.no": "İtalyancada aynı yazılır (No)",
+      "documents:languages.hi": "Dil adı bu dilde de \"Hindi\" yazılır."
     },
     "ru": {
       "showcase:rating.place_id": "Google ürün terimi (alan adı)",

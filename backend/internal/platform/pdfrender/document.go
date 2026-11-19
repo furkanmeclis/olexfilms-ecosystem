@@ -124,7 +124,7 @@ func onColor(hex string) string {
 func FooterHTML(locale, text string) string {
 	lang := html.EscapeString(strings.ReplaceAll(strings.TrimSpace(locale), "_", "-"))
 	return "<!DOCTYPE html><html lang=\"" + lang + "\" dir=\"" + Dir(locale) + "\"><head><meta charset=\"utf-8\">" +
-		"<style>html,body{margin:0;width:100%}body{font-family:'Noto Sans','Vazirmatn','Noto Sans Arabic',sans-serif;font-size:7pt;color:#6b7280}" +
+		"<style>html,body{margin:0;width:100%}body{font-family:'Noto Sans','Vazirmatn','Noto Sans Arabic','Noto Sans Devanagari',sans-serif;font-size:7pt;color:#6b7280}" +
 		"table{width:100%;border-collapse:collapse}td{padding:3pt 0.4in 0;border-top:0.5pt solid #d0d0d0}.n{text-align:end}</style></head><body>" +
 		"<table><tr><td>" + html.EscapeString(text) + "</td>" +
 		"<td class=\"n\"><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></td></tr></table></body></html>"
@@ -136,7 +136,7 @@ func FooterHTML(locale, text string) string {
 // letterhead (TEC-772); seeded and tenant templates use the same classes.
 const baseCSS = `@page{size:A4}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;font-family:"Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans CJK SC","DejaVu Sans",sans-serif;font-size:10.5pt;line-height:1.45;color:#1a1a1a;text-align:start}
+body{margin:0;font-family:"Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans Devanagari","Noto Sans CJK SC","DejaVu Sans",sans-serif;font-size:10.5pt;line-height:1.45;color:#1a1a1a;text-align:start}
 h1,h2,h3{line-height:1.25;color:var(--primary)}
 h1.doc-title{font-size:16pt;margin:14pt 0 8pt}
 h2{font-size:11.5pt;margin:14pt 0 6pt;padding-block-end:3pt;border-block-end:2px solid var(--accent)}

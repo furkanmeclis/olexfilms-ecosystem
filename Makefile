@@ -222,7 +222,7 @@ check-i18n:
 
 # Fully translated languages (TEC-138, TEC-1233: every language beyond tr/en):
 # no missing keys, < 3% copy equal to en.
-I18N_TRANSLATED ?= bg,de,el,uk,ru,fr,es,it,zh-CN,az,ar,fa
+I18N_TRANSLATED ?= bg,de,el,uk,ru,fr,es,it,zh-CN,az,ar,fa,hi
 check-i18n-translations:
 	node scripts/check-i18n.mjs --strict --locales $(I18N_TRANSLATED)
 	node scripts/i18n-untranslated-report.mjs --locales $(I18N_TRANSLATED)

@@ -515,7 +515,7 @@ func TestIntegrationModuleRequestAutoApprovedBySubscription(t *testing.T) {
 	}
 }
 
-// GET /v1/features: a description in all 14 locales, bundle price with the
+// GET /v1/features: a description in all 15 locales, bundle price with the
 // distributor override, free_default and contact_for_price.
 func TestIntegrationFeaturesMetaDescriptionsAndPrice(t *testing.T) {
 	it := newIntegration(t)

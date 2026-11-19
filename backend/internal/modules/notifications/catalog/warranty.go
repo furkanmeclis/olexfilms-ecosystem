@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Warranty customer notifications (TEC-187, TEC-98 decision 5). The
 // warranty cron writes warranty.expiring_soon (days 30 or 7) and
 // warranty.expired outbox events; the bus handler dispatches these catalog
-// events to the warranty holder. Default templates ship in all 14 locales
+// events to the warranty holder. Default templates ship in all 15 locales
 // for WhatsApp (wuzapi, K16/K21) and in-app; the generic role covers a
 // holder who is also an organization member.
 const (
@@ -47,6 +47,8 @@ var warrantyExpiringSoonTexts = map[string]localizedText{
 		"ينتهي ضمان {{product_name}} لمركبتك {{plate}} في {{end_date}} (متبقٍ {{days}} يومًا). للتفاصيل تواصل مع {{organization_name}}. الضمان: {{verify_url}}"},
 	"fa": {"گارانتی شما {{days}} روز دیگر به پایان می\u200cرسد",
 		"گارانتی {{product_name}} روی خودروی {{plate}} شما در تاریخ {{end_date}} به پایان می\u200cرسد ({{days}} روز باقی مانده است). برای جزئیات با {{organization_name}} تماس بگیرید. گارانتی: {{verify_url}}"},
+	"hi": {"आपकी वारंटी {{days}} दिनों में समाप्त हो रही है",
+		"आपके वाहन {{plate}} पर {{product_name}} की वारंटी {{end_date}} को समाप्त हो रही है ({{days}} दिन शेष)। विवरण के लिए {{organization_name}} से संपर्क करें। वारंटी: {{verify_url}}"},
 }
 
 var warrantyExpiredTexts = map[string]localizedText{
@@ -78,6 +80,8 @@ var warrantyExpiredTexts = map[string]localizedText{
 		"انتهى ضمان {{product_name}} لمركبتك {{plate}} في {{end_date}}. لتجديده تواصل مع {{organization_name}}. الضمان: {{verify_url}}"},
 	"fa": {"گارانتی شما منقضی شد",
 		"گارانتی {{product_name}} روی خودروی {{plate}} شما در تاریخ {{end_date}} منقضی شد. برای تمدید با {{organization_name}} تماس بگیرید. گارانتی: {{verify_url}}"},
+	"hi": {"आपकी वारंटी समाप्त हो गई है",
+		"आपके वाहन {{plate}} पर {{product_name}} की वारंटी {{end_date}} को समाप्त हो गई। नवीनीकरण के लिए {{organization_name}} से संपर्क करें। वारंटी: {{verify_url}}"},
 }
 
 func warrantyTemplates(texts map[string]localizedText) []DefaultTemplate {

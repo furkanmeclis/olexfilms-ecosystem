@@ -41,6 +41,7 @@ var serviceReviewRequestInappTexts = map[string]localizedText{
 	"az":    {"Xidmətimizi qiymətləndirərdiniz?", "{{organization_name}} tərəfindən {{plate}} avtomobilinə göstərilən xidməti qiymətləndirə bilərsiniz."},
 	"ar":    {"كيف كانت خدمتنا؟", "يمكنك تقييم الخدمة التي قدمتها {{organization_name}} للمركبة {{plate}}."},
 	"fa":    {"از خدمات ما راضی بودید؟", "می\u200cتوانید سرویسی را که {{organization_name}} روی {{plate}} انجام داده است ارزیابی کنید."},
+	"hi":    {"हमारी सर्विस कैसी रही?", "आप {{organization_name}} द्वारा {{plate}} पर की गई सर्विस की समीक्षा कर सकते हैं।"},
 }
 
 var customerWelcomeInappTexts = map[string]localizedText{
@@ -58,6 +59,7 @@ var customerWelcomeInappTexts = map[string]localizedText{
 	"az":    {"Xoş gəlmisiniz", "Salam {{customer_name}}, {{organization_name}} müştəri hesabınızı yaratdı. Avtomobillərinizi, xidmətlərinizi və zəmanətlərinizi burada izləyə bilərsiniz."},
 	"ar":    {"مرحبًا بك", "مرحبًا {{customer_name}}، أنشأت {{organization_name}} حساب العميل الخاص بك. يمكنك هنا متابعة مركباتك وخدماتك وضماناتك."},
 	"fa":    {"خوش آمدید", "سلام {{customer_name}}، {{organization_name}} حساب مشتری شما را ایجاد کرده است. می\u200cتوانید خودروها، سرویس\u200cها و گارانتی\u200cهای خود را از اینجا پیگیری کنید."},
+	"hi":    {"स्वागत है", "नमस्ते {{customer_name}}, {{organization_name}} ने आपका ग्राहक खाता बनाया है। आप यहाँ अपने वाहनों, सर्विस और वारंटी पर नज़र रख सकते हैं।"},
 }
 
 var quoteSentInappTexts = map[string]localizedText{
@@ -75,4 +77,5 @@ var quoteSentInappTexts = map[string]localizedText{
 	"az":    {"Təklifiniz hazırdır", "{{organization_name}} təklifiniz hazırdır. Cəmi: {{total_amount}}. Təfərrüatlara baxmaq üçün açın."},
 	"ar":    {"عرض السعر جاهز", "عرض السعر من {{organization_name}} جاهز. الإجمالي: {{total_amount}}. افتحه لعرض التفاصيل."},
 	"fa":    {"پیش\u200cفاکتور شما آماده است", "پیش\u200cفاکتور شما از {{organization_name}} آماده است. جمع کل: {{total_amount}}. برای دیدن جزئیات آن را باز کنید."},
+	"hi":    {"आपका कोटेशन तैयार है", "{{organization_name}} से आपका कोटेशन तैयार है। कुल: {{total_amount}}। विवरण देखने के लिए इसे खोलें।"},
 }

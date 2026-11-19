@@ -31,6 +31,7 @@ var pricingPublishedTexts = map[string]localizedText{
 	"az":    {"Tövsiyə olunan satış qiymətləri yeniləndi", "{{currencies}} üçün {{price_count}} tövsiyə olunan satış qiyməti dərc edildi, {{effective_from}} tarixindən qüvvədədir."},
 	"ar":    {"تم تحديث أسعار البيع الموصى بها", "تم نشر {{price_count}} من أسعار البيع الموصى بها لـ {{currencies}}، سارية اعتبارًا من {{effective_from}}."},
 	"fa":    {"قیمت\u200cهای پیشنهادی خرده\u200cفروشی به\u200cروزرسانی شد", "{{price_count}} قیمت پیشنهادی خرده\u200cفروشی برای {{currencies}} منتشر شد که از {{effective_from}} اعمال می\u200cشود."},
+	"hi":    {"अनुशंसित खुदरा मूल्य अपडेट किए गए", "{{currencies}} के लिए {{price_count}} अनुशंसित खुदरा मूल्य प्रकाशित किए गए, जो {{effective_from}} से प्रभावी हैं।"},
 }
 
 var pricingDigestTexts = map[string]localizedText{
@@ -48,6 +49,7 @@ var pricingDigestTexts = map[string]localizedText{
 	"az":    {"Qiymət intizamının həftəlik xülasəsi", "{{snapshot_date}} tarixinə {{org_count}} təşkilat tövsiyə qiymətindən ən azı {{threshold_pct}}% fərqlə satır: {{org_names}}."},
 	"ar":    {"الملخص الأسبوعي لانضباط الأسعار", "حتى {{snapshot_date}}، تبيع {{org_count}} مؤسسات بانحراف لا يقل عن {{threshold_pct}}% عن السعر الموصى به: {{org_names}}."},
 	"fa":    {"خلاصه هفتگی انضباط قیمت\u200cگذاری", "تا تاریخ {{snapshot_date}}، {{org_count}} سازمان دست\u200cکم {{threshold_pct}}% متفاوت از قیمت پیشنهادی می\u200cفروشند: {{org_names}}."},
+	"hi":    {"मूल्य अनुशासन का साप्ताहिक सारांश", "{{snapshot_date}} तक, {{org_count}} संगठन अनुशंसित मूल्य से कम से कम {{threshold_pct}}% अलग मूल्य पर बेच रहे हैं: {{org_names}}।"},
 }
 
 func pricingTemplates(texts map[string]localizedText) []DefaultTemplate {

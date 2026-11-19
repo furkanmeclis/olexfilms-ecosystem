@@ -8,7 +8,7 @@ import (
 )
 
 // TEC-1034: every customer facing event writes the in-app row of the
-// portal/mobile inbox next to WhatsApp, in all 14 locales.
+// portal/mobile inbox next to WhatsApp, in all 15 locales.
 func TestCustomerEventsReachTheInbox(t *testing.T) {
 	for _, code := range []string{
 		EventAppointmentCreated, EventAppointmentCancelled, EventAppointmentReminder,

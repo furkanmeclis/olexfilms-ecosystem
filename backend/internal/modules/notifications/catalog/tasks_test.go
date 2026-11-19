@@ -7,12 +7,12 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 )
 
-// TEC-221: every task event ships a default template in every locale (14)
+// TEC-221: every task event ships a default template in every locale (15)
 // for in-app and e-mail, using only catalog placeholders, naming the task
 // and (for the reminders) the due date.
 func TestTaskTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 14 {
-		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 15 {
+		t.Fatalf("locales = %d, want 15", len(msgtemplate.Locales))
 	}
 	for _, code := range TaskEvents {
 		ev, ok := Lookup(code)

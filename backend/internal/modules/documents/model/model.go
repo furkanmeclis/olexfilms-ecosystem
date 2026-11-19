@@ -42,8 +42,8 @@ func CustomerFacing(kind string) bool {
 }
 
 // Languages a template may be written in (K10: 12 languages + Arabic;
-// TEC-1233: Persian). A missing language falls back to en.
-var Languages = []string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "zh_CN", "az", "ar", "fa"}
+// TEC-1233: Persian; TEC-1245: Hindi). A missing language falls back to en.
+var Languages = []string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "zh_CN", "az", "ar", "fa", "hi"}
 
 // FallbackLanguage is used when no template exists for the requested one.
 const FallbackLanguage = "en"

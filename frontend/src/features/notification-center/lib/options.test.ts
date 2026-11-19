@@ -14,7 +14,7 @@ import {
 describe("notification center options", () => {
   it("covers the six channels and thirteen languages", () => {
     expect(CHANNELS).toHaveLength(6);
-    expect(LANGUAGES).toHaveLength(14);
+    expect(LANGUAGES).toHaveLength(15);
     expect(LANGUAGES).toContain("ar");
   });
 

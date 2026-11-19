@@ -55,6 +55,7 @@ func TestMeterLineDocuments(t *testing.T) {
 		{i18n.LocaleEN, "3", "3.0 m"},
 		{i18n.LocaleEN, "12.40", "12.4 m"},
 		{i18n.LocaleFA, "0.5", "0.5 m"},
+		{i18n.LocaleHI, "2.5", "2.5 m"},
 	} {
 		if got := meterAmount(tc.loc, num(tc.in)); got != tc.want {
 			t.Errorf("meterAmount(%s, %s) = %q, want %q", tc.loc, tc.in, got, tc.want)

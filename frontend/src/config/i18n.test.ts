@@ -9,7 +9,7 @@ import {
 } from "@/config/i18n";
 
 describe("i18n config", () => {
-  it("supports the 13 K10 languages plus Persian with zh-CN in BCP-47 form", () => {
+  it("supports the 13 K10 languages plus Persian and Hindi with zh-CN in BCP-47 form", () => {
     expect(SUPPORTED_LOCALES).toEqual([
       "tr",
       "en",
@@ -25,7 +25,9 @@ describe("i18n config", () => {
       "az",
       "ar",
       "fa",
+      "hi",
     ]);
+    expect(LOCALE_NAMES.hi).toBe("हिन्दी");
     for (const l of SUPPORTED_LOCALES) expect(LOCALE_NAMES[l]).toBeTruthy();
   });
 
@@ -43,6 +45,8 @@ describe("i18n config", () => {
     expect(normalizeLocale("zh")).toBe("zh-CN");
     expect(normalizeLocale("tr-TR")).toBe("tr");
     expect(normalizeLocale(" AR-ae ")).toBe("ar");
+    expect(normalizeLocale("hi-IN")).toBe("hi");
+    expect(localeDir("hi")).toBe("ltr");
     expect(normalizeLocale("ja")).toBeNull();
     expect(normalizeLocale("")).toBeNull();
     expect(normalizeLocale(undefined)).toBeNull();

@@ -110,7 +110,7 @@ type legacyUser struct {
 var supportedLocales = map[string]string{
 	"tr": "tr", "en": "en", "bg": "bg", "de": "de", "el": "el", "uk": "uk", "ru": "ru",
 	"fr": "fr", "es": "es", "it": "it", "zh_cn": "zh-CN", "zh-cn": "zh-CN", "az": "az", "ar": "ar",
-	"fa": "fa",
+	"fa": "fa", "hi": "hi",
 }
 
 // Run implements Step.

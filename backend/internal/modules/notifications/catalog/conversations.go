@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // an assigned conversation tells the assignee in-app and over web push
 // (whatsapp.message.received with assigned_user_id). Per the F4 decision S2
 // only platform admins read conversations, so the audience is the center.
-// Default templates ship in all 14 locales (SyncCatalog, no migration).
+// Default templates ship in all 15 locales (SyncCatalog, no migration).
 const EventConversationInbound = "conversation.inbound"
 
 // ConversationInboundChannels are the default channels of the inbound
@@ -28,6 +28,7 @@ var conversationInboundTexts = map[string]localizedText{
 	"az":    {"Yeni WhatsApp mesajı: {{contact_name}}", "{{contact_name}}: {{preview}}"},
 	"ar":    {"رسالة واتساب جديدة: {{contact_name}}", "{{contact_name}}: {{preview}}"},
 	"fa":    {"پیام جدید WhatsApp: {{contact_name}}", "{{contact_name}}: {{preview}}"},
+	"hi":    {"नया WhatsApp संदेश: {{contact_name}}", "{{contact_name}}: {{preview}}"},
 }
 
 func conversationInboundTemplates() []DefaultTemplate {

@@ -17,6 +17,11 @@ import (
 // image (Noto Sans / Noto Sans CJK), which need no network either.
 // TEC-1233: Persian documents use Vazirmatn (arabic subset, @fontsource
 // 5.2.5, SIL OFL 1.1) with Noto Sans Arabic as the fallback.
+// TEC-1248: Hindi documents (and Devanagari text in any document) embed Noto
+// Sans Devanagari (devanagari subset, weights 400/700, @fontsource
+// noto-sans-devanagari 5.3.0, npm tarball sha256
+// 8d42be0e944481b61e68c7702037d4143e96bf48dbb72d19ea05d0cacc1323d5,
+// SIL OFL 1.1); Chromium in Gotenberg does the conjunct shaping.
 //
 //go:embed fonts/*.woff2
 var fontFS embed.FS
@@ -47,9 +52,10 @@ type fontFace struct {
 }
 
 const (
-	rangeLatin    = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
-	rangeLatinExt = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
-	rangeArabic   = "U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC"
+	rangeLatin      = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"
+	rangeLatinExt   = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+	rangeDevanagari = "U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09"
+	rangeArabic     = "U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC"
 )
 
 var latinFaces = []fontFace{
@@ -69,11 +75,17 @@ var persianFaces = []fontFace{
 	{"Vazirmatn", "vazirmatn-arabic-700-normal.woff2", 700, rangeArabic},
 }
 
+var devanagariFaces = []fontFace{
+	{"Noto Sans Devanagari", "noto-sans-devanagari-devanagari-400-normal.woff2", 400, rangeDevanagari},
+	{"Noto Sans Devanagari", "noto-sans-devanagari-devanagari-700-normal.woff2", 700, rangeDevanagari},
+}
+
 var (
 	fontOnce       sync.Once
 	latinFontCSS   string
 	arabicFontCSS  string
 	persianFontCSS string
+	devanagariCSS  string
 )
 
 func loadFontCSS() {
@@ -81,6 +93,7 @@ func loadFontCSS() {
 		latinFontCSS = facesCSS(latinFaces)
 		arabicFontCSS = facesCSS(arabicFaces)
 		persianFontCSS = facesCSS(persianFaces)
+		devanagariCSS = facesCSS(devanagariFaces)
 	})
 }
 
@@ -102,28 +115,45 @@ func facesCSS(faces []fontFace) string {
 // fontCSS returns the @font-face rules for a document. Arabic faces are only
 // inlined when the document needs them (RTL language or Arabic text), which
 // keeps the common Latin request ~190 KB smaller; Vazirmatn only for a
-// Persian document (lang fa).
+// Persian document (lang fa); Noto Sans Devanagari only for a Hindi document
+// (lang hi) or Devanagari text.
 func fontCSS(mode FontMode, lang string, body string) string {
 	if mode == FontsSystem {
 		return ""
 	}
 	loadFontCSS()
-	if isPersian(lang) {
-		return latinFontCSS + persianFontCSS + arabicFontCSS
+	css := latinFontCSS
+	switch {
+	case isPersian(lang):
+		css += persianFontCSS + arabicFontCSS
+	case IsRTL(lang) || containsArabic(body):
+		css += arabicFontCSS
 	}
-	if IsRTL(lang) || containsArabic(body) {
-		return latinFontCSS + arabicFontCSS
+	if langBase(lang) == "hi" || containsDevanagari(body) {
+		css += devanagariCSS
 	}
-	return latinFontCSS
+	return css
 }
 
 // isPersian reports whether a document language is Persian (fa, fa-IR).
-func isPersian(lang string) bool {
+func isPersian(lang string) bool { return langBase(lang) == "fa" }
+
+// langBase returns the lower-cased primary language subtag ("hi-IN" → "hi").
+func langBase(lang string) string {
 	l := strings.ToLower(strings.TrimSpace(lang))
 	if i := strings.IndexAny(l, "-_"); i > 0 {
 		l = l[:i]
 	}
-	return l == "fa"
+	return l
+}
+
+func containsDevanagari(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Devanagari, r) {
+			return true
+		}
+	}
+	return false
 }
 
 func containsArabic(s string) bool {

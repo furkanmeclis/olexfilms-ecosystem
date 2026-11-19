@@ -15,7 +15,8 @@ import (
 // upper-case region only for zh-CN.
 type Locale string
 
-// Supported locales (K10: 12 languages + Arabic; TEC-1233: Persian).
+// Supported locales (K10: 12 languages + Arabic; TEC-1233: Persian; TEC-1245:
+// Hindi).
 const (
 	LocaleTR   Locale = "tr"
 	LocaleEN   Locale = "en"
@@ -31,14 +32,15 @@ const (
 	LocaleAZ   Locale = "az"
 	LocaleAR   Locale = "ar"
 	LocaleFA   Locale = "fa"
+	LocaleHI   Locale = "hi"
 )
 
 // Supported lists the canonical locales in display order. The users and
-// organizations CHECK constraints (migrations 000033, 000195) hold the same
+// organizations CHECK constraints (migrations 000033, 000195, 000199) hold the same
 // list.
 var Supported = []Locale{
 	LocaleTR, LocaleEN, LocaleBG, LocaleDE, LocaleEL, LocaleUK, LocaleRU,
-	LocaleFR, LocaleES, LocaleIT, LocaleZhCN, LocaleAZ, LocaleAR, LocaleFA,
+	LocaleFR, LocaleES, LocaleIT, LocaleZhCN, LocaleAZ, LocaleAR, LocaleFA, LocaleHI,
 }
 
 // DefaultLocale ends the resolution chain and is what Normalize returns for
@@ -70,7 +72,7 @@ var byLower = func() map[string]Locale {
 // Parse maps a raw code to a supported locale. It trims, accepts "_" for "-"
 // and any case; an exact match wins ("zh_CN" -> zh-CN), otherwise the primary
 // language subtag is used ("tr-TR" -> tr, "ar-AE" -> ar, "fa-IR" -> fa,
-// "zh" -> zh-CN). ok is false for an empty or unsupported value.
+// "hi-IN" -> hi, "zh" -> zh-CN). ok is false for an empty or unsupported value.
 func Parse(raw string) (Locale, bool) {
 	s := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), "_", "-"))
 	if s == "" {

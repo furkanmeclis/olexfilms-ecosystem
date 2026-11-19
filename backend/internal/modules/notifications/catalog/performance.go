@@ -26,6 +26,7 @@ var performanceWeakDealerTexts = map[string]localizedText{
 	"az":    {"Zəif bayi qaydası: {{dealer_name}}", "{{dealer_name}} üçün {{period}} dövründə {{rule_name}} qaydası işə düşdü. {{metric}}={{metric_value}}, hədd {{threshold}}."},
 	"ar":    {"قاعدة أداء منخفض: {{dealer_name}}", "تم تفعيل قاعدة {{rule_name}} لـ {{dealer_name}} خلال {{period}}. {{metric}}={{metric_value}}، الحد {{threshold}}."},
 	"fa":    {"قاعده نمایندگی ضعیف: {{dealer_name}}", "قاعده {{rule_name}} برای {{dealer_name}} در دوره {{period}} فعال شد. {{metric}}={{metric_value}}، آستانه {{threshold}}."},
+	"hi":    {"कमज़ोर डीलर नियम: {{dealer_name}}", "{{period}} में {{dealer_name}} के लिए {{rule_name}} नियम सक्रिय हुआ। {{metric}}={{metric_value}}, सीमा {{threshold}}।"},
 }
 
 var performanceBelowTargetTexts = map[string]localizedText{
@@ -43,6 +44,7 @@ var performanceBelowTargetTexts = map[string]localizedText{
 	"az":    {"Hədəf izləmə: {{period}}", "{{period}} dövründə {{metric}} dəyəriniz {{metric_value}}. Hədəfinizi performans panelində izləyin."},
 	"ar":    {"متابعة الهدف: {{period}}", "قيمة {{metric}} لديك في {{period}} هي {{metric_value}}. راجع لوحة الأداء لمتابعة الهدف."},
 	"fa":    {"پیگیری هدف: {{period}}", "مقدار {{metric}} شما در دوره {{period}} برابر {{metric_value}} است. برای پیگیری هدف خود داشبورد عملکرد را ببینید."},
+	"hi":    {"लक्ष्य ट्रैकिंग: {{period}}", "{{period}} के लिए आपका {{metric}} मान {{metric_value}} है। अपने लक्ष्य पर नज़र रखने के लिए प्रदर्शन डैशबोर्ड देखें।"},
 }
 
 var performanceBonusCalculatedTexts = map[string]localizedText{
@@ -60,6 +62,7 @@ var performanceBonusCalculatedTexts = map[string]localizedText{
 	"az":    {"Prim hesablamalari hazirdir: {{period}}", "{{period}} dovru ucun {{count}} prim hesablamasi owner tesdiqini gozleyir."},
 	"ar":    {"تم حساب المكافآت: {{period}}", "{{count}} استحقاقات مكافأة للفترة {{period}} بانتظار موافقة المالك."},
 	"fa":    {"پاداش\u200cهای محاسبه\u200cشده آماده است: {{period}}", "{{count}} پاداش محاسبه\u200cشده برای دوره {{period}} در انتظار تأیید مالک است."},
+	"hi":    {"बोनस उपार्जन तैयार: {{period}}", "{{period}} के लिए {{count}} बोनस उपार्जन मालिक के अनुमोदन की प्रतीक्षा में हैं।"},
 }
 
 var performanceBonusApprovedTexts = map[string]localizedText{
@@ -77,6 +80,7 @@ var performanceBonusApprovedTexts = map[string]localizedText{
 	"az":    {"Priminiz tesdiqlendi", "{{period}} dovru ucun {{amount}} {{currency}} priminiz tesdiqlendi. Odeme gunu: {{paid_on}}."},
 	"ar":    {"تمت الموافقة على مكافأتك", "تمت الموافقة على مكافأة {{amount}} {{currency}} للفترة {{period}}. يوم الدفع: {{paid_on}}."},
 	"fa":    {"پاداش شما تأیید شد", "پاداش {{amount}} {{currency}} شما برای دوره {{period}} تأیید شد. روز پرداخت: {{paid_on}}."},
+	"hi":    {"आपका बोनस स्वीकृत हुआ", "{{period}} के लिए आपका {{amount}} {{currency}} बोनस स्वीकृत हो गया है। भुगतान दिवस: {{paid_on}}।"},
 }
 
 func performanceTemplates(code string, texts map[string]localizedText) []DefaultTemplate {

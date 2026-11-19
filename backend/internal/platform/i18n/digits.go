@@ -5,11 +5,11 @@ import "strings"
 // TEC-1009: Arabic text shows Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩). Formatted
 // values (dates, numbers, money, counts) are converted with Digits at the
 // point they are written for a reader; identifiers keep Latin digits in
-// every locale (LatinOnlyKey). Input arriving with Arabic-Indic or Persian
-// digits is stored as Latin (LatinDigits).
+// every locale (LatinOnlyKey). Input arriving with Arabic-Indic, Persian or
+// Devanagari digits is stored as Latin (LatinDigits).
 
 // Digits writes the ASCII digits of a formatted value in the locale's
-// digits: Arabic-Indic for ar, unchanged otherwise (fa included, see above).
+// digits: Arabic-Indic for ar, unchanged otherwise (fa and hi included, see above).
 func Digits(locale Locale, s string) string {
 	if locale != LocaleAR || !strings.ContainsAny(s, "0123456789") {
 		return s
@@ -26,8 +26,8 @@ func Digits(locale Locale, s string) string {
 	return b.String()
 }
 
-// LatinDigits rewrites Arabic-Indic (٠-٩) and Persian (۰-۹) digits as
-// 0-9.
+// LatinDigits rewrites Arabic-Indic (٠-٩), Persian (۰-۹) and Devanagari
+// (०-९, TEC-1248) digits as 0-9.
 func LatinDigits(s string) string {
 	if !strings.ContainsFunc(s, isEasternDigit) {
 		return s
@@ -40,6 +40,8 @@ func LatinDigits(s string) string {
 			b.WriteRune('0' + (r - '٠'))
 		case r >= '۰' && r <= '۹':
 			b.WriteRune('0' + (r - '۰'))
+		case r >= '०' && r <= '९':
+			b.WriteRune('0' + (r - '०'))
 		default:
 			b.WriteRune(r)
 		}
@@ -48,7 +50,7 @@ func LatinDigits(s string) string {
 }
 
 func isEasternDigit(r rune) bool {
-	return (r >= '٠' && r <= '٩') || (r >= '۰' && r <= '۹')
+	return (r >= '٠' && r <= '٩') || (r >= '۰' && r <= '۹') || (r >= '०' && r <= '९')
 }
 
 // latinOnlyParts are the name parts of values that keep Latin digits:

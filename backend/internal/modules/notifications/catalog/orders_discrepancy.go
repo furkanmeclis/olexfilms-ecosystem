@@ -38,6 +38,8 @@ var orderReceiptDiscrepancyTexts = map[string]localizedText{
 		"أبلغ {{buyer_name}} عن {{missing_count}} وحدات مفقودة و{{damaged_count}} وحدات تالفة عند استلام الطلب {{order_no}}. راجعوا السجل في الطلب."},
 	"fa": {"مغایرت در تحویل گزارش شد: {{order_no}}",
 		"{{buyer_name}} هنگام دریافت سفارش {{order_no}}، {{missing_count}} واحد کسری و {{damaged_count}} واحد آسیب\u200cدیده گزارش کرد. صورت\u200cجلسه را در سفارش بررسی کنید."},
+	"hi": {"प्राप्ति में अंतर की सूचना: {{order_no}}",
+		"{{buyer_name}} ने ऑर्डर {{order_no}} प्राप्त करते समय {{missing_count}} गायब और {{damaged_count}} क्षतिग्रस्त इकाइयों की सूचना दी है। ऑर्डर पर रिकॉर्ड की समीक्षा करें।"},
 }
 
 func init() {

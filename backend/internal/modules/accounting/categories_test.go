@@ -8,7 +8,7 @@ import (
 
 // Every catalog key fits chk_finance_entries_category, keys are unique, the
 // direction is one of chk_finance_entries_direction and the label resolves
-// in all 14 languages.
+// in all 15 languages.
 func TestCategoryCatalog(t *testing.T) {
 	directions := map[string]bool{
 		DirectionIncome: true, DirectionExpense: true, DirectionCharge: true,

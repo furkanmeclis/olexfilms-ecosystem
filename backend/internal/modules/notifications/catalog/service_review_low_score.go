@@ -23,6 +23,7 @@ var serviceReviewLowScoreTexts = map[string]localizedText{
 	"az":    {"Aşağı qiymət alındı", "{{organization_name}} {{service_no}} xidməti üçün aşağı qiymət aldı. Platforma: {{platform_rating}}, məhsul: {{product_rating}}."},
 	"ar":    {"تم استلام تقييم منخفض", "تلقت {{organization_name}} تقييمًا منخفضًا للخدمة {{service_no}}. المنصة: {{platform_rating}}، المنتج: {{product_rating}}."},
 	"fa":    {"امتیاز پایین دریافت شد", "{{organization_name}} برای سرویس {{service_no}} امتیاز پایینی دریافت کرد. پلتفرم: {{platform_rating}}، محصول: {{product_rating}}."},
+	"hi":    {"कम समीक्षा स्कोर मिला", "{{organization_name}} को सर्विस {{service_no}} के लिए कम स्कोर मिला। प्लेटफ़ॉर्म: {{platform_rating}}, उत्पाद: {{product_rating}}।"},
 }
 
 func serviceReviewLowScoreTemplates() []DefaultTemplate {

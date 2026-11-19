@@ -371,7 +371,7 @@ func TestIdentityCacheClearedOnMembershipChange(t *testing.T) {
 }
 
 // Acceptance: Arabic text is detected as ar with the fast model (fake llm);
-// languages outside the 14 locales fall back to en; Chinese is zh_CN.
+// languages outside the 15 locales fall back to en; Chinese is zh_CN.
 func TestDetectLocale(t *testing.T) {
 	f := newIDFixture(t, nil)
 	settings, err := f.q.GetAISettings(f.ctx)

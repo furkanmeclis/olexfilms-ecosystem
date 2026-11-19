@@ -7,7 +7,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // center's members holding platform.showcase.review; the decision
 // (approved and published, or rejected with a note) reaches the owners of
 // the dealer. Both sides are panel users, so the defaults are in-app and
-// e-mail. Default templates ship in all 14 locales and are seeded with
+// e-mail. Default templates ship in all 15 locales and are seeded with
 // InsertNotificationTemplateIfMissing by SyncCatalog (no migration).
 const (
 	EventShowcaseReviewRequested = "SHOWCASE_REVIEW_REQUESTED"
@@ -51,6 +51,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"قدّمت {{organization_name}} واجهة عرض الوكيل للحصول على موافقتك. يرجى مراجعتها في اللوحة والموافقة عليها أو رفضها."},
 		"fa": {"ویترین در انتظار بررسی: {{organization_name}}",
 			"{{organization_name}} ویترین نمایندگی خود را برای تأیید شما ارسال کرده است. لطفاً آن را در پنل بررسی کنید و تأیید یا رد کنید."},
+		"hi": {"समीक्षा की प्रतीक्षा में शोकेस: {{organization_name}}",
+			"{{organization_name}} ने अपना डीलर शोकेस आपके अनुमोदन के लिए भेजा है। कृपया पैनल में इसकी समीक्षा करें और इसे स्वीकृत या अस्वीकृत करें।"},
 	},
 	EventShowcaseApproved: {
 		"tr": {"Vitrininiz onaylandı ve yayında",
@@ -81,6 +83,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"وافق المركز على واجهة عرض {{organization_name}} وأصبحت منشورة الآن على صفحة الوكيل العامة."},
 		"fa": {"ویترین شما تأیید و منتشر شد",
 			"ویترین {{organization_name}} از سوی مرکز تأیید شد و اکنون در صفحه عمومی نمایندگی شما منتشر شده است."},
+		"hi": {"आपका शोकेस स्वीकृत होकर प्रकाशित हो गया है",
+			"{{organization_name}} शोकेस को केंद्र ने स्वीकृत कर दिया है और अब यह आपके सार्वजनिक डीलर पेज पर प्रकाशित है।"},
 	},
 	EventShowcaseRejected: {
 		"tr": {"Vitrininiz reddedildi",
@@ -111,6 +115,8 @@ var showcaseTexts = map[string]map[string]localizedText{
 			"رفض المركز واجهة عرض {{organization_name}}. ملاحظة: {{reason}}. يمكنك تعديلها وتقديمها مرة أخرى."},
 		"fa": {"ویترین شما رد شد",
 			"ویترین {{organization_name}} از سوی مرکز رد شد. یادداشت: {{reason}}. می\u200cتوانید آن را ویرایش و دوباره ارسال کنید."},
+		"hi": {"आपका शोकेस अस्वीकृत किया गया",
+			"{{organization_name}} शोकेस को केंद्र ने अस्वीकृत कर दिया है। नोट: {{reason}}। आप इसे संपादित करके फिर से भेज सकते हैं।"},
 	},
 }
 

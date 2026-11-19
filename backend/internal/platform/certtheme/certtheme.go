@@ -78,7 +78,7 @@ func CSS() string {
 	return `<style>@font-face{font-family:"Michroma";font-style:normal;font-weight:400;font-display:block;src:url(data:font/woff2;base64,` +
 		base64.StdEncoding.EncodeToString(asset("michroma-400.woff2")) + `) format("woff2")}
 @page ct{margin:0}
-.ct-page{page:ct;break-after:page;position:relative;overflow:hidden;box-sizing:border-box;width:100%;height:297mm;margin:0;background:` + pageColor + `;color:#fff;font-family:"Michroma","Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans CJK SC",sans-serif;font-weight:400;text-align:center}
+.ct-page{page:ct;break-after:page;position:relative;overflow:hidden;box-sizing:border-box;width:100%;height:297mm;margin:0;background:` + pageColor + `;color:#fff;font-family:"Michroma","Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans Devanagari","Noto Sans CJK SC",sans-serif;font-weight:400;text-align:center}
 .ct-page.ct-summary{height:auto;min-height:297mm;padding-block-end:1cm}
 .ct-watermark{position:absolute;top:2cm;inset-inline-start:-150px;width:400px;opacity:.5}
 .ct-logo{display:block;width:10cm;margin:10cm auto 5cm}
@@ -116,7 +116,7 @@ func MeasurementCSS() string {
 		base64.StdEncoding.EncodeToString(asset("michroma-400.woff2")) + `) format("woff2")}
 @page{margin:0}
 html{background:` + pageColor + `}
-.ct-measure{padding:.65cm .75cm;box-decoration-break:clone;-webkit-box-decoration-break:clone;color:#fff;font-family:"Michroma","Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans CJK SC",sans-serif;font-size:9px;font-weight:400}
+.ct-measure{padding:.65cm .75cm;box-decoration-break:clone;-webkit-box-decoration-break:clone;color:#fff;font-family:"Michroma","Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans Devanagari","Noto Sans CJK SC",sans-serif;font-size:9px;font-weight:400}
 .ct-measure h1,.ct-measure h2,.ct-measure h3{color:#fff;font-weight:400;text-align:center;border:0;padding:0}
 .ct-measure h1.doc-title{font-size:15px}
 .ct-measure h2{font-size:14px;margin:.45cm 0 .35cm;break-after:avoid}

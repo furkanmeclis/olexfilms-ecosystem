@@ -131,7 +131,7 @@ type featuresResponse struct {
 type featureItem struct {
 	features.State
 	// Description is the module's one-sentence description in the request
-	// locale (backend i18n catalog, 14 languages).
+	// locale (backend i18n catalog, 15 languages).
 	Description string `json:"description"`
 	// FreeDefault: on by default, free, needs no service record.
 	FreeDefault bool `json:"free_default"`

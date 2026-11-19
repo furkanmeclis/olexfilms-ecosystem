@@ -368,7 +368,7 @@ func (r *IdentityResolver) detectAndStore(ctx context.Context, conv db.Conversat
 	return locale, conv, err
 }
 
-// FallbackConversationLocale answers languages outside the 14 locales.
+// FallbackConversationLocale answers languages outside the 15 locales.
 const FallbackConversationLocale = "en"
 
 // detectSystem is the language detection prompt of the fast model.
@@ -376,7 +376,7 @@ const detectSystem = "Identify the language of the user's message. " +
 	"Answer with only its ISO 639-1 code in lower case (for Chinese answer zh_CN), nothing else."
 
 // DetectLocale asks the fast model (ai_settings.fast_model, else
-// AI_MODEL_FAST) for the language of text. A language outside the 14
+// AI_MODEL_FAST) for the language of text. A language outside the 15
 // supported locales is en.
 func (r *IdentityResolver) DetectLocale(ctx context.Context, conv db.Conversation, text string) (string, error) {
 	configured := ""
@@ -419,7 +419,7 @@ func (r *IdentityResolver) DetectLocale(ctx context.Context, conv db.Conversatio
 }
 
 // ConversationLocale maps a locale code to the conversations.locale form
-// (zh-CN -> zh_CN); ok is false outside the 14 supported locales.
+// (zh-CN -> zh_CN); ok is false outside the 15 supported locales.
 func ConversationLocale(raw string) (string, bool) {
 	l, ok := i18n.Parse(raw)
 	if !ok {

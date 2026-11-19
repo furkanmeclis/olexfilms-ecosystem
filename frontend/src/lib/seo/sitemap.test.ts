@@ -37,14 +37,15 @@ import { buildSitemap, localeAlternates } from "./sitemap";
 const landing = `${site.url}/`;
 
 describe("localeAlternates (TEC-251)", () => {
-  it("lists the 14 languages via ?lang= plus x-default", () => {
+  it("lists the 15 languages via ?lang= plus x-default", () => {
     const langs = localeAlternates("https://olex.test/bayi/kadikoy");
     expect(Object.keys(langs)).toHaveLength(SUPPORTED_LOCALES.length + 1);
-    expect(SUPPORTED_LOCALES).toHaveLength(14);
+    expect(SUPPORTED_LOCALES).toHaveLength(15);
     expect(langs.tr).toBe("https://olex.test/bayi/kadikoy?lang=tr");
     expect(langs["zh-CN"]).toBe("https://olex.test/bayi/kadikoy?lang=zh-CN");
     expect(langs.ar).toBe("https://olex.test/bayi/kadikoy?lang=ar");
     expect(langs.fa).toBe("https://olex.test/bayi/kadikoy?lang=fa");
+    expect(langs.hi).toBe("https://olex.test/bayi/kadikoy?lang=hi");
     expect(langs["x-default"]).toBe("https://olex.test/bayi/kadikoy");
   });
 });
@@ -71,7 +72,7 @@ describe("buildSitemap (TEC-251)", () => {
     expect(entries[1]!.lastModified).toEqual(new Date("2026-09-01T10:00:00Z"));
     expect(entries[2]!.lastModified).toEqual(now);
     for (const entry of entries) {
-      expect(Object.keys(entry.alternates?.languages ?? {})).toHaveLength(15);
+      expect(Object.keys(entry.alternates?.languages ?? {})).toHaveLength(16);
     }
   });
 });
@@ -120,7 +121,7 @@ describe("sitemap route (TEC-251)", () => {
       `${site.url}/bayi-basvuru`,
     ]);
     expect(Object.keys(entries[1]!.alternates?.languages ?? {})).toHaveLength(
-      15,
+      16,
     );
     const configCall = upstream.calls.find((c) => c.path === CONFIG_PATH);
     expect(configCall!.headers.get("x-forwarded-host")).toBe(

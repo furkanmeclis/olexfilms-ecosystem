@@ -40,6 +40,15 @@ const vazirmatn = localFont({
   display: "swap",
 });
 
+// TEC-1248: Hindi (hi) text; Devanagari glyphs only, used for
+// html[lang="hi"] (src/styles/theme.css).
+const notoSansDevanagari = localFont({
+  src: "./fonts/noto-sans-devanagari-wght.woff2",
+  variable: "--font-devanagari",
+  weight: "400 700",
+  display: "swap",
+});
+
 const jetbrainsMono = localFont({
   src: "./fonts/jetbrains-mono-wght.woff2",
   variable: "--font-jetbrains",
@@ -106,7 +115,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning className="h-full">
       <body
-        className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} ${vazirmatn.variable} min-h-full font-sans antialiased`}
+        className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} ${vazirmatn.variable} ${notoSansDevanagari.variable} min-h-full font-sans antialiased`}
       >
         <AppProviders
           locale={locale}

@@ -1,5 +1,6 @@
 /**
- * Supported UI languages (K10: 12 languages + Arabic, TEC-1233: + Persian).
+ * Supported UI languages (K10: 12 languages + Arabic, TEC-1233: + Persian,
+ * TEC-1248: + Hindi).
  * Canonical codes are
  * short BCP-47 tags that Intl accepts as is; the backend uses the same list
  * (backend/internal/platform/i18n, OpenAPI `Locale`).
@@ -21,6 +22,7 @@ export const SUPPORTED_LOCALES = [
   "az",
   "ar",
   "fa",
+  "hi",
 ] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -41,6 +43,7 @@ export const LOCALE_NAMES: Record<AppLocale, string> = {
   az: "Azərbaycan dili",
   ar: "العربية",
   fa: "فارسی",
+  hi: "हिन्दी",
 };
 
 /**

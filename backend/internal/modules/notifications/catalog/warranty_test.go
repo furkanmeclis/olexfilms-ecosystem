@@ -8,15 +8,15 @@ import (
 )
 
 // TEC-187: both warranty events ship a default template in every locale
-// (14) for every default channel, using only catalog placeholders.
+// (15) for every default channel, using only catalog placeholders.
 func TestWarrantyTemplatesCoverEveryLocale(t *testing.T) {
 	for _, code := range []string{EventWarrantyExpiringSoon, EventWarrantyExpired} {
 		ev, ok := Lookup(code)
 		if !ok {
 			t.Fatalf("%s not registered", code)
 		}
-		if len(msgtemplate.Locales) != 14 {
-			t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
+		if len(msgtemplate.Locales) != 15 {
+			t.Fatalf("locales = %d, want 15", len(msgtemplate.Locales))
 		}
 		seen := map[string]bool{}
 		for _, tpl := range ev.Templates {

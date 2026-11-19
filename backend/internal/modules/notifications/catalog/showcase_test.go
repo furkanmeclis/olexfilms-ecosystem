@@ -8,11 +8,11 @@ import (
 )
 
 // TEC-467: every showcase review event ships a default template in every
-// locale (14) for in-app and e-mail, names the organization and, for a
+// locale (15) for in-app and e-mail, names the organization and, for a
 // rejection, carries the reviewer's note.
 func TestShowcaseTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 14 {
-		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 15 {
+		t.Fatalf("locales = %d, want 15", len(msgtemplate.Locales))
 	}
 	for _, code := range ShowcaseEvents {
 		ev, ok := Lookup(code)

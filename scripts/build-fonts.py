@@ -49,6 +49,8 @@ SUBSETS = {
     "arabic": "U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,"
     "U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,"
     "U+FE76-FEFC",
+    "devanagari": "U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,"
+    "U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09",
 }
 
 # (output name, google/fonts dir, TTF name, sha256, wght min, wght max, subsets)
@@ -91,6 +93,18 @@ FONTS = [
         700,
         ["arabic"],
     ),
+    # TEC-1248: Hindi (hi) UI text. Devanagari only; Latin falls back to Plus
+    # Jakarta Sans. Applied for html[lang="hi"] in src/styles/theme.css. The
+    # width axis is pinned to its default (100).
+    (
+        "noto-sans-devanagari",
+        "notosansdevanagari",
+        "NotoSansDevanagari[wdth,wght].ttf",
+        "14ec4af41f27482216d1c2229f417ff9b1425e1babb014e57d1d40d03229853e",
+        400,
+        700,
+        ["devanagari"],
+    ),
 ]
 
 
@@ -109,7 +123,7 @@ def unicodes(names: list[str]) -> list[int]:
 
 
 def build(name, family_dir, ttf, sha256, wmin, wmax, subsets) -> None:
-    quoted = ttf.replace("[", "%5B").replace("]", "%5D")
+    quoted = ttf.replace("[", "%5B").replace("]", "%5D").replace(",", "%2C")
     data = fetch(f"{RAW}/{family_dir}/{quoted}")
     digest = hashlib.sha256(data).hexdigest()
     if digest != sha256:
@@ -117,9 +131,13 @@ def build(name, family_dir, ttf, sha256, wmin, wmax, subsets) -> None:
 
     # Limit the weight axis, then reload from bytes: subsetting a freshly
     # instanced in-memory font trips over lazily loaded gvar data.
-    font = instancer.instantiateVariableFont(
-        TTFont(io.BytesIO(data)), {"wght": (wmin, wmax)}
-    )
+    # Other axes (e.g. wdth) are pinned to their default value.
+    source = TTFont(io.BytesIO(data))
+    limits = {
+        a.axisTag: (wmin, wmax) if a.axisTag == "wght" else a.defaultValue
+        for a in source["fvar"].axes
+    }
+    font = instancer.instantiateVariableFont(source, limits)
     buf = io.BytesIO()
     font.save(buf)
     font = TTFont(io.BytesIO(buf.getvalue()))

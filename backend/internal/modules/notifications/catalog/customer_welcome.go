@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // customer: customer.created goes through the outbox to the notifications
 // bus, which sends this WhatsApp message (wuzapi, K16/K21) with the portal
 // link. Customers without a phone are skipped. Default templates ship in all
-// 14 locales and are seeded with InsertNotificationTemplateIfMissing by
+// 15 locales and are seeded with InsertNotificationTemplateIfMissing by
 // SyncCatalog.
 const EventCustomerWelcome = "CUSTOMER_WELCOME"
 
@@ -44,6 +44,8 @@ var customerWelcomeTexts = map[string]localizedText{
 		"مرحبًا {{customer_name}}، أنشأت {{organization_name}} حساب العميل الخاص بك. يمكنك متابعة مركباتك وخدماتك وضماناتك عبر بوابة العملاء: {{portal_url}} يتم تسجيل الدخول برمز لمرة واحدة يصل إلى هاتفك عبر WhatsApp."},
 	"fa": {"خوش آمدید",
 		"سلام {{customer_name}}، {{organization_name}} حساب مشتری شما را ایجاد کرده است. می\u200cتوانید خودروها، سرویس\u200cها و گارانتی\u200cهای خود را در پورتال مشتریان پیگیری کنید: {{portal_url}} ورود با کد یک\u200cبارمصرفی انجام می\u200cشود که از طریق WhatsApp به تلفن شما ارسال می\u200cشود."},
+	"hi": {"स्वागत है",
+		"नमस्ते {{customer_name}}, {{organization_name}} ने आपका ग्राहक खाता बनाया है। आप ग्राहक पोर्टल पर अपने वाहनों, सर्विस और वारंटी पर नज़र रख सकते हैं: {{portal_url}} साइन इन WhatsApp के ज़रिए आपके फ़ोन पर भेजे गए एक-बार के कोड से होता है।"},
 }
 
 func customerWelcomeTemplates() []DefaultTemplate {

@@ -265,6 +265,30 @@ func TestDocumentCSPAndDirection(t *testing.T) {
 		t.Fatal("fa font stack")
 	}
 
+	if strings.Contains(tr, `"Noto Sans Devanagari";font-style`) {
+		t.Fatal("tr document must not embed Noto Sans Devanagari")
+	}
+
+	// TEC-1248: Hindi is ltr and embeds Noto Sans Devanagari (400 and 700);
+	// Latin digits stay as written.
+	hi := Document{Lang: "hi-IN", Title: "सेवा", Body: "<p>नमस्ते, ग्राहक 1,25,000.50 ₹</p>"}.HTML()
+	if !strings.Contains(hi, `<html lang="hi-IN" dir="ltr">`) {
+		t.Fatal("hi document must be ltr")
+	}
+	if !strings.Contains(hi, `font-family:"Noto Sans Devanagari";font-style:normal;font-weight:400`) ||
+		!strings.Contains(hi, `font-family:"Noto Sans Devanagari";font-style:normal;font-weight:700`) {
+		t.Fatal("hi document must embed Noto Sans Devanagari 400/700")
+	}
+	if strings.Contains(hi, `"Noto Sans Arabic";font-style`) || strings.Contains(hi, `"Vazirmatn";font-style`) {
+		t.Fatal("hi document must not embed Arabic faces")
+	}
+	if !strings.Contains(hi, "नमस्ते, ग्राहक 1,25,000.50 ₹") || !strings.Contains(hi, `"Noto Sans Devanagari","Noto Sans CJK SC"`) {
+		t.Fatal("hi body / font stack")
+	}
+	if mixedHi := (Document{Lang: "en", Body: "<p>Customer: राहुल</p>"}).HTML(); !strings.Contains(mixedHi, `"Noto Sans Devanagari";font-style`) {
+		t.Fatal("devanagari text must embed Noto Sans Devanagari")
+	}
+
 	// Arabic text in an LTR document still pulls the Arabic faces.
 	mixed := Document{Lang: "en", Body: "<p>Customer: محمد</p>"}.HTML()
 	if !strings.Contains(mixed, `"Noto Sans Arabic";font-style`) {
@@ -282,7 +306,7 @@ func TestDocumentCSPAndDirection(t *testing.T) {
 }
 
 func TestIsRTL(t *testing.T) {
-	for loc, want := range map[string]bool{"ar": true, "ar-SA": true, "AR_eg": true, "tr": false, "en": false, "zh_CN": false, "": false} {
+	for loc, want := range map[string]bool{"ar": true, "ar-SA": true, "AR_eg": true, "tr": false, "en": false, "hi": false, "hi-IN": false, "zh_CN": false, "": false} {
 		if IsRTL(loc) != want {
 			t.Errorf("IsRTL(%q) = %v", loc, !want)
 		}

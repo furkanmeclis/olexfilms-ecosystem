@@ -18,6 +18,7 @@ var catalogs = map[Locale]map[string]string{
 	LocaleAZ:   azCatalog,
 	LocaleAR:   arCatalog,
 	LocaleFA:   faCatalog,
+	LocaleHI:   hiCatalog,
 }
 
 // Translate resolves a dotted key for the locale. A key missing (or empty) in

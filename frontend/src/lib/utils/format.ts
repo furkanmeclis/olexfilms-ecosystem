@@ -9,6 +9,7 @@ import {
   es as dfEs,
   faIR as dfFaIR,
   fr as dfFr,
+  hi as dfHi,
   it as dfIt,
   ru as dfRu,
   tr as dfTr,
@@ -25,6 +26,7 @@ import {
   es as dpEs,
   faIR as dpFaIR,
   fr as dpFr,
+  hi as dpHi,
   it as dpIt,
   ru as dpRu,
   tr as dpTr,
@@ -54,6 +56,7 @@ const DATE_FNS_LOCALES: Record<AppLocale, DateFnsLocale> = {
   az: dfAz,
   ar: dfAr,
   fa: dfFaIR,
+  hi: dfHi,
 };
 
 const DAY_PICKER_LOCALES = {
@@ -71,6 +74,7 @@ const DAY_PICKER_LOCALES = {
   az: dpAz,
   ar: dpAr,
   fa: dpFaIR,
+  hi: dpHi,
 } satisfies Record<AppLocale, unknown>;
 
 export function dateFnsLocale(
