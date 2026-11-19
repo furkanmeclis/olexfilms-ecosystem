@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Hissə sətirdən qısadır; hissələrlə göndərməni təsdiqləyib qeyd yazın.",
   "errors.CUT_BELOW_MIN_CUT": "Kəsim məhsulun minimum kəsimindən qısadır.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu sətir qutudan kəsilən metr sətri deyil.",
-  "orders.cut.note_placeholder": "Niyə hissələrlə? (məs. heç bir rulon çatmadı)"
+  "orders.cut.note_placeholder": "Niyə hissələrlə? (məs. heç bir rulon çatmadı)",
+  "m.measure_boxes": "Bağlı qutu {{count}}",
+  "m.measure_open": "Açıq {{count}} rulon / {{meters}} m",
+  "m.measure_cut": "Kəsik {{count}} hissə / {{meters}} m",
+  "m.measure_remnant": "Qalıq {{meters}} m",
+  "m.reorder_meters": "Metr (açıq + kəsik): {{available}} / hədd {{min}} m",
+  "m.level_meters_below_min": "Metr minimumdan aşağı",
+  "m.remnants_title": "Qalıqlar",
+  "m.remnants_hint": "Minimum kəsimdən qısa qalan hissələr; sifarişlərə təklif edilmir. Stok düzəliş sənədi ilə silin.",
+  "m.remnants_empty": "Qalıq yoxdur."
 }

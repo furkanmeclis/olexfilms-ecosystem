@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Шматок коротший за рядок; підтвердьте надсилання частинами й додайте примітку.",
   "errors.CUT_BELOW_MIN_CUT": "Відріз коротший за мінімальний відріз товару.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Цей рядок не є метражним рядком із коробки.",
-  "orders.cut.note_placeholder": "Чому частинами? (напр., жоден рулон не підійшов)"
+  "orders.cut.note_placeholder": "Чому частинами? (напр., жоден рулон не підійшов)",
+  "m.measure_boxes": "Закриті коробки {{count}}",
+  "m.measure_open": "Відкриті {{count}} рул. / {{meters}} м",
+  "m.measure_cut": "Відрізи {{count}} шт. / {{meters}} м",
+  "m.measure_remnant": "Залишок {{meters}} м",
+  "m.reorder_meters": "Метри (відкриті + відрізи): {{available}} / поріг {{min}} м",
+  "m.level_meters_below_min": "Метри нижче мінімуму",
+  "m.remnants_title": "Залишки",
+  "m.remnants_hint": "Шматки, коротші за мінімальний відріз; не пропонуються до замовлень. Списуйте їх документом коригування запасу.",
+  "m.remnants_empty": "Залишків немає."
 }

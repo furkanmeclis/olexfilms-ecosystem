@@ -86,6 +86,25 @@ export function useProductUnits(org: string, product: string) {
   });
 }
 
+/**
+ * TEC-1243: the remnants ("ragle") of the organization: rolls with meters
+ * left but fewer than the product's minimum cut (GET …/units?remnant=true).
+ */
+export function useRemnantUnits(org: string) {
+  return useInfiniteQuery({
+    queryKey: ['stock', 'remnants', org],
+    enabled: !!org,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET('/v1/stock/organizations/{uuid}/units', {
+          params: { path: { uuid: org }, query: { remnant: true, sort: 'product', limit: PAGE, offset: pageParam } },
+        }),
+      ),
+    getNextPageParam: next,
+  });
+}
+
 /** Products on one location (and below). */
 export function useLocationProducts(location: string) {
   return useInfiniteQuery({

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it, test } from 'node:test';
 
-import { balanceParts, filterTotals, inStockTotals, totalsTruncated, WAREHOUSE_TOTALS_MAX_PAGES, WAREHOUSE_TOTALS_PAGE, warehouseProductTotals } from './warehouse-totals.ts';
+import { balanceParts, filterTotals, hasMetered, measureParts, inStockTotals, totalsTruncated, WAREHOUSE_TOTALS_MAX_PAGES, WAREHOUSE_TOTALS_PAGE, warehouseProductTotals } from './warehouse-totals.ts';
 
 const row = (uuid: string, name: string, quantity: number, meters = '0.00', unitType = 'piece', sku = `SKU-${uuid}`) => ({
   product: { uuid, sku, name, unit_type: unitType, category: { name: 'Kat' } },
@@ -85,5 +85,41 @@ describe('totalsTruncated (TEC-1224)', () => {
     assert.equal(totalsTruncated(cap, cap), false);
     assert.equal(totalsTruncated(12, 12), false);
     assert.equal(totalsTruncated(0, undefined), false);
+  });
+});
+
+// TEC-1243 (K14): an opened box of a piece product shows its meters; the
+// split reads closed boxes, open rolls, cut pieces and remnants.
+describe('box / meter split (TEC-1243)', () => {
+  const measures = {
+    boxes: 12, available_boxes: 10, open_rolls: 2, open_meters: '18.40', cut_pieces: 3, cut_meters: '9.00',
+    remnants: 1, remnant_meters: '1.20', available_meters: '27.40',
+  };
+  const balance = {
+    reserved_quantity: 2, available_quantity: 16, incoming_quantity: 0, quarantine_quantity: 0,
+    available_meters: '27.40', reserved_meters: '0.00', measures,
+  };
+
+  it('keeps the meters of a piece product with opened boxes', () => {
+    const [r] = warehouseProductTotals([{ ...row('p', 'Black PPF', 18, '28.60'), balance }]);
+    assert.equal(r.meters, 28.6);
+    assert.deepEqual(r.measures, measures);
+    const [box] = warehouseProductTotals([row('b', 'Seramik', 4)]);
+    assert.equal(box.meters, null);
+    assert.equal(box.measures, null);
+  });
+
+  it('lists the parts in reading order and skips empty groups', () => {
+    assert.deepEqual(measureParts(measures), [
+      { key: 'm.measure_boxes', count: 12 },
+      { key: 'm.measure_open', count: 2, meters: 18.4 },
+      { key: 'm.measure_cut', count: 3, meters: 9 },
+      { key: 'm.measure_remnant', count: 1, meters: 1.2 },
+    ]);
+    const boxOnly = { ...measures, open_rolls: 0, cut_pieces: 0, remnants: 0 };
+    assert.equal(hasMetered(boxOnly), false);
+    assert.deepEqual(measureParts(boxOnly), [{ key: 'm.measure_boxes', count: 12 }]);
+    assert.equal(hasMetered(measures), true);
+    assert.equal(hasMetered(null), false);
   });
 });

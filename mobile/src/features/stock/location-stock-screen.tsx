@@ -8,7 +8,7 @@ import { go } from '@/features/warehouse/format';
 import { ListStatus } from '@/features/warehouse/parts';
 
 import { useLocationProducts } from './api';
-import { stockAmount } from './stock-screen';
+import { measureText, stockAmount } from './stock-screen';
 
 /** What is on one location (opened from a scanned location QR). */
 export function LocationStockScreen({ base }: { base: string }) {
@@ -52,6 +52,12 @@ export function LocationStockScreen({ base }: { base: string }) {
               <Text variant="footnote" tone="muted" className="font-mono">
                 {item.product.sku}
               </Text>
+              {/* TEC-1243 (K14): boxes, open rolls, cut pieces, remnants. */}
+              {measureText(t, item.balance?.measures) ? (
+                <Text variant="footnote" numberOfLines={2}>
+                  {measureText(t, item.balance?.measures)}
+                </Text>
+              ) : null}
               {item.fixed_barcodes.length ? (
                 <Text variant="footnote" tone="muted" numberOfLines={2}>
                   {item.fixed_barcodes.map((f) => `${f.barcode} × ${f.quantity}`).join(', ')}
