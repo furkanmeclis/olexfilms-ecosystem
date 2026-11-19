@@ -128,7 +128,11 @@ describe("drift report (glorian.ReconcileCounts)", () => {
         product_drift: [],
         owner_drift: [],
         meter_drift: [
-          { barcode: "GL-3", local_remaining_meters: "12.00", remote_remaining_meters: "15" },
+          {
+            barcode: "GL-3",
+            local_remaining_meters: "12.00",
+            remote_remaining_meters: "15",
+          },
         ],
       },
     });
