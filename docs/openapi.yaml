@@ -42002,6 +42002,15 @@ components:
         longitude: { type: [number, "null"] }
         service_point:
           $ref: "#/components/schemas/TenantServicePoint"
+        excess_meter_billing:
+          type: string
+          enum: [free, charge]
+          description: >-
+            TEC-1250 (K7, 19.11): when a meter line takes the whole roll or
+            box because the rest would be shorter than the minimum cut, the
+            extra meters are free (default; the buyer pays the ordered
+            meters) or charged (the line is billed every meter that goes).
+            The mode is frozen on the line when the extra meters are decided.
 
     TenantServicePoint:
       type: object
@@ -42046,6 +42055,10 @@ components:
           type: string
           maxLength: 200
           description: TEC-1003, brand center only; an empty string clears it.
+        excess_meter_billing:
+          type: string
+          enum: [free, charge]
+          description: TEC-1250 (19.11). Any other value is 400 VALIDATION_ERROR.
 
     NearbyDealer:
       type: object
@@ -51662,7 +51675,22 @@ components:
             TEC-1250 (K7): the meters the line's pieces carry over the line
             (a whole roll whose rest was shorter than the minimum cut); they
             go free, the line is billed its own meters. Null when the pieces
-            do not exceed the line.
+            do not exceed the line. 19.11: measured over ordered_meters on a
+            charge line.
+        excess_billing:
+          type: [string, "null"]
+          enum: [free, charge, null]
+          description: >-
+            TEC-1250 (19.11): the seller's excess meter setting frozen on the
+            line when its pieces exceeded the order; null otherwise. On a
+            charge line meters, line_total and the order total are raised to
+            the real meters of the pieces.
+        ordered_meters:
+          type: [string, "null"]
+          example: "3.00"
+          description: >-
+            TEC-1250 (19.11): what the buyer ordered on a charge line whose
+            meters were raised; null otherwise (meters is the order).
         list_unit_price:
           type: [string, "null"]
           description: >-
@@ -52208,7 +52236,7 @@ components:
       type: object
       description: TEC-1241. What assigning the scanned unit to a meter line does.
       required: [item_uuid, unit_uuid, barcode, closed_box, source_meters, cut_meters, remaining_meters,
-        whole, remnant, excess_meters, min_cut_meters, missing_meters, partial, credits, line_credits, plotter_cut, location_code]
+        whole, remnant, excess_meters, excess_billing, min_cut_meters, missing_meters, partial, credits, line_credits, plotter_cut, location_code]
       properties:
         item_uuid: { type: string, format: uuid }
         unit_uuid: { type: string, format: uuid }
@@ -52226,6 +52254,13 @@ components:
             TEC-1250 (K7): the rest after the line would be shorter than the
             minimum cut, so the whole roll or box goes (whole) and these
             meters go free of charge; "0.00" when the piece fits the line.
+        excess_billing:
+          type: string
+          enum: [free, charge]
+          description: >-
+            TEC-1250 (19.11): whether excess_meters go free or are added to
+            the invoice (the line's frozen mode, else the seller's setting).
+            Never an amount; warehouse roles see it.
         min_cut_meters: { type: [string, "null"] }
         missing_meters: { type: string, description: What the line still needs }
         partial: { type: boolean, description: The piece is shorter than missing_meters (needs partial and a note) }
@@ -52329,6 +52364,10 @@ components:
             the rest would be shorter than the minimum cut; meters is the
             whole length and excess_meters what goes free. Null when the
             piece is cut to the line.
+        excess_billing:
+          type: [string, "null"]
+          enum: [free, charge, null]
+          description: TEC-1250 (19.11) free | charge, set with excess_meters.
 
     OrderSuggestions:
       type: object

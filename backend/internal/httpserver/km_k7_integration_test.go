@@ -48,6 +48,10 @@ func TestIntegrationKutuMetreK7WholeRoll(t *testing.T) {
 			t.Fatalf("rate: %v", err)
 		}
 	}
+	// TEC-1250 (19.11): this scenario is the default free mode.
+	if _, err := it.pool.Exec(ctx, `UPDATE organizations SET excess_meter_billing = 'free' WHERE id = $1`, center.ID); err != nil {
+		t.Fatal(err)
+	}
 	dealer := it.org("tk7-dealer", "dealer", center)
 	var dealerCur string
 	if err := it.pool.QueryRow(ctx, `SELECT currency FROM organizations WHERE id = $1`, dealer.ID).Scan(&dealerCur); err != nil {

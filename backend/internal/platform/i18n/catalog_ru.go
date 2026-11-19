@@ -499,6 +499,7 @@ var ruCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "шт.",
 	"orders.pdf.line_credits":                 "Кредиты использования: {{credits}} на отрезок",
 	"orders.pdf.excess_free":                  "Дополнительно {{meters}} бесплатно",
+	"orders.pdf.excess_charged":               "Дополнительные {{meters}} добавлены в счёт",
 	"orders.pdf.delivered_by":                 "Передал",
 	"orders.pdf.received_by":                  "Принял",
 	"orders.pdf.generated_at":                 "Создано",

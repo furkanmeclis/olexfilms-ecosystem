@@ -304,7 +304,8 @@ SELECT
   -- buyer ordered (its piece, at most the line's meters: a whole roll's
   -- free extra meters are not demand), else its initial meters.
   COALESCE((
-    SELECT LEAST(oiu.meters, oi.meters)
+    -- 19.11: a charged line's meters were raised; demand is the order.
+    SELECT LEAST(oiu.meters, COALESCE(oi.ordered_meters, oi.meters))
     FROM order_item_units oiu
     JOIN order_items oi ON oi.id = oiu.order_item_id
     WHERE u.initial_meters IS NOT NULL
@@ -1049,7 +1050,7 @@ func (q *Queries) ListStockForecastNotifyUserIDs(ctx context.Context, organizati
 }
 
 const listStockForecastOrganizations = `-- name: ListStockForecastOrganizations :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct, excess_meter_billing
 FROM organizations
 WHERE deleted_at IS NULL
   AND status = 'active'
@@ -1127,6 +1128,7 @@ func (q *Queries) ListStockForecastOrganizations(ctx context.Context, organizati
 			&i.BillingUpdatedByUserID,
 			&i.StandardDiscountPct,
 			&i.FirstOrderDiscountPct,
+			&i.ExcessMeterBilling,
 		); err != nil {
 			return nil, err
 		}

@@ -499,6 +499,7 @@ var esCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "uds.",
 	"orders.pdf.line_credits":                 "Créditos de uso: {{credits}} por pieza",
 	"orders.pdf.excess_free":                  "{{meters}} adicionales sin cargo",
+	"orders.pdf.excess_charged":               "{{meters}} adicionales añadidos a la factura",
 	"orders.pdf.delivered_by":                 "Entregado por",
 	"orders.pdf.received_by":                  "Recibido por",
 	"orders.pdf.generated_at":                 "Generado el",

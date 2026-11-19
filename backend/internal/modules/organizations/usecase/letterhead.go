@@ -37,7 +37,16 @@ type TenantSettings struct {
 	Longitude *float64 `json:"longitude"`
 	// TEC-1003: the brand center's own service point (nil elsewhere).
 	ServicePoint *ServicePoint `json:"service_point,omitempty"`
+	// TEC-1250 (K7, 19.11): the extra meters of a whole roll that goes with
+	// a meter line are free (default) or charged to the buyer.
+	ExcessMeterBilling string `json:"excess_meter_billing"`
 }
+
+// Excess meter billing modes (organizations.excess_meter_billing).
+const (
+	ExcessMeterBillingFree   = "free"
+	ExcessMeterBillingCharge = "charge"
+)
 
 // ServicePoint is the name and logo the center shows on customer surfaces
 // (warranty page and PDF, portal, WhatsApp) when Enabled; the panel keeps
@@ -70,6 +79,8 @@ type LetterheadPatch struct {
 	// TEC-1003: center only. An empty name clears it.
 	ServicePointEnabled *bool   `json:"service_point_enabled"`
 	ServicePointName    *string `json:"service_point_name"`
+	// TEC-1250: free | charge.
+	ExcessMeterBilling *string `json:"excess_meter_billing"`
 }
 
 func mapTenantSettings(row db.Organization) TenantSettings {
@@ -82,21 +93,22 @@ func mapTenantSettings(row db.Organization) TenantSettings {
 		paper = "A4"
 	}
 	return TenantSettings{
-		CompanyName:  row.Name,
-		Tagline:      row.Tagline,
-		PrimaryColor: color,
-		Address:      row.Address,
-		City:         row.City,
-		District:     row.District,
-		Phone:        row.Phone,
-		Email:        row.Email,
-		Website:      row.Website,
-		FooterText:   row.FooterText,
-		PaperSize:    paper,
-		LogoURL:      logoURL(row.Uuid, row.LogoObjectKey),
-		Latitude:     numericFloat(row.Latitude),
-		Longitude:    numericFloat(row.Longitude),
-		ServicePoint: mapServicePoint(row),
+		CompanyName:        row.Name,
+		Tagline:            row.Tagline,
+		PrimaryColor:       color,
+		Address:            row.Address,
+		City:               row.City,
+		District:           row.District,
+		Phone:              row.Phone,
+		Email:              row.Email,
+		Website:            row.Website,
+		FooterText:         row.FooterText,
+		PaperSize:          paper,
+		LogoURL:            logoURL(row.Uuid, row.LogoObjectKey),
+		Latitude:           numericFloat(row.Latitude),
+		Longitude:          numericFloat(row.Longitude),
+		ServicePoint:       mapServicePoint(row),
+		ExcessMeterBilling: row.ExcessMeterBilling,
 	}
 }
 
@@ -169,6 +181,13 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 		}
 		in.Phone = &p
 	}
+	if in.ExcessMeterBilling != nil {
+		mode := strings.TrimSpace(*in.ExcessMeterBilling)
+		if mode != ExcessMeterBillingFree && mode != ExcessMeterBillingCharge {
+			return TenantSettings{}, ErrInvalidRequest
+		}
+		in.ExcessMeterBilling = &mode
+	}
 	spPatch := in.ServicePointEnabled != nil || in.ServicePointName != nil
 	var spName pgtype.Text
 	if in.ServicePointName != nil {
@@ -216,6 +235,13 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 			}
 			if row, err = q.UpdateOrganizationServicePoint(ctx, db.UpdateOrganizationServicePointParams{
 				ID: orgID, Enabled: enabled, SetName: in.ServicePointName != nil, Name: spName,
+			}); err != nil {
+				return row, err
+			}
+		}
+		if in.ExcessMeterBilling != nil {
+			if row, err = q.UpdateOrganizationExcessMeterBilling(ctx, db.UpdateOrganizationExcessMeterBillingParams{
+				ID: orgID, ExcessMeterBilling: *in.ExcessMeterBilling,
 			}); err != nil {
 				return row, err
 			}

@@ -125,6 +125,8 @@ export type AppSettings = {
   longitude?: TenantSettingsSchema["longitude"];
   /** TEC-1003: the brand center's service point (tenant settings only). */
   service_point?: TenantSettingsSchema["service_point"];
+  /** TEC-1250 (19.11): free | charge extra meters of a whole roll (tenant only). */
+  excess_meter_billing?: TenantSettingsSchema["excess_meter_billing"];
 };
 
 type TenantSettingsSchema = components["schemas"]["TenantSettings"];

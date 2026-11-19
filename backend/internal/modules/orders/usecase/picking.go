@@ -64,6 +64,9 @@ type SuggestionView struct {
 	// then the whole length and ExcessMeters what goes free. Null when the
 	// piece is cut to the line.
 	ExcessMeters *string `json:"excess_meters"`
+	// ExcessBilling (TEC-1250, 19.11): free | charge, set with
+	// ExcessMeters: whether the excess is added to the invoice.
+	ExcessBilling *string `json:"excess_billing"`
 }
 
 // SuggestionsView answers a suggestion request for one line.
@@ -288,6 +291,11 @@ func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem,
 		v := serialSuggestion(*whole)
 		all, ex := wholeMeters.FloatString(2), excessOf(wholeMeters).FloatString(2)
 		v.Meters, v.ExcessMeters = &all, &ex
+		mode, err := excessBillingOf(ctx, q, o, it)
+		if err != nil {
+			return nil, err
+		}
+		v.ExcessBilling = &mode
 		covered.Add(covered, missing)
 		return []SuggestionView{v}, nil
 	}
@@ -312,6 +320,11 @@ func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem,
 		if ex := excessOf(box); ex != nil {
 			all, exs := box.FloatString(2), ex.FloatString(2)
 			v.Meters, v.ExcessMeters = &all, &exs
+			mode, err := excessBillingOf(ctx, q, o, it)
+			if err != nil {
+				return nil, err
+			}
+			v.ExcessBilling = &mode
 		}
 		covered.Add(covered, missing)
 		return []SuggestionView{v}, nil
@@ -432,7 +445,10 @@ func (s *Service) ApplySuggestions(ctx context.Context, c Caller, orderUUID, ite
 		if err := s.recordAssigned(ctx, q, c, o, it, before); err != nil {
 			return err
 		}
-		result = o
+		// TEC-1250: a charged whole roll changed the order total.
+		if result, err = q.GetOrder(ctx, db.GetOrderParams{ID: o.ID, BrandID: o.BrandID}); err != nil {
+			return fmt.Errorf("orders: reload: %w", err)
+		}
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
 	})
 	if err != nil {

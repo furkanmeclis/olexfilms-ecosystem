@@ -110,8 +110,13 @@ type ItemView struct {
 	// ExcessMeters (TEC-1250, K7): the meters its pieces carry over the
 	// line (a whole roll whose rest was shorter than the minimum cut);
 	// they go free. Null when the pieces do not exceed the line.
-	ExcessMeters *string            `json:"excess_meters"`
-	Units        []AssignedUnitView `json:"units"`
+	ExcessMeters *string `json:"excess_meters"`
+	// ExcessBilling (TEC-1250, 19.11): free | charge, frozen on the line
+	// when its pieces exceeded the order; null otherwise. On a charge line
+	// Meters is the billed meters and OrderedMeters what the buyer ordered.
+	ExcessBilling *string            `json:"excess_billing"`
+	OrderedMeters *string            `json:"ordered_meters"`
+	Units         []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
 	Invoiced    bool       `json:"invoiced"`
@@ -476,6 +481,8 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		}
 		iv.Units, iv.Assigned = assignedUnits(byItem[it.ID], it.Meters.Valid)
 		iv.ExcessMeters = lineExcess(it, iv.Assigned)
+		iv.ExcessBilling = textPtr(it.ExcessBilling)
+		iv.OrderedMeters = numericTextPtr(it.OrderedMeters, 2)
 		if l, ok := invoicedLines[it.ID]; ok {
 			no, id := l.InvoiceNo, l.InvoiceUuid
 			iv.Invoiced, iv.InvoiceNo, iv.InvoiceUUID = true, &no, &id
@@ -653,8 +660,8 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 	return out, total, nil
 }
 
-// lineExcess is what the pieces of a meter line carry over the line
-// (TEC-1250, K7); nil when nothing exceeds it.
+// lineExcess is what the pieces of a meter line carry over the ordered
+// meters (TEC-1250, K7); nil when nothing exceeds them.
 func lineExcess(it db.OrderItem, assigned string) *string {
 	if !it.Meters.Valid {
 		return nil
@@ -663,7 +670,9 @@ func lineExcess(it db.OrderItem, assigned string) *string {
 	if !ok {
 		return nil
 	}
-	ex := a.Sub(a, numericRat(it.Meters))
+	// A charge line's meters were raised to its pieces: the excess is
+	// over what the buyer ordered.
+	ex := a.Sub(a, orderedMeters(it))
 	if ex.Sign() <= 0 {
 		return nil
 	}

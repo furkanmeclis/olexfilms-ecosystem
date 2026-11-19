@@ -61,6 +61,7 @@ import {
   asksWholeRoll,
   assignTarget,
   cutAssignBody,
+  excessKey,
   excessOf,
   fixedAssignQuantity,
   fixedSuggestionUnits,
@@ -828,9 +829,16 @@ export function OrderScreen() {
                     </Text>
                     {excessOf(i) > 0 ? (
                       <Text variant="footnote" tone="muted">
-                        {t("orders.cut.excess_free", {
-                          excess: formatNumber(i.excess_meters, 2),
-                        })}
+                        {t(
+                          excessKey(
+                            i,
+                            "orders.cut.excess_free",
+                            "orders.cut.excess_charged",
+                          ),
+                          {
+                            excess: formatNumber(i.excess_meters, 2),
+                          },
+                        )}
                       </Text>
                     ) : null}
                   </View>
@@ -1271,9 +1279,16 @@ function SuggestSheet({
                       ) : null}
                       {excessOf(x) > 0 ? (
                         <Text variant="footnote" tone="muted">
-                          {t("orders.cut.suggest_whole", {
-                            excess: formatNumber(x.excess_meters, 2),
-                          })}
+                          {t(
+                            excessKey(
+                              x,
+                              "orders.cut.suggest_whole",
+                              "orders.cut.suggest_whole_charge",
+                            ),
+                            {
+                              excess: formatNumber(x.excess_meters, 2),
+                            },
+                          )}
                         </Text>
                       ) : null}
                     </View>

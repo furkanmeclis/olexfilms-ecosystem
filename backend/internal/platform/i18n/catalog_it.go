@@ -499,6 +499,7 @@ var itCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "pz",
 	"orders.pdf.line_credits":                 "Crediti di utilizzo: {{credits}} per pezzo",
 	"orders.pdf.excess_free":                  "{{meters}} in più gratuiti",
+	"orders.pdf.excess_charged":               "{{meters}} in più aggiunti alla fattura",
 	"orders.pdf.delivered_by":                 "Consegnato da",
 	"orders.pdf.received_by":                  "Ricevuto da",
 	"orders.pdf.generated_at":                 "Generato il",

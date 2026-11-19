@@ -499,6 +499,7 @@ var azCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "əd.",
 	"orders.pdf.line_credits":                 "İstifadə krediti: hər parça üçün {{credits}}",
 	"orders.pdf.excess_free":                  "Artıq {{meters}} ödənişsiz",
+	"orders.pdf.excess_charged":               "Artıq {{meters}} fakturaya əlavə edildi",
 	"orders.pdf.delivered_by":                 "Təhvil verən",
 	"orders.pdf.received_by":                  "Təhvil alan",
 	"orders.pdf.generated_at":                 "Yaradılıb",

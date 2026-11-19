@@ -182,5 +182,12 @@
   "service_point.hint": "Activado, este nombre y logotipo se muestran a los clientes en la garantía y su PDF, el portal y WhatsApp; el panel mantiene el nombre de la organización.",
   "service_point.enabled": "Mostrar el nombre del punto de servicio a los clientes",
   "service_point.name": "Nombre del punto de servicio",
-  "service_point.no_logo": "Sin logotipo; se usa el de la organización."
+  "service_point.no_logo": "Sin logotipo; se usa el de la organización.",
+  "excess_meter_billing.title": "Metros adicionales cuando va el rollo entero",
+  "excess_meter_billing.hint": "Cuando el resto tras el corte sería más corto que el corte mínimo, el rollo no se corta y va entero con el pedido. Elija cómo se cobran al distribuidor los metros adicionales.",
+  "excess_meter_billing.free": "Sin cargo (predeterminado)",
+  "excess_meter_billing.free_hint": "El distribuidor paga los metros pedidos; los metros adicionales van sin cargo.",
+  "excess_meter_billing.charge": "Con cargo",
+  "excess_meter_billing.charge_hint": "El distribuidor paga todos los metros enviados; la línea, la factura y la cuenta usan los metros reales.",
+  "excess_meter_billing.frozen": "El ajuste se escribe en la línea del pedido cuando el almacén asigna el rollo; cambiarlo no afecta a los pedidos existentes."
 }

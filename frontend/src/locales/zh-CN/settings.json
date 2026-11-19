@@ -182,5 +182,12 @@
   "service_point.hint": "开启后，客户在保修页面及 PDF、门户和 WhatsApp 中看到此名称和标志；面板仍显示机构名称。",
   "service_point.enabled": "向客户显示服务点名称",
   "service_point.name": "服务点名称",
-  "service_point.no_logo": "无标志，使用机构标志。"
+  "service_point.no_logo": "无标志，使用机构标志。",
+  "excess_meter_billing.title": "整卷发出时多出的米数",
+  "excess_meter_billing.hint": "如果裁切后的剩余短于最小裁切长度，则不裁切，整卷随订单发出。请选择多出的米数如何向经销商计费。",
+  "excess_meter_billing.free": "免费（默认）",
+  "excess_meter_billing.free_hint": "经销商按订购米数付款；多出的米数免费。",
+  "excess_meter_billing.charge": "收费",
+  "excess_meter_billing.charge_hint": "经销商为发出的全部米数付款；订单行、发票和往来账均按实际米数计算。",
+  "excess_meter_billing.frozen": "仓库分配卷材时，该设置会写入订单行；修改设置不会影响已有订单。"
 }

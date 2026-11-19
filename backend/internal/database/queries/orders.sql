@@ -366,6 +366,9 @@ FOR UPDATE;
 -- name: UpdateOrderItem :one
 UPDATE order_items
 SET quantity = sqlc.narg(quantity),
+    -- TEC-1250 (K7): a new meter figure drops the frozen excess billing.
+    excess_billing = CASE WHEN meters IS DISTINCT FROM sqlc.narg(meters) THEN NULL ELSE excess_billing END,
+    ordered_meters = CASE WHEN meters IS DISTINCT FROM sqlc.narg(meters) THEN NULL ELSE ordered_meters END,
     meters = sqlc.narg(meters),
     unit_price = sqlc.arg(unit_price),
     price_source = sqlc.arg(price_source),
@@ -685,3 +688,15 @@ WHERE sp.reference_type = 'order_item'
       AND (oiu.movement_id IS NOT NULL OR r.status = 'active')
   )
 ORDER BY sp.id;
+
+-- name: SetOrderItemExcessBilling :one
+-- TEC-1250 (K7): freezes the excess billing mode of a meter line and, on a
+-- 'charge' line, its billed meters (ordered_meters keeps the order). A
+-- NULL mode clears it (no extra meters left on the line).
+UPDATE order_items
+SET excess_billing = sqlc.narg(excess_billing),
+    ordered_meters = sqlc.narg(ordered_meters),
+    meters = sqlc.arg(meters),
+    line_total = sqlc.arg(line_total)
+WHERE id = sqlc.arg(id)
+RETURNING *;

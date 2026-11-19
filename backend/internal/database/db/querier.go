@@ -1277,6 +1277,7 @@ type Querier interface {
 	GetOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// Country of an organization for the default phone region (K29).
 	GetOrganizationCountryISO2(ctx context.Context, id int64) (string, error)
+	GetOrganizationExcessMeterBilling(ctx context.Context, id int64) (string, error)
 	GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrganizationForIndexRow, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (GetOrganizationMemberRow, error)
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
@@ -4117,6 +4118,10 @@ type Querier interface {
 	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
 	// The picked part of a line stays on the shipped order.
 	SetOrderItemAmount(ctx context.Context, arg SetOrderItemAmountParams) (OrderItem, error)
+	// TEC-1250 (K7): freezes the excess billing mode of a meter line and, on a
+	// 'charge' line, its billed meters (ordered_meters keeps the order). A
+	// NULL mode clears it (no extra meters left on the line).
+	SetOrderItemExcessBilling(ctx context.Context, arg SetOrderItemExcessBillingParams) (OrderItem, error)
 	// TEC-1238 (K3/K12): the credits of a meter line (shared with its plotter
 	// mark).
 	SetOrderItemLineCredits(ctx context.Context, arg SetOrderItemLineCreditsParams) (OrderItem, error)
@@ -4433,6 +4438,8 @@ type Querier interface {
 	// TEC-240: dealer coordinates and the public "nearby dealers" lookup.
 	// Sets or clears (both NULL) the map position of an organization.
 	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)
+	// TEC-1250 (K7): whether the extra meters of a whole roll are charged.
+	UpdateOrganizationExcessMeterBilling(ctx context.Context, arg UpdateOrganizationExcessMeterBillingParams) (Organization, error)
 	UpdateOrganizationInvoiceProfile(ctx context.Context, arg UpdateOrganizationInvoiceProfileParams) (Organization, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationMemberKind(ctx context.Context, arg UpdateOrganizationMemberKindParams) error

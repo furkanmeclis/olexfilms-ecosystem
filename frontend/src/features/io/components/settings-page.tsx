@@ -7,6 +7,7 @@ import { Loading } from "@/components/common/loading";
 import { EntityPage } from "@/components/entity";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { ExcessMeterBillingCard } from "@/features/io/components/excess-meter-billing-card";
 import { ServicePointCard } from "@/features/io/components/service-point-card";
 import { SettingsForm } from "@/features/io/components/settings-form";
 import { ioKeys } from "@/features/io/hooks/query-keys";
@@ -149,6 +150,17 @@ export function SettingsPage({ scope = "platform", slug }: SettingsPageProps) {
             }
             onUploadLogo={(file) => servicePointLogo.mutate(file)}
             onRemoveLogo={() => servicePointLogo.mutate(null)}
+          />
+        </div>
+      ) : null}
+      {tenant && settingsQuery.data?.excess_meter_billing ? (
+        <div className="mt-6">
+          <ExcessMeterBillingCard
+            key={settingsQuery.data.excess_meter_billing}
+            value={settingsQuery.data.excess_meter_billing}
+            canWrite={canWrite}
+            isSaving={save.isPending}
+            onSave={(mode) => save.mutate({ excess_meter_billing: mode })}
           />
         </div>
       ) : null}

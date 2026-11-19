@@ -2195,6 +2195,8 @@ type OrderItem struct {
 	PlotterCredits           pgtype.Int4        `json:"plotter_credits"`
 	SaleMeasure              pgtype.Text        `json:"sale_measure"`
 	LineCredits              pgtype.Int4        `json:"line_credits"`
+	ExcessBilling            pgtype.Text        `json:"excess_billing"`
+	OrderedMeters            pgtype.Numeric     `json:"ordered_meters"`
 }
 
 type OrderItemUnit struct {
@@ -2348,6 +2350,7 @@ type Organization struct {
 	BillingUpdatedByUserID    pgtype.Int8        `json:"billing_updated_by_user_id"`
 	StandardDiscountPct       pgtype.Numeric     `json:"standard_discount_pct"`
 	FirstOrderDiscountPct     pgtype.Numeric     `json:"first_order_discount_pct"`
+	ExcessMeterBilling        string             `json:"excess_meter_billing"`
 }
 
 type OrganizationMember struct {
