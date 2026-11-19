@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "该段短于该行；请确认分段发货并填写备注。",
   "errors.CUT_BELOW_MIN_CUT": "裁切短于产品的最小裁切。",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "该行不是从箱子裁切的按米行。",
-  "orders.cut.note_placeholder": "为什么分段？（例如没有足够长的卷材）"
+  "orders.cut.note_placeholder": "为什么分段？（例如没有足够长的卷材）",
+  "m.measure_boxes": "未开封箱 {{count}}",
+  "m.measure_open": "已开卷 {{count}} 卷 / {{meters}} 米",
+  "m.measure_cut": "裁切段 {{count}} 段 / {{meters}} 米",
+  "m.measure_remnant": "余料 {{meters}} 米",
+  "m.reorder_meters": "米数（已开卷 + 裁切）：{{available}} / 阈值 {{min}} 米",
+  "m.level_meters_below_min": "米数低于最低值",
+  "m.remnants_title": "余料",
+  "m.remnants_hint": "短于最小裁切长度的余料；不会推荐给订单。请用库存调整单报损。",
+  "m.remnants_empty": "没有余料。"
 }

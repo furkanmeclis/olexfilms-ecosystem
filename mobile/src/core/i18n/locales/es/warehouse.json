@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "La pieza es más corta que la línea; confirme el envío en piezas con una nota.",
   "errors.CUT_BELOW_MIN_CUT": "El corte es más corto que el corte mínimo del producto.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Esta línea no es una línea por metros cortada de una caja.",
-  "orders.cut.note_placeholder": "¿Por qué en piezas? (p. ej. ningún rollo alcanzaba)"
+  "orders.cut.note_placeholder": "¿Por qué en piezas? (p. ej. ningún rollo alcanzaba)",
+  "m.measure_boxes": "Cajas cerradas {{count}}",
+  "m.measure_open": "Abiertos {{count}} rollos / {{meters}} m",
+  "m.measure_cut": "Cortados {{count}} piezas / {{meters}} m",
+  "m.measure_remnant": "Retal {{meters}} m",
+  "m.reorder_meters": "Metros (abiertos + cortados): {{available}} / umbral {{min}} m",
+  "m.level_meters_below_min": "Metros bajo el mínimo",
+  "m.remnants_title": "Retales",
+  "m.remnants_hint": "Piezas por debajo del corte mínimo; no se ofrecen a pedidos. Dalas de baja con un documento de ajuste de stock.",
+  "m.remnants_empty": "No hay retales."
 }

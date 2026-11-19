@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Парчето е по-късо от реда; потвърдете изпращане на части с бележка.",
   "errors.CUT_BELOW_MIN_CUT": "Рязането е по-късо от минималното за продукта.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Този ред не е метров ред, рязан от кашон.",
-  "orders.cut.note_placeholder": "Защо на части? (напр. нито една ролка не стигаше)"
+  "orders.cut.note_placeholder": "Защо на части? (напр. нито една ролка не стигаше)",
+  "m.measure_boxes": "Затворени кутии {{count}}",
+  "m.measure_open": "Отворени {{count}} ролки / {{meters}} м",
+  "m.measure_cut": "Отрязани {{count}} парчета / {{meters}} м",
+  "m.measure_remnant": "Остатък {{meters}} м",
+  "m.reorder_meters": "Метри (отворени + отрязани): {{available}} / праг {{min}} м",
+  "m.level_meters_below_min": "Метри под минимума",
+  "m.remnants_title": "Остатъци",
+  "m.remnants_hint": "Парчета под минималната дължина на рязане; не се предлагат за поръчки. Отпишете ги с документ за корекция на наличност.",
+  "m.remnants_empty": "Няма остатъци."
 }

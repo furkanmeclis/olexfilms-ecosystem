@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Кусок короче строки; подтвердите отправку частями и добавьте примечание.",
   "errors.CUT_BELOW_MIN_CUT": "Отрез короче минимального отреза товара.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Эта строка не является метражной строкой из коробки.",
-  "orders.cut.note_placeholder": "Почему частями? (напр., ни один рулон не подошёл)"
+  "orders.cut.note_placeholder": "Почему частями? (напр., ни один рулон не подошёл)",
+  "m.measure_boxes": "Закрытые коробки {{count}}",
+  "m.measure_open": "Открытые {{count}} рул. / {{meters}} м",
+  "m.measure_cut": "Отрезы {{count}} шт. / {{meters}} м",
+  "m.measure_remnant": "Остаток {{meters}} м",
+  "m.reorder_meters": "Метры (открытые + отрезы): {{available}} / порог {{min}} м",
+  "m.level_meters_below_min": "Метры ниже минимума",
+  "m.remnants_title": "Остатки",
+  "m.remnants_hint": "Куски короче минимального отреза; не предлагаются к заказам. Списывайте их документом корректировки запаса.",
+  "m.remnants_empty": "Остатков нет."
 }

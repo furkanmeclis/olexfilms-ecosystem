@@ -58,7 +58,7 @@ export function StockProductScreen({ base }: { base: string }) {
   );
 }
 
-export function UnitRow({ unit, onPress }: { unit: StockUnitRow; onPress: () => void }) {
+export function UnitRow({ unit, onPress, showProduct }: { unit: StockUnitRow; onPress: () => void; showProduct?: boolean }) {
   const { t } = useTranslation('warehouse');
   const amount =
     unit.remaining_meters !== null
@@ -80,8 +80,15 @@ export function UnitRow({ unit, onPress }: { unit: StockUnitRow; onPress: () => 
         </Text>
         {amount ? <Text variant="headline">{amount}</Text> : null}
       </View>
+      {showProduct && unit.product ? (
+        <Text variant="footnote" tone="muted" numberOfLines={1}>
+          {unit.product.name}
+        </Text>
+      ) : null}
       <View className="flex-row items-center gap-2">
         <StatusPill tone={unitStatusTone(unit.status)} label={t(`stock.status.${unit.status}`)} />
+        {/* TEC-1243: a remnant ("ragle") is not offered to orders. */}
+        {unit.remnant ? <StatusPill tone="progress" label={t('split.remnant')} /> : null}
         <Icon name="location" tone="muted-foreground" size={14} />
         <Text variant="footnote" tone="muted" numberOfLines={1} className="flex-1">
           {unit.location ? unit.location.code || unit.location.name : t('scan.unplaced')}

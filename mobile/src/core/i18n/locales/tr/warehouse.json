@@ -997,5 +997,14 @@
   "errors.PARTIAL_PIECE_CONFIRM_REQUIRED": "Parça satırdan kısa; parçalı gönderimi onaylayıp not girin.",
   "errors.CUT_BELOW_MIN_CUT": "Kesim ürünün minimum kesiminden kısa.",
   "errors.ORDER_ITEM_NOT_CUT_LINE": "Bu satır kutudan kesilen bir metre satırı değil.",
-  "orders.cut.note_placeholder": "Neden iki parça? (ör. tek rulo yetmedi)"
+  "orders.cut.note_placeholder": "Neden iki parça? (ör. tek rulo yetmedi)",
+  "m.measure_boxes": "Kapalı kutu {{count}}",
+  "m.measure_open": "Açık {{count}} rulo / {{meters}} m",
+  "m.measure_cut": "Kesik {{count}} parça / {{meters}} m",
+  "m.measure_remnant": "Ragle {{meters}} m",
+  "m.reorder_meters": "Metre (açık + kesik): {{available}} / eşik {{min}} m",
+  "m.level_meters_below_min": "Metre minimumun altında",
+  "m.remnants_title": "Ragle listesi",
+  "m.remnants_hint": "Minimum kesimden kısa kalan parçalar; siparişe önerilmez. Fire için stok düzeltme belgesi kullanın.",
+  "m.remnants_empty": "Ragle yok."
 }

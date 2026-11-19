@@ -21,6 +21,9 @@ import { type StockProduct, type StockWarehouseProduct, type StockWarehouseUnit,
 import {
   balanceParts,
   filterTotals,
+  hasMetered,
+  type MeasuresLike,
+  measureParts,
   inStockTotals,
   totalsTruncated,
   WAREHOUSE_TOTALS_MAX_PAGES,
@@ -131,6 +134,19 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
           <Icon name="forward" tone="muted-foreground" size={16} />
         </Pressable>
       ) : null}
+      {/* TEC-1243: the remnants ("ragle") on hand. */}
+      {canCritical ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => go(`${base}/remnants`)}
+          className="flex-row items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
+          <Icon name="stock" tone="muted-foreground" size={16} />
+          <Text variant="headline" className="flex-1">
+            {t('m.remnants_title')}
+          </Text>
+          <Icon name="forward" tone="muted-foreground" size={16} />
+        </Pressable>
+      ) : null}
       {/* TEC-1079: a main code lists the roll and its parts first. */}
       <FamilySection q={q} base={base} />
     </View>
@@ -212,8 +228,13 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                 name={item.w.product.name}
                 sku={item.w.product.sku}
                 category={item.category}
-                amount={item.w.meters !== null ? `${formatNumber(item.w.meters, 2)} m` : formatNumber(item.w.units)}
-                sub={item.w.meters !== null ? t('m.rolls', { count: item.w.units }) : undefined}
+                amount={
+                  item.w.product.unit_type === 'roll_meter' && item.w.meters !== null
+                    ? `${formatNumber(item.w.meters, 2)} m`
+                    : formatNumber(item.w.units)
+                }
+                sub={item.w.product.unit_type === 'roll_meter' ? t('m.rolls', { count: item.w.units }) : undefined}
+                measure={measureText(t, item.w.measures)}
                 balance={balanceText(t, item.w)}
                 muted={false}
                 onPress={() => go(`${base}/${item.w.product.uuid}?name=${encodeURIComponent(item.w.product.name)}`)}
@@ -230,6 +251,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
                     : undefined
                 }
                 muted={item.kind === 'zero' || item.p.quantity <= 0}
+                measure={item.kind === 'org' ? measureText(t, item.p.balance?.measures) : undefined}
                 balance={item.kind === 'org' && item.p.balance ? balanceText(t, {
                   reserved: item.p.balance.reserved_quantity,
                   available: item.p.balance.available_quantity,
@@ -243,6 +265,21 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
       )}
     </>
   );
+}
+
+/**
+ * TEC-1243 (K14): "Kapalı kutu 12 · Açık 2 rulo / 18,4 m · Kesik 3 parça /
+ * 9 m · Ragle 1,2 m" under a product holding metered units (none for a
+ * box-only product, its amount already says it).
+ */
+export function measureText(
+  t: (k: string, o?: Record<string, unknown>) => string,
+  m: MeasuresLike | null | undefined,
+): string | undefined {
+  if (!hasMetered(m)) return undefined;
+  return measureParts(m)
+    .map((p) => t(p.key, { count: formatNumber(p.count), meters: p.meters === undefined ? '' : formatNumber(p.meters, 2) }))
+    .join(' · ');
 }
 
 /** TEC-1229: "Kullanılabilir 2 · Rezerve 1 · Yolda 3" under a row. */
@@ -260,6 +297,8 @@ function ProductRow(p: {
   category?: string;
   amount: string;
   sub?: string;
+  /** TEC-1243: the box / open roll / cut piece / remnant line. */
+  measure?: string;
   balance?: string;
   muted: boolean;
   onPress: () => void;
@@ -279,6 +318,11 @@ function ProductRow(p: {
           </Text>
           {p.category ? ` · ${p.category}` : ''}
         </Text>
+        {p.measure ? (
+          <Text variant="footnote" numberOfLines={2} testID="stock-measure-line">
+            {p.measure}
+          </Text>
+        ) : null}
         {p.balance ? (
           <Text variant="footnote" tone="muted" numberOfLines={1}>
             {p.balance}

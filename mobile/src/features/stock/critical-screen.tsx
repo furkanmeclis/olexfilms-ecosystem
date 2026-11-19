@@ -13,6 +13,8 @@ import { PullRefresh } from '@/ui/pull-refresh';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { measureText } from './stock-screen';
+
 type S = components['schemas'];
 type Rule = S['StockReorderRule'];
 type Forecast = S['StockForecast'];
@@ -85,16 +87,41 @@ export function CriticalStockScreen() {
   );
 }
 
+/**
+ * TEC-1243 (K14): the box thresholds count closed boxes (a roll_meter
+ * product, which has no boxes, keeps counting its rolls); the meter
+ * threshold (open rolls + cut pieces) shows and alerts apart.
+ */
+export function ruleBoxes(rule: Pick<Rule, 'product' | 'balance'>): number {
+  const m = rule.balance.measures;
+  return rule.product.unit_type === 'roll_meter' || !m ? rule.balance.available_quantity : m.available_boxes;
+}
+
 function RuleRow({ rule }: { rule: Rule }) {
   const { t } = useTranslation('warehouse');
+  const measure = measureText(t, rule.balance.measures);
+  const meterLow = rule.meter_level === 'below_min';
   return (
     <View className="gap-1.5 rounded-lg border border-border bg-card px-4 py-3">
       <View className="flex-row items-center gap-2">
         <Text variant="headline" className="flex-1" numberOfLines={2}>
           {rule.product.name}
         </Text>
-        <Text variant="title">{formatNumber(rule.balance.available_quantity)}</Text>
+        <Text variant="title">{formatNumber(ruleBoxes(rule))}</Text>
       </View>
+      {measure ? (
+        <Text variant="footnote" numberOfLines={2}>
+          {measure}
+        </Text>
+      ) : null}
+      {rule.min_meters ? (
+        <Text variant="footnote" tone={meterLow ? 'danger' : 'muted'} numberOfLines={1}>
+          {t('m.reorder_meters', {
+            available: formatNumber(rule.balance.measures?.available_meters ?? 0, 2),
+            min: formatNumber(rule.min_meters, 2),
+          })}
+        </Text>
+      ) : null}
       <Text variant="footnote" tone="muted" numberOfLines={1}>
         {`${rule.warehouse.name} · ${t('m.reorder_thresholds', {
           min: rule.min_quantity,
@@ -104,6 +131,7 @@ function RuleRow({ rule }: { rule: Rule }) {
       </Text>
       <View className="flex-row flex-wrap items-center gap-2">
         <StatusPill tone={levelTone(rule.level)} label={t(`m.level_${rule.level}`)} />
+        {meterLow ? <StatusPill tone="problem" label={t('m.level_meters_below_min')} /> : null}
         {rule.balance.reserved_quantity > 0 ? (
           <Text variant="footnote" tone="muted">
             {t('m.balance_reserved', { count: rule.balance.reserved_quantity })}
