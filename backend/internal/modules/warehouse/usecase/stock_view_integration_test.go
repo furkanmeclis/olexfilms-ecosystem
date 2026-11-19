@@ -213,6 +213,10 @@ func TestEODReportBalances(t *testing.T) {
 	if b.ProductUUID != e.piece.Uuid || b.OpeningQuantity != 0 || b.ClosingQuantity != 1 || b.ChangeQuantity != 1 {
 		t.Fatalf("today balance = %+v", b)
 	}
+	// TEC-1243: the closed boxes and metered units are kept apart.
+	if b.OpeningBoxes == nil || *b.OpeningBoxes != 0 || *b.ClosingBoxes != 1 || *b.ClosingRolls != 0 || *b.OpeningRolls != 0 {
+		t.Fatalf("today boxes = %+v", b)
+	}
 	if rep.Summary.Pending == nil {
 		t.Fatal("pending work missing")
 	}

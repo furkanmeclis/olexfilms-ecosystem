@@ -47,6 +47,52 @@ func (q *Queries) CountEODReports(ctx context.Context, arg CountEODReportsParams
 	return column_1, err
 }
 
+const eODCurrentMeteredUnits = `-- name: EODCurrentMeteredUnits :many
+SELECT u.product_id, COUNT(*)::bigint AS rolls
+FROM unit_current_state st
+JOIN units u ON u.id = st.unit_id
+LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+WHERE st.status IN ('available', 'placed')
+  AND st.holder_org_id = $1::bigint
+  AND st.owner_type IN ('warehouse_location', 'organization')
+  AND u.initial_meters IS NOT NULL
+  AND ($2::bigint IS NULL OR wl.warehouse_id = $2::bigint)
+GROUP BY u.product_id
+`
+
+type EODCurrentMeteredUnitsParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	WarehouseID    pgtype.Int8 `json:"warehouse_id"`
+}
+
+type EODCurrentMeteredUnitsRow struct {
+	ProductID int64 `json:"product_id"`
+	Rolls     int64 `json:"rolls"`
+}
+
+// TEC-1243: current metered serial units on hand per product of the
+// organization or of one warehouse; the closed boxes of a balance are its
+// quantity minus these (EODBalances).
+func (q *Queries) EODCurrentMeteredUnits(ctx context.Context, arg EODCurrentMeteredUnitsParams) ([]EODCurrentMeteredUnitsRow, error) {
+	rows, err := q.db.Query(ctx, eODCurrentMeteredUnits, arg.OrganizationID, arg.WarehouseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EODCurrentMeteredUnitsRow{}
+	for rows.Next() {
+		var i EODCurrentMeteredUnitsRow
+		if err := rows.Scan(&i.ProductID, &i.Rolls); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const eODCurrentStock = `-- name: EODCurrentStock :many
 SELECT s.product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        s.quantity::bigint AS quantity, s.meters::numeric(14,2)::text AS meters
@@ -237,7 +283,8 @@ WITH mv AS (
                WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta > 0 AND mv.to_in THEN mv.quantity_delta ELSE 0 END
                WHEN mv.to_in AND mv.to_counted THEN 1 ELSE 0
            END::bigint AS qty,
-           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN mv.remaining_after ELSE 0 END::numeric(14,2) AS meters
+           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN mv.remaining_after ELSE 0 END::numeric(14,2) AS meters,
+           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN 1 ELSE 0 END::bigint AS rolls
     FROM mv
     UNION ALL
     SELECT mv.before_product_id AS pid, mv.created_at,
@@ -245,14 +292,17 @@ WITH mv AS (
                WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta < 0 AND mv.from_in THEN mv.quantity_delta ELSE 0 END
                WHEN mv.from_in AND mv.from_counted THEN -1 ELSE 0
            END::bigint AS qty,
-           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -(mv.remaining_after - mv.meters_delta) ELSE 0 END::numeric(14,2) AS meters
+           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -(mv.remaining_after - mv.meters_delta) ELSE 0 END::numeric(14,2) AS meters,
+           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -1 ELSE 0 END::bigint AS rolls
     FROM mv
 )
 SELECT parts.pid AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at < $1::timestamptz), 0)::bigint AS period_quantity,
        COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at < $1::timestamptz), 0)::numeric(14,2)::text AS period_meters,
        COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at >= $1::timestamptz), 0)::bigint AS after_quantity,
-       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at >= $1::timestamptz), 0)::numeric(14,2)::text AS after_meters
+       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at >= $1::timestamptz), 0)::numeric(14,2)::text AS after_meters,
+       COALESCE(SUM(parts.rolls) FILTER (WHERE parts.created_at < $1::timestamptz), 0)::bigint AS period_rolls,
+       COALESCE(SUM(parts.rolls) FILTER (WHERE parts.created_at >= $1::timestamptz), 0)::bigint AS after_rolls
 FROM parts
 JOIN products p ON p.id = parts.pid
 GROUP BY parts.pid, p.uuid, p.sku, p.name
@@ -274,6 +324,8 @@ type EODStockDeltasRow struct {
 	PeriodMeters   string    `json:"period_meters"`
 	AfterQuantity  int64     `json:"after_quantity"`
 	AfterMeters    string    `json:"after_meters"`
+	PeriodRolls    int64     `json:"period_rolls"`
+	AfterRolls     int64     `json:"after_rolls"`
 }
 
 // TEC-1229: the on-hand change per product caused by the movements since
@@ -310,6 +362,8 @@ func (q *Queries) EODStockDeltas(ctx context.Context, arg EODStockDeltasParams) 
 			&i.PeriodMeters,
 			&i.AfterQuantity,
 			&i.AfterMeters,
+			&i.PeriodRolls,
+			&i.AfterRolls,
 		); err != nil {
 			return nil, err
 		}

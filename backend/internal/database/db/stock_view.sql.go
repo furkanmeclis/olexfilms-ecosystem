@@ -82,7 +82,7 @@ func (q *Queries) DeleteStockReorderRule(ctx context.Context, arg DeleteStockReo
 }
 
 const getStockReorderRuleByUUID = `-- name: GetStockReorderRuleByUUID :one
-SELECT id, uuid, organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point, max_quantity, warning_days, cover_days, alert_state, alerted_at, evaluated_at, created_by_user_id, updated_by_user_id, created_at, updated_at FROM stock_reorder_rules
+SELECT id, uuid, organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point, max_quantity, warning_days, cover_days, alert_state, alerted_at, evaluated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, min_meters, meter_alert_state, meter_alerted_at FROM stock_reorder_rules
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -113,6 +113,9 @@ func (q *Queries) GetStockReorderRuleByUUID(ctx context.Context, arg GetStockReo
 		&i.UpdatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MinMeters,
+		&i.MeterAlertState,
+		&i.MeterAlertedAt,
 	)
 	return i, err
 }
@@ -228,6 +231,115 @@ func (q *Queries) ListStockIncomingByProduct(ctx context.Context, arg ListStockI
 	for rows.Next() {
 		var i ListStockIncomingByProductRow
 		if err := rows.Scan(&i.ProductID, &i.IncomingQuantity, &i.IncomingMeters); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStockMeasureBreakdownByProduct = `-- name: ListStockMeasureBreakdownByProduct :many
+WITH metered AS (
+    SELECT u.id, u.product_id, u.remaining_meters,
+           (EXISTS (SELECT 1 FROM stock_splits ss WHERE ss.new_unit_id = u.id)
+            OR EXISTS (SELECT 1 FROM stock_reservations r WHERE r.unit_id = u.id AND r.status = 'active')) AS is_cut,
+           (p.min_cut_meters IS NOT NULL AND u.remaining_meters > 0
+            AND u.remaining_meters < p.min_cut_meters) AS below_min_cut,
+           COALESCE((SELECT SUM(r.meters) FROM stock_reservations r
+                     WHERE r.unit_id = u.id AND r.status = 'active'), 0)::numeric(14,2) AS reserved_meters,
+           COALESCE((SELECT SUM(r.quantity) FROM stock_reservations r
+                     WHERE r.unit_id = u.id AND r.status = 'active'), 0)::bigint AS reserved_quantity
+    FROM unit_current_state st
+    JOIN units u ON u.id = st.unit_id
+    JOIN products p ON p.id = u.product_id
+    LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+    WHERE st.status IN ('available', 'placed')
+      AND st.holder_org_id = $1::bigint
+      AND st.owner_type IN ('warehouse_location', 'organization')
+      AND u.unit_kind = 'serial'
+      AND u.initial_meters IS NOT NULL
+      AND ($2::bigint IS NULL OR wl.warehouse_id = $2::bigint)
+      AND ($3::bigint IS NULL OR st.owner_location_id = $3::bigint)
+      AND u.product_id = ANY($4::bigint[])
+), classed AS (
+    SELECT m.id, m.product_id, m.remaining_meters, m.is_cut, m.below_min_cut, m.reserved_meters, m.reserved_quantity,
+           CASE WHEN m.below_min_cut THEN 'remnant' WHEN m.is_cut THEN 'cut' ELSE 'open' END AS kind
+    FROM metered m
+)
+SELECT c.product_id,
+       COUNT(*)::bigint AS metered_count,
+       COUNT(*) FILTER (WHERE c.kind = 'open')::bigint AS open_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'open'), 0)::numeric(14,2)::text AS open_meters,
+       COUNT(*) FILTER (WHERE c.kind = 'cut')::bigint AS cut_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'cut'), 0)::numeric(14,2)::text AS cut_meters,
+       COUNT(*) FILTER (WHERE c.kind = 'remnant')::bigint AS remnant_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'remnant'), 0)::numeric(14,2)::text AS remnant_meters,
+       COALESCE(SUM(c.reserved_quantity), 0)::bigint AS reserved_metered_count,
+       COALESCE(SUM(LEAST(c.reserved_meters, c.remaining_meters)) FILTER (WHERE c.kind <> 'remnant'), 0)::numeric(14,2)::text AS reserved_meters
+FROM classed c
+GROUP BY c.product_id
+`
+
+type ListStockMeasureBreakdownByProductParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	WarehouseID    pgtype.Int8 `json:"warehouse_id"`
+	LocationID     pgtype.Int8 `json:"location_id"`
+	ProductIds     []int64     `json:"product_ids"`
+}
+
+type ListStockMeasureBreakdownByProductRow struct {
+	ProductID            int64  `json:"product_id"`
+	MeteredCount         int64  `json:"metered_count"`
+	OpenCount            int64  `json:"open_count"`
+	OpenMeters           string `json:"open_meters"`
+	CutCount             int64  `json:"cut_count"`
+	CutMeters            string `json:"cut_meters"`
+	RemnantCount         int64  `json:"remnant_count"`
+	RemnantMeters        string `json:"remnant_meters"`
+	ReservedMeteredCount int64  `json:"reserved_metered_count"`
+	ReservedMeters       string `json:"reserved_meters"`
+}
+
+// TEC-1243 (K14): the metered serial units on hand (available / placed)
+// held by the organization, per product, split into open rolls, cut pieces
+// and remnants (warehouse_id / location_id narrow to the units there).
+// A remnant is a metered unit whose rest is below the product's minimum
+// cut (the TEC-1230 rule of the unit list's remnant filter); a cut piece is
+// another unit cut off a unit (stock_splits target) or with an active
+// order reservation; the rest are open rolls. Closed boxes are the on-hand quantity minus these units (the
+// caller subtracts). reserved_metered_count is the piece quantity reserved
+// on metered units (a box line served by a metered unit; ListStockReserved
+// counts it as a piece) and reserved_meters the meters reserved on open
+// rolls and cut pieces (remnants are never offered).
+func (q *Queries) ListStockMeasureBreakdownByProduct(ctx context.Context, arg ListStockMeasureBreakdownByProductParams) ([]ListStockMeasureBreakdownByProductRow, error) {
+	rows, err := q.db.Query(ctx, listStockMeasureBreakdownByProduct,
+		arg.OrganizationID,
+		arg.WarehouseID,
+		arg.LocationID,
+		arg.ProductIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStockMeasureBreakdownByProductRow{}
+	for rows.Next() {
+		var i ListStockMeasureBreakdownByProductRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.MeteredCount,
+			&i.OpenCount,
+			&i.OpenMeters,
+			&i.CutCount,
+			&i.CutMeters,
+			&i.RemnantCount,
+			&i.RemnantMeters,
+			&i.ReservedMeteredCount,
+			&i.ReservedMeters,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -496,9 +608,10 @@ func (q *Queries) ListStockReorderOrganizations(ctx context.Context) ([]int64, e
 }
 
 const listStockReorderRules = `-- name: ListStockReorderRules :many
-SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.warehouse_id, r.product_id, r.min_quantity, r.reorder_point, r.max_quantity, r.warning_days, r.cover_days, r.alert_state, r.alerted_at, r.evaluated_at, r.created_by_user_id, r.updated_by_user_id, r.created_at, r.updated_at,
+SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.warehouse_id, r.product_id, r.min_quantity, r.reorder_point, r.max_quantity, r.warning_days, r.cover_days, r.alert_state, r.alerted_at, r.evaluated_at, r.created_by_user_id, r.updated_by_user_id, r.created_at, r.updated_at, r.min_meters, r.meter_alert_state, r.meter_alerted_at,
        w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
        p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COALESCE(p.default_roll_meters::text, '')::text AS default_roll_meters, p.sellable_by_meter,
        c.uuid AS category_uuid, c.name AS category_name
 FROM stock_reorder_rules r
 JOIN warehouses w ON w.id = r.warehouse_id
@@ -517,33 +630,38 @@ type ListStockReorderRulesParams struct {
 }
 
 type ListStockReorderRulesRow struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	OrganizationID  int64              `json:"organization_id"`
-	BrandID         int64              `json:"brand_id"`
-	WarehouseID     int64              `json:"warehouse_id"`
-	ProductID       int64              `json:"product_id"`
-	MinQuantity     int32              `json:"min_quantity"`
-	ReorderPoint    pgtype.Int4        `json:"reorder_point"`
-	MaxQuantity     pgtype.Int4        `json:"max_quantity"`
-	WarningDays     pgtype.Int4        `json:"warning_days"`
-	CoverDays       pgtype.Int4        `json:"cover_days"`
-	AlertState      string             `json:"alert_state"`
-	AlertedAt       pgtype.Timestamptz `json:"alerted_at"`
-	EvaluatedAt     pgtype.Timestamptz `json:"evaluated_at"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	WarehouseUuid   uuid.UUID          `json:"warehouse_uuid"`
-	WarehouseCode   string             `json:"warehouse_code"`
-	WarehouseName   string             `json:"warehouse_name"`
-	ProductUuid     uuid.UUID          `json:"product_uuid"`
-	Sku             string             `json:"sku"`
-	ProductName     string             `json:"product_name"`
-	UnitType        string             `json:"unit_type"`
-	CategoryUuid    uuid.UUID          `json:"category_uuid"`
-	CategoryName    string             `json:"category_name"`
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	WarehouseID       int64              `json:"warehouse_id"`
+	ProductID         int64              `json:"product_id"`
+	MinQuantity       int32              `json:"min_quantity"`
+	ReorderPoint      pgtype.Int4        `json:"reorder_point"`
+	MaxQuantity       pgtype.Int4        `json:"max_quantity"`
+	WarningDays       pgtype.Int4        `json:"warning_days"`
+	CoverDays         pgtype.Int4        `json:"cover_days"`
+	AlertState        string             `json:"alert_state"`
+	AlertedAt         pgtype.Timestamptz `json:"alerted_at"`
+	EvaluatedAt       pgtype.Timestamptz `json:"evaluated_at"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	MinMeters         pgtype.Numeric     `json:"min_meters"`
+	MeterAlertState   string             `json:"meter_alert_state"`
+	MeterAlertedAt    pgtype.Timestamptz `json:"meter_alerted_at"`
+	WarehouseUuid     uuid.UUID          `json:"warehouse_uuid"`
+	WarehouseCode     string             `json:"warehouse_code"`
+	WarehouseName     string             `json:"warehouse_name"`
+	ProductUuid       uuid.UUID          `json:"product_uuid"`
+	Sku               string             `json:"sku"`
+	ProductName       string             `json:"product_name"`
+	UnitType          string             `json:"unit_type"`
+	DefaultRollMeters string             `json:"default_roll_meters"`
+	SellableByMeter   bool               `json:"sellable_by_meter"`
+	CategoryUuid      uuid.UUID          `json:"category_uuid"`
+	CategoryName      string             `json:"category_name"`
 }
 
 // Reorder rules of the organization; warehouse / product narrow them.
@@ -575,6 +693,9 @@ func (q *Queries) ListStockReorderRules(ctx context.Context, arg ListStockReorde
 			&i.UpdatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MinMeters,
+			&i.MeterAlertState,
+			&i.MeterAlertedAt,
 			&i.WarehouseUuid,
 			&i.WarehouseCode,
 			&i.WarehouseName,
@@ -582,6 +703,8 @@ func (q *Queries) ListStockReorderRules(ctx context.Context, arg ListStockReorde
 			&i.Sku,
 			&i.ProductName,
 			&i.UnitType,
+			&i.DefaultRollMeters,
+			&i.SellableByMeter,
 			&i.CategoryUuid,
 			&i.CategoryName,
 		); err != nil {
@@ -753,15 +876,35 @@ func (q *Queries) SetStockReorderRuleAlert(ctx context.Context, arg SetStockReor
 	return err
 }
 
+const setStockReorderRuleMeterAlert = `-- name: SetStockReorderRuleMeterAlert :exec
+UPDATE stock_reorder_rules
+SET meter_alert_state = $1,
+    meter_alerted_at = CASE WHEN $2::bool THEN NOW() ELSE meter_alerted_at END
+WHERE id = $3
+`
+
+type SetStockReorderRuleMeterAlertParams struct {
+	AlertState string `json:"alert_state"`
+	Alerted    bool   `json:"alerted"`
+	ID         int64  `json:"id"`
+}
+
+// TEC-1243: the meter threshold's own alert state (K14, alerts run apart).
+func (q *Queries) SetStockReorderRuleMeterAlert(ctx context.Context, arg SetStockReorderRuleMeterAlertParams) error {
+	_, err := q.db.Exec(ctx, setStockReorderRuleMeterAlert, arg.AlertState, arg.Alerted, arg.ID)
+	return err
+}
+
 const upsertStockReorderRule = `-- name: UpsertStockReorderRule :one
 INSERT INTO stock_reorder_rules (
     organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point,
-    max_quantity, warning_days, cover_days, created_by_user_id, updated_by_user_id
+    max_quantity, warning_days, cover_days, min_meters, created_by_user_id, updated_by_user_id
 )
 VALUES (
     $1, $2, $3, $4,
     $5, $6, $7,
-    $8, $9, $10, $10
+    $8, $9, $10::numeric,
+    $11, $11
 )
 ON CONFLICT ON CONSTRAINT uq_stock_reorder_rules_warehouse_product DO UPDATE
 SET min_quantity = EXCLUDED.min_quantity,
@@ -769,21 +912,23 @@ SET min_quantity = EXCLUDED.min_quantity,
     max_quantity = EXCLUDED.max_quantity,
     warning_days = EXCLUDED.warning_days,
     cover_days = EXCLUDED.cover_days,
+    min_meters = EXCLUDED.min_meters,
     updated_by_user_id = EXCLUDED.updated_by_user_id
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point, max_quantity, warning_days, cover_days, alert_state, alerted_at, evaluated_at, created_by_user_id, updated_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point, max_quantity, warning_days, cover_days, alert_state, alerted_at, evaluated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, min_meters, meter_alert_state, meter_alerted_at
 `
 
 type UpsertStockReorderRuleParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	BrandID        int64       `json:"brand_id"`
-	WarehouseID    int64       `json:"warehouse_id"`
-	ProductID      int64       `json:"product_id"`
-	MinQuantity    int32       `json:"min_quantity"`
-	ReorderPoint   pgtype.Int4 `json:"reorder_point"`
-	MaxQuantity    pgtype.Int4 `json:"max_quantity"`
-	WarningDays    pgtype.Int4 `json:"warning_days"`
-	CoverDays      pgtype.Int4 `json:"cover_days"`
-	UserID         pgtype.Int8 `json:"user_id"`
+	OrganizationID int64          `json:"organization_id"`
+	BrandID        int64          `json:"brand_id"`
+	WarehouseID    int64          `json:"warehouse_id"`
+	ProductID      int64          `json:"product_id"`
+	MinQuantity    int32          `json:"min_quantity"`
+	ReorderPoint   pgtype.Int4    `json:"reorder_point"`
+	MaxQuantity    pgtype.Int4    `json:"max_quantity"`
+	WarningDays    pgtype.Int4    `json:"warning_days"`
+	CoverDays      pgtype.Int4    `json:"cover_days"`
+	MinMeters      pgtype.Numeric `json:"min_meters"`
+	UserID         pgtype.Int8    `json:"user_id"`
 }
 
 func (q *Queries) UpsertStockReorderRule(ctx context.Context, arg UpsertStockReorderRuleParams) (StockReorderRule, error) {
@@ -797,6 +942,7 @@ func (q *Queries) UpsertStockReorderRule(ctx context.Context, arg UpsertStockReo
 		arg.MaxQuantity,
 		arg.WarningDays,
 		arg.CoverDays,
+		arg.MinMeters,
 		arg.UserID,
 	)
 	var i StockReorderRule
@@ -819,6 +965,9 @@ func (q *Queries) UpsertStockReorderRule(ctx context.Context, arg UpsertStockReo
 		&i.UpdatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MinMeters,
+		&i.MeterAlertState,
+		&i.MeterAlertedAt,
 	)
 	return i, err
 }

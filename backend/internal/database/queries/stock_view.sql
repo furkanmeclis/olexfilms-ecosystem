@@ -179,6 +179,7 @@ WHERE (m.organization_id = sqlc.arg(organization_id)::bigint
 SELECT r.*,
        w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
        p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COALESCE(p.default_roll_meters::text, '')::text AS default_roll_meters, p.sellable_by_meter,
        c.uuid AS category_uuid, c.name AS category_name
 FROM stock_reorder_rules r
 JOIN warehouses w ON w.id = r.warehouse_id
@@ -196,12 +197,13 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 -- name: UpsertStockReorderRule :one
 INSERT INTO stock_reorder_rules (
     organization_id, brand_id, warehouse_id, product_id, min_quantity, reorder_point,
-    max_quantity, warning_days, cover_days, created_by_user_id, updated_by_user_id
+    max_quantity, warning_days, cover_days, min_meters, created_by_user_id, updated_by_user_id
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(warehouse_id), sqlc.arg(product_id),
     sqlc.arg(min_quantity), sqlc.narg(reorder_point), sqlc.narg(max_quantity),
-    sqlc.narg(warning_days), sqlc.narg(cover_days), sqlc.narg(user_id), sqlc.narg(user_id)
+    sqlc.narg(warning_days), sqlc.narg(cover_days), sqlc.narg(min_meters)::numeric,
+    sqlc.narg(user_id), sqlc.narg(user_id)
 )
 ON CONFLICT ON CONSTRAINT uq_stock_reorder_rules_warehouse_product DO UPDATE
 SET min_quantity = EXCLUDED.min_quantity,
@@ -209,6 +211,7 @@ SET min_quantity = EXCLUDED.min_quantity,
     max_quantity = EXCLUDED.max_quantity,
     warning_days = EXCLUDED.warning_days,
     cover_days = EXCLUDED.cover_days,
+    min_meters = EXCLUDED.min_meters,
     updated_by_user_id = EXCLUDED.updated_by_user_id
 RETURNING *;
 
@@ -221,6 +224,13 @@ UPDATE stock_reorder_rules
 SET alert_state = sqlc.arg(alert_state),
     alerted_at = CASE WHEN sqlc.arg(alerted)::bool THEN NOW() ELSE alerted_at END,
     evaluated_at = NOW()
+WHERE id = sqlc.arg(id);
+
+-- name: SetStockReorderRuleMeterAlert :exec
+-- TEC-1243: the meter threshold's own alert state (K14, alerts run apart).
+UPDATE stock_reorder_rules
+SET meter_alert_state = sqlc.arg(alert_state),
+    meter_alerted_at = CASE WHEN sqlc.arg(alerted)::bool THEN NOW() ELSE meter_alerted_at END
 WHERE id = sqlc.arg(id);
 
 -- name: ListStockReorderOrganizations :many
@@ -265,3 +275,55 @@ WHERE st.status = 'quarantine'
   AND (sqlc.narg(location_id)::bigint IS NULL OR st.owner_location_id = sqlc.narg(location_id)::bigint)
   AND u.product_id = ANY(sqlc.arg(product_ids)::bigint[])
 GROUP BY u.product_id;
+
+-- name: ListStockMeasureBreakdownByProduct :many
+-- TEC-1243 (K14): the metered serial units on hand (available / placed)
+-- held by the organization, per product, split into open rolls, cut pieces
+-- and remnants (warehouse_id / location_id narrow to the units there).
+-- A remnant is a metered unit whose rest is below the product's minimum
+-- cut (the TEC-1230 rule of the unit list's remnant filter); a cut piece is
+-- another unit cut off a unit (stock_splits target) or with an active
+-- order reservation; the rest are open rolls. Closed boxes are the on-hand quantity minus these units (the
+-- caller subtracts). reserved_metered_count is the piece quantity reserved
+-- on metered units (a box line served by a metered unit; ListStockReserved
+-- counts it as a piece) and reserved_meters the meters reserved on open
+-- rolls and cut pieces (remnants are never offered).
+WITH metered AS (
+    SELECT u.id, u.product_id, u.remaining_meters,
+           (EXISTS (SELECT 1 FROM stock_splits ss WHERE ss.new_unit_id = u.id)
+            OR EXISTS (SELECT 1 FROM stock_reservations r WHERE r.unit_id = u.id AND r.status = 'active')) AS is_cut,
+           (p.min_cut_meters IS NOT NULL AND u.remaining_meters > 0
+            AND u.remaining_meters < p.min_cut_meters) AS below_min_cut,
+           COALESCE((SELECT SUM(r.meters) FROM stock_reservations r
+                     WHERE r.unit_id = u.id AND r.status = 'active'), 0)::numeric(14,2) AS reserved_meters,
+           COALESCE((SELECT SUM(r.quantity) FROM stock_reservations r
+                     WHERE r.unit_id = u.id AND r.status = 'active'), 0)::bigint AS reserved_quantity
+    FROM unit_current_state st
+    JOIN units u ON u.id = st.unit_id
+    JOIN products p ON p.id = u.product_id
+    LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+    WHERE st.status IN ('available', 'placed')
+      AND st.holder_org_id = sqlc.arg(organization_id)::bigint
+      AND st.owner_type IN ('warehouse_location', 'organization')
+      AND u.unit_kind = 'serial'
+      AND u.initial_meters IS NOT NULL
+      AND (sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
+      AND (sqlc.narg(location_id)::bigint IS NULL OR st.owner_location_id = sqlc.narg(location_id)::bigint)
+      AND u.product_id = ANY(sqlc.arg(product_ids)::bigint[])
+), classed AS (
+    SELECT m.*,
+           CASE WHEN m.below_min_cut THEN 'remnant' WHEN m.is_cut THEN 'cut' ELSE 'open' END AS kind
+    FROM metered m
+)
+SELECT c.product_id,
+       COUNT(*)::bigint AS metered_count,
+       COUNT(*) FILTER (WHERE c.kind = 'open')::bigint AS open_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'open'), 0)::numeric(14,2)::text AS open_meters,
+       COUNT(*) FILTER (WHERE c.kind = 'cut')::bigint AS cut_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'cut'), 0)::numeric(14,2)::text AS cut_meters,
+       COUNT(*) FILTER (WHERE c.kind = 'remnant')::bigint AS remnant_count,
+       COALESCE(SUM(c.remaining_meters) FILTER (WHERE c.kind = 'remnant'), 0)::numeric(14,2)::text AS remnant_meters,
+       COALESCE(SUM(c.reserved_quantity), 0)::bigint AS reserved_metered_count,
+       COALESCE(SUM(LEAST(c.reserved_meters, c.remaining_meters)) FILTER (WHERE c.kind <> 'remnant'), 0)::numeric(14,2)::text AS reserved_meters
+FROM classed c
+GROUP BY c.product_id;

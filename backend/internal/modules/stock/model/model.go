@@ -352,6 +352,36 @@ type StockBalance struct {
 	IncomingMeters     string `json:"incoming_meters"`
 	QuarantineQuantity int64  `json:"quarantine_quantity"`
 	QuarantineMeters   string `json:"quarantine_meters"`
+	// Measures splits the on-hand stock into closed boxes, open rolls, cut
+	// pieces and remnants (TEC-1243, K14).
+	Measures StockMeasures `json:"measures"`
+}
+
+// StockMeasures is the TEC-1243 (K14) split of the on-hand stock of one
+// product in a scope:
+//   - Boxes: closed boxes, the serial units without meters plus fixed
+//     barcode pieces (on-hand quantity minus the metered units).
+//   - Remnants ("ragle"): metered units whose rest is below the product's
+//     minimum cut (the unit list's remnant filter, TEC-1230); they are not
+//     offered and not counted in the meter threshold.
+//   - Cut pieces: other metered units cut off another unit (for an order, a
+//     buyer or by hand) or reserved for an order line.
+//   - Open rolls: the other metered units (a box opened or entered as a
+//     roll).
+//
+// AvailableBoxes is boxes minus their reservations; AvailableMeters is the
+// open roll and cut piece meters minus their reserved meters (the meter
+// threshold reads it). No prices.
+type StockMeasures struct {
+	Boxes           int64  `json:"boxes"`
+	AvailableBoxes  int64  `json:"available_boxes"`
+	OpenRolls       int64  `json:"open_rolls"`
+	OpenMeters      string `json:"open_meters"`
+	CutPieces       int64  `json:"cut_pieces"`
+	CutMeters       string `json:"cut_meters"`
+	Remnants        int64  `json:"remnants"`
+	RemnantMeters   string `json:"remnant_meters"`
+	AvailableMeters string `json:"available_meters"`
 }
 
 // WarehouseProductStock is one product of a warehouse (TEC-1090,
