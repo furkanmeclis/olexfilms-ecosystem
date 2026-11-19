@@ -225,6 +225,15 @@ function AddUnitForm({
         </div>
       ) : null}
 
+      {mode === "cut" ? (
+        // TEC-1242 (K4): a cut piece with credits is used whole; no meters.
+        <p className="text-muted-foreground text-sm" data-testid="cut-piece">
+          {t("services.stock.cut_piece_info", {
+            meters: unit.remaining_meters ?? "-",
+          })}
+        </p>
+      ) : null}
+
       {mode === "fixed" ? (
         <div className="space-y-2">
           <Label htmlFor={`${id}-qty`}>
@@ -651,7 +660,11 @@ export function StockStep({
                               ? t("services.stock.on_hand", {
                                   count: u.quantity_on_hand,
                                 })
-                              : t("services.stock.mode.piece")}
+                              : mode === "cut"
+                                ? t("services.stock.cut_piece", {
+                                    meters: u.remaining_meters ?? "-",
+                                  })
+                                : t("services.stock.mode.piece")}
                         </span>
                         {u.credits ? (
                           <span className="ms-2" data-testid="unit-row-credits">

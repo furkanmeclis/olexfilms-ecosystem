@@ -372,6 +372,7 @@
   "credits.taken": "Списано кредитов: {{credits}}",
   "credits.refunded": "Кредиты возвращены",
   "credits.finished": "Продукт израсходован",
+  "credits.exhausted": "Кредиты исчерпаны",
   "credits.movements": "Движения кредитов",
   "credits.no_movement": "Движений кредитов нет.",
   "credits.type.opening": "Открытие",

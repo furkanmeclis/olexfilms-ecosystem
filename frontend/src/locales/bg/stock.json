@@ -358,6 +358,7 @@
   "credits.taken": "Отнети кредити: {{credits}}",
   "credits.refunded": "Кредитите са възстановени",
   "credits.finished": "Продуктът е изразходван",
+  "credits.exhausted": "Кредитите са изчерпани",
   "credits.movements": "Движения на кредити",
   "credits.no_movement": "Няма движения на кредити.",
   "credits.type.opening": "Откриване",

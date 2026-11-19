@@ -77,6 +77,10 @@ export function QuickSaleForm({
 
   const lookupError = useCallback(
     (error: unknown) => {
+      // TEC-1242 (K13): a cut piece is used only in services.
+      if (isApiError(error) && error.code === "CUT_PIECE_NOT_SELLABLE") {
+        return t("dealer_sales.quick_sale.cut_piece");
+      }
       if (isApiError(error) && error.code === "STOCK_UNAVAILABLE") {
         return t("dealer_sales.quick_sale.not_in_stock");
       }

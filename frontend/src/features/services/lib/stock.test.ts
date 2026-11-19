@@ -133,6 +133,20 @@ describe("stock rules (TEC-182)", () => {
     ).toBe("roll");
   });
 
+  it("uses a cut piece with credits whole, never cut (TEC-1242)", () => {
+    const cut = {
+      unit_kind: "serial" as const,
+      initial_meters: "3.00",
+      product: { unit_type: "piece" },
+    };
+    const credits = { credits_total: 5, credits_remaining: 4 };
+    expect(unitMode({ ...cut, credits })).toBe("cut");
+    // Without line credits a unit with meters stays a roll to cut.
+    expect(unitMode({ ...cut, credits: null })).toBe("roll");
+    // A piece without meters keeps the piece mode with its credits.
+    expect(unitMode({ ...cut, initial_meters: null, credits })).toBe("piece");
+  });
+
   it("maps API codes to messages", () => {
     expect(stockErrorKey("SERVICE_UNIT_NOT_AVAILABLE")).toBe(
       "services.stock.errors.SERVICE_UNIT_NOT_AVAILABLE",

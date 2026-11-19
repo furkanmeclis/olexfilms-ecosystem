@@ -643,6 +643,45 @@ describe("Step 4: products and stock", () => {
     );
   });
 
+  it("uses a cut piece with credits whole, without meters (TEC-1242)", async () => {
+    const cutUnit: ServiceStockUnit = {
+      uuid: "u-cut",
+      barcode: "C-001",
+      unit_kind: "serial",
+      product: product("p-cut", "Black PPF", "piece", []),
+      quantity_on_hand: 1,
+      initial_meters: "3.00",
+      remaining_meters: "3.00",
+      credits: { credits_total: 5, credits_remaining: 4 },
+    };
+    api.listStockUnits.mockResolvedValue({ items: [cutUnit] });
+    api.addItem.mockResolvedValue(service());
+    await renderStock(service());
+    // The row names the cut piece and its credits, not "meters left".
+    const row = $('[data-unit="C-001"]');
+    expect(row?.textContent).toContain(
+      'services.stock.cut_piece {"meters":"3.00"}',
+    );
+    expect(row?.textContent).not.toContain("services.stock.remaining");
+    expect(
+      row?.querySelector('[data-testid="unit-row-credits"]')?.textContent,
+    ).toBe('services.stock.credits {"remaining":4,"total":5}');
+
+    await click($('[data-unit="C-001"] [data-testid="pick-unit"]'));
+    // No meters field and no whole-roll switch: the piece is used whole.
+    expect($('input[name="meters"]')).toBeNull();
+    expect($('[data-testid="whole-roll"]')).toBeNull();
+    expect($('[data-testid="cut-piece"]')).not.toBeNull();
+    expect($('[data-testid="unit-credits"]')).not.toBeNull();
+    await submit($('[data-testid="add-unit-form"]'));
+    expect(api.addItem).toHaveBeenCalledWith("s1", {
+      barcode: "C-001",
+      product_uuid: "p-cut",
+      kind: "full",
+      applied_parts: [],
+    });
+  });
+
   it("offers no credits or finish option for a roll", async () => {
     api.listStockUnits.mockResolvedValue({ items: [rollUnit] });
     api.addItem.mockResolvedValue(service());

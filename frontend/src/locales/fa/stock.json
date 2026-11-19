@@ -372,6 +372,7 @@
   "credits.taken": "اعتبار کسرشده: {{credits}}",
   "credits.refunded": "اعتبار بازگردانده شد",
   "credits.finished": "محصول تمام شد",
+  "credits.exhausted": "اعتبار تمام شد",
   "credits.movements": "گردش اعتبار",
   "credits.no_movement": "گردش اعتباری وجود ندارد.",
   "credits.type.opening": "افتتاحیه",

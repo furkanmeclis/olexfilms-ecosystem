@@ -58,6 +58,7 @@
   "quick_sale.empty_cart": "برای افزودن ردیف، یک بارکد اسکن کنید.",
   "quick_sale.already_added": "بارکد {{barcode}} قبلاً در این فروش وجود دارد.",
   "quick_sale.not_in_stock": "این محصول در موجودی شما نیست.",
+  "quick_sale.cut_piece": "این بارکد یک قطعه برش‌خورده است؛ قطعه‌های برش‌خورده فروخته نمی‌شوند و فقط در سرویس‌ها استفاده می‌شوند.",
   "quick_sale.not_found": "محصول یافت نشد.",
   "quick_sale.increase": "افزایش مقدار",
   "quick_sale.decrease": "کاهش مقدار",

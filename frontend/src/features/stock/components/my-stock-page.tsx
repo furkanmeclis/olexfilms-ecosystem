@@ -292,9 +292,21 @@ export function MyStockPage({
         meta: { cellClassName: "text-end whitespace-nowrap tabular-nums" },
         cell: ({ row }) =>
           row.original.credits_total != null &&
-          row.original.credits_remaining != null
-            ? `${format.number(row.original.credits_remaining)} / ${format.number(row.original.credits_total)}`
-            : "—",
+          row.original.credits_remaining != null ? (
+            <span className="inline-flex items-center gap-2">
+              {`${format.number(row.original.credits_remaining)} / ${format.number(row.original.credits_total)}`}
+              {/* TEC-1242: a unit whose credits are used up (it leaves the
+                  stock when its last open service completes). */}
+              {row.original.credits_remaining <= 0 ? (
+                <StatusChip
+                  label={t("stock.credits.exhausted")}
+                  tone="warning"
+                />
+              ) : null}
+            </span>
+          ) : (
+            "—"
+          ),
       }) as ColumnDef<StockUnitRow, unknown>,
       createColumn<StockUnitRow>({
         id: "credits_used",

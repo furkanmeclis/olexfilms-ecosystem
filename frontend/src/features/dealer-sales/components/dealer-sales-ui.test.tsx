@@ -89,6 +89,8 @@ vi.mock("@/components/entity", async (orig) => ({
   },
 }));
 
+import { ApiError } from "@/lib/api/errors";
+
 import { QuickSaleForm } from "./quick-sale-form";
 import { VoidSaleButton } from "./quick-sale-page";
 import {
@@ -329,6 +331,30 @@ describe("QuickSaleForm (TEC-348)", () => {
     await fill(scanInput(), "OLX-0002");
     await submit(scanForm());
     expect(lines()).toHaveLength(2);
+  });
+
+  it("explains that a cut piece is not sold (TEC-1242)", async () => {
+    captured.service.lookup.mockRejectedValue(
+      new ApiError({
+        status: 422,
+        code: "CUT_PIECE_NOT_SELLABLE",
+        message: "cut piece",
+      }),
+    );
+    await render(
+      m,
+      createElement(QuickSaleForm, {
+        currency: "TRY",
+        canSeePurchasePrice: true,
+      }),
+    );
+    await fill(scanInput(), "CUT-0001");
+    await submit(scanForm());
+    expect(lines()).toHaveLength(0);
+    expect(
+      m.container.querySelector('[data-testid="quick-sale-notice"]')
+        ?.textContent,
+    ).toContain("dealer_sales.quick_sale.cut_piece");
   });
 
   it("sends the scanned lines as one sale", async () => {
