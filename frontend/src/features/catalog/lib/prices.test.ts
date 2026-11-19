@@ -7,6 +7,7 @@ import {
   productDefaults,
 } from "@/features/catalog/lib/form";
 import {
+  computedMeterPrice,
   listPriceBody,
   normalizePriceInput,
   visiblePriceColumns,
@@ -145,5 +146,47 @@ describe("resolveSearchHitHref", () => {
     expect(resolveSearchHitHref("/catalog/products/u1", null)).toBe(
       "/catalog/products/u1",
     );
+  });
+});
+
+// TEC-1238 (K2): the meter list price.
+describe("meter price", () => {
+  it("previews box price ÷ box meters", () => {
+    expect(computedMeterPrice("400", 15)).toBe(26.6667);
+    expect(computedMeterPrice("400", null)).toBeNull();
+    expect(computedMeterPrice(undefined, 15)).toBeNull();
+  });
+
+  it("sends meter_price only when the dialog shows it", () => {
+    expect(
+      listPriceBody({ sale_to_distributor_price: "400" }, null, false),
+    ).toEqual({
+      sale_to_distributor_price: "400",
+    });
+    expect(
+      listPriceBody(
+        { sale_to_distributor_price: "400", meter_price: "30" },
+        null,
+        false,
+      ),
+    ).toEqual({ sale_to_distributor_price: "400", meter_price: "30" });
+    // Emptied after a stored value: cleared (computed again).
+    expect(
+      listPriceBody(
+        { sale_to_distributor_price: "400", meter_price: "" },
+        { currency: "USD", sale_price: "400", meter_price: "30" },
+        false,
+      ),
+    ).toEqual({ sale_to_distributor_price: "400", meter_price: null });
+  });
+
+  it("shows the meter list price column to the center only", () => {
+    const row = { currency: "USD", sale_price: "400", meter_price: "30" };
+    expect(visiblePriceColumns("center", [row]).map((c) => c.field)).toContain(
+      "meter_price",
+    );
+    expect(
+      visiblePriceColumns("dealer", [row]).map((c) => c.field),
+    ).not.toContain("meter_price");
   });
 });

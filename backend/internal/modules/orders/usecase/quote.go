@@ -38,6 +38,13 @@ type QuoteItem struct {
 	ListUnitPrice *string   `json:"list_unit_price"`
 	UnitPrice     *string   `json:"unit_price"`
 	PriceSource   string    `json:"price_source"`
+	// TEC-1238 (K1/K2): SellableByMeter tells a piece product that may
+	// also be ordered by the meter; the meter prices follow the box price
+	// ratio (nil when none or not visible). A roll_meter product's
+	// unit_price is already per meter and its meter fields stay nil.
+	SellableByMeter    bool    `json:"sellable_by_meter"`
+	MeterListUnitPrice *string `json:"meter_list_unit_price"`
+	MeterUnitPrice     *string `json:"meter_unit_price"`
 }
 
 // QuoteView is the price preview of a new order (TEC-1064): the order
@@ -160,7 +167,7 @@ func (s *Service) Quote(ctx context.Context, c Caller, in QuoteInput) (QuoteView
 		}
 	}
 	for _, p := range products {
-		item := QuoteItem{ProductUUID: p.Uuid, PriceSource: PriceSourceMissing}
+		item := QuoteItem{ProductUUID: p.Uuid, PriceSource: PriceSourceMissing, SellableByMeter: p.SellableByMeter}
 		if pr, ok := prices[p.ID]; ok {
 			unit, err := discountedPrice(pr.Price, d.Pct)
 			if err != nil {
@@ -170,6 +177,17 @@ func (s *Service) Quote(ctx context.Context, c Caller, in QuoteInput) (QuoteView
 			if sellerSide {
 				list := pr.Price
 				item.ListUnitPrice = &list
+			}
+			if p.SellableByMeter && pr.MeterPrice != "" {
+				meter, err := discountedPrice(pr.MeterPrice, d.Pct)
+				if err != nil {
+					return QuoteView{}, err
+				}
+				item.MeterUnitPrice = &meter
+				if sellerSide {
+					list := pr.MeterPrice
+					item.MeterListUnitPrice = &list
+				}
 			}
 		}
 		out.Items = append(out.Items, item)

@@ -319,5 +319,15 @@
   "related.empty_stock": "No stock units of this product.",
   "fields.usage_credits": "Usage credits",
   "products.usage_credits_hint": "How many services one barcode (serial piece unit) can be used in. Each service selection takes 1 credit; rolls and fixed barcodes carry no credits.",
-  "validation.usage_credits": "Enter a whole number from 1 to {{max}}"
+  "validation.usage_credits": "Enter a whole number from 1 to {{max}}",
+  "roll.sellable_by_meter": "Sold by the meter",
+  "roll.sellable_by_meter_hint": "When on, the product is also ordered by the meter next to the box; the piece is cut from a box of the default length.",
+  "roll.sellable_needs_meters": "Selling by the meter needs the default length (box meters).",
+  "roll.sellable_min_cut_hint": "A minimum cut is recommended; an order line cannot be shorter.",
+  "roll.sellable_glorian": "A product synced with Glorian cannot be sold by the meter.",
+  "roll.sellable_roll_product": "Roll products are always sold by the meter.",
+  "roll.sellable_fixed": "A fixed barcode product cannot be sold by the meter.",
+  "prices.meter_price": "Meter list price",
+  "prices.meter_computed": "Left empty, the system computes {{price}} / m (box price ÷ box meters).",
+  "prices.meter_computed_hint": "Left empty, box price ÷ box meters is used."
 }

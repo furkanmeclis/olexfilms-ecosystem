@@ -238,7 +238,9 @@ SET category_id = sqlc.arg(category_id),
     active = sqlc.arg(active),
     external_id = sqlc.arg(external_id),
     connection_id = sqlc.arg(connection_id),
-    locked_fields = sqlc.arg(locked_fields)::text[]
+    locked_fields = sqlc.arg(locked_fields)::text[],
+    -- TEC-1238 (K1): a product synced from Glorian is not sold by the meter.
+    sellable_by_meter = false
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
 

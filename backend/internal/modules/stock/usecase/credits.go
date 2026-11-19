@@ -134,7 +134,10 @@ func (s *UnitCredits) Increase(ctx context.Context, unitUUID uuid.UUID, in Incre
 	if u, err = q.LockUnit(ctx, u.ID); err != nil {
 		return nil, fmt.Errorf("stock: lock unit: %w", err)
 	}
-	if !credits.Applies(u) {
+	// TEC-1238: a cut piece of a meter line carries credits too.
+	if ok, err := credits.Carries(ctx, q, u); err != nil {
+		return nil, err
+	} else if !ok {
 		return nil, ErrCreditsNotApplicable
 	}
 	b, err := credits.Increase(ctx, q, u, credits.Actor{OrgID: u.OrganizationID, UserID: in.ActorID}, in.Amount, reason)

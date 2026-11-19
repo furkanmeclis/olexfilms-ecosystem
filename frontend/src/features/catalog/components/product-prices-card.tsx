@@ -23,7 +23,10 @@ import {
   type PriceDialogValues,
 } from "@/features/catalog/components/price-dialog";
 import { PriceTable } from "@/features/catalog/components/price-table";
-import { listPriceBody } from "@/features/catalog/lib/prices";
+import {
+  computedMeterPrice,
+  listPriceBody,
+} from "@/features/catalog/lib/prices";
 import { useDeviationThreshold } from "@/features/pricing/hooks/use-deviation-threshold";
 import {
   pricingService,
@@ -52,9 +55,16 @@ type Editing = { row: EffectivePrice | null } | null;
 export function ProductPricesCard({
   productUuid,
   access,
+  meter,
 }: {
   productUuid: string;
   access: PricingAccess;
+  /**
+   * TEC-1238 (K2): the product is sold by the meter; the center's list
+   * price then takes a meter list price, previewed from the box price ÷
+   * the box length when empty.
+   */
+  meter?: { sellable: boolean; boxMeters: number | null };
 }) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
@@ -149,6 +159,22 @@ export function ProductPricesCard({
         ];
 
   const row = editing?.row ?? null;
+  // TEC-1238: the meter list price field (also kept while a stored value
+  // exists after the switch was turned off, so it can be cleared).
+  if (
+    viewer === "center" &&
+    (meter?.sellable || row?.meter_price !== undefined)
+  ) {
+    const computed = computedMeterPrice(row?.sale_price, meter?.boxMeters);
+    fields.push({
+      name: "meter_price",
+      labelKey: "catalog.prices.meter_price",
+      description:
+        computed === null
+          ? t("catalog.prices.meter_computed_hint")
+          : t("catalog.prices.meter_computed", { price: String(computed) }),
+    });
+  }
   const defaults: PriceDialogValues =
     viewer === "distributor"
       ? {
@@ -160,6 +186,9 @@ export function ProductPricesCard({
           purchase_price: row?.purchase_price ?? "",
           sale_to_distributor_price: row?.sale_price ?? "",
           recommended_sale_price: row?.recommended_sale_price ?? "",
+          ...(fields.some((f) => f.name === "meter_price")
+            ? { meter_price: row?.meter_price ?? "" }
+            : {}),
         };
 
   return (

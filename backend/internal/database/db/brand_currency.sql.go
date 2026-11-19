@@ -144,10 +144,12 @@ SELECT p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name,
        src.purchase_price AS purchase_price,
        src.sale_to_distributor_price AS sale_to_distributor_price,
        src.recommended_sale_price AS recommended_sale_price,
+       src.meter_price AS meter_price,
        (dst.id IS NOT NULL)::bool AS target_exists,
        dst.purchase_price AS target_purchase_price,
        dst.sale_to_distributor_price AS target_sale_to_distributor_price,
-       dst.recommended_sale_price AS target_recommended_sale_price
+       dst.recommended_sale_price AS target_recommended_sale_price,
+       dst.meter_price AS target_meter_price
 FROM product_prices src
 JOIN products p ON p.id = src.product_id AND p.brand_id = src.brand_id
 LEFT JOIN product_prices dst ON dst.product_id = src.product_id AND dst.currency = $1::text
@@ -171,10 +173,12 @@ type ListBrandPricesInCurrencyRow struct {
 	PurchasePrice                pgtype.Numeric `json:"purchase_price"`
 	SaleToDistributorPrice       pgtype.Numeric `json:"sale_to_distributor_price"`
 	RecommendedSalePrice         pgtype.Numeric `json:"recommended_sale_price"`
+	MeterPrice                   pgtype.Numeric `json:"meter_price"`
 	TargetExists                 bool           `json:"target_exists"`
 	TargetPurchasePrice          pgtype.Numeric `json:"target_purchase_price"`
 	TargetSaleToDistributorPrice pgtype.Numeric `json:"target_sale_to_distributor_price"`
 	TargetRecommendedSalePrice   pgtype.Numeric `json:"target_recommended_sale_price"`
+	TargetMeterPrice             pgtype.Numeric `json:"target_meter_price"`
 }
 
 // Price list rows of the brand in the source currency next to the row of
@@ -196,10 +200,12 @@ func (q *Queries) ListBrandPricesInCurrency(ctx context.Context, arg ListBrandPr
 			&i.PurchasePrice,
 			&i.SaleToDistributorPrice,
 			&i.RecommendedSalePrice,
+			&i.MeterPrice,
 			&i.TargetExists,
 			&i.TargetPurchasePrice,
 			&i.TargetSaleToDistributorPrice,
 			&i.TargetRecommendedSalePrice,
+			&i.TargetMeterPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -431,14 +437,17 @@ func (q *Queries) SetBrandCurrency(ctx context.Context, arg SetBrandCurrencyPara
 }
 
 const upsertConvertedPrice = `-- name: UpsertConvertedPrice :exec
-INSERT INTO product_prices (product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price)
+INSERT INTO product_prices (product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price,
+                            meter_price)
 VALUES ($1, $2, $3::text,
         $4::numeric, $5::numeric,
-        $6::numeric)
+        $6::numeric, $7::numeric)
 ON CONFLICT (product_id, currency) DO UPDATE SET
     purchase_price = EXCLUDED.purchase_price,
     sale_to_distributor_price = EXCLUDED.sale_to_distributor_price,
-    recommended_sale_price = EXCLUDED.recommended_sale_price
+    recommended_sale_price = EXCLUDED.recommended_sale_price,
+    -- TEC-1238: the meter list price is converted with the others.
+    meter_price = EXCLUDED.meter_price
 `
 
 type UpsertConvertedPriceParams struct {
@@ -448,6 +457,7 @@ type UpsertConvertedPriceParams struct {
 	PurchasePrice          pgtype.Numeric `json:"purchase_price"`
 	SaleToDistributorPrice pgtype.Numeric `json:"sale_to_distributor_price"`
 	RecommendedSalePrice   pgtype.Numeric `json:"recommended_sale_price"`
+	MeterPrice             pgtype.Numeric `json:"meter_price"`
 }
 
 func (q *Queries) UpsertConvertedPrice(ctx context.Context, arg UpsertConvertedPriceParams) error {
@@ -458,6 +468,7 @@ func (q *Queries) UpsertConvertedPrice(ctx context.Context, arg UpsertConvertedP
 		arg.PurchasePrice,
 		arg.SaleToDistributorPrice,
 		arg.RecommendedSalePrice,
+		arg.MeterPrice,
 	)
 	return err
 }

@@ -248,7 +248,14 @@ export function ProductDetailPage({
         product={p}
         canWrite={catalog.canWrite}
       />
-      <ProductPricesCard productUuid={p.uuid} access={pricing} />
+      <ProductPricesCard
+        productUuid={p.uuid}
+        access={pricing}
+        meter={{
+          sellable: p.roll.sellable_by_meter ?? false,
+          boxMeters: p.roll.default_meters,
+        }}
+      />
       <DistributorPricesCard productUuid={p.uuid} access={pricing} />
       <ProductRelatedTabs slug={slug} productUuid={p.uuid} />
 

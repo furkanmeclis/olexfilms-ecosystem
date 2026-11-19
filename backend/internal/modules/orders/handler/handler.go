@@ -176,6 +176,10 @@ type itemBody struct {
 	PlotterCut *bool `json:"plotter_cut"`
 	// PlotterCredits (TEC-1221): credits of a plotter cut line (0 clears).
 	PlotterCredits *int32 `json:"plotter_credits"`
+	// SaleMeasure (TEC-1238): box or meter (default: meter with meters).
+	SaleMeasure *string `json:"sale_measure"`
+	// LineCredits (TEC-1238, K3): credits of a meter line's cut pieces.
+	LineCredits *int32 `json:"line_credits"`
 }
 
 func toItems(in []itemBody) []ord.ItemInput {
@@ -198,7 +202,7 @@ func toItems(in []itemBody) []ord.ItemInput {
 		}
 		out = append(out, ord.ItemInput{ProductUUID: it.ProductUUID, Quantity: it.Quantity, Meters: meters,
 			Note: it.Note, UnitPrice: price, DiscountPct: discount, IsGift: it.IsGift, PlotterCut: it.PlotterCut,
-			PlotterCredits: it.PlotterCredits})
+			PlotterCredits: it.PlotterCredits, SaleMeasure: it.SaleMeasure, LineCredits: it.LineCredits})
 	}
 	return out
 }

@@ -247,7 +247,7 @@ func (s *Service) insertSellerLines(ctx context.Context, q *db.Queries, o db.Ord
 	}
 	for i, l := range lines {
 		in := chargeInput{amount: l.amount, discount: d.Pct, source: PriceSourceMissing}
-		if p, ok := prices[l.product.ID]; ok {
+		if p, ok := purchaseFor(prices, l.product.ID, l.measure == MeasureMeter); ok {
 			list := p.Price
 			in.list, in.source = &list, priceSource(p.Source)
 		}

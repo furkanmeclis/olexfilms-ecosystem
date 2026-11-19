@@ -319,5 +319,15 @@
   "related.empty_stock": "Nessuna unità di magazzino per questo prodotto.",
   "fields.usage_credits": "Crediti di utilizzo",
   "products.usage_credits_hint": "In quanti servizi può essere usato un codice a barre (unità singola). Ogni selezione in un servizio consuma 1 credito; rotoli e codici a barre fissi non hanno crediti.",
-  "validation.usage_credits": "Inserisci un numero intero da 1 a {{max}}"
+  "validation.usage_credits": "Inserisci un numero intero da 1 a {{max}}",
+  "roll.sellable_by_meter": "Vendibile al metro",
+  "roll.sellable_by_meter_hint": "Se attivo, il prodotto si ordina anche al metro oltre che a scatola; il pezzo si taglia da una scatola di lunghezza predefinita.",
+  "roll.sellable_needs_meters": "La vendita al metro richiede la lunghezza predefinita (metri della scatola).",
+  "roll.sellable_min_cut_hint": "Si consiglia un taglio minimo; una riga d’ordine non può essere più corta.",
+  "roll.sellable_glorian": "Un prodotto sincronizzato con Glorian non può essere venduto al metro.",
+  "roll.sellable_roll_product": "I prodotti in rotolo sono sempre venduti al metro.",
+  "roll.sellable_fixed": "Un prodotto con codice a barre fisso non può essere venduto al metro.",
+  "prices.meter_price": "Prezzo di listino al metro",
+  "prices.meter_computed": "Se vuoto, il sistema calcola {{price}} / m (prezzo scatola ÷ metri della scatola).",
+  "prices.meter_computed_hint": "Se vuoto, si usa prezzo scatola ÷ metri della scatola."
 }

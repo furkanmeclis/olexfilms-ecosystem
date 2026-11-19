@@ -6,30 +6,36 @@
 
 -- name: UpsertProductPrice :one
 INSERT INTO product_prices (
-    product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price
+    product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price,
+    meter_price
 )
 VALUES (
     sqlc.arg(product_id), sqlc.arg(brand_id), sqlc.arg(currency),
     sqlc.narg(purchase_price)::text::numeric,
     sqlc.narg(sale_to_distributor_price)::text::numeric,
-    sqlc.narg(recommended_sale_price)::text::numeric
+    sqlc.narg(recommended_sale_price)::text::numeric,
+    -- TEC-1238 (K2): the meter list price; NULL = computed from the box.
+    sqlc.narg(meter_price)::text::numeric
 )
 ON CONFLICT (product_id, currency) DO UPDATE SET
     purchase_price = EXCLUDED.purchase_price,
     sale_to_distributor_price = EXCLUDED.sale_to_distributor_price,
-    recommended_sale_price = EXCLUDED.recommended_sale_price
+    recommended_sale_price = EXCLUDED.recommended_sale_price,
+    meter_price = EXCLUDED.meter_price
 RETURNING id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at;
+    created_at, updated_at,
+    meter_price;
 
 -- name: GetProductPrice :one
 SELECT id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at
+    created_at, updated_at,
+    meter_price
 FROM product_prices
 WHERE product_id = sqlc.arg(product_id) AND brand_id = sqlc.arg(brand_id)
   AND currency = sqlc.arg(currency);
@@ -39,7 +45,8 @@ SELECT id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at
+    created_at, updated_at,
+    meter_price
 FROM product_prices
 WHERE product_id = sqlc.arg(product_id) AND brand_id = sqlc.arg(brand_id)
 ORDER BY currency ASC;
@@ -114,7 +121,8 @@ WHERE brand_id = sqlc.arg(brand_id)
 SELECT product_id, currency,
     purchase_price,
     sale_to_distributor_price,
-    recommended_sale_price
+    recommended_sale_price,
+    meter_price
 FROM product_prices
 WHERE brand_id = sqlc.arg(brand_id) AND product_id = ANY(sqlc.arg(product_ids)::bigint[])
 ORDER BY product_id ASC, currency ASC;
@@ -230,3 +238,15 @@ SELECT id, uuid, sku, name
 FROM products
 WHERE brand_id = sqlc.arg(brand_id) AND uuid = ANY(sqlc.arg(uuids)::uuid[])
 ORDER BY id ASC;
+
+-- name: ListProductMeterTerms :many
+-- TEC-1238 (K2): what a buyer's meter price is computed from: the product's
+-- unit type and box length and the center's box and meter list prices in
+-- one currency (NULL when the currency has no list row).
+SELECT p.id AS product_id, p.unit_type, p.default_roll_meters,
+       pp.sale_to_distributor_price AS list_box_price,
+       pp.meter_price AS list_meter_price
+FROM products p
+LEFT JOIN product_prices pp ON pp.product_id = p.id AND pp.currency = sqlc.arg(currency)::text
+WHERE p.brand_id = sqlc.arg(brand_id) AND p.id = ANY(sqlc.arg(product_ids)::bigint[])
+ORDER BY p.id;

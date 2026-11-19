@@ -19,12 +19,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ErrBelowAssigned: a line's new amount is below its assigned units.
@@ -59,6 +59,8 @@ type LineChange struct {
 	// PlotterCut: the line's plotter mark after the edit, set when it
 	// changed (TEC-1058).
 	PlotterCut *bool `json:"plotter_cut,omitempty"`
+	// SaleMeasure: box or meter (TEC-1238); one product may have both.
+	SaleMeasure string `json:"sale_measure,omitempty"`
 }
 
 type lineSnap struct {
@@ -66,21 +68,23 @@ type lineSnap struct {
 	amount    string
 	order     int64
 	plotter   bool
+	measure   string
 }
 
-// snapshotLines keeps the amount of every line by product.
-func snapshotLines(ctx context.Context, q *db.Queries, o db.Order) (map[int64]lineSnap, error) {
+// snapshotLines keeps the amount of every line by product and measure.
+func snapshotLines(ctx context.Context, q *db.Queries, o db.Order) (map[lineKey]lineSnap, error) {
 	items, err := q.ListOrderItems(ctx, o.ID)
 	if err != nil {
 		return nil, fmt.Errorf("orders: lines: %w", err)
 	}
-	out := make(map[int64]lineSnap, len(items))
+	out := make(map[lineKey]lineSnap, len(items))
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
 		}
-		out[it.ProductID] = lineSnap{name: p.Name, sku: p.Sku, amount: amountText(it), order: it.ID, plotter: it.PlotterCut}
+		out[itemKey(it)] = lineSnap{name: p.Name, sku: p.Sku, amount: amountText(it), order: it.ID, plotter: it.PlotterCut,
+			measure: itemMeasure(it)}
 	}
 	return out, nil
 }
@@ -94,7 +98,7 @@ func amountText(it db.OrderItem) string {
 
 // diffLines lists the added, changed and removed lines between two
 // snapshots (by line order, removed lines first in their old order).
-func diffLines(before, after map[int64]lineSnap) []LineChange {
+func diffLines(before, after map[lineKey]lineSnap) []LineChange {
 	type keyed struct {
 		c   LineChange
 		seq int64
@@ -105,10 +109,10 @@ func diffLines(before, after map[int64]lineSnap) []LineChange {
 		switch {
 		case !ok:
 			v := b.amount
-			all = append(all, keyed{LineChange{Product: b.name, SKU: b.sku, Before: &v}, b.order})
+			all = append(all, keyed{LineChange{Product: b.name, SKU: b.sku, Before: &v, SaleMeasure: b.measure}, b.order})
 		case a.amount != b.amount || a.plotter != b.plotter:
 			bv, av := b.amount, a.amount
-			c := LineChange{Product: b.name, SKU: b.sku, Before: &bv, After: &av}
+			c := LineChange{Product: b.name, SKU: b.sku, Before: &bv, After: &av, SaleMeasure: b.measure}
 			if a.plotter != b.plotter {
 				pc := a.plotter
 				c.PlotterCut = &pc
@@ -119,7 +123,7 @@ func diffLines(before, after map[int64]lineSnap) []LineChange {
 	for id, a := range after {
 		if _, ok := before[id]; !ok {
 			v := a.amount
-			c := LineChange{Product: a.name, SKU: a.sku, After: &v}
+			c := LineChange{Product: a.name, SKU: a.sku, After: &v, SaleMeasure: a.measure}
 			if a.plotter {
 				pc := true
 				c.PlotterCut = &pc
@@ -140,25 +144,23 @@ func diffLines(before, after map[int64]lineSnap) []LineChange {
 func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, o db.Order, items []ItemInput) (bool, error) {
 	// TEC-1061: the seller may add a product closed to dealer orders (as
 	// createForBuyer does), so no dealer rules here.
-	lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{})
-	if err != nil {
-		return false, err
-	}
 	old, err := q.LockOrderItems(ctx, o.ID)
 	if err != nil {
 		return false, fmt.Errorf("orders: lines: %w", err)
 	}
-	byProduct := make(map[int64]db.OrderItem, len(old))
-	for _, it := range old {
-		byProduct[it.ProductID] = it
+	// TEC-1238: lines are matched by product and measure.
+	byKey := existingLines(old)
+	lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{existing: byKey})
+	if err != nil {
+		return false, err
 	}
-	wanted := make(map[int64]bool, len(lines))
+	wanted := make(map[lineKey]bool, len(lines))
 	changed := false
 	var added []line
 	var addedIdx []int
 	for i, l := range lines {
-		wanted[l.product.ID] = true
-		it, ok := byProduct[l.product.ID]
+		wanted[l.key()] = true
+		it, ok := byKey[l.key()]
 		if !ok {
 			added, addedIdx = append(added, l), append(addedIdx, i)
 			continue
@@ -172,8 +174,18 @@ func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, 
 		if p := items[i].PlotterCut; p != nil {
 			cut = *p
 		}
-		credits, err := plotterCredits(fmt.Sprintf("items[%d].plotter_credits", i), cut, it.PlotterCredits, items[i].PlotterCredits)
-		if err != nil {
+		var credits pgtype.Int4
+		if l.creditLine() {
+			// K12: the meter line's credits are the plotter credits.
+			if l.lineCredits != it.LineCredits {
+				if _, err := q.SetOrderItemLineCredits(ctx, db.SetOrderItemLineCreditsParams{
+					ID: it.ID, LineCredits: l.lineCredits,
+				}); err != nil {
+					return false, fmt.Errorf("orders: line credits: %w", err)
+				}
+				changed = true
+			}
+		} else if credits, err = plotterCredits(fmt.Sprintf("items[%d].plotter_credits", i), cut, it.PlotterCredits, items[i].PlotterCredits); err != nil {
 			return false, err
 		}
 		if cut != it.PlotterCut || credits != it.PlotterCredits {
@@ -214,7 +226,7 @@ func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, 
 		changed = true
 	}
 	for _, it := range old {
-		if wanted[it.ProductID] {
+		if wanted[itemKey(it)] {
 			continue
 		}
 		if err := s.removeLine(ctx, q, c, o, it); err != nil {
@@ -297,14 +309,12 @@ func (s *Service) insertEditedLines(ctx context.Context, q *db.Queries, o db.Ord
 	if err != nil {
 		return err
 	}
-	ids := make([]int64, len(lines))
-	amounts := make([]*big.Rat, len(lines))
-	discounts := make([]*big.Rat, len(lines))
-	fields := make([]string, len(lines))
+	reqs := make([]priceReq, len(lines))
 	for i, l := range lines {
-		ids[i], amounts[i], discounts[i], fields[i] = l.product.ID, l.amount, d.Pct, fmt.Sprintf("items[%d].product_uuid", idx[i])
+		reqs[i] = priceReq{product: l.product.ID, meter: l.measure == MeasureMeter, amount: l.amount,
+			discount: d.Pct, field: fmt.Sprintf("items[%d].product_uuid", idx[i])}
 	}
-	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, discounts, fields)
+	priced, err := priceLines(ctx, q, buyer, o.Currency, reqs)
 	if err != nil {
 		return err
 	}

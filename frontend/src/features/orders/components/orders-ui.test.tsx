@@ -254,6 +254,8 @@ function order(over: Partial<Order> = {}): Order {
         discount_pct: null,
         is_gift: false,
         plotter_cut: false,
+        sale_measure: "box" as const,
+        line_credits: null,
         line_total: "240.00",
         note: null,
         assigned: "0",

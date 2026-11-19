@@ -319,5 +319,15 @@
   "related.empty_stock": "Bu ürünün stok birimi yok.",
   "fields.usage_credits": "Kullanım kredisi",
   "products.usage_credits_hint": "Bir barkodun (tekil birim) kaç hizmette kullanılabileceği. Her hizmet seçimi 1 kredi düşer; rulo ve sabit barkodlu birimler kredi taşımaz.",
-  "validation.usage_credits": "1 ile {{max}} arasında tam sayı girin"
+  "validation.usage_credits": "1 ile {{max}} arasında tam sayı girin",
+  "roll.sellable_by_meter": "Metreyle satılabilir",
+  "roll.sellable_by_meter_hint": "Açıkken ürün kutu yanında metre olarak da sipariş edilir; parça, varsayılan uzunluktaki kutudan kesilir.",
+  "roll.sellable_needs_meters": "Metreyle satış için varsayılan uzunluk (kutu metresi) gerekli.",
+  "roll.sellable_min_cut_hint": "Minimum kesim girmeniz önerilir; sipariş satırı bundan kısa olamaz.",
+  "roll.sellable_glorian": "Glorian ile senkron üründe metreyle satış açılamaz.",
+  "roll.sellable_roll_product": "Rulo ürünler her zaman metreyle satılır.",
+  "roll.sellable_fixed": "Sabit barkodlu üründe metreyle satış açılamaz.",
+  "prices.meter_price": "Metre liste fiyatı",
+  "prices.meter_computed": "Boş bırakılırsa sistem hesaplar: {{price}} / m (kutu fiyatı ÷ kutu metresi).",
+  "prices.meter_computed_hint": "Boş bırakılırsa kutu fiyatı ÷ kutu metresi kullanılır."
 }

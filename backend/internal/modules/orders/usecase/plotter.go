@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ActionPlotterMarked is the timeline step of a plotter mark change.
@@ -63,8 +64,32 @@ func (s *Service) SetPlotterCut(ctx context.Context, c Caller, orderUUID, itemUU
 			return fmt.Errorf("orders: line: %w", err)
 		}
 		result = o
-		next, err := plotterCredits("plotter_credits", on, it.PlotterCredits, credits)
-		if err != nil {
+		// TEC-1238 (K12): a meter line of a piece product (it carries
+		// line credits) shares its credits with the plotter mark: a
+		// credits value sets them, the mark keeps none of its own.
+		creditLine := it.LineCredits.Valid
+		var next pgtype.Int4
+		if creditLine {
+			if credits != nil && *credits != 0 {
+				if *credits < 1 || *credits > MaxLineCredits {
+					return invalid("plotter_credits", fmt.Sprintf("must be between 1 and %d", MaxLineCredits))
+				}
+				if *credits != it.LineCredits.Int32 {
+					if it, err = q.SetOrderItemLineCredits(ctx, db.SetOrderItemLineCreditsParams{
+						ID: it.ID, LineCredits: pgtype.Int4{Int32: *credits, Valid: true},
+					}); err != nil {
+						return fmt.Errorf("orders: line credits: %w", err)
+					}
+					if it.PlotterCut == on {
+						p := activityPayload{ItemUUID: it.Uuid.String(), PlotterCut: &on, PlotterCredits: int4Ptr(it.LineCredits)}
+						if err := s.recordActivity(ctx, q, c, o, ActionPlotterMarked, p); err != nil {
+							return err
+						}
+						return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
+					}
+				}
+			}
+		} else if next, err = plotterCredits("plotter_credits", on, it.PlotterCredits, credits); err != nil {
 			return err
 		}
 		if it.PlotterCut == on && it.PlotterCredits == next {
@@ -75,7 +100,11 @@ func (s *Service) SetPlotterCut(ctx context.Context, c Caller, orderUUID, itemUU
 		}); err != nil {
 			return fmt.Errorf("orders: plotter mark: %w", err)
 		}
-		p := activityPayload{ItemUUID: it.Uuid.String(), PlotterCut: &on, PlotterCredits: int4Ptr(next)}
+		shown := next
+		if creditLine {
+			shown = it.LineCredits
+		}
+		p := activityPayload{ItemUUID: it.Uuid.String(), PlotterCut: &on, PlotterCredits: int4Ptr(shown)}
 		if pr, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID}); err == nil {
 			p.Product = pr.Name
 		}

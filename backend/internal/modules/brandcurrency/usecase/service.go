@@ -353,6 +353,8 @@ type PriceSet struct {
 	PurchasePrice          *string `json:"purchase_price"`
 	SaleToDistributorPrice *string `json:"sale_to_distributor_price"`
 	RecommendedSalePrice   *string `json:"recommended_sale_price"`
+	// MeterPrice (TEC-1238): the meter list price is converted too.
+	MeterPrice *string `json:"meter_price"`
 }
 
 // Conversion row actions.
@@ -448,8 +450,10 @@ func (s *Service) ConvertPrices(ctx context.Context, brandUUID uuid.UUID, in Con
 	}
 	writes := make([]write, 0, len(rows))
 	for _, row := range rows {
-		src := PriceSet{PurchasePrice: textPtr(row.PurchasePrice), SaleToDistributorPrice: textPtr(row.SaleToDistributorPrice), RecommendedSalePrice: textPtr(row.RecommendedSalePrice)}
-		conv := PriceSet{PurchasePrice: convert(src.PurchasePrice, r), SaleToDistributorPrice: convert(src.SaleToDistributorPrice, r), RecommendedSalePrice: convert(src.RecommendedSalePrice, r)}
+		src := PriceSet{PurchasePrice: textPtr(row.PurchasePrice), SaleToDistributorPrice: textPtr(row.SaleToDistributorPrice), RecommendedSalePrice: textPtr(row.RecommendedSalePrice),
+			MeterPrice: textPtr(row.MeterPrice)}
+		conv := PriceSet{PurchasePrice: convert(src.PurchasePrice, r), SaleToDistributorPrice: convert(src.SaleToDistributorPrice, r), RecommendedSalePrice: convert(src.RecommendedSalePrice, r),
+			MeterPrice: convert(src.MeterPrice, r)}
 		cr := ConversionRow{ProductUUID: row.ProductUuid, SKU: row.Sku, Name: row.Name, Source: src, Converted: conv}
 		switch {
 		case row.TargetExists && !in.Overwrite:
@@ -463,7 +467,8 @@ func (s *Service) ConvertPrices(ctx context.Context, brandUUID uuid.UUID, in Con
 			out.Create++
 		}
 		if row.TargetExists {
-			cr.Existing = &PriceSet{PurchasePrice: textPtr(row.TargetPurchasePrice), SaleToDistributorPrice: textPtr(row.TargetSaleToDistributorPrice), RecommendedSalePrice: textPtr(row.TargetRecommendedSalePrice)}
+			cr.Existing = &PriceSet{PurchasePrice: textPtr(row.TargetPurchasePrice), SaleToDistributorPrice: textPtr(row.TargetSaleToDistributorPrice), RecommendedSalePrice: textPtr(row.TargetRecommendedSalePrice),
+				MeterPrice: textPtr(row.TargetMeterPrice)}
 		}
 		if cr.Action != ActionSkip {
 			writes = append(writes, write{productID: row.ProductID, set: conv})
@@ -485,7 +490,7 @@ func (s *Service) ConvertPrices(ctx context.Context, brandUUID uuid.UUID, in Con
 		if err := q.UpsertConvertedPrice(ctx, db.UpsertConvertedPriceParams{
 			ProductID: w.productID, BrandID: b.ID, Currency: target,
 			PurchasePrice: numeric(w.set.PurchasePrice), SaleToDistributorPrice: numeric(w.set.SaleToDistributorPrice),
-			RecommendedSalePrice: numeric(w.set.RecommendedSalePrice),
+			RecommendedSalePrice: numeric(w.set.RecommendedSalePrice), MeterPrice: numeric(w.set.MeterPrice),
 		}); err != nil {
 			return ConversionPreview{}, fmt.Errorf("brand currency: write price: %w", err)
 		}

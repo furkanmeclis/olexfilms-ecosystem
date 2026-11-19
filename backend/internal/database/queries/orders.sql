@@ -326,13 +326,15 @@ WHERE o.id = ANY (sqlc.arg(order_ids)::bigint[]);
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
     unit_price, price_source, recommended_price_snapshot, line_total, note,
-    list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+    list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, line_credits
 )
 SELECT o.id, o.organization_id, o.brand_id, sqlc.arg(product_id), sqlc.narg(quantity), sqlc.narg(meters),
        sqlc.arg(unit_price), sqlc.arg(price_source), sqlc.narg(recommended_price_snapshot),
        sqlc.arg(line_total), sqlc.narg(note),
        sqlc.narg(list_unit_price), sqlc.narg(discount_pct), COALESCE(sqlc.narg(is_gift)::boolean, false),
-       sqlc.arg(plotter_cut), sqlc.narg(plotter_credits)
+       sqlc.arg(plotter_cut), sqlc.narg(plotter_credits),
+       -- TEC-1238 (K3): the credits of a meter line's cut pieces.
+       sqlc.narg(line_credits)
 FROM orders o
 WHERE o.id = sqlc.arg(order_id)
 RETURNING *;
@@ -391,6 +393,14 @@ UPDATE order_items
 SET plotter_cut = sqlc.arg(plotter_cut),
     -- TEC-1221: the custom credits live only on a plotter cut line.
     plotter_credits = CASE WHEN sqlc.arg(plotter_cut)::bool THEN sqlc.narg(plotter_credits)::int END
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- TEC-1238 (K3/K12): the credits of a meter line (shared with its plotter
+-- mark).
+-- name: SetOrderItemLineCredits :one
+UPDATE order_items
+SET line_credits = sqlc.arg(line_credits)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

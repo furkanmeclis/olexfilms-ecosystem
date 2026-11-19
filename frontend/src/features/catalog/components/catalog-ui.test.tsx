@@ -248,6 +248,13 @@ describe("ProductDetailPage write controls", () => {
         .value,
     ).toBe("15");
     expect(labels).toContain("catalog.roll.save");
+    // TEC-1238 (K1): the "sold by the meter" switch, off by default.
+    const sellable = container.querySelector(
+      "[data-testid=roll-sellable-by-meter]",
+    );
+    expect(sellable).not.toBeNull();
+    expect(sellable?.getAttribute("aria-checked")).toBe("false");
+    expect(container.textContent).toContain("catalog.roll.sellable_by_meter");
   });
 
   it("dealer reads the product and its purchase price only", async () => {

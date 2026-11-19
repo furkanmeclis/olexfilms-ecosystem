@@ -63,6 +63,39 @@ func (e *ValidationError) Error() string { return e.Field + ": " + e.Message }
 // CodePriceNotFound marks a line without an effective purchase price.
 const CodePriceNotFound = "PRICE_NOT_FOUND"
 
+// CodeBelowMinCut marks a meter line shorter than the product's minimum
+// cut (TEC-1238, K6).
+const CodeBelowMinCut = "ORDER_LINE_BELOW_MIN_CUT"
+
+// CodeNotSoldByMeter marks a meter line of a piece product that is not
+// sold by the meter (TEC-1238, K1).
+const CodeNotSoldByMeter = "PRODUCT_NOT_SOLD_BY_METER"
+
+// Sale measures of an order line (order_items.sale_measure, TEC-1238): a
+// box line counts quantity, a meter line meters.
+const (
+	MeasureBox   = "box"
+	MeasureMeter = "meter"
+)
+
+// lineKey identifies a line of an order: one per product and measure
+// (K10: 1 box and 3 m of the same product are two lines).
+type lineKey struct {
+	product int64
+	measure string
+}
+
+func itemKey(it db.OrderItem) lineKey {
+	return lineKey{product: it.ProductID, measure: itemMeasure(it)}
+}
+
+func itemMeasure(it db.OrderItem) string {
+	if it.Meters.Valid {
+		return MeasureMeter
+	}
+	return MeasureBox
+}
+
 // CodeProductNotOrderable marks a line whose product the center closed to
 // dealer / distributor orders (TEC-1061, products.dealer_orderable).
 const CodeProductNotOrderable = "PRODUCT_NOT_ORDERABLE"
@@ -219,7 +252,16 @@ type ItemInput struct {
 	// PlotterCredits (TEC-1221): the usage credits of the units shipped on
 	// a plotter cut line (overrides the product default). Only on a
 	// plotter cut line; 0 clears it, nil keeps it on a kept line.
+	// TEC-1238 (K12): on a meter line of a piece product the plotter mark
+	// shares the line's credits, so a value here sets LineCredits.
 	PlotterCredits *int32
+	// SaleMeasure (TEC-1238): box or meter; nil = meter when Meters is
+	// given, else box. A roll_meter product is always a meter line.
+	SaleMeasure *string
+	// LineCredits (TEC-1238, K3): the usage credits each cut piece of a
+	// meter line of a piece product carries; nil = the product's usage
+	// credits (5 by default) on a new line, unchanged on a kept one.
+	LineCredits *int32
 }
 
 // MaxPlotterCredits bounds the plotter credits of a line (TEC-1221).
@@ -283,6 +325,20 @@ type line struct {
 	plotterCut bool
 	// plotterCredits: the plotter line's custom credits (TEC-1221).
 	plotterCredits pgtype.Int4
+	// measure: box or meter (TEC-1238).
+	measure string
+	// lineCredits: the credits of a meter line of a piece product (K3);
+	// creditsGiven tells an explicit value from the default.
+	lineCredits  pgtype.Int4
+	creditsGiven bool
+}
+
+func (l line) key() lineKey { return lineKey{product: l.product.ID, measure: l.measure} }
+
+// creditLine: a meter line of a piece product, whose cut pieces carry the
+// line's credits (TEC-1238).
+func (l line) creditLine() bool {
+	return l.measure == MeasureMeter && l.product.UnitType != "roll_meter"
 }
 
 func textOrNull(p *string) pgtype.Text {
@@ -305,6 +361,72 @@ type lineRules struct {
 	// keep: product ids already on the order; a draft may keep a line whose
 	// product was closed after it was added.
 	keep map[int64]bool
+	// existing: the order's lines (TEC-1238). A kept meter line stays after
+	// the product's meter sale is turned off, keeps its credits unless new
+	// ones are given and is not checked against a minimum cut raised later
+	// while its meters stay the same.
+	existing map[lineKey]db.OrderItem
+}
+
+func existingLines(items []db.OrderItem) map[lineKey]db.OrderItem {
+	out := make(map[lineKey]db.OrderItem, len(items))
+	for _, it := range items {
+		out[itemKey(it)] = it
+	}
+	return out
+}
+
+// lineMeasure resolves the measure of a requested line.
+func lineMeasure(field string, p db.Product, it ItemInput) (string, error) {
+	m := MeasureBox
+	if it.Meters != nil {
+		m = MeasureMeter
+	}
+	if it.SaleMeasure != nil {
+		switch v := strings.TrimSpace(*it.SaleMeasure); v {
+		case MeasureBox, MeasureMeter:
+			m = v
+		default:
+			return "", invalid(field+".sale_measure", "must be box or meter")
+		}
+	}
+	if p.UnitType == "roll_meter" && m != MeasureMeter {
+		return "", invalid(field+".meters", "roll products are ordered in meters")
+	}
+	return m, nil
+}
+
+// MaxLineCredits bounds the credits of a meter line (TEC-1238).
+const MaxLineCredits = 1000
+
+// resolveLineCredits sets the credits of a meter line of a piece product:
+// LineCredits, else the plotter credits (K12: one shared field), else the
+// kept line's, else the product's usage credits (K3, 5 by default).
+func resolveLineCredits(field string, l *line, it ItemInput, kept *db.OrderItem) error {
+	in := it.LineCredits
+	if in == nil && it.PlotterCredits != nil && *it.PlotterCredits > 0 {
+		in = it.PlotterCredits
+	}
+	if !l.creditLine() {
+		if it.LineCredits != nil {
+			return invalid(field+".line_credits", "only a meter line of a piece product carries line credits")
+		}
+		return nil
+	}
+	// The plotter mark of a meter line keeps no credits of its own.
+	l.plotterCredits = pgtype.Int4{}
+	switch {
+	case in != nil:
+		if *in < 1 || *in > MaxLineCredits {
+			return invalid(field+".line_credits", fmt.Sprintf("must be between 1 and %d", MaxLineCredits))
+		}
+		l.lineCredits, l.creditsGiven = pgtype.Int4{Int32: *in, Valid: true}, true
+	case kept != nil && kept.LineCredits.Valid:
+		l.lineCredits = kept.LineCredits
+	default:
+		l.lineCredits = pgtype.Int4{Int32: l.product.UsageCredits, Valid: true}
+	}
+	return nil
 }
 
 // resolveLines validates the requested lines against the brand catalog.
@@ -315,7 +437,7 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 	if len(items) > MaxItems {
 		return nil, invalid("items", fmt.Sprintf("at most %d lines", MaxItems))
 	}
-	seen := map[int64]bool{}
+	seen := map[lineKey]bool{}
 	out := make([]line, 0, len(items))
 	for i, it := range items {
 		field := fmt.Sprintf("items[%d]", i)
@@ -336,25 +458,42 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 				Message: "product is not open to dealer orders",
 			}
 		}
-		if seen[p.ID] {
-			return nil, invalid(field+".product_uuid", "each product may appear once")
+		measure, err := lineMeasure(field, p, it)
+		if err != nil {
+			return nil, err
 		}
-		seen[p.ID] = true
-		l := line{product: p, note: textOrNull(it.Note), plotterCut: it.PlotterCut != nil && *it.PlotterCut}
+		key := lineKey{product: p.ID, measure: measure}
+		if seen[key] {
+			return nil, invalid(field+".product_uuid", "each product may appear once per measure")
+		}
+		seen[key] = true
+		kept, isKept := rules.existing[key]
+		l := line{product: p, measure: measure, note: textOrNull(it.Note), plotterCut: it.PlotterCut != nil && *it.PlotterCut}
 		// A kept line's mark may be unchanged (PlotterCut nil): its credits
-		// are resolved against the stored line by the edit.
-		if it.PlotterCut != nil || it.PlotterCredits == nil || *it.PlotterCredits == 0 {
+		// are resolved against the stored line by the edit. A meter line of
+		// a piece product shares its credits with the mark (K12, below).
+		switch {
+		case l.creditLine():
+			// resolveLineCredits below.
+		case it.PlotterCut != nil || it.PlotterCredits == nil || *it.PlotterCredits == 0:
 			if l.plotterCredits, err = plotterCredits(field+".plotter_credits", l.plotterCut, pgtype.Int4{}, it.PlotterCredits); err != nil {
 				return nil, err
 			}
-		} else if *it.PlotterCredits < 0 || *it.PlotterCredits > MaxPlotterCredits {
+		case *it.PlotterCredits < 0 || *it.PlotterCredits > MaxPlotterCredits:
 			return nil, invalid(field+".plotter_credits", fmt.Sprintf("must be between 1 and %d", MaxPlotterCredits))
-		} else {
+		default:
 			l.plotterCredits = pgtype.Int4{Int32: *it.PlotterCredits, Valid: true}
 		}
-		if p.UnitType == "roll_meter" {
+		if measure == MeasureMeter {
 			if it.Quantity != nil || it.Meters == nil {
-				return nil, invalid(field+".meters", "roll products are ordered in meters")
+				return nil, invalid(field+".meters", "a meter line is ordered in meters")
+			}
+			// K1: a piece product is cut from its box only when it is sold
+			// by the meter; a kept draft line stays after the switch is
+			// turned off.
+			if p.UnitType != "roll_meter" && !p.SellableByMeter && !isKept {
+				return nil, &ValidationError{Field: field + ".sale_measure", Code: CodeNotSoldByMeter,
+					Message: "this product is not sold by the meter"}
 			}
 			m, ok := normalizeMeters(*it.Meters)
 			if !ok {
@@ -364,9 +503,25 @@ func resolveLines(ctx context.Context, q *db.Queries, brandID int64, items []Ite
 				return nil, err
 			}
 			l.amount, _ = parseRat(m)
+			// K6: a meter line is not shorter than the minimum cut.
+			unchanged := isKept && kept.Meters.Valid && ratEq(numericRat(kept.Meters), l.amount)
+			if minCut := numericRat(p.MinCutMeters); minCut != nil && l.amount.Cmp(minCut) < 0 && !unchanged {
+				return nil, &ValidationError{Field: field + ".meters", Code: CodeBelowMinCut,
+					Message: "shorter than the product's minimum cut of " + numericText(p.MinCutMeters, 2) + " m"}
+			}
+			var keptPtr *db.OrderItem
+			if isKept {
+				keptPtr = &kept
+			}
+			if err := resolveLineCredits(field, &l, it, keptPtr); err != nil {
+				return nil, err
+			}
 		} else {
 			if it.Meters != nil || it.Quantity == nil {
 				return nil, invalid(field+".quantity", "this product is ordered by quantity")
+			}
+			if it.LineCredits != nil {
+				return nil, invalid(field+".line_credits", "only a meter line of a piece product carries line credits")
 			}
 			if *it.Quantity <= 0 || *it.Quantity > MaxQuantity {
 				return nil, invalid(field+".quantity", fmt.Sprintf("must be between 1 and %d", MaxQuantity))
@@ -391,26 +546,59 @@ func priceSource(src string) string {
 	}
 }
 
-// priceLines fetches the buyer's effective purchase price of every product
+// priceReq is one line to price: its product, measure and amount, the
+// discount (nil: none) and the input field named by an error.
+type priceReq struct {
+	product  int64
+	meter    bool
+	amount   *big.Rat
+	discount *big.Rat
+	field    string
+}
+
+// purchaseFor picks the buyer's price of a line's measure: the box price,
+// or the meter price of a meter line (TEC-1238, K2; a roll_meter product's
+// price is per meter already). ok is false when there is none.
+func purchaseFor(prices map[int64]pricingusecase.PurchasePrice, product int64, meter bool) (pricingusecase.PurchasePrice, bool) {
+	p, ok := prices[product]
+	if !ok {
+		return p, false
+	}
+	if meter {
+		if p.MeterPrice == "" {
+			return p, false
+		}
+		p.Price = p.MeterPrice
+	}
+	return p, true
+}
+
+// priceLines fetches the buyer's effective purchase price of every line
 // in the order currency and applies each line's discount (TEC-1064; nil:
-// none). fields names the input field of each product for the error; a
-// missing price is a 422.
-func priceLines(ctx context.Context, q *db.Queries, buyer db.Organization, currency string,
-	products []int64, amounts, discounts []*big.Rat, fields []string) ([]lineCharge, error) {
-	prices, err := pricingusecase.New(q).BuyerPurchasePrices(ctx, buyer.ID, buyer.Type, buyer.BrandID, products, currency)
+// none). A meter line takes the meter price (TEC-1238). A missing price is
+// a 422 naming the line's field.
+func priceLines(ctx context.Context, q *db.Queries, buyer db.Organization, currency string, reqs []priceReq) ([]lineCharge, error) {
+	ids := make([]int64, len(reqs))
+	for i, r := range reqs {
+		ids[i] = r.product
+	}
+	prices, err := pricingusecase.New(q).BuyerPurchasePrices(ctx, buyer.ID, buyer.Type, buyer.BrandID, ids, currency)
 	if err != nil {
 		return nil, fmt.Errorf("orders: prices: %w", err)
 	}
-	out := make([]lineCharge, len(products))
-	for i, pid := range products {
-		p, ok := prices[pid]
+	out := make([]lineCharge, len(reqs))
+	for i, r := range reqs {
+		p, ok := purchaseFor(prices, r.product, r.meter)
 		if !ok {
-			return nil, &ValidationError{Field: fields[i], Code: CodePriceNotFound,
-				Message: "no purchase price in " + currency + " for this product"}
+			msg := "no purchase price in " + currency + " for this product"
+			if r.meter {
+				msg = "no meter price in " + currency + " for this product"
+			}
+			return nil, &ValidationError{Field: r.field, Code: CodePriceNotFound, Message: msg}
 		}
 		list := p.Price
-		if out[i], err = charge(chargeInput{list: &list, source: priceSource(p.Source), amount: amounts[i],
-			discount: discounts[i]}); err != nil {
+		if out[i], err = charge(chargeInput{list: &list, source: priceSource(p.Source), amount: r.amount,
+			discount: r.discount}); err != nil {
 			return nil, err
 		}
 	}
@@ -424,14 +612,12 @@ func (s *Service) insertLines(ctx context.Context, q *db.Queries, o db.Order, bu
 	if err != nil {
 		return err
 	}
-	ids := make([]int64, len(lines))
-	amounts := make([]*big.Rat, len(lines))
-	discounts := make([]*big.Rat, len(lines))
-	fields := make([]string, len(lines))
+	reqs := make([]priceReq, len(lines))
 	for i, l := range lines {
-		ids[i], amounts[i], discounts[i], fields[i] = l.product.ID, l.amount, d.Pct, fmt.Sprintf("items[%d].product_uuid", i)
+		reqs[i] = priceReq{product: l.product.ID, meter: l.measure == MeasureMeter, amount: l.amount,
+			discount: d.Pct, field: fmt.Sprintf("items[%d].product_uuid", i)}
 	}
-	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, discounts, fields)
+	priced, err := priceLines(ctx, q, buyer, o.Currency, reqs)
 	if err != nil {
 		return err
 	}
@@ -443,12 +629,25 @@ func (s *Service) insertLines(ctx context.Context, q *db.Queries, o db.Order, bu
 	return nil
 }
 
-// creditsIfCut: a line's credits are stored only with the plotter mark.
+// creditsIfCut: a line's credits are stored only with the plotter mark;
+// a meter line of a piece product keeps them in line_credits (K12).
 func creditsIfCut(l line) pgtype.Int4 {
-	if !l.plotterCut {
+	if !l.plotterCut || l.creditLine() {
 		return pgtype.Int4{}
 	}
 	return l.plotterCredits
+}
+
+// lineCreditsOf: the credits of a meter line of a piece product (K3);
+// the product default when none was resolved.
+func lineCreditsOf(l line) pgtype.Int4 {
+	if !l.creditLine() {
+		return pgtype.Int4{}
+	}
+	if !l.lineCredits.Valid {
+		return pgtype.Int4{Int32: l.product.UsageCredits, Valid: true}
+	}
+	return l.lineCredits
 }
 
 func createLine(ctx context.Context, q *db.Queries, o db.Order, l line, c lineCharge) error {
@@ -456,7 +655,7 @@ func createLine(ctx context.Context, q *db.Queries, o db.Order, l line, c lineCh
 		OrderID: o.ID, ProductID: l.product.ID, Quantity: l.qty, Meters: l.meters,
 		UnitPrice: c.unitPrice, PriceSource: c.source, LineTotal: c.lineTotal, Note: l.note,
 		ListUnitPrice: c.listPrice, DiscountPct: c.discount, IsGift: pgtype.Bool{Bool: c.gift, Valid: true},
-		PlotterCut: l.plotterCut, PlotterCredits: creditsIfCut(l),
+		PlotterCut: l.plotterCut, PlotterCredits: creditsIfCut(l), LineCredits: lineCreditsOf(l),
 	}); err != nil {
 		return fmt.Errorf("orders: create line: %w", err)
 	}
@@ -651,15 +850,15 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 		return nil, fmt.Errorf("orders: lines: %w", err)
 	}
 	out := make([]line, 0, len(items)+len(add))
-	byProduct := map[int64]int{}
+	byKey := map[lineKey]int{}
 	for _, it := range items {
 		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
 		if err != nil {
 			return nil, fmt.Errorf("orders: product: %w", err)
 		}
-		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note, plotterCut: it.PlotterCut,
-			plotterCredits: it.PlotterCredits}
-		if p.UnitType == "roll_meter" {
+		l := line{product: p, measure: itemMeasure(it), qty: it.Quantity, meters: it.Meters, note: it.Note,
+			plotterCut: it.PlotterCut, plotterCredits: it.PlotterCredits, lineCredits: it.LineCredits}
+		if it.Meters.Valid {
 			m, err := parseRat(numericText(it.Meters, 2))
 			if err != nil {
 				return nil, fmt.Errorf("orders: existing meters: %w", err)
@@ -671,13 +870,13 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 			}
 			l.amount = new(big.Rat).SetInt64(int64(it.Quantity.Int32))
 		}
-		byProduct[p.ID] = len(out)
+		byKey[l.key()] = len(out)
 		out = append(out, l)
 	}
 	for _, l := range add {
-		i, ok := byProduct[l.product.ID]
+		i, ok := byKey[l.key()]
 		if !ok {
-			byProduct[l.product.ID] = len(out)
+			byKey[l.key()] = len(out)
 			out = append(out, l)
 			continue
 		}
@@ -685,7 +884,10 @@ func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order
 		if l.plotterCredits.Valid {
 			out[i].plotterCredits = l.plotterCredits
 		}
-		if l.product.UnitType == "roll_meter" {
+		if l.creditsGiven {
+			out[i].lineCredits, out[i].creditsGiven = l.lineCredits, true
+		}
+		if l.measure == MeasureMeter {
 			total := new(big.Rat).Add(out[i].amount, l.amount)
 			m, err := numeric(total.FloatString(2))
 			if err != nil {
@@ -779,7 +981,8 @@ func (s *Service) replaceDraftLines(ctx context.Context, q *db.Queries, o db.Ord
 	for _, it := range old {
 		keep[it.ProductID] = true
 	}
-	lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{dealerOrder: true, keep: keep})
+	lines, err := resolveLines(ctx, q, o.BrandID, items, lineRules{dealerOrder: true, keep: keep,
+		existing: existingLines(old)})
 	if err != nil {
 		return err
 	}
@@ -997,19 +1200,12 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 			priceable = append(priceable, it)
 		}
 	}
-	ids := make([]int64, len(priceable))
-	amounts := make([]*big.Rat, len(priceable))
-	discounts := make([]*big.Rat, len(priceable))
-	fields := make([]string, len(priceable))
+	reqs := make([]priceReq, len(priceable))
 	for i, it := range priceable {
-		ids[i], discounts[i], fields[i] = it.ProductID, numericRat(it.DiscountPct), fmt.Sprintf("items[%d]", i)
-		if it.Meters.Valid {
-			amounts[i] = numericRat(it.Meters)
-		} else {
-			amounts[i] = new(big.Rat).SetInt64(int64(it.Quantity.Int32))
-		}
+		reqs[i] = priceReq{product: it.ProductID, meter: it.Meters.Valid, amount: lineAmount(it),
+			discount: numericRat(it.DiscountPct), field: fmt.Sprintf("items[%d]", i)}
 	}
-	priced, err := priceLines(ctx, q, buyer, o.Currency, ids, amounts, discounts, fields)
+	priced, err := priceLines(ctx, q, buyer, o.Currency, reqs)
 	if err != nil {
 		return o, nil, err
 	}

@@ -97,6 +97,11 @@ type RollSettings struct {
 	WidthCm       *float64 `json:"width_cm"`
 	MinCutMeters  *float64 `json:"min_cut_meters"`
 	WastePct      *float64 `json:"waste_pct"`
+	// SellableByMeter (TEC-1238, K1): the product is also sold by the
+	// meter (cut from a box of DefaultMeters). Always set in a view; in a
+	// PUT nil keeps the stored value. roll_meter products are always sold
+	// by the meter and keep it false.
+	SellableByMeter *bool `json:"sellable_by_meter,omitempty"`
 }
 
 // CategoryInput creates a category (POST) or patches it (PATCH: nil keeps).

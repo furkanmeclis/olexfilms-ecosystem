@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { catalogKeys } from "@/features/catalog/hooks/use-catalog-access";
 import type { components } from "@/generated/api";
 import { isApiError } from "@/lib/api";
@@ -35,10 +36,24 @@ const toNumber = (v: string): number | null => {
 };
 
 /**
+ * TEC-1238 (K1): why a product cannot be sold by the meter (i18n key), or
+ * null. A Glorian synced product (external_id) keeps the switch off, a
+ * roll product is always sold by the meter, a fixed barcode has no box.
+ */
+export function sellableBlockReason(product: Product): string | null {
+  if (product.external_id) return "catalog.roll.sellable_glorian";
+  if (product.unit_type === "roll_meter")
+    return "catalog.roll.sellable_roll_product";
+  if (product.uses_fixed_barcode) return "catalog.roll.sellable_fixed";
+  return null;
+}
+
+/**
  * TEC-1008 roll defaults of a product: the default roll length a box
  * counted as a piece becomes in bulk conversion, the width, the minimum
  * cut and the waste allowance. Any product may hold rolls and pieces at
- * the same time (a unit is a roll when it carries meters).
+ * the same time (a unit is a roll when it carries meters). TEC-1238: the
+ * "sold by the meter" switch lives here, next to the box length it needs.
  */
 export function ProductRollCard({
   product,
@@ -57,6 +72,10 @@ export function ProductRollCard({
       waste_pct: toText(product.roll.waste_pct),
     },
   );
+  const [sellable, setSellable] = useState(
+    product.roll.sellable_by_meter ?? false,
+  );
+  const blocked = sellableBlockReason(product);
   const save = useMutation({
     mutationFn: (body: Roll) =>
       platformRequest<Product>(
@@ -81,6 +100,11 @@ export function ProductRollCard({
       }
       body[f] = n;
     }
+    if (sellable && body.default_meters === null) {
+      appToast.error(t("catalog.roll.sellable_needs_meters"));
+      return;
+    }
+    if (!blocked || !sellable) body.sellable_by_meter = sellable;
     save.mutate(body);
   };
   return (
@@ -108,6 +132,33 @@ export function ProductRollCard({
               />
             </div>
           ))}
+        </div>
+        <div className="flex items-start gap-3 rounded-md border p-3">
+          <Switch
+            id="roll-sellable_by_meter"
+            data-testid="roll-sellable-by-meter"
+            checked={sellable}
+            disabled={!canWrite || (Boolean(blocked) && !sellable)}
+            onCheckedChange={setSellable}
+          />
+          <div className="space-y-1">
+            <Label htmlFor="roll-sellable_by_meter">
+              {t("catalog.roll.sellable_by_meter")}
+            </Label>
+            <p className="text-muted-foreground text-sm">
+              {blocked ? t(blocked) : t("catalog.roll.sellable_by_meter_hint")}
+            </p>
+            {sellable && values.default_meters.trim() === "" ? (
+              <p className="text-destructive text-sm">
+                {t("catalog.roll.sellable_needs_meters")}
+              </p>
+            ) : null}
+            {sellable && values.min_cut_meters.trim() === "" ? (
+              <p className="text-sm text-amber-600 dark:text-amber-500">
+                {t("catalog.roll.sellable_min_cut_hint")}
+              </p>
+            ) : null}
+          </div>
         </div>
         {canWrite ? (
           <Button type="button" disabled={save.isPending} onClick={submit}>
