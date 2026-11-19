@@ -182,6 +182,13 @@ export const orderApi = {
         params: { path: { uuid, item_uuid: item }, query: { include_unlocated: unlocated } },
       }),
     ),
+  /** TEC-1241: what a scanned roll or closed box does on a meter line (read only). */
+  cutPreview: (uuid: string, item: string, barcode: string, meters?: string) =>
+    unwrap(
+      api.GET('/v1/orders/{uuid}/items/{item_uuid}/cut-preview', {
+        params: { path: { uuid, item_uuid: item }, query: { barcode, ...(meters ? { meters } : {}) } },
+      }),
+    ),
   applySuggestions: (uuid: string, item: string, body: S['OrderSuggestionsApplyInput']) =>
     unwrap(
       api.POST('/v1/orders/{uuid}/items/{item_uuid}/suggestions/apply', {

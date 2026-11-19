@@ -164,6 +164,21 @@ FROM (
 ) s
 JOIN products p ON p.id = s.product_id;
 
+-- name: EODCurrentMeteredUnits :many
+-- TEC-1243: current metered serial units on hand per product of the
+-- organization or of one warehouse; the closed boxes of a balance are its
+-- quantity minus these (EODBalances).
+SELECT u.product_id, COUNT(*)::bigint AS rolls
+FROM unit_current_state st
+JOIN units u ON u.id = st.unit_id
+LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
+WHERE st.status IN ('available', 'placed')
+  AND st.holder_org_id = sqlc.arg(organization_id)::bigint
+  AND st.owner_type IN ('warehouse_location', 'organization')
+  AND u.initial_meters IS NOT NULL
+  AND (sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
+GROUP BY u.product_id;
+
 -- name: EODStockDeltas :many
 -- TEC-1229: the on-hand change per product caused by the movements since
 -- period_start, split at period_end (period: [start, end), after: [end,
@@ -219,7 +234,8 @@ WITH mv AS (
                WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta > 0 AND mv.to_in THEN mv.quantity_delta ELSE 0 END
                WHEN mv.to_in AND mv.to_counted THEN 1 ELSE 0
            END::bigint AS qty,
-           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN mv.remaining_after ELSE 0 END::numeric(14,2) AS meters
+           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN mv.remaining_after ELSE 0 END::numeric(14,2) AS meters,
+           CASE WHEN mv.is_roll AND mv.to_in AND mv.to_counted THEN 1 ELSE 0 END::bigint AS rolls
     FROM mv
     UNION ALL
     SELECT mv.before_product_id AS pid, mv.created_at,
@@ -227,14 +243,17 @@ WITH mv AS (
                WHEN mv.unit_kind = 'fixed' THEN CASE WHEN mv.quantity_delta < 0 AND mv.from_in THEN mv.quantity_delta ELSE 0 END
                WHEN mv.from_in AND mv.from_counted THEN -1 ELSE 0
            END::bigint AS qty,
-           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -(mv.remaining_after - mv.meters_delta) ELSE 0 END::numeric(14,2) AS meters
+           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -(mv.remaining_after - mv.meters_delta) ELSE 0 END::numeric(14,2) AS meters,
+           CASE WHEN mv.is_roll AND mv.from_in AND mv.from_counted THEN -1 ELSE 0 END::bigint AS rolls
     FROM mv
 )
 SELECT parts.pid AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at < sqlc.arg(period_end)::timestamptz), 0)::bigint AS period_quantity,
        COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at < sqlc.arg(period_end)::timestamptz), 0)::numeric(14,2)::text AS period_meters,
        COALESCE(SUM(parts.qty) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::bigint AS after_quantity,
-       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::numeric(14,2)::text AS after_meters
+       COALESCE(SUM(parts.meters) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::numeric(14,2)::text AS after_meters,
+       COALESCE(SUM(parts.rolls) FILTER (WHERE parts.created_at < sqlc.arg(period_end)::timestamptz), 0)::bigint AS period_rolls,
+       COALESCE(SUM(parts.rolls) FILTER (WHERE parts.created_at >= sqlc.arg(period_end)::timestamptz), 0)::bigint AS after_rolls
 FROM parts
 JOIN products p ON p.id = parts.pid
 GROUP BY parts.pid, p.uuid, p.sku, p.name;

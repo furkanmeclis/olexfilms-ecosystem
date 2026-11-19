@@ -199,5 +199,6 @@
   "measure.pick_hint": "Box {{box}} m · minimum cut {{min}} m. Add as a box or by the meter.",
   "errors.below_min_cut": "At least {{value}} m can be ordered (minimum cut).",
   "errors.line_credits_invalid": "Credits must be a whole number from 1 to 1000.",
-  "unit_price_meter": "Unit price (m)"
+  "unit_price_meter": "Unit price (m)",
+  "partial.below_min_cut": "The {{rest}} m left for the backorder is shorter than the minimum cut ({{min}} m)."
 }

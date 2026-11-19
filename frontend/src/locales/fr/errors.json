@@ -190,5 +190,13 @@
   "codes.ORDER_NOT_CLAIMABLE": "Seule une commande approuvée non expédiée est un travail d'entrepôt.",
   "codes.ORDER_SCHEDULE_LOCKED": "La priorité et l'échéance ne peuvent pas changer dans ce statut.",
   "codes.ORDER_LINE_BELOW_MIN_CUT": "Les mètres ne peuvent pas être inférieurs à la coupe minimale du produit.",
-  "codes.PRODUCT_NOT_SOLD_BY_METER": "Ce produit n'est pas vendu au mètre ; ajoutez-le en carton."
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Ce produit n'est pas vendu au mètre ; ajoutez-le en carton.",
+  "codes.BOX_OPEN_CONFIRM_REQUIRED": "C’est un carton fermé ; confirmez son ouverture.",
+  "codes.PARTIAL_PIECE_CONFIRM_REQUIRED": "La pièce est plus courte que la ligne ; confirmez l’envoi en pièces avec une note.",
+  "codes.CUT_BELOW_MIN_CUT": "La découpe est plus courte que la découpe minimale du produit.",
+  "codes.ORDER_ITEM_NOT_CUT_LINE": "Cette ligne n’est pas une ligne au mètre découpée d’un carton.",
+  "codes.CREDITS_EXCEED_LINE": "Les pièces ne peuvent pas porter plus d’utilisations que la ligne.",
+  "codes.NOTE_REQUIRED": "Une note est obligatoire.",
+  "codes.BOX_LENGTH_UNKNOWN": "Le produit n’a pas de longueur de carton.",
+  "codes.UNIT_NOT_CUTTABLE": "Une ligne au mètre se découpe uniquement d’un rouleau ou d’un carton fermé."
 }

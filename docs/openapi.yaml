@@ -11545,9 +11545,14 @@ paths:
       description: >-
         Needs `stock.write` and the warehouse module. min_quantity <=
         reorder_point <= max_quantity; warning_days / cover_days 1..3650; at
-        least one of min_quantity, reorder_point, max_quantity or
-        warning_days. The hourly check notifies organization owners and
-        warehouse roles (STOCK_REORDER_LOW) when the level leaves ok.
+        least one of min_quantity, reorder_point, max_quantity,
+        warning_days or min_meters. The hourly check notifies organization
+        owners and warehouse roles (STOCK_REORDER_LOW) when the level
+        leaves ok. TEC-1243 (K14): min_quantity / reorder_point /
+        max_quantity count closed boxes (a roll_meter product, which has no
+        boxes, keeps counting its rolls); min_meters is a separate meter
+        threshold over open rolls and cut pieces (remnants excluded) with
+        its own state and notification (STOCK_REORDER_METERS_LOW).
       security:
         - bearerAuth: []
       requestBody:
@@ -11588,7 +11593,8 @@ paths:
       summary: Critical stock (reorder rules whose level is not ok, TEC-1229)
       description: >-
         Same as GET /v1/stock/reorder-rules, only the rules at reorder,
-        below_min or days_low. Mobile: /v1/mobile/panel/stock/critical.
+        below_min or days_low, or whose meter_level is below_min
+        (TEC-1243). Mobile: /v1/mobile/panel/stock/critical.
       security:
         - bearerAuth: []
       parameters:
@@ -44462,7 +44468,8 @@ components:
               items: { $ref: "#/components/schemas/StockWarehouseSummary" }
     StockWarehouseSummary:
       type: object
-      required: [warehouse, products, pieces, rolls, meters]
+      required: [warehouse, products, pieces, rolls, meters, open_rolls, open_meters, cut_pieces, cut_meters, remnants,
+        remnant_meters]
       properties:
         warehouse:
           type: [object, "null"]
@@ -44473,9 +44480,15 @@ components:
             name: { type: string }
             is_primary: { type: boolean }
         products: { type: integer, format: int64 }
-        pieces: { type: integer, format: int64 }
-        rolls: { type: integer, format: int64 }
+        pieces: { type: integer, format: int64, description: Closed boxes (units without meters and fixed barcode pieces). }
+        rolls: { type: integer, format: int64, description: All metered units. }
         meters: { type: string, description: Remaining meters of the rolls (decimal string). }
+        open_rolls: { type: integer, format: int64, description: "TEC-1243: metered units that are neither cut pieces nor remnants." }
+        open_meters: { type: string }
+        cut_pieces: { type: integer, format: int64, description: "TEC-1243: units cut off another unit or reserved for an order line." }
+        cut_meters: { type: string }
+        remnants: { type: integer, format: int64, description: "TEC-1243: rest below the product's minimum cut (ragle)." }
+        remnant_meters: { type: string }
     EnvelopeStockWarehouseUnitPage:
       type: object
       required: [data]
@@ -44693,7 +44706,7 @@ components:
         quarantine (returned serial units in status quarantine, TEC-1226)
         are not on hand. No prices.
       required: [on_hand_quantity, on_hand_meters, reserved_quantity, reserved_meters, available_quantity,
-        available_meters, incoming_quantity, incoming_meters, quarantine_quantity, quarantine_meters]
+        available_meters, incoming_quantity, incoming_meters, quarantine_quantity, quarantine_meters, measures]
       properties:
         on_hand_quantity: { type: integer, format: int64 }
         on_hand_meters: { type: string }
@@ -44705,6 +44718,33 @@ components:
         incoming_meters: { type: string }
         quarantine_quantity: { type: integer, format: int64 }
         quarantine_meters: { type: string }
+        measures: { $ref: "#/components/schemas/StockMeasures" }
+
+    StockMeasures:
+      type: object
+      description: >-
+        TEC-1243 (K14): the on-hand stock split. boxes are the closed boxes
+        (serial units without meters plus fixed barcode pieces). Metered
+        units are remnants ("ragle", rest below the product's
+        min_cut_meters; not offered, not counted in the meter threshold),
+        cut pieces (cut off another unit, or reserved for an order line)
+        or open rolls (the rest: a box opened or entered as a roll).
+        available_boxes subtracts the box reservations; available_meters
+        is the open roll and cut piece meters minus their reserved meters
+        (the reorder meter threshold reads it). Meters are decimal
+        strings. No prices.
+      required: [boxes, available_boxes, open_rolls, open_meters, cut_pieces, cut_meters, remnants, remnant_meters,
+        available_meters]
+      properties:
+        boxes: { type: integer, format: int64 }
+        available_boxes: { type: integer, format: int64 }
+        open_rolls: { type: integer, format: int64 }
+        open_meters: { type: string }
+        cut_pieces: { type: integer, format: int64 }
+        cut_meters: { type: string }
+        remnants: { type: integer, format: int64 }
+        remnant_meters: { type: string }
+        available_meters: { type: string }
 
     StockMovementRef:
       type: object
@@ -44800,11 +44840,18 @@ components:
         max_quantity: { type: [integer, "null"], minimum: 1, maximum: 1000000 }
         warning_days: { type: [integer, "null"], minimum: 1, maximum: 3650 }
         cover_days: { type: [integer, "null"], minimum: 1, maximum: 3650 }
+        min_meters:
+          type: [string, "null"]
+          description: >-
+            TEC-1243 (K14): meter threshold over the open rolls and cut
+            pieces (decimal string, 0.01..100000; null or empty: none).
+            min_quantity / reorder_point / max_quantity count closed boxes.
 
     StockReorderRule:
       type: object
       required: [uuid, warehouse, product, min_quantity, reorder_point, max_quantity, warning_days, cover_days,
-        balance, level, avg_daily, days_left, suggested_quantity, alert_state, alerted_at, updated_at]
+        balance, level, avg_daily, days_left, suggested_quantity, alert_state, alerted_at, updated_at,
+        min_meters, meter_level, meter_alert_state, meter_alerted_at]
       properties:
         uuid: { type: string, format: uuid }
         warehouse:
@@ -44843,6 +44890,15 @@ components:
         alert_state: { type: string, enum: [ok, low] }
         alerted_at: { type: [string, "null"], format: date-time }
         updated_at: { type: string, format: date-time }
+        min_meters: { type: [string, "null"] }
+        meter_level:
+          type: string
+          enum: [ok, below_min]
+          description: >-
+            TEC-1243 (K14): below_min when balance.measures.available_meters
+            is under min_meters; runs apart from level (closed boxes).
+        meter_alert_state: { type: string, enum: [ok, low] }
+        meter_alerted_at: { type: [string, "null"], format: date-time }
 
     EnvelopeStockReorderRule:
       type: object
@@ -54512,6 +54568,22 @@ components:
         closing_meters: { type: string }
         change_quantity: { type: integer, format: int64 }
         change_meters: { type: string }
+        opening_boxes:
+          type: integer
+          format: int64
+          description: >-
+            TEC-1243: closed boxes at the period start (quantity minus the
+            metered units); absent on reports written before TEC-1243, like
+            opening_rolls, closing_boxes and closing_rolls.
+        opening_rolls: { type: integer, format: int64, description: Metered units at the period start. }
+        closing_boxes: { type: integer, format: int64 }
+        closing_rolls: { type: integer, format: int64 }
+        measures:
+          $ref: "#/components/schemas/StockMeasures"
+          description: >-
+            TEC-1243: open rolls, cut pieces and remnants when the report
+            was written (the ledger keeps no past split); absent without
+            metered stock.
 
     EodPending:
       type: object

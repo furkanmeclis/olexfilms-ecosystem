@@ -199,5 +199,6 @@
   "measure.pick_hint": "每箱 {{box}} 米 · 最小裁切 {{min}} 米。可按箱或按米添加。",
   "errors.below_min_cut": "至少可订购 {{value}} 米（最小裁切）。",
   "errors.line_credits_invalid": "次数必须是 1 到 1000 之间的整数。",
-  "unit_price_meter": "单价（米）"
+  "unit_price_meter": "单价（米）",
+  "partial.below_min_cut": "留给欠货订单的 {{rest}} 米短于最小裁切（{{min}} 米）。"
 }

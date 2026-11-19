@@ -9,9 +9,17 @@ import "github.com/google/uuid"
 type WarehouseStockSummary struct {
 	Warehouse *WarehouseSummaryRef `json:"warehouse"`
 	Products  int64                `json:"products"`
-	Pieces    int64                `json:"pieces"`
-	Rolls     int64                `json:"rolls"`
-	Meters    string               `json:"meters"`
+	// Pieces are the closed boxes (units without meters and fixed barcode
+	// pieces); Rolls / Meters all metered units, split below (TEC-1243).
+	Pieces        int64  `json:"pieces"`
+	Rolls         int64  `json:"rolls"`
+	Meters        string `json:"meters"`
+	OpenRolls     int64  `json:"open_rolls"`
+	OpenMeters    string `json:"open_meters"`
+	CutPieces     int64  `json:"cut_pieces"`
+	CutMeters     string `json:"cut_meters"`
+	Remnants      int64  `json:"remnants"`
+	RemnantMeters string `json:"remnant_meters"`
 }
 
 // WarehouseSummaryRef names the warehouse of a summary row.
