@@ -106,7 +106,8 @@ const listGlorianOrderUnits = `-- name: ListGlorianOrderUnits :many
 SELECT i.id AS order_item_id,
        p.connection_id::bigint AS connection_id,
        p.external_id::text AS product_external_id,
-       u.barcode
+       u.barcode,
+       i.sale_measure::text AS sale_measure
 FROM order_items i
 JOIN products p ON p.id = i.product_id
 JOIN order_item_units oiu ON oiu.order_item_id = i.id
@@ -123,11 +124,14 @@ type ListGlorianOrderUnitsRow struct {
 	ConnectionID      int64  `json:"connection_id"`
 	ProductExternalID string `json:"product_external_id"`
 	Barcode           string `json:"barcode"`
+	SaleMeasure       string `json:"sale_measure"`
 }
 
 // Serial units assigned to the order's lines whose product is synced from
 // a connection, in line order. Olex and local products have no connection
-// and never appear.
+// and never appear. TEC-1244: sale_measure lets the outbound leave out a
+// meter line (K1: a synced product is never sold by the meter; a cut piece
+// has no Glorian barcode).
 func (q *Queries) ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error) {
 	rows, err := q.db.Query(ctx, listGlorianOrderUnits, orderID)
 	if err != nil {
@@ -142,6 +146,7 @@ func (q *Queries) ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]L
 			&i.ConnectionID,
 			&i.ProductExternalID,
 			&i.Barcode,
+			&i.SaleMeasure,
 		); err != nil {
 			return nil, err
 		}

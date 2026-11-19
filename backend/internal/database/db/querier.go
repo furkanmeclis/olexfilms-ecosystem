@@ -2266,7 +2266,9 @@ type Querier interface {
 	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
-	// and never appear.
+	// and never appear. TEC-1244: sale_measure lets the outbound leave out a
+	// meter line (K1: a synced product is never sold by the meter; a cut piece
+	// has no Glorian barcode).
 	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
 	// Order outbounds of a connection with their order (TEC-367 list contract,
 	// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
