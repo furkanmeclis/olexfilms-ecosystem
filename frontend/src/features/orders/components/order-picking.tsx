@@ -72,7 +72,7 @@ export function SuggestDialog({
   const { t } = useLocale();
   const store = useStoreOrder();
   const [unlocated, setUnlocated] = useState(false);
-  const roll = isRoll(item.product.unit_type);
+  const roll = isRoll(item.product.unit_type) || item.sale_measure === "meter";
   const query = useQuery({
     queryKey: orderKeys.suggestions(order.uuid, item.uuid, unlocated),
     queryFn: () => ordersService.suggest(order.uuid, item.uuid, unlocated),
@@ -147,7 +147,20 @@ export function SuggestDialog({
                     t("orders.picking.no_location")
                   )}
                 </span>
-                <span className="tabular-nums">{suggestionAmount(s, t)}</span>
+                <span className="tabular-nums">
+                  {suggestionAmount(s, t)}
+                  {s.open_box ? (
+                    <Badge
+                      variant="warning"
+                      className="ms-2"
+                      data-testid="suggestion-open-box"
+                    >
+                      {t("orders.cut.suggest_open_box", {
+                        box: s.remaining_meters ?? "",
+                      })}
+                    </Badge>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ul>
