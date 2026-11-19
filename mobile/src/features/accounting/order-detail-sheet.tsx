@@ -47,7 +47,8 @@ export function OrderDetailSheet({
         </Text>
       ) : (
         order.items.map((it) => (
-          <View key={it.product_uuid} className="gap-1 rounded-lg border border-border bg-card px-4 py-3">
+          // TEC-1244: one product may have a box and a meter line.
+          <View key={`${it.product_uuid}-${it.sale_measure}`} className="gap-1 rounded-lg border border-border bg-card px-4 py-3">
             <Text variant="callout" className="font-semibold">
               {it.product_name}
             </Text>
@@ -57,7 +58,7 @@ export function OrderDetailSheet({
               </Text>
             ) : null}
             <Text variant="footnote" className="tabular-nums">
-              {it.meters != null ? t('order_detail.meters', { n: it.meters }) : t('order_detail.pieces', { n: it.quantity ?? 0 })}
+              {it.sale_measure === 'meter' && it.meters != null ? t('order_detail.meters', { n: it.meters }) : t('order_detail.pieces', { n: it.quantity ?? 0 })}
               {' × '}
               {formatMoney(it.unit_price, order.currency, i18n.language)}
               {' = '}

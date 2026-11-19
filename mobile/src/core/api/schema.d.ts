@@ -28674,6 +28674,11 @@ export interface components {
             /** @example piece */
             unit_type: string;
             /**
+             * @description TEC-1244 — the line's measure: box (quantity, unit_price per piece/box) or meter (meters, unit_price per meter). A product may have a box line and a meter line on one order.
+             * @enum {string}
+             */
+            sale_measure: "box" | "meter";
+            /**
              * Format: int32
              * @description Pieces (null for a meter line)
              */

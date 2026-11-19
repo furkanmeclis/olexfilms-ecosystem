@@ -640,7 +640,8 @@ func (q *Queries) ListStatementOrderItemUnits(ctx context.Context, itemIds []int
 const listStatementOrderItems = `-- name: ListStatementOrderItems :many
 SELECT o.uuid AS order_uuid, o.order_no, o.status AS order_status, o.currency,
        oi.id AS item_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
-       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total
+       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total,
+       oi.sale_measure::text AS sale_measure
 FROM orders o
 JOIN order_items oi ON oi.order_id = o.id
 JOIN products p ON p.id = oi.product_id
@@ -668,6 +669,7 @@ type ListStatementOrderItemsRow struct {
 	Meters      pgtype.Numeric `json:"meters"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
 	LineTotal   pgtype.Numeric `json:"line_total"`
+	SaleMeasure string         `json:"sale_measure"`
 }
 
 // TEC-1035: order detail of statement rows. ListStatementOrderItems returns
@@ -696,6 +698,7 @@ func (q *Queries) ListStatementOrderItems(ctx context.Context, arg ListStatement
 			&i.Meters,
 			&i.UnitPrice,
 			&i.LineTotal,
+			&i.SaleMeasure,
 		); err != nil {
 			return nil, err
 		}

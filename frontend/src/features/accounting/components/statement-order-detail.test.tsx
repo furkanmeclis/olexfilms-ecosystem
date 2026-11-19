@@ -43,6 +43,7 @@ const order = {
       product_sku: "PPF-1",
       product_name: "Film",
       unit_type: "piece",
+      sale_measure: "box" as const,
       quantity: 2,
       meters: null,
       unit_price: "50.0000",
@@ -57,6 +58,7 @@ const order = {
       product_sku: "ROLL",
       product_name: "Rulo",
       unit_type: "roll_meter",
+      sale_measure: "meter" as const,
       quantity: null,
       meters: "12.50",
       unit_price: "8.0000",
@@ -97,5 +99,44 @@ describe("StatementOrderDetail (TEC-1035)", () => {
     expect(chips).toEqual(["B-1", "B-2"]);
     expect(items[1].textContent).toContain("accounting.statement.order_meters");
     expect(items[1].textContent).toContain("accounting.statement.no_barcodes");
+  });
+
+  it("shows a box line and a meter line of one product apart (TEC-1244)", async () => {
+    const film = order.items[0];
+    const both = {
+      ...order,
+      items: [
+        { ...film, units: [] },
+        {
+          ...film,
+          sale_measure: "meter" as const,
+          quantity: null,
+          meters: "3.50",
+          unit_price: "26.6667",
+          line_total: "93.33",
+          units: [],
+        },
+      ],
+    };
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => {
+      root!.render(createElement(StatementOrderDetail, { order: both }));
+    });
+    await act(async () =>
+      (
+        host!.querySelector(
+          '[data-testid="statement-order-toggle"]',
+        ) as HTMLButtonElement
+      ).click(),
+    );
+    const items = host.querySelectorAll('[data-testid="statement-order-item"]');
+    expect(items).toHaveLength(2);
+    expect(items[0].getAttribute("data-measure")).toBe("box");
+    expect(items[0].textContent).toContain("accounting.statement.order_pieces");
+    expect(items[1].getAttribute("data-measure")).toBe("meter");
+    expect(items[1].textContent).toContain("accounting.statement.order_meters");
+    expect(items[1].textContent).toContain("93.33 TRY");
   });
 });

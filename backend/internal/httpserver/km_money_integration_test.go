@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -252,5 +253,52 @@ func TestIntegrationKMDealerCost(t *testing.T) {
 		if got := cost(c.unit); !sameAmount(&got, c.want) {
 			t.Errorf("%s cost = %s, want %s", c.unit.Barcode, got, c.want)
 		}
+	}
+}
+
+// TEC-1244 acceptance (ekstre tutarı): the statement detail of an order
+// with a box line and a meter line of one product reads both lines apart,
+// each with its measure, amount and total (box 400; 3.5 m × 30 = 105;
+// 3.5 m × 26.6667 = 93.33) and the barcodes assigned to each line.
+func TestIntegrationKMStatementLines(t *testing.T) {
+	it := newIntegration(t)
+	f := newKMMoney(t, it, "t1244s")
+	box := f.shipped(t, f.film, "", "box")
+	piece := f.shipped(t, f.film, "3.50", "meter")
+	rows, err := it.q.ListStatementOrderItems(context.Background(), db.ListStatementOrderItemsParams{
+		OrderUuids: []uuid.UUID{uuid.MustParse(f.order.UUID)}, OrganizationID: f.dealer.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type key struct{ sku, measure string }
+	got := map[key]db.ListStatementOrderItemsRow{}
+	for _, r := range rows {
+		got[key{r.ProductSku, r.SaleMeasure}] = r
+	}
+	if len(rows) != 3 {
+		t.Fatalf("rows = %+v", rows)
+	}
+	num := func(n pgtype.Numeric) string { v, _ := n.Value(); s, _ := v.(string); return s }
+	b, m, c := got[key{f.film.Sku, "box"}], got[key{f.film.Sku, "meter"}], got[key{f.computed.Sku, "meter"}]
+	if !b.Quantity.Valid || b.Quantity.Int32 != 1 || b.Meters.Valid || num(b.LineTotal) != "400.00" {
+		t.Fatalf("box line = %+v", b)
+	}
+	if m.Quantity.Valid || num(m.Meters) != "3.50" || num(m.LineTotal) != "105.00" {
+		t.Fatalf("meter line = %+v", m)
+	}
+	if num(c.UnitPrice) != "26.6667" || num(c.LineTotal) != "93.33" {
+		t.Fatalf("computed meter line = %+v", c)
+	}
+	units, err := it.q.ListStatementOrderItemUnits(context.Background(), []int64{b.ItemID, m.ItemID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	byLine := map[int64]string{}
+	for _, u := range units {
+		byLine[u.OrderItemID] = u.Barcode
+	}
+	if byLine[b.ItemID] != box.Barcode || byLine[m.ItemID] != piece.Barcode {
+		t.Fatalf("units = %+v", units)
 	}
 }
