@@ -199,5 +199,6 @@
   "measure.pick_hint": "Qutu {{box}} m · minimum kəsim {{min}} m. Qutu və ya metr kimi əlavə et.",
   "errors.below_min_cut": "Ən az {{value}} m sifariş verilə bilər (minimum kəsim).",
   "errors.line_credits_invalid": "Haqq 1 ilə 1000 arasında tam ədəd olmalıdır.",
-  "unit_price_meter": "Vahid qiymət (m)"
+  "unit_price_meter": "Vahid qiymət (m)",
+  "partial.below_min_cut": "Qalıq sifarişə qalan {{rest}} m minimum kəsimdən ({{min}} m) qısadır."
 }

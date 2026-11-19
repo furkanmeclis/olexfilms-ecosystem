@@ -199,5 +199,6 @@
   "measure.pick_hint": "جعبه {{box}} م · حداقل برش {{min}} م. به‌صورت جعبه یا متری اضافه کنید.",
   "errors.below_min_cut": "حداقل {{value}} م قابل سفارش است (حداقل برش).",
   "errors.line_credits_invalid": "اعتبار باید عدد صحیحی از ۱ تا ۱۰۰۰ باشد.",
-  "unit_price_meter": "قیمت واحد (م)"
+  "unit_price_meter": "قیمت واحد (م)",
+  "partial.below_min_cut": "{{rest}} متر باقی‌مانده برای سفارش معوق از حداقل برش ({{min}} متر) کوتاه‌تر است."
 }

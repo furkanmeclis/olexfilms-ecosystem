@@ -190,5 +190,13 @@
   "codes.ORDER_NOT_CLAIMABLE": "فقط سفارش تأییدشده‌ای که هنوز ارسال نشده، کار انبار محسوب می‌شود.",
   "codes.ORDER_SCHEDULE_LOCKED": "اولویت و تاریخ سررسید در این وضعیت قابل تغییر نیستند.",
   "codes.ORDER_LINE_BELOW_MIN_CUT": "متراژ نمی‌تواند از حداقل برش محصول کمتر باشد.",
-  "codes.PRODUCT_NOT_SOLD_BY_METER": "این محصول متری فروخته نمی‌شود؛ آن را به‌صورت جعبه اضافه کنید."
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "این محصول متری فروخته نمی‌شود؛ آن را به‌صورت جعبه اضافه کنید.",
+  "codes.BOX_OPEN_CONFIRM_REQUIRED": "این یک جعبه بسته است؛ باز کردن آن را تأیید کنید.",
+  "codes.PARTIAL_PIECE_CONFIRM_REQUIRED": "تکه از ردیف کوتاه‌تر است؛ ارسال چندتکه را تأیید و یادداشت وارد کنید.",
+  "codes.CUT_BELOW_MIN_CUT": "برش از حداقل برش محصول کوتاه‌تر است.",
+  "codes.ORDER_ITEM_NOT_CUT_LINE": "این ردیف یک ردیف متری بریده‌شده از جعبه نیست.",
+  "codes.CREDITS_EXCEED_LINE": "حق تکه‌ها نمی‌تواند از حق ردیف بیشتر باشد.",
+  "codes.NOTE_REQUIRED": "یادداشت الزامی است.",
+  "codes.BOX_LENGTH_UNKNOWN": "طول جعبه برای محصول تعریف نشده است.",
+  "codes.UNIT_NOT_CUTTABLE": "ردیف متری فقط از رول یا جعبه بسته بریده می‌شود."
 }

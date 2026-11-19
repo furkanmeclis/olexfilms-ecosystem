@@ -96,6 +96,11 @@ import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import { warehouseService } from "@/features/warehouse/services/warehouse.service";
 import { stockService } from "@/features/stock/services/stock.service";
+import {
+  CutDialog,
+  DetachedPiecesNotice,
+  isCutLine,
+} from "@/features/orders/components/order-cut";
 import { isApiError } from "@/lib/api";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
@@ -153,6 +158,92 @@ function newSplitKey(): string {
 
 /** Barcode scan (or typed) assignment of a unit to a line (seller). */
 function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
+  const cut = isCutLine(item);
+  if (cut) return <CutAssignForm order={order} item={item} />;
+  return <UnitAssignForm order={order} item={item} />;
+}
+
+/**
+ * TEC-1241: the scan field of a meter line of a box product. A scanned roll
+ * or closed box opens the cut confirmation (Enter confirms); "Parçalı
+ * gönder" is a separate, deliberate button.
+ */
+function CutAssignForm({ order, item }: { order: Order; item: OrderItem }) {
+  const { t } = useLocale();
+  const [barcode, setBarcode] = useState("");
+  const [scanned, setScanned] = useState<string | null>(null);
+  const [partial, setPartial] = useState(false);
+  const bid = `barcode-${item.uuid}`;
+  const start = (asPartial: boolean) => {
+    const code = barcode.trim();
+    if (!code) return;
+    setPartial(asPartial);
+    setScanned(code);
+  };
+  return (
+    <>
+      <form
+        className="flex flex-wrap items-end gap-2"
+        data-testid="assign-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          start(false);
+        }}
+      >
+        <div className="min-w-48 flex-1 space-y-1">
+          <Label htmlFor={bid} className="text-xs">
+            {t("orders.cut.scan")}
+          </Label>
+          <Input
+            id={bid}
+            name="barcode"
+            dir="ltr"
+            autoComplete="off"
+            value={barcode}
+            maxLength={64}
+            placeholder={t("orders.assign.barcode_placeholder")}
+            onChange={(e) => setBarcode(e.target.value)}
+          />
+        </div>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!barcode.trim()}
+          data-testid="assign-submit"
+        >
+          <ScanBarcode className="size-4" />
+          {t("orders.assign.submit")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={!barcode.trim()}
+          data-testid="assign-partial"
+          onClick={() => start(true)}
+        >
+          {t("orders.cut.partial_button")}
+        </Button>
+      </form>
+      <CutDialog
+        key={scanned ?? ""}
+        order={order}
+        item={item}
+        barcode={scanned}
+        partial={partial}
+        onOpenChange={(o) => {
+          if (!o) {
+            setScanned(null);
+            setBarcode("");
+          }
+        }}
+      />
+    </>
+  );
+}
+
+/** Barcode assignment of a box, roll_meter or fixed barcode line. */
+function UnitAssignForm({ order, item }: { order: Order; item: OrderItem }) {
   const { t } = useLocale();
   const store = useStoreOrder();
   const [barcode, setBarcode] = useState("");
@@ -290,12 +381,20 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
 export function lineForProduct(
   order: Order,
   productUuid: string,
+  opened?: boolean,
 ): OrderItem | null {
-  return (
-    (order.items ?? []).find(
-      (item) => item.product.uuid === productUuid && !lineFullyAssigned(item),
-    ) ?? null
+  const open = (order.items ?? []).filter(
+    (item) => item.product.uuid === productUuid && !lineFullyAssigned(item),
   );
+  // TEC-1241: one product may have a box and a meter line (K10). An open
+  // roll or a cut piece goes to the meter line; a closed box to the box
+  // line first, else it is opened for the meter line.
+  if (opened !== undefined && open.length > 1) {
+    const meter = open.find((i) => i.sale_measure === "meter");
+    const box = open.find((i) => i.sale_measure !== "meter");
+    return (opened ? meter : box) ?? open[0] ?? null;
+  }
+  return open[0] ?? null;
 }
 
 /**
@@ -309,6 +408,9 @@ function OrderScanBar({ order }: { order: Order }) {
   const store = useStoreOrder();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cut, setCut] = useState<{ item: OrderItem; barcode: string } | null>(
+    null,
+  );
   const onScan = async (code: string) => {
     if (scanKind(code) === "location") {
       setError(t("orders.scan.not_unit"));
@@ -324,9 +426,18 @@ function OrderScanBar({ order }: { order: Order }) {
         setError(t("orders.scan.not_unit"));
         return;
       }
-      const item = lineForProduct(order, product.uuid);
+      const item = lineForProduct(
+        order,
+        product.uuid,
+        scan.unit ? scan.unit.remaining_meters != null : undefined,
+      );
       if (!item) {
         setError(t("orders.scan.no_line", { product: product.name }));
+        return;
+      }
+      if (isCutLine(item)) {
+        // TEC-1241: a meter line is cut; the confirmation names the cut.
+        setCut({ item, barcode });
         return;
       }
       const updated = await ordersService.assignUnit(order.uuid, item.uuid, {
@@ -359,6 +470,17 @@ function OrderScanBar({ order }: { order: Order }) {
           >
             {error}
           </p>
+        ) : null}
+        {cut ? (
+          <CutDialog
+            key={cut.barcode}
+            order={order}
+            item={cut.item}
+            barcode={cut.barcode}
+            onOpenChange={(o) => {
+              if (!o) setCut(null);
+            }}
+          />
         ) : null}
       </CardContent>
     </Card>
@@ -604,6 +726,18 @@ function Items({
                         />
                         {u.quantity && u.quantity > 1 ? ` ×${u.quantity}` : ""}
                         {u.meters ? ` ${u.meters} m` : ""}
+                        {isCutLine(item) && u.credits != null ? (
+                          <span
+                            className="text-muted-foreground"
+                            title={u.piece_note ?? undefined}
+                            data-testid="unit-credits"
+                          >
+                            {" · "}
+                            {t("orders.cut.unit_credits", {
+                              credits: String(u.credits),
+                            })}
+                          </span>
+                        ) : null}
                         {assign ? (
                           <button
                             type="button"
@@ -1113,6 +1247,7 @@ export function OrderDetailPage({
           {fully ? t("orders.assign.complete") : t("orders.assign.hint")}
         </p>
       ) : null}
+      <DetachedPiecesNotice order={order} />
       {assign && !fully ? <OrderScanBar order={order} /> : null}
       <OrderPlacementPanel slug={slug} order={order} />
       {/* TEC-1052 (5.10): while preparing, the lines (barcode assignment)

@@ -203,5 +203,6 @@
   "measure.pick_hint": "الصندوق {{box}} م · أدنى قص {{min}} م. أضِف كصندوق أو بالمتر.",
   "errors.below_min_cut": "يمكن طلب {{value}} م على الأقل (أدنى قص).",
   "errors.line_credits_invalid": "يجب أن تكون الأرصدة عددًا صحيحًا من 1 إلى 1000.",
-  "unit_price_meter": "سعر الوحدة (م)"
+  "unit_price_meter": "سعر الوحدة (م)",
+  "partial.below_min_cut": "الـ {{rest}} م المتبقية للطلب المؤجل أقصر من الحد الأدنى للقص ({{min}} م)."
 }

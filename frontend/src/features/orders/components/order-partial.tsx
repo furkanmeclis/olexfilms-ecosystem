@@ -61,6 +61,8 @@ export type ShortLine = {
   measure: "box" | "meter";
   picked: number;
   rest: number;
+  /** TEC-1241: the meter rest is shorter than the minimum cut. */
+  belowMinCut?: string;
 };
 
 /** TEC-1227: the lines a partial shipment would move to the backorder. */
@@ -69,12 +71,20 @@ export function shortLines(order: Order): ShortLine[] {
     .map((it) => {
       const want = lineAmount(it);
       const picked = Number(it.assigned) || 0;
+      const rest = want - picked;
+      const min = it.min_cut_meters ? Number(it.min_cut_meters) : 0;
+      const below =
+        it.sale_measure === "meter" &&
+        min > 0 &&
+        rest > 1e-9 &&
+        rest < min - 1e-9;
       return {
         key: it.uuid,
         name: it.product.name,
         measure: itemMeasure(it),
         picked,
-        rest: want - picked,
+        rest,
+        ...(below ? { belowMinCut: it.min_cut_meters ?? "" } : {}),
       };
     })
     .filter((l) => l.rest > 1e-9);
@@ -139,17 +149,31 @@ export function PartialShipButton({
           </DialogHeader>
           <ul className="space-y-1 text-sm" data-testid="partial-short-lines">
             {short.map((l) => (
-              <li key={l.key} className="flex justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">{l.name}</span>
-                  <MeasureBadge measure={l.measure} />
-                </span>
-                <span className="text-muted-foreground shrink-0">
-                  {t("orders.partial.line", {
-                    picked: format.number(l.picked),
-                    rest: format.number(l.rest),
-                  })}
-                </span>
+              <li key={l.key} className="space-y-0.5">
+                <div className="flex justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{l.name}</span>
+                    <MeasureBadge measure={l.measure} />
+                  </span>
+                  <span className="text-muted-foreground shrink-0">
+                    {t("orders.partial.line", {
+                      picked: format.number(l.picked),
+                      rest: format.number(l.rest),
+                    })}
+                  </span>
+                </div>
+                {l.belowMinCut ? (
+                  <p
+                    className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300"
+                    data-testid="partial-below-min-cut"
+                  >
+                    <AlertTriangle className="size-3 shrink-0" />
+                    {t("orders.cut.partial_ship_below_min", {
+                      rest: format.number(l.rest),
+                      min: l.belowMinCut,
+                    })}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

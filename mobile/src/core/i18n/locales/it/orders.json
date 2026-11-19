@@ -200,5 +200,6 @@
   "measure.pick_hint": "Scatola {{box}} m · taglio minimo {{min}} m. Aggiungi a scatola o a metro.",
   "errors.below_min_cut": "Si possono ordinare almeno {{value}} m (taglio minimo).",
   "errors.line_credits_invalid": "I crediti devono essere un numero intero da 1 a 1000.",
-  "unit_price_meter": "Prezzo unitario (m)"
+  "unit_price_meter": "Prezzo unitario (m)",
+  "partial.below_min_cut": "I {{rest}} m lasciati all’ordine arretrato sono più corti del taglio minimo ({{min}} m)."
 }
