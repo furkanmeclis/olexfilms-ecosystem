@@ -1105,6 +1105,7 @@ var itCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Durata stimata (min)",
 	"ai.actions.fields.follow_up_date":         "Data di ricontatto",
 	"ai.actions.fields.item":                   "Articolo",
+	"ai.actions.fields.line_credits":           "Utilizzi per pezzo tagliato",
 	"ai.actions.fields.lead":                   "Contatto commerciale",
 	"ai.actions.fields.note":                   "Nota",
 	"ai.actions.fields.notes":                  "Annotazioni",

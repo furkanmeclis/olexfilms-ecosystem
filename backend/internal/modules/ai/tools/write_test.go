@@ -102,7 +102,11 @@ func (fakeCustomerGetter) GetCustomer(_ context.Context, _ customersuc.Caller, i
 
 type fakeOrdersW struct{ log *writeLog }
 
+// lastOrderDraft is the last input the fake orders writer got (TEC-1244).
+var lastOrderDraft ordersuc.CreateInput
+
 func (f fakeOrdersW) Create(_ context.Context, _ ordersuc.Caller, in ordersuc.CreateInput) (ordersuc.OrderView, error) {
+	lastOrderDraft = in
 	f.log.add("order:draft")
 	return ordersuc.OrderView{UUID: uuid.New(), OrderNo: "SP-1", Status: "draft"}, nil
 }
@@ -252,6 +256,10 @@ func TestWriteToolsRejectBadProposals(t *testing.T) {
 		{ToolCancelAppointment, OrgDealer, `{"appointment_uuid":"` + appointmentUUID.String() + `","reason":"x"}`, appointmentsuc.StatusArrived, "only scheduled or confirmed"},
 		{ToolCreateOrderDraft, OrgDealer, `{"items":[{"product_uuid":"` + productUUID.String() + `","quantity":2,"meters":1.5}]}`, "", "exactly one of quantity or meters"},
 		{ToolCreateOrderDraft, OrgDealer, `{"items":[{"product_uuid":"` + uuid.NewString() + `","quantity":2}]}`, "", "not found"},
+		// TEC-1244: the measure and the credits of a line.
+		{ToolCreateOrderDraft, OrgDealer, `{"items":[{"product_uuid":"` + productUUID.String() + `","meters":3,"sale_measure":"box"}]}`, "", "a box line takes quantity"},
+		{ToolCreateOrderDraft, OrgDealer, `{"items":[{"product_uuid":"` + productUUID.String() + `","quantity":1,"sale_measure":"meter"}]}`, "", "a meter line takes meters"},
+		{ToolCreateOrderDraft, OrgDealer, `{"items":[{"product_uuid":"` + productUUID.String() + `","quantity":1,"line_credits":5}]}`, "", "only for a meter line"},
 		{ToolAddServiceNote, OrgDealer, `{"service_uuid":"` + serviceUUID.String() + `","note":"   "}`, "", "note is required"},
 	}
 	for _, tc := range cases {
@@ -435,5 +443,49 @@ func TestAppliedPartsLabeled(t *testing.T) {
 	}
 	if appliedParts(i18n.LocaleTR, nil) != nil {
 		t.Error("no parts must stay omitted")
+	}
+}
+
+// TEC-1244: a draft with a box line and a meter line of one product (K10)
+// reaches the orders use case with each line's measure and the meter
+// line's credits; the preview shows the credits.
+func TestCreateOrderDraftMeasures(t *testing.T) {
+	ctx := context.Background()
+	log := &writeLog{}
+	r := writeRegistry(log, appointmentsuc.StatusScheduled)
+	p := superAdminOf(OrgDealer)
+	in := json.RawMessage(`{"items":[{"product_uuid":"` + productUUID.String() + `","quantity":1},` +
+		`{"product_uuid":"` + productUUID.String() + `","meters":3.5,"sale_measure":"meter","line_credits":7}]}`)
+	prop, bad, err := r.Propose(ctx, p, ToolCreateOrderDraft, in)
+	if err != nil || bad != nil || prop == nil {
+		t.Fatalf("Propose: %+v %+v %v", prop, bad, err)
+	}
+	var credits bool
+	for _, f := range prop.Preview.Fields {
+		if f.Key == "line_credits" && f.Value == "7" {
+			credits = true
+		}
+	}
+	if !credits {
+		t.Fatalf("preview fields = %+v", prop.Preview.Fields)
+	}
+	if err := Validate(r.byName[ToolCreateOrderDraft].Spec().InputSchema, prop.Input); err != nil {
+		t.Fatalf("schema: %v", err)
+	}
+	if out, err := r.RunConfirmed(ctx, p, ToolCreateOrderDraft, prop.Input); err != nil || out.IsError {
+		t.Fatalf("RunConfirmed: %+v %v", out, err)
+	}
+	items := lastOrderDraft.Items
+	if len(items) != 2 {
+		t.Fatalf("items = %+v", items)
+	}
+	box, meter := items[0], items[1]
+	if box.SaleMeasure == nil || *box.SaleMeasure != ordersuc.MeasureBox || box.Quantity == nil || *box.Quantity != 1 ||
+		box.Meters != nil || box.LineCredits != nil {
+		t.Fatalf("box line = %+v", box)
+	}
+	if meter.SaleMeasure == nil || *meter.SaleMeasure != ordersuc.MeasureMeter || meter.Meters == nil || *meter.Meters != "3.50" ||
+		meter.Quantity != nil || meter.LineCredits == nil || *meter.LineCredits != 7 {
+		t.Fatalf("meter line = %+v", meter)
 	}
 }

@@ -1105,6 +1105,7 @@ var ukCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Очікувана тривалість (хв)",
 	"ai.actions.fields.follow_up_date":         "Дата наступного контакту",
 	"ai.actions.fields.item":                   "Позиція",
+	"ai.actions.fields.line_credits":           "Права використання на відріз",
 	"ai.actions.fields.lead":                   "Лід",
 	"ai.actions.fields.note":                   "Нотатка",
 	"ai.actions.fields.notes":                  "Нотатки",

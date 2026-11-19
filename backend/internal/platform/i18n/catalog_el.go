@@ -1105,6 +1105,7 @@ var elCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Εκτιμώμενη διάρκεια (λεπτά)",
 	"ai.actions.fields.follow_up_date":         "Ημερομηνία παρακολούθησης",
 	"ai.actions.fields.item":                   "Είδος",
+	"ai.actions.fields.line_credits":           "Δικαιώματα χρήσης ανά κομμάτι",
 	"ai.actions.fields.lead":                   "Υποψήφιος πελάτης",
 	"ai.actions.fields.note":                   "Σημείωση",
 	"ai.actions.fields.notes":                  "Σημειώσεις",

@@ -160,13 +160,17 @@ func (GetOrder) Spec() Spec {
 }
 
 type orderLine struct {
-	Product   string  `json:"product"`
-	SKU       string  `json:"sku"`
-	Quantity  *int32  `json:"quantity,omitempty"`
-	Meters    *string `json:"meters,omitempty"`
-	Assigned  string  `json:"assigned"`
-	UnitPrice string  `json:"unit_price,omitempty"`
-	LineTotal string  `json:"line_total,omitempty"`
+	Product  string  `json:"product"`
+	SKU      string  `json:"sku"`
+	Quantity *int32  `json:"quantity,omitempty"`
+	Meters   *string `json:"meters,omitempty"`
+	// SaleMeasure and LineCredits (TEC-1244): box or meter; the usage
+	// credits of each cut piece of a meter line.
+	SaleMeasure string `json:"sale_measure"`
+	LineCredits *int32 `json:"line_credits,omitempty"`
+	Assigned    string `json:"assigned"`
+	UnitPrice   string `json:"unit_price,omitempty"`
+	LineTotal   string `json:"line_total,omitempty"`
 }
 
 type orderStatusLog struct {
@@ -229,7 +233,8 @@ func (t GetOrder) Run(ctx context.Context, env Env, raw json.RawMessage) (Result
 	}
 	for _, it := range v.Items {
 		l := orderLine{Product: dataText(it.Product.Name, maxNameChars), SKU: it.Product.SKU,
-			Quantity: it.Quantity, Meters: it.Meters, Assigned: it.Assigned}
+			Quantity: it.Quantity, Meters: it.Meters, SaleMeasure: it.SaleMeasure, LineCredits: it.LineCredits,
+			Assigned: it.Assigned}
 		if prices {
 			l.UnitPrice, l.LineTotal = moneyText(it.UnitPrice), moneyText(it.LineTotal)
 		}

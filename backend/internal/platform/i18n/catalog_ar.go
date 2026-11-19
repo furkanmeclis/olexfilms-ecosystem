@@ -1105,6 +1105,7 @@ var arCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "المدة المقدّرة (دقيقة)",
 	"ai.actions.fields.follow_up_date":         "تاريخ المتابعة",
 	"ai.actions.fields.item":                   "البند",
+	"ai.actions.fields.line_credits":           "حقوق الاستخدام لكل قطعة",
 	"ai.actions.fields.lead":                   "العميل المحتمل",
 	"ai.actions.fields.note":                   "ملاحظة",
 	"ai.actions.fields.notes":                  "ملاحظات",

@@ -1060,6 +1060,7 @@ var faCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":                   "مدت تخمینی (دقیقه)",
 	"ai.actions.fields.follow_up_date":                      "تاریخ پیگیری",
 	"ai.actions.fields.item":                                "قلم",
+	"ai.actions.fields.line_credits":                        "حق استفاده هر قطعه",
 	"ai.actions.fields.lead":                                "سرنخ فروش",
 	"ai.actions.fields.note":                                "یادداشت",
 	"ai.actions.fields.notes":                               "یادداشت\u200cها",

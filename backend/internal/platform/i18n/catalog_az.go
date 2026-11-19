@@ -1105,6 +1105,7 @@ var azCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Təxmini müddət (dəq)",
 	"ai.actions.fields.follow_up_date":         "İzləmə tarixi",
 	"ai.actions.fields.item":                   "Mövqe",
+	"ai.actions.fields.line_credits":           "Hər parça üçün istifadə haqqı",
 	"ai.actions.fields.lead":                   "Potensial müştəri",
 	"ai.actions.fields.note":                   "Qeyd",
 	"ai.actions.fields.notes":                  "Qeydlər",

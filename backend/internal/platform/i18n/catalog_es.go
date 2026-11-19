@@ -1105,6 +1105,7 @@ var esCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Duración estimada (min)",
 	"ai.actions.fields.follow_up_date":         "Fecha de seguimiento",
 	"ai.actions.fields.item":                   "Artículo",
+	"ai.actions.fields.line_credits":           "Usos por pieza cortada",
 	"ai.actions.fields.lead":                   "Cliente potencial",
 	"ai.actions.fields.note":                   "Nota",
 	"ai.actions.fields.notes":                  "Notas",

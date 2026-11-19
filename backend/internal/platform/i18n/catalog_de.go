@@ -1105,6 +1105,7 @@ var deCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Geschätzte Dauer (Min.)",
 	"ai.actions.fields.follow_up_date":         "Nachfassdatum",
 	"ai.actions.fields.item":                   "Position",
+	"ai.actions.fields.line_credits":           "Nutzungsrechte je Zuschnitt",
 	"ai.actions.fields.lead":                   "Interessent",
 	"ai.actions.fields.note":                   "Notiz",
 	"ai.actions.fields.notes":                  "Notizen",

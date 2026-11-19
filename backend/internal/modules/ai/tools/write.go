@@ -761,6 +761,45 @@ type orderDraftItem struct {
 	ProductUUID string   `json:"product_uuid"`
 	Quantity    int64    `json:"quantity,omitempty"`
 	Meters      *float64 `json:"meters,omitempty"`
+	// SaleMeasure (TEC-1244) is the line's measure, box or meter; empty =
+	// meter with meters, else box (the orders API default).
+	SaleMeasure string `json:"sale_measure,omitempty"`
+	// LineCredits (TEC-1244, K3) is the usage credits of each cut piece of
+	// a meter line; nil = the product default (5).
+	LineCredits *int32 `json:"line_credits,omitempty"`
+}
+
+// measure is the line's measure (TEC-1244).
+func (it orderDraftItem) measure() string {
+	if it.SaleMeasure != "" {
+		return it.SaleMeasure
+	}
+	if it.Meters != nil {
+		return ordersuc.MeasureMeter
+	}
+	return ordersuc.MeasureBox
+}
+
+// check validates the measure fields of item i (TEC-1244): a box line
+// counts quantity, a meter line meters; credits only on a meter line.
+func (it orderDraftItem) check(i int) string {
+	if (it.Quantity > 0) == (it.Meters != nil) {
+		return fmt.Sprintf("items[%d] needs exactly one of quantity or meters", i)
+	}
+	switch it.measure() {
+	case ordersuc.MeasureBox:
+		if it.Meters != nil {
+			return fmt.Sprintf("items[%d]: a box line takes quantity, not meters", i)
+		}
+		if it.LineCredits != nil {
+			return fmt.Sprintf("items[%d]: line_credits are only for a meter line", i)
+		}
+	case ordersuc.MeasureMeter:
+		if it.Meters == nil {
+			return fmt.Sprintf("items[%d]: a meter line takes meters, not quantity", i)
+		}
+	}
+	return ""
 }
 
 type orderDraftInput struct {
@@ -774,13 +813,19 @@ func (CreateOrderDraft) Spec() Spec {
 		Name: ToolCreateOrderDraft,
 		Description: "Propose a DRAFT order of your organization to its supplier (product uuids from search_products; " +
 			"quantity for piece products (boxes), meters for roll products and for products sold by the meter; " +
-			"one product may have a box line and a meter line). The draft is never submitted: the user reviews " +
-			"and submits it in the orders screen. The user confirms the draft on a card before it is saved.",
+			"one product may have a box line and a meter line: sale_measure box (quantity) or meter (meters), " +
+			"and line_credits the usage credits of each cut piece of a meter line, default 5). The draft is never " +
+			"submitted: the user reviews and submits it in the orders screen. The user confirms the draft on a " +
+			"card before it is saved.",
 		InputSchema: object(map[string]any{
 			"items": map[string]any{"type": "array", "minItems": 1, "maxItems": maxOrderDraftItems, "items": object(map[string]any{
 				"product_uuid": map[string]any{"type": "string", "format": "uuid"},
 				"quantity":     map[string]any{"type": "integer", "minimum": 1, "maximum": 100000},
 				"meters":       map[string]any{"type": "number", "minimum": 0.01, "maximum": 100000},
+				"sale_measure": map[string]any{"type": "string", "enum": []string{ordersuc.MeasureBox, ordersuc.MeasureMeter},
+					"description": "box: closed boxes (quantity); meter: cut by the meter (meters). Default: meter with meters, else box."},
+				"line_credits": map[string]any{"type": "integer", "minimum": 1, "maximum": ordersuc.MaxLineCredits,
+					"description": "Meter line only: usage credits of each cut piece (default 5)."},
 			}, "product_uuid")},
 			"note": str("Optional order note.", 1000),
 		}, "items"),
@@ -808,8 +853,8 @@ func (t CreateOrderDraft) Propose(ctx context.Context, env Env, raw json.RawMess
 	in.Note = trimmed(in.Note, 1000)
 	fields := make([]Field, 0, len(in.Items)+1)
 	for i, it := range in.Items {
-		if (it.Quantity > 0) == (it.Meters != nil) {
-			return Proposal{}, badInput(fmt.Sprintf("items[%d] needs exactly one of quantity or meters", i)), nil
+		if msg := it.check(i); msg != "" {
+			return Proposal{}, badInput(msg), nil
 		}
 		id, _ := parseID(it.ProductUUID)
 		prod, err := t.products.GetProduct(ctx, *env.Principal.Org, id)
@@ -824,6 +869,9 @@ func (t CreateOrderDraft) Propose(ctx context.Context, env Env, raw json.RawMess
 			amount = strconv.FormatFloat(*it.Meters, 'f', 2, 64) + " m"
 		}
 		fields = append(fields, Field{Key: "item", Value: dataText(prod.Name, maxNameChars) + " × " + amount})
+		if it.LineCredits != nil {
+			fields = append(fields, Field{Key: "line_credits", Value: strconv.Itoa(int(*it.LineCredits))})
+		}
 	}
 	fields = fieldIf(fields, "note", in.Note)
 	return proposal(in, Preview{
@@ -847,8 +895,12 @@ func (t CreateOrderDraft) Run(ctx context.Context, env Env, raw json.RawMessage)
 		return errs.result(err)
 	}
 	ci := ordersuc.CreateInput{Note: strPtr(in.Note), Items: make([]ordersuc.ItemInput, 0, len(in.Items))}
-	for _, it := range in.Items {
-		item := ordersuc.ItemInput{ProductUUID: it.ProductUUID}
+	for i, it := range in.Items {
+		if msg := it.check(i); msg != "" {
+			return *badInput(msg), nil
+		}
+		measure := it.measure()
+		item := ordersuc.ItemInput{ProductUUID: it.ProductUUID, SaleMeasure: &measure, LineCredits: it.LineCredits}
 		if it.Meters != nil {
 			m := strconv.FormatFloat(*it.Meters, 'f', 2, 64)
 			item.Meters = &m

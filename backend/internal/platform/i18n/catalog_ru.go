@@ -1105,6 +1105,7 @@ var ruCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Ожидаемая длительность (мин)",
 	"ai.actions.fields.follow_up_date":         "Дата следующего контакта",
 	"ai.actions.fields.item":                   "Позиция",
+	"ai.actions.fields.line_credits":           "Права использования на отрез",
 	"ai.actions.fields.lead":                   "Лид",
 	"ai.actions.fields.note":                   "Заметка",
 	"ai.actions.fields.notes":                  "Заметки",
