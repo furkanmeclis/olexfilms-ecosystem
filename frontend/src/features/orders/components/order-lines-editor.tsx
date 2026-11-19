@@ -7,18 +7,28 @@ import { toast } from "@/lib/toast";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useStoreOrder } from "@/features/orders/components/order-action-dialog";
+import {
+  CutLineDetails,
+  LineAmountField,
+  MeasureBadge,
+  lineErrorText,
+} from "@/features/orders/components/order-line-measure";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
   addLine,
+  convertToBoxes,
   formIsValid,
-  isRoll,
+  isCutLine,
+  lineKey,
+  lineMeasure,
   linesBelowAssigned,
   linesFromOrder,
+  orderItemOf,
+  patchLine,
+  removeLine,
   toItemInputs,
   validateOrderForm,
   type OrderFormLine,
@@ -53,14 +63,9 @@ export function OrderLinesEditor({
   const errors = useMemo(() => validateOrderForm(lines), [lines]);
   const below = useMemo(() => linesBelowAssigned(order, lines), [order, lines]);
   const valid = formIsValid(errors) && below.size === 0;
-  const picked = useMemo(
-    () => new Set(lines.map((l) => l.product_uuid)),
-    [lines],
-  );
-  const assignedOf = (productUuid: string) =>
-    Number(
-      order.items?.find((i) => i.product.uuid === productUuid)?.assigned ?? 0,
-    );
+  const picked = useMemo(() => new Set(lines.map(lineKey)), [lines]);
+  const assignedOf = (line: OrderFormLine) =>
+    Number(orderItemOf(order, line)?.assigned ?? 0);
 
   const save = useMutation({
     mutationFn: () =>
@@ -74,10 +79,8 @@ export function OrderLinesEditor({
       toast.error(orderErrorMessage(err, t, t("orders.edit_lines.failed"))),
   });
 
-  const update = (uuid: string, amount: string) =>
-    setLines((ls) =>
-      ls.map((l) => (l.product_uuid === uuid ? { ...l, amount } : l)),
-    );
+  const update = (key: string, patch: Partial<OrderFormLine>) =>
+    setLines((ls) => patchLine(ls, key, patch));
 
   return (
     <Card data-testid="order-lines-editor">
@@ -93,7 +96,7 @@ export function OrderLinesEditor({
         </p>
         <ProductSearch
           picked={picked}
-          onPick={(p) => setLines((ls) => addLine(ls, p))}
+          onPick={(p, measure) => setLines((ls) => addLine(ls, p, measure))}
         />
         <div className="space-y-3">
           {lines.length === 0 ? (
@@ -109,47 +112,54 @@ export function OrderLinesEditor({
             </p>
           ) : (
             lines.map((line) => {
-              const err = errors.lines[line.product_uuid];
-              const isBelow = below.has(line.product_uuid);
-              const assigned = assignedOf(line.product_uuid);
-              const id = `edit-line-${line.product_uuid}`;
+              const key = lineKey(line);
+              const err = errors.lines[key];
+              const isBelow = below.has(key);
+              const assigned = assignedOf(line);
+              const cut = isCutLine(line);
+              const id = `edit-line-${line.product_uuid}-${lineMeasure(line)}`;
               return (
                 <div
-                  key={line.product_uuid}
-                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(7rem,1fr)_auto] sm:items-end"
+                  key={key}
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(9rem,1fr)_auto] sm:items-start"
                   data-testid="edit-line"
                   data-sku={line.sku}
+                  data-measure={lineMeasure(line)}
                 >
                   <div className="min-w-0 space-y-1">
-                    <div className="font-medium">{line.name}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{line.name}</span>
+                      <MeasureBadge measure={lineMeasure(line)} />
+                    </div>
                     <PlotterToggle
                       id={`${id}-plotter`}
                       checked={line.plotter_cut === true}
-                      onChange={(v) =>
-                        setLines((ls) =>
-                          ls.map((l) =>
-                            l.product_uuid === line.product_uuid
-                              ? { ...l, plotter_cut: v }
-                              : l,
-                          ),
-                        )
+                      onChange={(v) => update(key, { plotter_cut: v })}
+                      credits={
+                        cut
+                          ? undefined
+                          : {
+                              value: line.plotter_credits ?? "",
+                              invalid: touched && err === "credits_invalid",
+                              onChange: (v) =>
+                                update(key, { plotter_credits: v }),
+                            }
                       }
-                      credits={{
-                        value: line.plotter_credits ?? "",
-                        invalid: touched && err === "credits_invalid",
-                        onChange: (v) =>
-                          setLines((ls) =>
-                            ls.map((l) =>
-                              l.product_uuid === line.product_uuid
-                                ? { ...l, plotter_credits: v }
-                                : l,
-                            ),
-                          ),
-                      }}
                     />
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>
+                    <CutLineDetails
+                      id={id}
+                      line={line}
+                      creditsInvalid={touched && err === "line_credits_invalid"}
+                      onCredits={(v) => update(key, { line_credits: v })}
+                      onConvert={
+                        assigned > 0
+                          ? undefined
+                          : () => setLines((ls) => convertToBoxes(ls, key))
+                      }
+                    />
                     {assigned > 0 ? (
                       <div
                         className="text-muted-foreground text-xs"
@@ -164,34 +174,24 @@ export function OrderLinesEditor({
                     ) : null}
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor={id} className="text-xs">
-                      {isRoll(line.unit_type)
-                        ? t("orders.form.meters")
-                        : t("orders.form.quantity")}
-                    </Label>
-                    <Input
+                    <LineAmountField
                       id={id}
-                      name="amount"
-                      inputMode={isRoll(line.unit_type) ? "decimal" : "numeric"}
-                      dir="ltr"
-                      value={line.amount}
-                      aria-invalid={
+                      line={line}
+                      invalid={
                         (touched &&
                           Boolean(err) &&
-                          err !== "credits_invalid") ||
-                        isBelow ||
-                        undefined
+                          err !== "credits_invalid" &&
+                          err !== "line_credits_invalid") ||
+                        isBelow
                       }
-                      onChange={(e) =>
-                        update(line.product_uuid, e.target.value)
-                      }
+                      onChange={(amount) => update(key, { amount })}
                     />
                     {touched && err ? (
                       <p
                         className="text-destructive text-xs"
                         data-testid="line-error"
                       >
-                        {t(`orders.form.errors.${err}`)}
+                        {lineErrorText(t, err, line)}
                       </p>
                     ) : isBelow ? (
                       <p
@@ -209,13 +209,7 @@ export function OrderLinesEditor({
                       variant="ghost"
                       aria-label={t("orders.form.remove")}
                       data-testid="edit-line-remove"
-                      onClick={() =>
-                        setLines((ls) =>
-                          ls.filter(
-                            (l) => l.product_uuid !== line.product_uuid,
-                          ),
-                        )
-                      }
+                      onClick={() => setLines((ls) => removeLine(ls, key))}
                     >
                       <Trash2 className="size-4" />
                     </Button>

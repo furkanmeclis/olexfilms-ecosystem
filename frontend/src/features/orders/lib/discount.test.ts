@@ -24,7 +24,7 @@ describe("order line discounts (TEC-1064)", () => {
       amount: "1",
       discount_pct: "120",
     };
-    expect(validateOrderForm([line]).lines.p1).toBe("discount_invalid");
+    expect(validateOrderForm([line]).lines["p1:box"]).toBe("discount_invalid");
   });
 
   it("previews the discounted price, a gift, a typed price and no price", () => {
@@ -70,12 +70,17 @@ describe("order line discounts (TEC-1064)", () => {
       },
     ];
     expect(toItemInputs(lines, true)).toEqual([
-      { product_uuid: "p1", quantity: 2, discount_pct: "12.5" },
-      { product_uuid: "p2", quantity: 1, is_gift: true },
+      {
+        product_uuid: "p1",
+        quantity: 2,
+        sale_measure: "box",
+        discount_pct: "12.5",
+      },
+      { product_uuid: "p2", quantity: 1, sale_measure: "box", is_gift: true },
     ]);
     expect(toItemInputs(lines)).toEqual([
-      { product_uuid: "p1", quantity: 2 },
-      { product_uuid: "p2", quantity: 1 },
+      { product_uuid: "p1", quantity: 2, sale_measure: "box" },
+      { product_uuid: "p2", quantity: 1, sale_measure: "box" },
     ]);
   });
 });

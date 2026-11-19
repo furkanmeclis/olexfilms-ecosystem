@@ -50,6 +50,7 @@ import {
   OrderQueueBadges,
   OrderWorkCard,
 } from "@/features/orders/components/order-work-queue";
+import { MeasureBadge } from "@/features/orders/components/order-line-measure";
 import { PlotterLineControl } from "@/features/orders/components/plotter-toggle";
 import {
   AddSupplementButton,
@@ -78,8 +79,10 @@ import {
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
   amountNumber,
+  cutItem,
   invoiceStatusTone,
   isRoll,
+  itemMeasure,
   orderStatusTone,
 } from "@/features/orders/lib/form";
 import {
@@ -545,12 +548,23 @@ function Items({
             data-testid="order-item"
             data-sku={row.original.product.sku}
           >
-            <div className="font-medium">
+            <div className="flex flex-wrap items-center gap-2 font-medium">
               <EntityLink kind="product" entity={row.original.product} />
+              <MeasureBadge measure={itemMeasure(row.original)} />
             </div>
             <div className="text-muted-foreground text-xs" dir="ltr">
               {row.original.product.sku}
             </div>
+            {cutItem(row.original) && row.original.line_credits != null ? (
+              <div
+                className="text-muted-foreground text-xs"
+                data-testid="line-credits-value"
+              >
+                {t("orders.measure.credits_value", {
+                  credits: row.original.line_credits,
+                })}
+              </div>
+            ) : null}
           </div>
         ),
       }) as ColumnDef<OrderItem, unknown>,
@@ -559,8 +573,11 @@ function Items({
         accessorFn: (item) => lineAmount(item),
         labelKey: "orders.items.amount",
         cell: ({ row }) =>
-          isRoll(row.original.product.unit_type)
-            ? `${row.original.meters ?? "0"} ${t("orders.unit.m")}`
+          itemMeasure(row.original) === "meter"
+            ? `${format.number(Number(row.original.meters ?? 0), {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 2,
+              })} ${t("orders.unit.m")}`
             : `${row.original.quantity ?? 0} ${t("orders.unit.pcs")}`,
       }) as ColumnDef<OrderItem, unknown>,
     ];
@@ -611,7 +628,11 @@ function Items({
               key={`${row.original.uuid}-${row.original.plotter_credits ?? ""}`}
               id={`plotter-${row.original.uuid}`}
               checked={row.original.plotter_cut === true}
-              credits={row.original.plotter_credits}
+              credits={
+                cutItem(row.original)
+                  ? row.original.line_credits
+                  : row.original.plotter_credits
+              }
               disabled={plotterPending}
               onSave={(v) => setPlotter({ item: row.original.uuid, ...v })}
             />
@@ -620,7 +641,8 @@ function Items({
               <Badge variant="secondary" data-testid="line-plotter-badge">
                 {t("orders.plotter.badge")}
               </Badge>
-              {row.original.plotter_credits != null ? (
+              {row.original.plotter_credits != null &&
+              !cutItem(row.original) ? (
                 <div
                   className="text-muted-foreground text-xs"
                   data-testid="line-plotter-credits-value"
@@ -668,14 +690,14 @@ function Items({
           labelKey: "orders.assign.assigned",
           cell: ({ row }) => {
             const item = row.original;
-            const roll =
-              isRoll(item.product.unit_type) || item.sale_measure === "meter";
+            const meter = itemMeasure(item) === "meter";
             return (
               <Badge
                 variant={lineFullyAssigned(item) ? "success" : "warning"}
                 data-testid="line-assigned"
               >
-                {item.assigned} / {roll ? item.meters : item.quantity}
+                {item.assigned} / {meter ? item.meters : item.quantity}
+                {meter ? ` ${t("orders.unit.m")}` : ""}
               </Badge>
             );
           },

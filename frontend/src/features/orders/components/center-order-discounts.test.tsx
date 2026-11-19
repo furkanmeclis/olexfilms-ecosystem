@@ -228,8 +228,13 @@ describe("center order prices and discounts (TEC-1064)", () => {
     expect(api.create).toHaveBeenCalledWith({
       buyer_org_uuid: "d1",
       items: [
-        { product_uuid: "p1", quantity: 1, discount_pct: "25" },
-        { product_uuid: "p2", quantity: 1, is_gift: true },
+        {
+          product_uuid: "p1",
+          quantity: 1,
+          sale_measure: "box",
+          discount_pct: "25",
+        },
+        { product_uuid: "p2", quantity: 1, sale_measure: "box", is_gift: true },
       ],
     });
   });

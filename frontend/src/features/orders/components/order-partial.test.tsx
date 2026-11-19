@@ -63,9 +63,16 @@ describe("TEC-1227 partial shipment helpers", () => {
         item("Kit", 1, "0"),
       ] as never,
     });
-    expect(shortLines(o)).toEqual([
-      { name: "Film", picked: 1, rest: 1 },
-      { name: "Kit", picked: 0, rest: 1 },
+    expect(
+      shortLines(o).map(({ name, measure, picked, rest }) => ({
+        name,
+        measure,
+        picked,
+        rest,
+      })),
+    ).toEqual([
+      { name: "Film", measure: "box", picked: 1, rest: 1 },
+      { name: "Kit", measure: "box", picked: 0, rest: 1 },
     ]);
   });
 

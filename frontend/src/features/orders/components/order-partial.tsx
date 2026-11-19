@@ -37,8 +37,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { routes } from "@/config/routes";
 import { useStoreOrder } from "@/features/orders/components/order-action-dialog";
 import { lineAmount } from "@/features/orders/lib/access";
+import { MeasureBadge } from "@/features/orders/components/order-line-measure";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
-import { orderStatusTone } from "@/features/orders/lib/form";
+import { itemMeasure, orderStatusTone } from "@/features/orders/lib/form";
 import {
   ordersService,
   type Order,
@@ -54,7 +55,10 @@ const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
 /** A line that is short of its amount: what goes to the backorder. */
 export type ShortLine = {
+  key: string;
   name: string;
+  /** TEC-1239: the line's measure (a product may have a box and a meter line). */
+  measure: "box" | "meter";
   picked: number;
   rest: number;
   /** TEC-1241: the meter rest is shorter than the minimum cut. */
@@ -75,7 +79,9 @@ export function shortLines(order: Order): ShortLine[] {
         rest > 1e-9 &&
         rest < min - 1e-9;
       return {
+        key: it.uuid,
         name: it.product.name,
+        measure: itemMeasure(it),
         picked,
         rest,
         ...(below ? { belowMinCut: it.min_cut_meters ?? "" } : {}),
@@ -143,9 +149,12 @@ export function PartialShipButton({
           </DialogHeader>
           <ul className="space-y-1 text-sm" data-testid="partial-short-lines">
             {short.map((l) => (
-              <li key={l.name} className="space-y-0.5">
+              <li key={l.key} className="space-y-0.5">
                 <div className="flex justify-between gap-2">
-                  <span className="truncate">{l.name}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{l.name}</span>
+                    <MeasureBadge measure={l.measure} />
+                  </span>
                   <span className="text-muted-foreground shrink-0">
                     {t("orders.partial.line", {
                       picked: format.number(l.picked),
