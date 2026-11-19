@@ -784,7 +784,13 @@ func (s *Service) purchaseCost(ctx context.Context, q *db.Queries, o db.Organiza
 			// after meters and the rate (TEC-1244).
 			price := exactNumeric(op.UnitPrice)
 			if op.MeterLine {
-				price = mulMeters(price, meters)
+				// TEC-1250 (K7): free extra meters of a whole roll cost
+				// nothing; the buyer paid the line's meters at most.
+				m := meters
+				if lm := numericRat(op.LineMeters); lm != nil && lm.Sign() > 0 && m.Cmp(lm) > 0 {
+					m = lm
+				}
+				price = mulMeters(price, m)
 			}
 			if v, ok := frozenCost(price, op.Currency, o.Currency, op.RateSnapshot); ok {
 				return &v

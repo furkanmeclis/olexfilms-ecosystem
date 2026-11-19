@@ -105,8 +105,12 @@ type ItemView struct {
 	LineCredits *int32 `json:"line_credits"`
 	// MinCutMeters (TEC-1241): the product's minimum cut on meter lines,
 	// for the partial piece and partial shipment warnings.
-	MinCutMeters *string            `json:"min_cut_meters"`
-	Assigned     string             `json:"assigned"`
+	MinCutMeters *string `json:"min_cut_meters"`
+	Assigned     string  `json:"assigned"`
+	// ExcessMeters (TEC-1250, K7): the meters its pieces carry over the
+	// line (a whole roll whose rest was shorter than the minimum cut);
+	// they go free. Null when the pieces do not exceed the line.
+	ExcessMeters *string            `json:"excess_meters"`
 	Units        []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
@@ -471,6 +475,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			iv.MinCutMeters = numericTextPtr(p.MinCutMeters, 2)
 		}
 		iv.Units, iv.Assigned = assignedUnits(byItem[it.ID], it.Meters.Valid)
+		iv.ExcessMeters = lineExcess(it, iv.Assigned)
 		if l, ok := invoicedLines[it.ID]; ok {
 			no, id := l.InvoiceNo, l.InvoiceUuid
 			iv.Invoiced, iv.InvoiceNo, iv.InvoiceUUID = true, &no, &id
@@ -646,6 +651,24 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]OrderView
 		return nil, 0, err
 	}
 	return out, total, nil
+}
+
+// lineExcess is what the pieces of a meter line carry over the line
+// (TEC-1250, K7); nil when nothing exceeds it.
+func lineExcess(it db.OrderItem, assigned string) *string {
+	if !it.Meters.Valid {
+		return nil
+	}
+	a, ok := new(big.Rat).SetString(assigned)
+	if !ok {
+		return nil
+	}
+	ex := a.Sub(a, numericRat(it.Meters))
+	if ex.Sign() <= 0 {
+		return nil
+	}
+	v := ex.FloatString(2)
+	return &v
 }
 
 // assignedUnits renders the units of a line and the amount they cover.

@@ -702,6 +702,7 @@ var hiCatalog = map[string]string{
 	"orders.pdf.generated_at":                               "बनाने का समय",
 	"orders.pdf.gift":                                       "उपहार",
 	"orders.pdf.line_credits":                               "उपयोग क्रेडिट: प्रति नग {{credits}}",
+	"orders.pdf.excess_free":                                "अतिरिक्त {{meters}} मुफ़्त",
 	"orders.pdf.line_total":                                 "पंक्ति का कुल",
 	"orders.pdf.notes":                                      "नोट",
 	"orders.pdf.order_date":                                 "ऑर्डर तिथि",

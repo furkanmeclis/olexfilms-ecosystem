@@ -377,7 +377,9 @@ func (q *Queries) GetTransferRequestByUUID(ctx context.Context, arg GetTransferR
 }
 
 const getUnitLastOrderPrice = `-- name: GetUnitLastOrderPrice :one
-SELECT oi.id AS order_item_id, oi.unit_price, (oi.sale_measure = 'meter')::bool AS meter_line
+SELECT oi.id AS order_item_id, oi.unit_price, (oi.sale_measure = 'meter')::bool AS meter_line,
+       -- TEC-1250 (K7): the line's meters cap a piece that went whole.
+       oi.meters AS line_meters
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id
@@ -404,6 +406,7 @@ type GetUnitLastOrderPriceRow struct {
 	OrderItemID int64          `json:"order_item_id"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
 	MeterLine   bool           `json:"meter_line"`
+	LineMeters  pgtype.Numeric `json:"line_meters"`
 }
 
 // TEC-223: the price a unit was sold at to buyer by seller (its latest
@@ -419,7 +422,12 @@ func (q *Queries) GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrde
 		arg.OrderID,
 	)
 	var i GetUnitLastOrderPriceRow
-	err := row.Scan(&i.OrderItemID, &i.UnitPrice, &i.MeterLine)
+	err := row.Scan(
+		&i.OrderItemID,
+		&i.UnitPrice,
+		&i.MeterLine,
+		&i.LineMeters,
+	)
 	return i, err
 }
 

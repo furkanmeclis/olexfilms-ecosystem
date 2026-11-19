@@ -200,7 +200,7 @@ func (s *Service) editSellerLines(ctx context.Context, q *db.Queries, c Caller, 
 			continue
 		}
 		if !same {
-			done, err := reservedOnLine(ctx, q, it.ID)
+			done, err := reservedOnLine(ctx, q, it)
 			if err != nil {
 				return false, err
 			}

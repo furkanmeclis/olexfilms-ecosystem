@@ -420,7 +420,18 @@ SELECT
         THEN -GREATEST(sm.meters_delta, 0)
       ELSE 0
     END AS m,
-  u.initial_meters AS init
+  -- TEC-1250 (K7): a metered unit sold on an order counts the meters the
+  -- buyer ordered (its piece, at most the line's meters: a whole roll's
+  -- free extra meters are not demand), else its initial meters.
+  COALESCE((
+    SELECT LEAST(oiu.meters, oi.meters)
+    FROM order_item_units oiu
+    JOIN order_items oi ON oi.id = oiu.order_item_id
+    WHERE u.initial_meters IS NOT NULL
+      AND sm.type IN ('order_out', 'order_cancel_restore')
+      AND sm.reference_type = 'order_item_unit'
+      AND oiu.id = sm.reference_id
+  ), u.initial_meters) AS init
 FROM stock_movements sm
 JOIN units u ON u.id = sm.unit_id
 WHERE sm.brand_id = sqlc.arg(brand_id)

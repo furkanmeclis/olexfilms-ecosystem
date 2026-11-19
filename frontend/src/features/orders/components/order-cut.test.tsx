@@ -11,12 +11,14 @@ import type {
 
 import {
   CutDialog,
+  confirmKey,
   cutMeters,
   cutWarnings,
   DetachedPiecesNotice,
   isCutLine,
 } from "./order-cut";
 import { shortLines } from "./order-partial";
+import { lineCovered, linesBelowAssigned } from "../lib/form";
 
 const mutate = vi.fn();
 let previewData: OrderCutPreview | undefined;
@@ -43,6 +45,7 @@ const preview = (over: Partial<OrderCutPreview>): OrderCutPreview => ({
   remaining_meters: "9.00",
   whole: false,
   remnant: false,
+  excess_meters: "0.00",
   min_cut_meters: "2.00",
   missing_meters: "3.00",
   partial: false,
@@ -94,6 +97,73 @@ describe("TEC-1241 cut helpers", () => {
     expect(cutWarnings(preview({ closed_box: true, whole: true }))[0].key).toBe(
       "orders.cut.box_whole",
     );
+  });
+
+  it("TEC-1250 (K7): the whole roll with free extra meters is an info, not a warning", () => {
+    // 3 m from a 3.5 m roll: the whole roll goes, 0.5 m free.
+    const roll = cutWarnings(
+      preview({
+        source_meters: "3.50",
+        cut_meters: "3.50",
+        remaining_meters: "0.00",
+        whole: true,
+        excess_meters: "0.50",
+        min_cut_meters: "1.00",
+      }),
+    );
+    expect(roll).toEqual([
+      {
+        key: "orders.cut.whole_excess",
+        values: { excess: "0.50", min: "1.00", whole: "3.50" },
+        tone: "info",
+      },
+    ]);
+    // 14.6 m from a closed 15 m box: the box opens and goes whole.
+    const box = cutWarnings(
+      preview({
+        closed_box: true,
+        whole: true,
+        source_meters: "15.00",
+        cut_meters: "15.00",
+        remaining_meters: "0.00",
+        excess_meters: "0.40",
+      }),
+    ).map((w) => `${w.key}:${w.tone}`);
+    expect(box).toEqual([
+      "orders.cut.box_whole:warning",
+      "orders.cut.whole_excess:info",
+    ]);
+    // Exactly the minimum cut left: cut as before, nothing to say.
+    expect(
+      cutWarnings(
+        preview({ remaining_meters: "1.00", min_cut_meters: "1.00" }),
+      ),
+    ).toEqual([]);
+    expect(confirmKey(preview({ whole: true }))).toBe(
+      "orders.cut.confirm_whole",
+    );
+    expect(confirmKey(preview({ closed_box: true, whole: true }))).toBe(
+      "orders.cut.confirm_box_whole",
+    );
+    expect(confirmKey(preview({}))).toBe("orders.cut.confirm");
+  });
+
+  it("TEC-1250 (K7): a line covered by a whole roll is covered, not over", () => {
+    const covered = { ...item, assigned: "3.50", excess_meters: "0.50" };
+    expect(lineCovered(covered)).toBe(3);
+    const o = { items: [covered] } as unknown as Order;
+    expect(shortLines(o)).toEqual([]);
+    // Keeping the line at 3 m is not below what is assigned.
+    expect(
+      linesBelowAssigned(o, [
+        {
+          product_uuid: "p1",
+          unit_type: "piece",
+          sale_measure: "meter",
+          amount: "3",
+        } as unknown as Parameters<typeof linesBelowAssigned>[1][number],
+      ]).size,
+    ).toBe(0);
   });
 
   it("flags a partial shipment rest shorter than the minimum cut", () => {
@@ -152,6 +222,31 @@ describe("TEC-1241 CutDialog", () => {
     const warn = document.querySelector('[data-testid="cut-warning"]')!;
     expect(warn.textContent).toContain("orders.cut.box_open:3.00|12.00|15.00");
     expect(confirm().textContent).toBe("orders.cut.confirm_box");
+    expect(confirm().disabled).toBe(false);
+    act(() => {
+      confirm().form!.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("TEC-1250: says the whole roll goes free of the extra and confirms in one step", () => {
+    previewData = preview({
+      source_meters: "3.50",
+      cut_meters: "3.50",
+      remaining_meters: "0.00",
+      whole: true,
+      excess_meters: "0.50",
+      min_cut_meters: "1.00",
+    });
+    render();
+    const info = document.querySelector('[data-testid="cut-info"]')!;
+    expect(info.textContent).toContain(
+      "orders.cut.whole_excess:0.50|1.00|3.50",
+    );
+    expect(document.querySelector('[data-testid="cut-warning"]')).toBeNull();
+    expect(confirm().textContent).toBe("orders.cut.confirm_whole");
     expect(confirm().disabled).toBe(false);
     act(() => {
       confirm().form!.dispatchEvent(

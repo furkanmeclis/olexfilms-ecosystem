@@ -31,6 +31,7 @@ import {
   RECEIPT_MAX_BYTES,
   useStoreOrder,
 } from "@/features/orders/components/order-action-dialog";
+import { excessOf } from "@/features/orders/components/order-cut";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import { isRoll } from "@/features/orders/lib/form";
 import {
@@ -157,6 +158,17 @@ export function SuggestDialog({
                     >
                       {t("orders.cut.suggest_open_box", {
                         box: s.remaining_meters ?? "",
+                      })}
+                    </Badge>
+                  ) : null}
+                  {excessOf(s) > 0 ? (
+                    <Badge
+                      variant="secondary"
+                      className="ms-2"
+                      data-testid="suggestion-whole"
+                    >
+                      {t("orders.cut.suggest_whole", {
+                        excess: s.excess_meters ?? "",
                       })}
                     </Badge>
                   ) : null}
