@@ -18,10 +18,10 @@ import { useLocale } from "@/providers/locale-provider";
 type StatementOrder = NonNullable<CariStatementLine["order"]>;
 type StatementOrderItem = StatementOrder["items"][number];
 
-/** "2 pcs" / "12.50 m" of an order line. */
+/** "2 pcs" / "12.50 m" of an order line (TEC-1244: by its measure). */
 function ItemAmount({ item }: { item: StatementOrderItem }) {
   const { t, format } = useLocale();
-  if (item.meters != null) {
+  if (item.sale_measure === "meter" && item.meters != null) {
     return (
       <>
         {t("accounting.statement.order_meters", {
@@ -86,9 +86,10 @@ export function StatementOrderDetail({ order }: { order: StatementOrder }) {
         >
           {order.items.map((it) => (
             <li
-              key={it.product_uuid}
+              key={`${it.product_uuid}-${it.sale_measure}`}
               className="text-xs"
               data-testid="statement-order-item"
+              data-measure={it.sale_measure}
             >
               <div className="font-medium">
                 {it.product_name}

@@ -125,6 +125,12 @@ func TestOlexOrders(t *testing.T) {
 		}
 	}
 
+	// TEC-1244: every migrated legacy line is a box line with a quantity.
+	if n := scalar(`SELECT COUNT(*) FROM order_items i WHERE i.order_id IN (`+migratedOrders+`)
+		AND (i.sale_measure <> 'box' OR i.quantity IS NULL OR i.meters IS NOT NULL OR i.line_credits IS NOT NULL)`, hubSys, whSys); n != 0 {
+		t.Errorf("non-box legacy lines = %d", n)
+	}
+
 	// Matched hub + warehouse order is one record, mapped from both sides.
 	if n := scalar(`SELECT COUNT(*) FROM orders WHERE external_reference = 'SYN-WH-REF-0001'`); n != 1 {
 		t.Errorf("orders with SYN-WH-REF-0001 = %d, want 1", n)

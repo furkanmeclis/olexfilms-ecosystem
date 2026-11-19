@@ -47,8 +47,10 @@ import (
 //
 // Legacy orders are history: the step writes no status history row, no
 // outbox event and no accounting entry (K9; a later receipt books nothing
-// either, the total is 0). Lines of Glorian products are skipped (K2), roll
-// products are skipped (the legacy rows carry no meters). Reruns are
+// either, the total is 0). Lines of Glorian products are skipped (K2).
+// TEC-1244: a line is a box line (sale_measure 'box'); a roll product's
+// line would be a meter line, but the legacy rows carry no meters, so it is
+// skipped (legacyLineMeasure). Reruns are
 // idempotent through migration_map checksums; a changed legacy order is
 // rewritten only while the application has not moved it (no status history).
 type OrdersStep struct {
@@ -244,6 +246,22 @@ func skipOrder(c counts, l *legacyOrders, cand *orderCandidate, reason string, l
 			}
 		}
 	}
+}
+
+// legacyBoxMeasure is the order_items.sale_measure of every written legacy
+// line (TEC-1244): legacy orders count pieces.
+const legacyBoxMeasure = "box"
+
+// legacyLineMeasure maps a legacy order line to its measure by the
+// product (TEC-1244, kutu/metraj): a piece product's line is a box line
+// (quantity); a roll product's line is a meter line, but the legacy rows
+// carry no meters (and roll units are not migrated either), so it cannot
+// be written (ok false: skipped and counted, as before).
+func legacyLineMeasure(unitType string) (measure string, ok bool) {
+	if unitType == "roll_meter" {
+		return "meter", false
+	}
+	return legacyBoxMeasure, true
 }
 
 // orderLine is one product line of a candidate, merged from both sides.
@@ -910,7 +928,7 @@ func (s OrdersStep) orderLines(ctx context.Context, u *orderCtx, l *legacyOrders
 			c.inc("lines_skipped_product_unmapped:" + what)
 			return p, false, nil
 		}
-		if p.UnitType == "roll_meter" {
+		if _, ok := legacyLineMeasure(p.UnitType); !ok {
 			c.inc("lines_skipped_roll_meter:" + what)
 			return p, false, nil
 		}
@@ -1045,7 +1063,9 @@ func (s OrdersStep) writeLines(ctx context.Context, u *orderCtx, orderID, orgID 
 			}
 		}
 		if target == uuid.Nil {
-			existing, err := u.q.MigratorFindOrderItem(ctx, db.MigratorFindOrderItemParams{OrderID: orderID, ProductID: ln.ProductID})
+			existing, err := u.q.MigratorFindOrderItem(ctx, db.MigratorFindOrderItemParams{
+				OrderID: orderID, ProductID: ln.ProductID, SaleMeasure: legacyBoxMeasure,
+			})
 			switch {
 			case err == nil:
 				target = existing

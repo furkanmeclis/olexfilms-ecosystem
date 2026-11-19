@@ -494,8 +494,10 @@ RETURNING *;
 -- TEC-1214: the last order line a unit was bought on from the supplier, in
 -- whatever currency the order was placed (a brand currency change leaves
 -- older orders in the old currency); rate_snapshot carries the rate frozen
--- at approval to the buyer's ledger currency.
-SELECT oi.unit_price, o.currency::text AS currency, o.rate_snapshot
+-- at approval to the buyer's ledger currency. TEC-1244: meter_line tells
+-- the price is per meter (a meter line), else per piece / box.
+SELECT oi.unit_price, o.currency::text AS currency, o.rate_snapshot,
+       (oi.sale_measure = 'meter')::bool AS meter_line
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id

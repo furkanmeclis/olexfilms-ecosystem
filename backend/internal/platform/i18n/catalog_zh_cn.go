@@ -1111,6 +1111,7 @@ var zhCNCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "预计时长（分钟）",
 	"ai.actions.fields.follow_up_date":         "跟进日期",
 	"ai.actions.fields.item":                   "项目",
+	"ai.actions.fields.line_credits":           "每段使用次数",
 	"ai.actions.fields.lead":                   "潜在客户",
 	"ai.actions.fields.note":                   "备注",
 	"ai.actions.fields.notes":                  "备注列表",

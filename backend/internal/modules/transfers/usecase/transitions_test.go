@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -128,12 +129,61 @@ func TestLineAmount(t *testing.T) {
 	}{
 		{db.ListTransferRequestItemsRow{Quantity: pgtype.Int4{Int32: 3, Valid: true}}, big.NewRat(3, 1)},
 		{db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "roll_meter"}, big.NewRat(25, 2)},
-		{db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}, big.NewRat(1, 1)},
+		// TEC-1244: a cut piece of a piece product is priced by its meters
+		// (before: one piece, the return credit was short).
+		{db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}, big.NewRat(25, 2)},
 		{db.ListTransferRequestItemsRow{}, big.NewRat(1, 1)},
 	}
 	for i, c := range cases {
 		if got := lineAmount(c.row); got.Cmp(c.want) != 0 {
 			t.Errorf("case %d: %s, want %s", i, got.RatString(), c.want.RatString())
 		}
+	}
+}
+
+// TEC-1244: at the order line price a meter line counts meters, a box
+// line one piece (a closed box), a fixed line its quantity.
+func TestOrderLineAmount(t *testing.T) {
+	m, _ := numeric("3.50")
+	piece := db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}
+	box := db.ListTransferRequestItemsRow{ProductUnitType: "piece"}
+	fixed := db.ListTransferRequestItemsRow{Quantity: pgtype.Int4{Int32: 4, Valid: true}}
+	cases := []struct {
+		row   db.ListTransferRequestItemsRow
+		meter bool
+		want  *big.Rat
+	}{
+		{piece, true, big.NewRat(7, 2)},
+		{piece, false, big.NewRat(1, 1)},
+		{box, false, big.NewRat(1, 1)},
+		{box, true, big.NewRat(1, 1)},
+		{fixed, false, big.NewRat(4, 1)},
+	}
+	for i, c := range cases {
+		if got := orderLineAmount(c.row, c.meter); got.Cmp(c.want) != 0 {
+			t.Errorf("case %d: %s, want %s", i, got.RatString(), c.want.RatString())
+		}
+	}
+	if meterPiece(box) || !meterPiece(piece) || meterPiece(fixed) {
+		t.Fatal("meterPiece")
+	}
+}
+
+// TEC-1244: the purchase price of a cut piece is the meter price; of a
+// roll its (per meter) price; of a closed box the box price.
+func TestPurchaseUnitPrice(t *testing.T) {
+	m, _ := numeric("3.50")
+	p := pricingusecase.PurchasePrice{Price: "400", MeterPrice: "26.6667"}
+	if got := purchaseUnitPrice(db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}, p); got != "26.6667" {
+		t.Fatalf("cut piece = %s", got)
+	}
+	if got := purchaseUnitPrice(db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "roll_meter"}, pricingusecase.PurchasePrice{Price: "30"}); got != "30" {
+		t.Fatalf("roll = %s", got)
+	}
+	if got := purchaseUnitPrice(db.ListTransferRequestItemsRow{ProductUnitType: "piece"}, p); got != "400" {
+		t.Fatalf("closed box = %s", got)
+	}
+	if got := purchaseUnitPrice(db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}, pricingusecase.PurchasePrice{Price: "400"}); got != "" {
+		t.Fatalf("no meter price = %q (the line stays unpriced)", got)
 	}
 }

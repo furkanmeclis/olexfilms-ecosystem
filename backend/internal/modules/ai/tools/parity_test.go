@@ -77,3 +77,48 @@ func TestParityTableNamesAreRegistered(t *testing.T) {
 		t.Errorf("unexpected sources %v (mapped %d)", counts, mapped)
 	}
 }
+
+// TEC-1244: the assistant's order draft takes the same line fields as the
+// REST order line (docs/openapi.yaml OrderItemInput) a buyer fills in:
+// product, quantity / meters, the measure (box / meter) and the meter
+// line's credits. Price, discount and gift fields stay out (the
+// assistant never sets a price).
+func TestOrderDraftSchemaParity(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "docs", "openapi.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(raw)
+	start := strings.Index(doc, "\n    OrderItemInput:\n")
+	if start < 0 {
+		t.Fatal("OrderItemInput missing from docs/openapi.yaml")
+	}
+	block := doc[start+1:]
+	if end := regexp.MustCompile(`\n    [A-Za-z]+:\n`).FindStringIndex(block[1:]); end != nil {
+		block = block[:end[0]+1]
+	}
+	rest := map[string]bool{}
+	for _, m := range regexp.MustCompile(`(?m)^        ([a-z_]+):`).FindAllStringSubmatch(block, -1) {
+		rest[m[1]] = true
+	}
+	spec := CreateOrderDraft{}.Spec()
+	items := spec.InputSchema["properties"].(map[string]any)["items"].(map[string]any)["items"].(map[string]any)
+	props := items["properties"].(map[string]any)
+	for _, f := range []string{"product_uuid", "quantity", "meters", "sale_measure", "line_credits"} {
+		if !rest[f] {
+			t.Errorf("OrderItemInput has no %s", f)
+		}
+		if _, ok := props[f]; !ok {
+			t.Errorf("create_order_draft item schema has no %s", f)
+		}
+	}
+	for _, f := range []string{"unit_price", "discount_pct", "is_gift"} {
+		if _, ok := props[f]; ok {
+			t.Errorf("create_order_draft must not take %s", f)
+		}
+	}
+	m := props["sale_measure"].(map[string]any)["enum"].([]string)
+	if strings.Join(m, ",") != "box,meter" {
+		t.Errorf("sale_measure enum = %v", m)
+	}
+}

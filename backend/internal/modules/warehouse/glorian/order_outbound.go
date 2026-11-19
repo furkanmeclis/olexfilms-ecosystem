@@ -167,7 +167,7 @@ func (o *OrderOutbounder) EnsureOutbounds(ctx context.Context, order db.Order) (
 		return nil, fmt.Errorf("glorian order: units: %w", err)
 	}
 	for _, u := range units {
-		if have[u.ConnectionID] {
+		if have[u.ConnectionID] || !outboundUnit(u) {
 			continue
 		}
 		have[u.ConnectionID] = true
@@ -434,6 +434,11 @@ func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, 
 		if u.ConnectionID != ob.ConnectionID {
 			continue
 		}
+		if !outboundUnit(u) {
+			o.log.Warn("glorian order: meter line of a synced product left out",
+				"order_id", order.ID, "order_item_id", u.OrderItemID, "barcode", u.Barcode)
+			continue
+		}
 		i, ok := index[u.OrderItemID]
 		if !ok {
 			i = len(items)
@@ -452,6 +457,14 @@ func (o *OrderOutbounder) createInput(ctx context.Context, ob db.OrderOutbound, 
 		in.Notes = &note
 	}
 	return in, nil
+}
+
+// outboundUnit reports a unit Glorian knows (TEC-1244, K1): a synced
+// product is never sold by the meter, so a unit on a meter line (a cut
+// piece with a barcode printed here) is never sent; the box lines go as
+// before.
+func outboundUnit(u db.ListGlorianOrderUnitsRow) bool {
+	return u.SaleMeasure != "meter"
 }
 
 func shipInput(order db.Order) TransitionInput {

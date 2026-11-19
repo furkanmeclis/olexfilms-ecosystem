@@ -49722,12 +49722,19 @@ components:
 
     CariStatementOrderItem:
       type: object
-      required: [product_uuid, product_sku, product_name, unit_type, quantity, meters, unit_price, line_total, units]
+      required: [product_uuid, product_sku, product_name, unit_type, sale_measure, quantity, meters, unit_price, line_total, units]
       properties:
         product_uuid: { type: string, format: uuid }
         product_sku: { type: string }
         product_name: { type: string }
         unit_type: { type: string, example: piece }
+        sale_measure:
+          type: string
+          enum: [box, meter]
+          description: >-
+            TEC-1244 — the line's measure: box (quantity, unit_price per
+            piece/box) or meter (meters, unit_price per meter). A product
+            may have a box line and a meter line on one order.
         quantity: { type: [integer, "null"], format: int32, description: Pieces (null for a meter line) }
         meters: { type: [string, "null"], example: "12.50", description: Meters (null for a piece line) }
         unit_price: { type: string, example: "50.0000", description: Frozen unit price (4 decimals) in the order currency }

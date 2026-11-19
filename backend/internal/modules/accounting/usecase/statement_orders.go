@@ -32,10 +32,13 @@ type StatementOrder struct {
 
 // StatementOrderItem is one line of the order with its assigned units.
 type StatementOrderItem struct {
-	ProductUUID uuid.UUID            `json:"product_uuid"`
-	ProductSKU  string               `json:"product_sku"`
-	ProductName string               `json:"product_name"`
-	UnitType    string               `json:"unit_type"`
+	ProductUUID uuid.UUID `json:"product_uuid"`
+	ProductSKU  string    `json:"product_sku"`
+	ProductName string    `json:"product_name"`
+	UnitType    string    `json:"unit_type"`
+	// SaleMeasure (TEC-1244) is the line's measure: box (Quantity) or
+	// meter (Meters, UnitPrice per meter). A product may have both lines.
+	SaleMeasure string               `json:"sale_measure"`
 	Quantity    *int32               `json:"quantity"`
 	Meters      *string              `json:"meters"`
 	UnitPrice   string               `json:"unit_price"`
@@ -113,7 +116,7 @@ func (s *Service) attachStatementOrders(ctx context.Context, bookID int64, lines
 		}
 		o.Items = append(o.Items, StatementOrderItem{
 			ProductUUID: it.ProductUuid, ProductSKU: it.ProductSku, ProductName: it.ProductName, UnitType: it.UnitType,
-			Quantity: int4Ptr(it.Quantity), Meters: numericPtr(it.Meters, 2),
+			SaleMeasure: it.SaleMeasure, Quantity: int4Ptr(it.Quantity), Meters: numericPtr(it.Meters, 2),
 			UnitPrice: numericString(it.UnitPrice, 4), LineTotal: numericString(it.LineTotal, 2),
 			Units: u,
 		})

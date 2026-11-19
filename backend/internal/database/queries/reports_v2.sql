@@ -173,13 +173,17 @@ LIMIT sqlc.arg(row_limit);
 -- location), bucketed by the days since the last ledger movement of each
 -- unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
 -- brand price list's recommended sale price; the report shows it only
--- with a pricing read permission.
+-- with a pricing read permission. TEC-1244: quantity counts closed boxes
+-- (and rolls, fixed pieces); an opened box / cut piece of a piece product
+-- adds only its meters, so the two measures are never summed together.
 WITH stock AS (
     SELECT u.product_id, st.holder_org_id AS org_id, wl.warehouse_id,
-           1::bigint AS qty, COALESCE(u.remaining_meters, 0)::numeric(14,2) AS meters,
+           CASE WHEN up.unit_type = 'piece' AND u.remaining_meters IS NOT NULL THEN 0 ELSE 1 END::bigint AS qty,
+           COALESCE(u.remaining_meters, 0)::numeric(14,2) AS meters,
            COALESCE(m.created_at, u.created_at) AS last_at
     FROM unit_current_state st
     JOIN units u ON u.id = st.unit_id
+    JOIN products up ON up.id = u.product_id
     LEFT JOIN warehouse_locations wl ON wl.id = st.owner_location_id
     LEFT JOIN stock_movements m ON m.id = st.last_movement_id
     WHERE st.status IN ('available', 'placed')

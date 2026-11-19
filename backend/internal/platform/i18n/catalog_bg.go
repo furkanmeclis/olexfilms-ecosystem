@@ -1111,6 +1111,7 @@ var bgCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Очаквана продължителност (мин)",
 	"ai.actions.fields.follow_up_date":         "Дата за проследяване",
 	"ai.actions.fields.item":                   "Позиция",
+	"ai.actions.fields.line_credits":           "Права за ползване на парче",
 	"ai.actions.fields.lead":                   "Потенциален клиент",
 	"ai.actions.fields.note":                   "Бележка",
 	"ai.actions.fields.notes":                  "Бележки",

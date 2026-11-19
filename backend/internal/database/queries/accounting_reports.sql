@@ -221,7 +221,8 @@ ORDER BY sp.name, sp.id;
 -- name: ListStatementOrderItems :many
 SELECT o.uuid AS order_uuid, o.order_no, o.status AS order_status, o.currency,
        oi.id AS item_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
-       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total
+       p.unit_type, oi.quantity, oi.meters, oi.unit_price, oi.line_total,
+       oi.sale_measure::text AS sale_measure
 FROM orders o
 JOIN order_items oi ON oi.order_id = o.id
 JOIN products p ON p.id = oi.product_id

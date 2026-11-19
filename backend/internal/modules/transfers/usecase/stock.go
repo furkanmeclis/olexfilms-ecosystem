@@ -373,7 +373,7 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 	}
 	total, complete := new(big.Rat), true
 	for _, it := range rows {
-		var price *big.Rat
+		var price, amount *big.Rat
 		var orderItem pgtype.Int8
 		if r.Kind == KindReturn {
 			// TEC-223: a return is priced at what the parent sold the unit
@@ -393,8 +393,11 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return pgtype.Numeric{}, fmt.Errorf("transfers: order price: %w", err)
 			}
-			if err == nil {
-				price = numericRat(op.UnitPrice)
+			// TEC-1244: a meter line's price is per meter, so it needs
+			// the unit's meters; a unit without meters on it (never cut)
+			// falls back to the purchase price below.
+			if err == nil && (!op.MeterLine || meterPiece(it)) {
+				price, amount = numericRat(op.UnitPrice), orderLineAmount(it, op.MeterLine)
 				// TEC-229: the order line this return line reverses.
 				orderItem = pgtype.Int8{Int64: op.OrderItemID, Valid: true}
 			}
@@ -405,19 +408,29 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 				complete = false
 				continue
 			}
-			if price, err = parseRat(p.Price); err != nil {
+			unit := purchaseUnitPrice(it, p)
+			if unit == "" {
+				complete = false
+				continue
+			}
+			if price, err = parseRat(unit); err != nil {
 				return pgtype.Numeric{}, err
 			}
+			amount = lineAmount(it)
 		}
-		line := new(big.Rat).Mul(price, lineAmount(it))
+		line := new(big.Rat).Mul(price, amount)
 		up, err := numeric(price.FloatString(4))
 		if err != nil {
 			return pgtype.Numeric{}, err
 		}
-		lt, err := numeric(line.FloatString(2))
+		// TEC-1244: the line is rounded to cents once and the request
+		// total is the sum of the rounded lines (what the lines show).
+		cents := line.FloatString(2)
+		lt, err := numeric(cents)
 		if err != nil {
 			return pgtype.Numeric{}, err
 		}
+		line, _ = new(big.Rat).SetString(cents)
 		if err := q.SetTransferItemPrice(ctx, db.SetTransferItemPriceParams{ID: it.ID, UnitPrice: up, LineTotal: lt, OrderItemID: orderItem}); err != nil {
 			return pgtype.Numeric{}, fmt.Errorf("transfers: item price: %w", err)
 		}
@@ -429,16 +442,47 @@ func (s *Service) freezePrices(ctx context.Context, q *db.Queries, r db.StockTra
 	return numeric(total.FloatString(2))
 }
 
-// lineAmount is the priced amount of a line: the quantity of a fixed
-// barcode, the meters of a roll of a per-meter product, else one piece.
+// meterPiece reports a serial unit carrying meters: a roll, an opened box
+// or a cut piece (TEC-1244). A closed box of a piece product has none.
+func meterPiece(it db.ListTransferRequestItemsRow) bool {
+	return !it.Quantity.Valid && it.Meters.Valid && numericRat(it.Meters) != nil
+}
+
+// lineAmount is the priced amount of a line at the purchase price: the
+// quantity of a fixed barcode, the meters of a unit with meters (a roll,
+// or a cut piece of a product sold by the meter, TEC-1244), else one
+// piece (a closed box).
 func lineAmount(it db.ListTransferRequestItemsRow) *big.Rat {
 	switch {
 	case it.Quantity.Valid:
 		return new(big.Rat).SetInt64(int64(it.Quantity.Int32))
-	case it.Meters.Valid && it.ProductUnitType == "roll_meter":
-		if r := numericRat(it.Meters); r != nil {
-			return r
-		}
+	case meterPiece(it):
+		return numericRat(it.Meters)
 	}
 	return big.NewRat(1, 1)
+}
+
+// orderLineAmount is the priced amount of a return line at its order line
+// price (TEC-1244): a meter line is priced per meter (meters × the line's
+// meter price), a box / piece line per piece or the fixed quantity.
+func orderLineAmount(it db.ListTransferRequestItemsRow, meterLine bool) *big.Rat {
+	switch {
+	case it.Quantity.Valid:
+		return new(big.Rat).SetInt64(int64(it.Quantity.Int32))
+	case meterLine && meterPiece(it):
+		return numericRat(it.Meters)
+	}
+	return big.NewRat(1, 1)
+}
+
+// purchaseUnitPrice is the purchase price that multiplies lineAmount: a
+// cut piece of a piece product takes the buyer's meter price (K2: box
+// price × meter list ÷ box list, else box price ÷ box meters); a roll's
+// price is already per meter; everything else the box / piece price. ""
+// when the meter price cannot be computed (the line stays unpriced).
+func purchaseUnitPrice(it db.ListTransferRequestItemsRow, p pricingusecase.PurchasePrice) string {
+	if meterPiece(it) && it.ProductUnitType != "roll_meter" {
+		return p.MeterPrice
+	}
+	return p.Price
 }

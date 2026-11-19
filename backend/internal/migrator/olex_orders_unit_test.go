@@ -109,3 +109,15 @@ func TestOrderTrackingAndNote(t *testing.T) {
 		t.Errorf("tracking %q note %q", tr, note)
 	}
 }
+
+// TEC-1244: a legacy line of a piece product maps to a box line; a roll
+// product's line would be a meter line but has no meters, so it is not
+// written.
+func TestLegacyLineMeasure(t *testing.T) {
+	if m, ok := legacyLineMeasure("piece"); !ok || m != "box" {
+		t.Fatalf("piece = %s %v", m, ok)
+	}
+	if m, ok := legacyLineMeasure("roll_meter"); ok || m != "meter" {
+		t.Fatalf("roll_meter = %s %v", m, ok)
+	}
+}

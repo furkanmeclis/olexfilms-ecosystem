@@ -770,12 +770,23 @@ func (s *Service) CreatePurchase(ctx context.Context, c Caller, in PurchaseInput
 // and converted with the rate frozen at approval; otherwise the current
 // price list in the dealer currency, or in the brand currency converted at
 // today's rate. nil when no price or no rate is found (an unknown cost is
-// reported as such instead of a wrong margin).
+// reported as such instead of a wrong margin). TEC-1244: a unit with
+// meters (a roll or a cut piece) costs its meters × the meter cost: the
+// meter line's price, else the buyer's meter price (a roll's price is
+// already per meter); a closed box costs the box price.
 func (s *Service) purchaseCost(ctx context.Context, q *db.Queries, o db.Organization, unitID, productID int64) *string {
+	meters := unitMeters(ctx, q, unitID)
 	parent, err := q.SupplierOf(ctx, o.ID)
 	if err == nil {
-		if op, err := q.GetUnitLastOrderCost(ctx, db.GetUnitLastOrderCostParams{UnitID: unitID, SellerOrgID: parent.ID, BuyerOrgID: o.ID}); err == nil {
-			if v, ok := frozenCost(op.UnitPrice, op.Currency, o.Currency, op.RateSnapshot); ok {
+		if op, err := q.GetUnitLastOrderCost(ctx, db.GetUnitLastOrderCostParams{UnitID: unitID, SellerOrgID: parent.ID, BuyerOrgID: o.ID}); err == nil &&
+			(!op.MeterLine || meters != nil) {
+			// The 4-decimal order price, exact: rounded to cents only
+			// after meters and the rate (TEC-1244).
+			price := exactNumeric(op.UnitPrice)
+			if op.MeterLine {
+				price = mulMeters(price, meters)
+			}
+			if v, ok := frozenCost(price, op.Currency, o.Currency, op.RateSnapshot); ok {
 				return &v
 			}
 		}
@@ -784,7 +795,10 @@ func (s *Service) purchaseCost(ctx context.Context, q *db.Queries, o db.Organiza
 	prices, err := pricing.BuyerPurchasePrices(ctx, o.ID, o.Type, o.BrandID, []int64{productID}, o.Currency)
 	if err == nil {
 		if p, ok := prices[productID]; ok {
-			return &p.Price
+			if v, ok := listCost(p, meters); ok {
+				v, _ = convertAt(v, "1")
+				return &v
+			}
 		}
 	}
 	if s.rates == nil {
@@ -802,22 +816,80 @@ func (s *Service) purchaseCost(ctx context.Context, q *db.Queries, o db.Organiza
 	if !ok {
 		return nil
 	}
+	price, ok := listCost(p, meters)
+	if !ok {
+		return nil
+	}
 	snap, err := s.rates.ResolveRate(ctx, s.now().UTC(), brand.Currency, o.Currency)
 	if err != nil {
 		return nil
 	}
-	v, ok := convertAt(p.Price, snap.Rate)
+	v, ok := convertAt(price, snap.Rate)
 	if !ok {
 		return nil
 	}
 	return &v
 }
 
+// unitMeters is the remaining meters of a unit with meters (a roll, an
+// opened box or a cut piece, TEC-1244); nil for a closed box / a piece.
+func unitMeters(ctx context.Context, q *db.Queries, unitID int64) *big.Rat {
+	u, err := q.GetUnit(ctx, unitID)
+	if err != nil || !u.RemainingMeters.Valid {
+		return nil
+	}
+	m := numericRat(u.RemainingMeters)
+	if m.Sign() <= 0 {
+		return nil
+	}
+	return m
+}
+
+// exactNumeric renders a NUMERIC without rounding ("" when NULL).
+func exactNumeric(n pgtype.Numeric) string {
+	if !n.Valid || n.Int == nil {
+		return ""
+	}
+	r := new(big.Rat).SetInt(n.Int)
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(n.Exp, -n.Exp))), nil)
+	if n.Exp >= 0 {
+		r.Mul(r, new(big.Rat).SetInt(scale))
+	} else {
+		r.Quo(r, new(big.Rat).SetInt(scale))
+	}
+	return r.FloatString(max(0, int(-n.Exp)))
+}
+
+// mulMeters is price × meters, exact (rounded once, after the rate).
+func mulMeters(price string, meters *big.Rat) string {
+	p, ok := new(big.Rat).SetString(price)
+	if !ok {
+		return price
+	}
+	return p.Mul(p, meters).FloatString(6)
+}
+
+// listCost is the price list cost of a unit (TEC-1244): meters × the
+// meter price for a unit with meters (a roll's Price is per meter and
+// MeterPrice equals it, a piece product's MeterPrice is the K2 meter
+// price), else the box / piece price. false when a cut piece has no meter
+// price.
+func listCost(p usecase.PurchasePrice, meters *big.Rat) (string, bool) {
+	if meters == nil {
+		return p.Price, true
+	}
+	mp := p.MeterPrice
+	if mp == "" {
+		return "", false
+	}
+	return mulMeters(mp, meters), true
+}
+
 // frozenCost converts an order unit price from the order currency to the
 // ledger currency with the rate frozen in the order's rate_snapshot.
-func frozenCost(price pgtype.Numeric, from, to string, rawSnapshot []byte) (string, bool) {
+func frozenCost(price string, from, to string, rawSnapshot []byte) (string, bool) {
 	if from == to {
-		return format(price, 2), true
+		return convertAt(price, "1")
 	}
 	if len(rawSnapshot) == 0 {
 		return "", false
@@ -830,7 +902,7 @@ func frozenCost(price pgtype.Numeric, from, to string, rawSnapshot []byte) (stri
 	if !ok {
 		return "", false
 	}
-	return convertAt(posting.FormatNumeric(price), pair.Rate)
+	return convertAt(price, pair.Rate)
 }
 
 // convertAt is amount × rate rounded to cents.

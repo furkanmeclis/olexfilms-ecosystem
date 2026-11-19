@@ -1111,6 +1111,7 @@ var frCatalog = map[string]string{
 	"ai.actions.fields.estimated_minutes":      "Durée estimée (min)",
 	"ai.actions.fields.follow_up_date":         "Date de relance",
 	"ai.actions.fields.item":                   "Article",
+	"ai.actions.fields.line_credits":           "Droits d'utilisation par coupe",
 	"ai.actions.fields.lead":                   "Prospect",
 	"ai.actions.fields.note":                   "Remarque",
 	"ai.actions.fields.notes":                  "Remarques",

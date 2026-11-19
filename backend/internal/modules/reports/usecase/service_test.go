@@ -702,7 +702,7 @@ SELECT o.id FROM orders o WHERE o.buyer_org_id = $1 ORDER BY o.id DESC LIMIT 1)`
 	if len(env.Rows) != 1 || env.Rows[0]["line_count"] != int64(4) || env.Rows[0]["month"] != testNow.AddDate(0, 0, -2).Format("2006-01") {
 		t.Fatalf("rows = %+v", env.Rows)
 	}
-	if len(env.Series[0].Points) < 1 || len(env.Columns) != 6 {
+	if len(env.Series[0].Points) < 1 || len(env.Columns) != 7 {
 		t.Fatalf("shape = %+v", env)
 	}
 }

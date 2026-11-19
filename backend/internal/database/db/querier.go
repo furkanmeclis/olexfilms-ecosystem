@@ -1514,10 +1514,13 @@ type Querier interface {
 	// TEC-1214: the last order line a unit was bought on from the supplier, in
 	// whatever currency the order was placed (a brand currency change leaves
 	// older orders in the old currency); rate_snapshot carries the rate frozen
-	// at approval to the buyer's ledger currency.
+	// at approval to the buyer's ledger currency. TEC-1244: meter_line tells
+	// the price is per meter (a meter line), else per piece / box.
 	GetUnitLastOrderCost(ctx context.Context, arg GetUnitLastOrderCostParams) (GetUnitLastOrderCostRow, error)
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
+	// TEC-1244: meter_line tells the price is per meter (a meter line of a
+	// roll or of a piece product sold by the meter), else per piece / box.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
 	GetUnitLotNote(ctx context.Context, id int64) (GetUnitLotNoteRow, error)
 	// The roll a unit was cut from (TEC-1078), with its current holder.
@@ -2275,7 +2278,9 @@ type Querier interface {
 	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
-	// and never appear.
+	// and never appear. TEC-1244: sale_measure lets the outbound leave out a
+	// meter line (K1: a synced product is never sold by the meter; a cut piece
+	// has no Glorian barcode).
 	ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]ListGlorianOrderUnitsRow, error)
 	// Order outbounds of a connection with their order (TEC-367 list contract,
 	// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
@@ -3510,7 +3515,8 @@ type Querier interface {
 	// shelves and bins are unique by full_code).
 	MigratorFindLocation(ctx context.Context, arg MigratorFindLocationParams) (uuid.UUID, error)
 	MigratorFindOrderByExternalReference(ctx context.Context, arg MigratorFindOrderByExternalReferenceParams) (uuid.UUID, error)
-	// TEC-1238: legacy lines are box (quantity) lines.
+	// TEC-1238/TEC-1244: a legacy line maps to the line of its product and
+	// measure (legacyLineMeasure: box, or meter for a roll product).
 	MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error)
 	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
 	// Products of the brand with the name (case insensitive); the warehouse
@@ -3881,6 +3887,8 @@ type Querier interface {
 	// line counts in the month its order shipped (in the report zone); orders
 	// cancelled after shipping (goods back) are left out. Scope like the other
 	// order reports: the seller or the buyer is in reach.
+	// TEC-1244: one row per product and line measure (box / meter), so a
+	// product sold both ways keeps its pieces and meters apart.
 	ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlotterCutParams) ([]ReportOrderPlotterCutRow, error)
 	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
 	// Orders: the caller reaches an order as its owner (organization_id) or
@@ -3916,7 +3924,9 @@ type Querier interface {
 	// location), bucketed by the days since the last ledger movement of each
 	// unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
 	// brand price list's recommended sale price; the report shows it only
-	// with a pricing read permission.
+	// with a pricing read permission. TEC-1244: quantity counts closed boxes
+	// (and rolls, fixed pieces); an opened box / cut piece of a piece product
+	// adds only its meters, so the two measures are never summed together.
 	ReportStockAging(ctx context.Context, arg ReportStockAgingParams) ([]ReportStockAgingRow, error)
 	ReportStockMovementByWarehouse(ctx context.Context, arg ReportStockMovementByWarehouseParams) ([]ReportStockMovementByWarehouseRow, error)
 	// stock.movement: serial unit movements into and out of the warehouses in
