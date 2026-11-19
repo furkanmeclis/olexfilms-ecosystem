@@ -33,7 +33,9 @@ type OrderInput struct {
 
 // FromOrder maps a center sales order. Lines are the order_items at their
 // sale price (VAT-exclusive, as orders.subtotal); quantity is the piece
-// count or the metres of a roll product. KDV comes from VAT.
+// count or the metres of a meter line. TEC-1244: a meter line (a roll, or
+// a piece product sold by the meter) goes as MTR, a box line as today
+// (C62). KDV comes from VAT.
 func FromOrder(in OrderInput) (ubl.Document, error) {
 	buyer, err := OrganizationParty(in.Buyer, in.BuyerCountry)
 	if err != nil {

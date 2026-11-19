@@ -301,3 +301,37 @@ func TestNumericString(t *testing.T) {
 		t.Errorf("got %s", got)
 	}
 }
+
+// TEC-1244 acceptance (e-fatura birim kodu): a piece product sold as a
+// box and by the meter on one order (K10) gives a C62 box line and an MTR
+// meter line; the meter line's 4-decimal price × meters is rounded to
+// cents like the order line total (3.5 × 26.6667 = 93.33).
+func TestFromOrderBoxAndMeterLines(t *testing.T) {
+	film := db.Product{ID: 5, CategoryID: 10, Name: "Black PPF", Sku: "BPPF", UnitType: "piece", SellableByMeter: true}
+	in := order()
+	in.Lines = []OrderLine{
+		{Item: db.OrderItem{Quantity: pgtype.Int4{Int32: 1, Valid: true}, UnitPrice: num("400.0000")}, Product: film},
+		{Item: db.OrderItem{Meters: num("3.50"), UnitPrice: num("26.6667"), LineCredits: pgtype.Int4{Int32: 5, Valid: true}}, Product: film},
+	}
+	doc, err := FromOrder(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ubl.Line{
+		{Name: "Black PPF (BPPF)", Quantity: "1", UnitCode: "C62", UnitPrice: "400", VATRate: "20"},
+		{Name: "Black PPF (BPPF)", Quantity: "3.5", UnitCode: "MTR", UnitPrice: "26.6667", VATRate: "20"},
+	}
+	if len(doc.Lines) != len(want) {
+		t.Fatalf("lines = %+v", doc.Lines)
+	}
+	for i, w := range want {
+		if doc.Lines[i] != w {
+			t.Errorf("line %d = %+v, want %+v", i, doc.Lines[i], w)
+		}
+	}
+	// 400.00 + 93.33 = 493.33 @20% = 98.67 -> 592.00
+	_, _, inv := buildXML(t, doc, "")
+	if inv.ext != "493.33" || inv.tax != "98.67" || inv.payable != "592.00" {
+		t.Fatalf("totals = %+v, want 493.33/98.67/592.00", inv)
+	}
+}
