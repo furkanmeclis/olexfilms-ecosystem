@@ -329,6 +329,8 @@ describe('gerçek çeviriler: "kaldı" sözcüğü bir kez', () => {
     it: /Ancora|Restano|rimanent/g,
     ru: /Остал|осталось/g,
     uk: /Залиши|залишилось/g,
+    fa: /باقی/g,
+    hi: /शेष/g,
   };
   const occurrences = (text: string, lang: string) => (text.match(LEFT_WORD[lang]) ?? []).length;
 

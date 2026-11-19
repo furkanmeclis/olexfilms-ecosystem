@@ -588,6 +588,48 @@ import fa_warehouse from './locales/fa/warehouse.json';
 import fa_widgets from './locales/fa/widgets.json';
 import fa_errors from '../../../../frontend/src/locales/fa/errors.json';
 import fa_modules from '../../../../frontend/src/locales/fa/modules.json';
+import hi_common from './locales/hi/common.json';
+import hi_accounting from './locales/hi/accounting.json';
+import hi_adjust from './locales/hi/adjust.json';
+import hi_admin from './locales/hi/admin.json';
+import hi_analytics from './locales/hi/analytics.json';
+import hi_announcements from './locales/hi/announcements.json';
+import hi_appointments from './locales/hi/appointments.json';
+import hi_assistant from './locales/hi/assistant.json';
+import hi_auth from './locales/hi/auth.json';
+import hi_callerid from './locales/hi/callerid.json';
+import hi_campaigns from './locales/hi/campaigns.json';
+import hi_catalog from './locales/hi/catalog.json';
+import hi_claims from './locales/hi/claims.json';
+import hi_customer from './locales/hi/customer.json';
+import hi_dealer from './locales/hi/dealer.json';
+import hi_feedback from './locales/hi/feedback.json';
+import hi_fleets from './locales/hi/fleets.json';
+import hi_governance from './locales/hi/governance.json';
+import hi_home from './locales/hi/home.json';
+import hi_leads from './locales/hi/leads.json';
+import hi_measure from './locales/hi/measure.json';
+import hi_menu from './locales/hi/menu.json';
+import hi_nav from './locales/hi/nav.json';
+import hi_notifications from './locales/hi/notifications.json';
+import hi_onboarding from './locales/hi/onboarding.json';
+import hi_orders from './locales/hi/orders.json';
+import hi_plate from './locales/hi/plate.json';
+import hi_qr from './locales/hi/qr.json';
+import hi_sales from './locales/hi/sales.json';
+import hi_scan from './locales/hi/scan.json';
+import hi_search from './locales/hi/search.json';
+import hi_settings from './locales/hi/settings.json';
+import hi_spaces from './locales/hi/spaces.json';
+import hi_staff from './locales/hi/staff.json';
+import hi_subscriptions from './locales/hi/subscriptions.json';
+import hi_tasks from './locales/hi/tasks.json';
+import hi_transfers from './locales/hi/transfers.json';
+import hi_update from './locales/hi/update.json';
+import hi_warehouse from './locales/hi/warehouse.json';
+import hi_widgets from './locales/hi/widgets.json';
+import hi_errors from '../../../../frontend/src/locales/hi/errors.json';
+import hi_modules from '../../../../frontend/src/locales/hi/modules.json';
 
 export const NAMESPACES = ['common', 'accounting', 'adjust', 'admin', 'analytics', 'announcements', 'appointments', 'assistant', 'auth', 'callerid', 'campaigns', 'catalog', 'claims', 'customer', 'dealer', 'feedback', 'fleets', 'governance', 'home', 'leads', 'measure', 'menu', 'nav', 'notifications', 'onboarding', 'orders', 'plate', 'qr', 'sales', 'scan', 'search', 'settings', 'spaces', 'staff', 'subscriptions', 'tasks', 'transfers', 'update', 'warehouse', 'widgets', 'errors', 'modules'] as const;
 
@@ -606,4 +648,5 @@ export const resources = {
   az: { common: az_common, accounting: az_accounting, adjust: az_adjust, admin: az_admin, analytics: az_analytics, announcements: az_announcements, appointments: az_appointments, assistant: az_assistant, auth: az_auth, callerid: az_callerid, campaigns: az_campaigns, catalog: az_catalog, claims: az_claims, customer: az_customer, dealer: az_dealer, feedback: az_feedback, fleets: az_fleets, governance: az_governance, home: az_home, leads: az_leads, measure: az_measure, menu: az_menu, nav: az_nav, notifications: az_notifications, onboarding: az_onboarding, orders: az_orders, plate: az_plate, qr: az_qr, sales: az_sales, scan: az_scan, search: az_search, settings: az_settings, spaces: az_spaces, staff: az_staff, subscriptions: az_subscriptions, tasks: az_tasks, transfers: az_transfers, update: az_update, warehouse: az_warehouse, widgets: az_widgets, errors: az_errors, modules: az_modules },
   ar: { common: ar_common, accounting: ar_accounting, adjust: ar_adjust, admin: ar_admin, analytics: ar_analytics, announcements: ar_announcements, appointments: ar_appointments, assistant: ar_assistant, auth: ar_auth, callerid: ar_callerid, campaigns: ar_campaigns, catalog: ar_catalog, claims: ar_claims, customer: ar_customer, dealer: ar_dealer, feedback: ar_feedback, fleets: ar_fleets, governance: ar_governance, home: ar_home, leads: ar_leads, measure: ar_measure, menu: ar_menu, nav: ar_nav, notifications: ar_notifications, onboarding: ar_onboarding, orders: ar_orders, plate: ar_plate, qr: ar_qr, sales: ar_sales, scan: ar_scan, search: ar_search, settings: ar_settings, spaces: ar_spaces, staff: ar_staff, subscriptions: ar_subscriptions, tasks: ar_tasks, transfers: ar_transfers, update: ar_update, warehouse: ar_warehouse, widgets: ar_widgets, errors: ar_errors, modules: ar_modules },
   fa: { common: fa_common, accounting: fa_accounting, adjust: fa_adjust, admin: fa_admin, analytics: fa_analytics, announcements: fa_announcements, appointments: fa_appointments, assistant: fa_assistant, auth: fa_auth, callerid: fa_callerid, campaigns: fa_campaigns, catalog: fa_catalog, claims: fa_claims, customer: fa_customer, dealer: fa_dealer, feedback: fa_feedback, fleets: fa_fleets, governance: fa_governance, home: fa_home, leads: fa_leads, measure: fa_measure, menu: fa_menu, nav: fa_nav, notifications: fa_notifications, onboarding: fa_onboarding, orders: fa_orders, plate: fa_plate, qr: fa_qr, sales: fa_sales, scan: fa_scan, search: fa_search, settings: fa_settings, spaces: fa_spaces, staff: fa_staff, subscriptions: fa_subscriptions, tasks: fa_tasks, transfers: fa_transfers, update: fa_update, warehouse: fa_warehouse, widgets: fa_widgets, errors: fa_errors, modules: fa_modules },
+  hi: { common: hi_common, accounting: hi_accounting, adjust: hi_adjust, admin: hi_admin, analytics: hi_analytics, announcements: hi_announcements, appointments: hi_appointments, assistant: hi_assistant, auth: hi_auth, callerid: hi_callerid, campaigns: hi_campaigns, catalog: hi_catalog, claims: hi_claims, customer: hi_customer, dealer: hi_dealer, feedback: hi_feedback, fleets: hi_fleets, governance: hi_governance, home: hi_home, leads: hi_leads, measure: hi_measure, menu: hi_menu, nav: hi_nav, notifications: hi_notifications, onboarding: hi_onboarding, orders: hi_orders, plate: hi_plate, qr: hi_qr, sales: hi_sales, scan: hi_scan, search: hi_search, settings: hi_settings, spaces: hi_spaces, staff: hi_staff, subscriptions: hi_subscriptions, tasks: hi_tasks, transfers: hi_transfers, update: hi_update, warehouse: hi_warehouse, widgets: hi_widgets, errors: hi_errors, modules: hi_modules },
 };

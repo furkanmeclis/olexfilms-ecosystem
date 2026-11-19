@@ -8,7 +8,7 @@ import { storage } from '@/core/storage';
 
 import { NAMESPACES, resources } from './resources';
 
-/** K10: 12 languages + Arabic, TEC-1233: + Persian; same codes as the web and the backend `Locale`. */
+/** K10: 12 languages + Arabic, TEC-1233: + Persian, TEC-1249: + Hindi; same codes as the web and the backend `Locale`. */
 export const LANGUAGES = [
   { code: 'tr', name: 'Türkçe' },
   { code: 'en', name: 'English' },
@@ -24,6 +24,7 @@ export const LANGUAGES = [
   { code: 'az', name: 'Azərbaycan dili' },
   { code: 'ar', name: 'العربية', rtl: true },
   { code: 'fa', name: 'فارسی', rtl: true },
+  { code: 'hi', name: 'हिन्दी' },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]['code'];

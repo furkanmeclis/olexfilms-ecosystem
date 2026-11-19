@@ -9,7 +9,7 @@
   "action.customer": "ग्राहक",
   "action.appointment": "अपॉइंटमेंट",
   "action.stock_entry": "स्टॉक एंट्री",
-  "action.transfer": "ट्रांसफ़र",
+  "action.transfer": "स्थानांतरण",
   "action.count": "गिनती",
   "action.prepare": "ऑर्डर तैयार करें",
   "nothing_next": "कुछ भी प्रतीक्षा में नहीं। नया काम यहाँ दिखेगा।"

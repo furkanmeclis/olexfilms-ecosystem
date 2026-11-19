@@ -14,16 +14,15 @@ import { LANGUAGES } from '../../../scripts/i18n-languages.mjs';
  */
 describe('PRODUCT_NOT_ORDERABLE text', () => {
   const WEB = fileURLToPath(new URL('../../../../frontend/src/locales/', import.meta.url));
-  // App languages from the shared list: a locales folder that is not wired up yet
-  // (TEC-1247: hi, until TEC-1249) is not an app language.
+  // App languages from the shared list (TEC-1249: 15 with Hindi).
   const langs: readonly string[] = LANGUAGES;
   const text = (lang: string) =>
     (JSON.parse(readFileSync(join(WEB, lang, 'errors.json'), 'utf8')) as Record<string, string>)[
       'codes.PRODUCT_NOT_ORDERABLE'
     ];
 
-  it('covers all 14 app languages', () => {
-    assert.equal(langs.length, 14);
+  it('covers all 15 app languages', () => {
+    assert.equal(langs.length, 15);
   });
 
   it('is translated in every app language', () => {

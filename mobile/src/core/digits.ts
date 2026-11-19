@@ -3,7 +3,7 @@
  * (٠١٢٣٤٥٦٧٨٩) by default; Settings can switch to Latin digits (the Maghreb
  * convention). Every Intl formatter takes its locale through `intlLocale`.
  * Identifiers (plate, VIN, barcode, service number, phone, codes, URLs) are
- * printed as is and keep Latin digits; typed Arabic-Indic or Persian digits
+ * printed as is and keep Latin digits; typed Arabic-Indic, Persian or Devanagari digits
  * are stored as Latin (`toLatinDigits`, applied by the Input component).
  *
  * Kept free of React / storage imports so plain node tests can use it; the
@@ -25,20 +25,25 @@ export function hasDigitChoice(locale: string): boolean {
   return locale.split('-')[0]?.toLowerCase() === 'ar';
 }
 
+/** Languages that always print Latin digits, whatever ICU defaults to. */
+const LATIN_ONLY = new Set(['fa', 'hi']);
+
 /** The locale tag Intl gets: Arabic with an explicit numbering system. */
 export function intlLocale(locale: string, digits: DigitStyle = current): string {
   // TEC-1233: Persian keeps Latin digits (ICU defaults "fa" to ۰-۹), like
-  // barcodes, plates, codes and amounts.
-  if (locale.split('-')[0]?.toLowerCase() === 'fa') return `${locale}-u-nu-latn`;
+  // barcodes, plates, codes and amounts. TEC-1249: Hindi too, pinned so an ICU
+  // that prefers Devanagari digits (०-९) cannot switch them.
+  if (LATIN_ONLY.has(locale.split('-')[0]?.toLowerCase() ?? '')) return `${locale}-u-nu-latn`;
   return hasDigitChoice(locale) ? `${locale}-u-nu-${digits}` : locale;
 }
 
-const ARABIC_INDIC = /[٠-٩۰-۹]/g;
+const NATIVE_DIGITS = /[٠-٩۰-۹०-९]/g;
 
-/** Arabic-Indic (٠-٩) and Persian (۰-۹) digits to 0-9. */
+/** Arabic-Indic (٠-٩), Persian (۰-۹) and Devanagari (०-९, TEC-1249) digits to 0-9. */
 export function toLatinDigits(value: string): string {
-  return value.replace(ARABIC_INDIC, (d) => {
+  return value.replace(NATIVE_DIGITS, (d) => {
     const code = d.charCodeAt(0);
+    if (code >= 0x0966) return String(code - 0x0966);
     return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
   });
 }
