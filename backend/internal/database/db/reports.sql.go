@@ -310,6 +310,7 @@ func (q *Queries) ReportOrderOverview(ctx context.Context, arg ReportOrderOvervi
 const reportOrderPlotterCut = `-- name: ReportOrderPlotterCut :many
 SELECT date_trunc('month', o.shipped_at AT TIME ZONE $1::text)::date AS month,
        p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       oi.sale_measure::text AS sale_measure,
        COUNT(*)::bigint AS line_count,
        COALESCE(SUM(oi.quantity), 0)::bigint AS quantity,
        COALESCE(SUM(oi.meters), 0)::float8 AS meters
@@ -325,8 +326,8 @@ WHERE oi.plotter_cut
   AND o.status NOT IN ('cancelling', 'cancelled')
   AND o.shipped_at >= $4::timestamptz
   AND o.shipped_at < $5::timestamptz
-GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type
-ORDER BY 1, p.name, p.uuid
+GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type, oi.sale_measure
+ORDER BY 1, p.name, p.uuid, oi.sale_measure
 `
 
 type ReportOrderPlotterCutParams struct {
@@ -343,6 +344,7 @@ type ReportOrderPlotterCutRow struct {
 	Sku         string      `json:"sku"`
 	ProductName string      `json:"product_name"`
 	UnitType    string      `json:"unit_type"`
+	SaleMeasure string      `json:"sale_measure"`
 	LineCount   int64       `json:"line_count"`
 	Quantity    int64       `json:"quantity"`
 	Meters      float64     `json:"meters"`
@@ -352,6 +354,8 @@ type ReportOrderPlotterCutRow struct {
 // line counts in the month its order shipped (in the report zone); orders
 // cancelled after shipping (goods back) are left out. Scope like the other
 // order reports: the seller or the buyer is in reach.
+// TEC-1244: one row per product and line measure (box / meter), so a
+// product sold both ways keeps its pieces and meters apart.
 func (q *Queries) ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlotterCutParams) ([]ReportOrderPlotterCutRow, error) {
 	rows, err := q.db.Query(ctx, reportOrderPlotterCut,
 		arg.Tz,
@@ -373,6 +377,7 @@ func (q *Queries) ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlot
 			&i.Sku,
 			&i.ProductName,
 			&i.UnitType,
+			&i.SaleMeasure,
 			&i.LineCount,
 			&i.Quantity,
 			&i.Meters,

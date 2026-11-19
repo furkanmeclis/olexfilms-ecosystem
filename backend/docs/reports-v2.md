@@ -139,12 +139,17 @@ değeri yalnız `pricing.purchase.read` ya da `pricing.sale.read` izniyle gelir.
     `net_count`.
   * Depo konumu olmayan bayi stoğu bu raporda görünmez; anlık stok için `stock.summary`
     kullanılır.
+* `orders.plotter_cut` (TEC-1244): satırlar ay × ürün × ölçü (`sale_measure`: Kutu /
+  Metre; ham kod `measure`). Aynı ürünün kutu adedi ve metresi ayrı satırdadır.
 * `stock.aging` (TEC-1229): yavaş dönen / yaşlanan stok. Kapsamdaki kurumların eldeki
   stoğu (sayılan seri birimler ve sabit barkod miktarları) ürün ve depo bazında; her
   birimin son defter hareketinden bu yana geçen gün sayısına göre kovalara ayrılır.
   * Kolonlar: `product`, `sku`, `warehouse` (konumsuz stokta `null`), `organization`,
     `quantity`, `meters`, `qty_0_30`, `qty_30_60`, `qty_60_90`, `qty_90_180`,
     `qty_180_plus`, `oldest_days`, `oldest_movement_at`.
+  * TEC-1244 (kutu/metraj): `quantity` ve yaş kovaları kapalı kutuyu (ve ruloyu, sabit
+    barkodu) sayar. Adet ürünün açılmış kutusu ve kesik parçası yalnız `meters`'a
+    eklenir; iki ölçü tek sayıda toplanmaz.
   * `unit_price` ve `stock_value` (markanın fiyat listesindeki tavsiye satış fiyatı ×
     adet) yalnız `pricing.purchase.read` ya da `pricing.sale.read` izniyle gelir. Depo
     rolleri bu kolonları görmez.

@@ -282,9 +282,12 @@ RETURNING *;
 -- line counts in the month its order shipped (in the report zone); orders
 -- cancelled after shipping (goods back) are left out. Scope like the other
 -- order reports: the seller or the buyer is in reach.
+-- TEC-1244: one row per product and line measure (box / meter), so a
+-- product sold both ways keeps its pieces and meters apart.
 -- name: ReportOrderPlotterCut :many
 SELECT date_trunc('month', o.shipped_at AT TIME ZONE sqlc.arg(tz)::text)::date AS month,
        p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       oi.sale_measure::text AS sale_measure,
        COUNT(*)::bigint AS line_count,
        COALESCE(SUM(oi.quantity), 0)::bigint AS quantity,
        COALESCE(SUM(oi.meters), 0)::float8 AS meters
@@ -300,5 +303,5 @@ WHERE oi.plotter_cut
   AND o.status NOT IN ('cancelling', 'cancelled')
   AND o.shipped_at >= sqlc.arg(range_from)::timestamptz
   AND o.shipped_at < sqlc.arg(range_to)::timestamptz
-GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type
-ORDER BY 1, p.name, p.uuid;
+GROUP BY 1, p.uuid, p.sku, p.name, p.unit_type, oi.sale_measure
+ORDER BY 1, p.name, p.uuid, oi.sale_measure;

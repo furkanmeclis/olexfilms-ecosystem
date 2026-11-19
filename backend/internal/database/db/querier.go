@@ -3860,6 +3860,8 @@ type Querier interface {
 	// line counts in the month its order shipped (in the report zone); orders
 	// cancelled after shipping (goods back) are left out. Scope like the other
 	// order reports: the seller or the buyer is in reach.
+	// TEC-1244: one row per product and line measure (box / meter), so a
+	// product sold both ways keeps its pieces and meters apart.
 	ReportOrderPlotterCut(ctx context.Context, arg ReportOrderPlotterCutParams) ([]ReportOrderPlotterCutRow, error)
 	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
 	// Orders: the caller reaches an order as its owner (organization_id) or
@@ -3895,7 +3897,9 @@ type Querier interface {
 	// location), bucketed by the days since the last ledger movement of each
 	// unit / holding (0-30, 30-60, 60-90, 90-180, 180+). unit_price is the
 	// brand price list's recommended sale price; the report shows it only
-	// with a pricing read permission.
+	// with a pricing read permission. TEC-1244: quantity counts closed boxes
+	// (and rolls, fixed pieces); an opened box / cut piece of a piece product
+	// adds only its meters, so the two measures are never summed together.
 	ReportStockAging(ctx context.Context, arg ReportStockAgingParams) ([]ReportStockAgingRow, error)
 	ReportStockMovementByWarehouse(ctx context.Context, arg ReportStockMovementByWarehouseParams) ([]ReportStockMovementByWarehouseRow, error)
 	// stock.movement: serial unit movements into and out of the warehouses in

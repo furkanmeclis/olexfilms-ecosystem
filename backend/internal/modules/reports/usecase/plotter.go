@@ -4,7 +4,9 @@ package usecase
 // "sent plotter cut" are counted in the month their order shipped (orders
 // cancelled after shipping are left out), per product: line count, pieces
 // and meters. The series carry the monthly totals (every month of the
-// range, missing = 0), the rows the month x product breakdown.
+// range, missing = 0), the rows the month x product breakdown. TEC-1244:
+// one row per product and line measure (box / meter): a product sold both
+// ways shows its box pieces and its meters on separate rows, never summed.
 
 import (
 	"context"
@@ -39,7 +41,7 @@ func (s *Service) plotterCut(ctx context.Context, q query, a args, env *Envelope
 	}
 	lines, pieces, meters := map[string]float64{}, map[string]float64{}, map[string]float64{}
 	env.Columns = q.columns([][2]string{
-		{"month", "string"}, {"product", "link"}, {"sku", "string"},
+		{"month", "string"}, {"product", "link"}, {"sku", "string"}, {"sale_measure", "string"},
 		{"line_count", "integer"}, {"quantity", "integer"}, {"meters", "number"},
 	})
 	for _, r := range rows {
@@ -52,7 +54,8 @@ func (s *Service) plotterCut(ctx context.Context, q query, a args, env *Envelope
 		meters[month] += r.Meters
 		env.Rows = append(env.Rows, map[string]any{
 			"month": r.Month.Time.Format("2006-01"), "product_uuid": r.ProductUuid, "product": r.ProductName,
-			"sku": r.Sku, "unit_type": r.UnitType, "line_count": r.LineCount, "quantity": r.Quantity, "meters": r.Meters,
+			"sku": r.Sku, "unit_type": r.UnitType,
+			"measure": r.SaleMeasure, "sale_measure": translate(q.locale, "measure."+r.SaleMeasure), "line_count": r.LineCount, "quantity": r.Quantity, "meters": r.Meters,
 			rowLink: link(LinkProduct, r.ProductUuid.String()),
 		})
 	}
