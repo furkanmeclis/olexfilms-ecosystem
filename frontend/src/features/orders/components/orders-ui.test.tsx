@@ -361,21 +361,27 @@ describe("OrderDetailPage: buttons by role and status", () => {
     expect($("[data-testid=order-items]")).toBeNull();
     expect($$("[data-testid=edit-line]")).toHaveLength(1);
     await click($("[data-testid=product-add]"));
-    await type($("#edit-line-p1"), "5");
+    await type($("#edit-line-p1-box"), "5");
     // TEC-1058: the new sign set is marked plotter cut.
-    await click($("#edit-line-p2-plotter"));
+    await click($("#edit-line-p2-box-plotter"));
     // TEC-1221: only the plotter cut line offers the credits field.
-    expect($("#edit-line-p1-plotter-credits")).toBeNull();
-    await type($("#edit-line-p2-plotter-credits"), "0");
+    expect($("#edit-line-p1-box-plotter-credits")).toBeNull();
+    await type($("#edit-line-p2-box-plotter-credits"), "0");
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).not.toHaveBeenCalled();
-    await type($("#edit-line-p2-plotter-credits"), "3");
+    await type($("#edit-line-p2-box-plotter-credits"), "3");
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).toHaveBeenCalledWith("o1", [
-      { product_uuid: "p1", quantity: 5, plotter_cut: false },
+      {
+        product_uuid: "p1",
+        quantity: 5,
+        sale_measure: "box",
+        plotter_cut: false,
+      },
       {
         product_uuid: "p2",
         quantity: 1,
+        sale_measure: "box",
         plotter_cut: true,
         plotter_credits: 3,
       },
@@ -400,7 +406,7 @@ describe("OrderDetailPage: buttons by role and status", () => {
     });
     await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
     await click($("[data-testid=order-edit-lines]"));
-    await type($("#edit-line-p1"), "1");
+    await type($("#edit-line-p1-box"), "1");
     expect($("[data-testid=line-below-assigned]")).not.toBeNull();
     await click($("[data-testid=edit-lines-save]"));
     expect(api.replaceItems).not.toHaveBeenCalled();
@@ -763,17 +769,17 @@ describe("OrderFormPage: validation", () => {
       "orders.form.errors.meters_invalid",
     ]);
 
-    await type($("#line-p1"), "0");
-    await type($("#line-p2"), "12,5");
+    await type($("#line-p1-box"), "0");
+    await type($("#line-p2-meter"), "12,5");
     expect($$("[data-testid=line-error]").map((e) => e.textContent)).toEqual([
       "orders.form.errors.quantity_invalid",
     ]);
-    await type($("#line-p1"), "3");
+    await type($("#line-p1-box"), "3");
     await click($("[data-testid=save-draft]"));
     expect(api.create).toHaveBeenCalledWith({
       items: [
-        { product_uuid: "p1", quantity: 3 },
-        { product_uuid: "p2", meters: "12.5" },
+        { product_uuid: "p1", quantity: 3, sale_measure: "box" },
+        { product_uuid: "p2", meters: "12.5", sale_measure: "meter" },
       ],
     });
     expect(nav.replace).toHaveBeenCalledWith("/t/acme/orders/o1/edit");

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -12,7 +17,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
@@ -27,9 +31,16 @@ import {
   NOTE_MAX,
   addLine,
   amountNumber,
+  convertToBoxes,
   formIsValid,
-  isRoll,
+  isCutLine,
+  lineKey,
+  lineMeasure,
   linesFromOrder,
+  metersNumber,
+  orderItemOf,
+  patchLine,
+  removeLine,
   toItemInputs,
   validateOrderForm,
   type OrderFormLine,
@@ -40,6 +51,12 @@ import {
   type Order,
 } from "@/features/orders/services/orders.service";
 import { CenterOrderForm } from "@/features/orders/components/center-order-form";
+import {
+  CutLineDetails,
+  LineAmountField,
+  MeasureBadge,
+  lineErrorText,
+} from "@/features/orders/components/order-line-measure";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { ScheduleFields } from "@/features/orders/components/order-work-queue";
@@ -90,12 +107,42 @@ export function OrderForm({
   const [touched, setTouched] = useState(false);
   const errors = useMemo(() => validateOrderForm(lines), [lines]);
   const valid = formIsValid(errors);
-  const picked = useMemo(
-    () => new Set(lines.map((l) => l.product_uuid)),
+  const picked = useMemo(() => new Set(lines.map(lineKey)), [lines]);
+  const serverLine = (line: OrderFormLine) =>
+    saved ? orderItemOf(saved, line) : undefined;
+
+  // TEC-1239: the buyer's meter price of the cut lines (the quote applies
+  // its default discount, K2).
+  const cutProducts = useMemo(
+    () =>
+      [...new Set(lines.filter(isCutLine).map((l) => l.product_uuid))].sort(),
     [lines],
   );
-  const serverLine = (productUuid: string) =>
-    saved?.items?.find((i) => i.product.uuid === productUuid);
+  const quote = useQuery({
+    queryKey: orderKeys.quote("", cutProducts),
+    queryFn: () => ordersService.quote({ product_uuids: cutProducts }),
+    enabled: canSeePrices && cutProducts.length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const meterPrice = (line: OrderFormLine) => {
+    if (!canSeePrices || !quote.data?.prices_visible) return null;
+    const q = quote.data.items.find(
+      (i) => i.product_uuid === line.product_uuid,
+    );
+    if (!q?.meter_unit_price) return null;
+    const unit = Number(q.meter_unit_price);
+    const m = metersNumber(line.amount);
+    const cur = quote.data.currency;
+    return {
+      unit: format.currency(unit, cur),
+      total:
+        Number.isFinite(m) && m > 0
+          ? format.currency(Math.round(unit * m * 100) / 100, cur)
+          : null,
+    };
+  };
 
   const save = async (): Promise<Order> => {
     const items = toItemInputs(lines);
@@ -145,10 +192,8 @@ export function OrderForm({
     if (!valid) return;
     m.mutate();
   };
-  const update = (uuid: string, amount: string) =>
-    setLines((ls) =>
-      ls.map((l) => (l.product_uuid === uuid ? { ...l, amount } : l)),
-    );
+  const update = (key: string, patch: Partial<OrderFormLine>) =>
+    setLines((ls) => patchLine(ls, key, patch));
 
   // TEC-1052 (5.10): the product picker and the summary share the top row;
   // the lines get the full width below.
@@ -160,7 +205,9 @@ export function OrderForm({
             <CardContent className="pt-6">
               <ProductSearch
                 picked={picked}
-                onPick={(p) => setLines((ls) => addLine(ls, p))}
+                onPick={(p, measure) =>
+                  setLines((ls) => addLine(ls, p, measure))
+                }
               />
             </CardContent>
           </Card>
@@ -262,45 +309,51 @@ export function OrderForm({
             </p>
           ) : (
             lines.map((line) => {
-              const err = errors.lines[line.product_uuid];
-              const server = serverLine(line.product_uuid);
-              const id = `line-${line.product_uuid}`;
+              const key = lineKey(line);
+              const err = errors.lines[key];
+              const server = serverLine(line);
+              const cut = isCutLine(line);
+              const id = `line-${line.product_uuid}-${lineMeasure(line)}`;
               return (
                 <div
-                  key={line.product_uuid}
-                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(7rem,1fr)_auto] sm:items-end"
+                  key={key}
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,3fr)_minmax(9rem,1fr)_auto] sm:items-start"
                   data-testid="order-line"
                   data-sku={line.sku}
+                  data-measure={lineMeasure(line)}
                 >
                   <div className="min-w-0 space-y-1">
-                    <div className="font-medium">{line.name}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{line.name}</span>
+                      <MeasureBadge measure={lineMeasure(line)} />
+                    </div>
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>
                     <PlotterToggle
                       id={`${id}-plotter`}
                       checked={line.plotter_cut === true}
-                      onChange={(v) =>
-                        setLines((ls) =>
-                          ls.map((l) =>
-                            l.product_uuid === line.product_uuid
-                              ? { ...l, plotter_cut: v }
-                              : l,
-                          ),
-                        )
+                      onChange={(v) => update(key, { plotter_cut: v })}
+                      credits={
+                        cut
+                          ? undefined
+                          : {
+                              value: line.plotter_credits ?? "",
+                              invalid: touched && err === "credits_invalid",
+                              onChange: (v) =>
+                                update(key, { plotter_credits: v }),
+                            }
                       }
-                      credits={{
-                        value: line.plotter_credits ?? "",
-                        invalid: touched && err === "credits_invalid",
-                        onChange: (v) =>
-                          setLines((ls) =>
-                            ls.map((l) =>
-                              l.product_uuid === line.product_uuid
-                                ? { ...l, plotter_credits: v }
-                                : l,
-                            ),
-                          ),
-                      }}
+                    />
+                    <CutLineDetails
+                      id={id}
+                      line={line}
+                      creditsInvalid={touched && err === "line_credits_invalid"}
+                      meterPrice={server ? null : meterPrice(line)}
+                      onCredits={(v) => update(key, { line_credits: v })}
+                      onConvert={() =>
+                        setLines((ls) => convertToBoxes(ls, key))
+                      }
                     />
                     <div className="text-xs">
                       <span className="text-muted-foreground me-1">
@@ -320,8 +373,14 @@ export function OrderForm({
                             saved?.currency ?? "",
                           )}
                         </span>
-                      ) : canSeePrices ? (
+                      ) : canSeePrices && !cut ? (
                         <LinePrice productUuid={line.product_uuid} />
+                      ) : canSeePrices && meterPrice(line) ? (
+                        <span data-testid="line-price-preview">
+                          {t("orders.measure.per_meter", {
+                            unit: meterPrice(line)?.unit ?? "",
+                          })}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">
                           {t("orders.form.price_on_save")}
@@ -330,33 +389,23 @@ export function OrderForm({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor={id} className="text-xs">
-                      {isRoll(line.unit_type)
-                        ? t("orders.form.meters")
-                        : t("orders.form.quantity")}
-                    </Label>
-                    <Input
+                    <LineAmountField
                       id={id}
-                      name="amount"
-                      inputMode={isRoll(line.unit_type) ? "decimal" : "numeric"}
-                      dir="ltr"
-                      value={line.amount}
-                      aria-invalid={
-                        (touched &&
-                          Boolean(err) &&
-                          err !== "credits_invalid") ||
-                        undefined
+                      line={line}
+                      invalid={
+                        touched &&
+                        Boolean(err) &&
+                        err !== "credits_invalid" &&
+                        err !== "line_credits_invalid"
                       }
-                      onChange={(e) =>
-                        update(line.product_uuid, e.target.value)
-                      }
+                      onChange={(amount) => update(key, { amount })}
                     />
                     {touched && err ? (
                       <p
                         className="text-destructive text-xs"
                         data-testid="line-error"
                       >
-                        {t(`orders.form.errors.${err}`)}
+                        {lineErrorText(t, err, line)}
                       </p>
                     ) : null}
                   </div>
@@ -367,13 +416,7 @@ export function OrderForm({
                       variant="ghost"
                       aria-label={t("orders.form.remove")}
                       data-testid="line-remove"
-                      onClick={() =>
-                        setLines((ls) =>
-                          ls.filter(
-                            (l) => l.product_uuid !== line.product_uuid,
-                          ),
-                        )
-                      }
+                      onClick={() => setLines((ls) => removeLine(ls, key))}
                     >
                       <Trash2 className="size-4" />
                     </Button>

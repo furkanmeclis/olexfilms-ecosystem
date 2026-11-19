@@ -33,6 +33,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { NewRecipientDialog } from "@/features/accounts/components/new-recipient-dialog";
+import {
+  CutLineDetails,
+  LineAmountField,
+  MeasureBadge,
+  lineErrorText,
+} from "@/features/orders/components/order-line-measure";
 import { PlotterToggle } from "@/features/orders/components/plotter-toggle";
 import { ProductSearch } from "@/features/orders/components/product-search";
 import { ScheduleFields } from "@/features/orders/components/order-work-queue";
@@ -40,9 +46,14 @@ import { orderErrorMessage } from "@/features/orders/lib/errors";
 import {
   NOTE_MAX,
   addLine,
+  convertToBoxes,
   formIsValid,
-  isRoll,
+  isCutLine,
+  lineKey,
+  lineMeasure,
+  patchLine,
   previewLine,
+  removeLine,
   toItemInputs,
   validateOrderForm,
   type OrderFormLine,
@@ -134,14 +145,11 @@ export function CenterOrderForm({
   const [touched, setTouched] = useState(false);
   const errors = useMemo(() => validateOrderForm(lines), [lines]);
   const valid = formIsValid(errors) && dealer !== null;
-  const picked = useMemo(
-    () => new Set(lines.map((l) => l.product_uuid)),
-    [lines],
-  );
+  const picked = useMemo(() => new Set(lines.map(lineKey)), [lines]);
 
   // TEC-1064: the dealer's prices, default discount and the TRY rate.
   const productUuids = useMemo(
-    () => lines.map((l) => l.product_uuid).sort(),
+    () => [...new Set(lines.map((l) => l.product_uuid))].sort(),
     [lines],
   );
   const quote = useQuery({
@@ -181,10 +189,15 @@ export function CenterOrderForm({
       new Map(
         lines.map((line) => {
           const q = quoteBy.get(line.product_uuid);
-          const list = q ? (q.list_unit_price ?? null) : undefined;
+          // TEC-1239 (K2): a cut line is priced by the meter list price.
+          const list = q
+            ? ((isCutLine(line)
+                ? q.meter_list_unit_price
+                : q.list_unit_price) ?? null)
+            : undefined;
           const typed = (line.discount_pct ?? "").trim();
           return [
-            line.product_uuid,
+            lineKey(line),
             {
               loaded: q !== undefined,
               list: list ?? null,
@@ -264,10 +277,8 @@ export function CenterOrderForm({
       toast.error(orderErrorMessage(err, t, t("orders.form.save_failed"))),
   });
 
-  const update = (uuid: string, patch: Partial<OrderFormLine>) =>
-    setLines((ls) =>
-      ls.map((l) => (l.product_uuid === uuid ? { ...l, ...patch } : l)),
-    );
+  const update = (key: string, patch: Partial<OrderFormLine>) =>
+    setLines((ls) => patchLine(ls, key, patch));
 
   const money = (v: number | null) =>
     v === null ? "—" : format.currency(v, currency);
@@ -526,9 +537,9 @@ export function CenterOrderForm({
           <CardContent className="pt-6">
             <ProductSearch
               picked={picked}
-              onPick={(p) =>
+              onPick={(p, measure) =>
                 setLines((ls) =>
-                  addLine(ls, p).map((l) =>
+                  addLine(ls, p, measure).map((l) =>
                     l.product_uuid === p.uuid && l.unit_price === undefined
                       ? { ...l, unit_price: "", discount_pct: "" }
                       : l,
@@ -559,9 +570,11 @@ export function CenterOrderForm({
             </p>
           ) : (
             lines.map((line) => {
-              const err = errors.lines[line.product_uuid];
-              const id = `line-${line.product_uuid}`;
-              const pv = previews.get(line.product_uuid);
+              const key = lineKey(line);
+              const err = errors.lines[key];
+              const cut = isCutLine(line);
+              const id = `line-${line.product_uuid}-${lineMeasure(line)}`;
+              const pv = previews.get(key);
               const gift = line.is_gift === true;
               // The typed price is offered when the prices are hidden or
               // the dealer has no list price for the product.
@@ -569,55 +582,58 @@ export function CenterOrderForm({
                 !pricesVisible || (pv?.loaded === true && pv.list === null);
               return (
                 <div
-                  key={line.product_uuid}
-                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,3fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(8rem,1.2fr)_auto_auto] lg:items-end"
+                  key={key}
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,3fr)_minmax(9rem,1.2fr)_minmax(6rem,1fr)_minmax(6rem,1fr)_minmax(8rem,1.2fr)_auto_auto] lg:items-start"
                   data-testid="order-line"
                   data-sku={line.sku}
+                  data-measure={lineMeasure(line)}
                 >
                   <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-1">
-                    <div className="font-medium">{line.name}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{line.name}</span>
+                      <MeasureBadge measure={lineMeasure(line)} />
+                    </div>
                     <div className="text-muted-foreground text-xs" dir="ltr">
                       {line.sku}
                     </div>
                     <PlotterToggle
                       id={`${id}-plotter`}
                       checked={line.plotter_cut === true}
-                      onChange={(v) =>
-                        update(line.product_uuid, { plotter_cut: v })
+                      onChange={(v) => update(key, { plotter_cut: v })}
+                      credits={
+                        cut
+                          ? undefined
+                          : {
+                              value: line.plotter_credits ?? "",
+                              invalid: touched && err === "credits_invalid",
+                              onChange: (v) =>
+                                update(key, { plotter_credits: v }),
+                            }
                       }
-                      credits={{
-                        value: line.plotter_credits ?? "",
-                        invalid: touched && err === "credits_invalid",
-                        onChange: (v) =>
-                          update(line.product_uuid, { plotter_credits: v }),
-                      }}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={id} className="text-xs">
-                      {isRoll(line.unit_type)
-                        ? t("orders.form.meters")
-                        : t("orders.form.quantity")}
-                    </Label>
-                    <Input
+                    <CutLineDetails
                       id={id}
-                      name="amount"
-                      inputMode={isRoll(line.unit_type) ? "decimal" : "numeric"}
-                      dir="ltr"
-                      value={line.amount}
-                      aria-invalid={
-                        (touched &&
-                          Boolean(err) &&
-                          err !== "price_invalid" &&
-                          err !== "discount_invalid" &&
-                          err !== "credits_invalid") ||
-                        undefined
-                      }
-                      onChange={(e) =>
-                        update(line.product_uuid, { amount: e.target.value })
+                      line={line}
+                      creditsInvalid={touched && err === "line_credits_invalid"}
+                      onCredits={(v) => update(key, { line_credits: v })}
+                      onConvert={() =>
+                        setLines((ls) => convertToBoxes(ls, key))
                       }
                     />
                   </div>
+                  <LineAmountField
+                    id={id}
+                    line={line}
+                    invalid={
+                      touched &&
+                      Boolean(err) &&
+                      err !== "price_invalid" &&
+                      err !== "discount_invalid" &&
+                      err !== "credits_invalid" &&
+                      err !== "line_credits_invalid"
+                    }
+                    onChange={(amount) => update(key, { amount })}
+                  />
                   <div className="space-y-1">
                     <span className="text-muted-foreground block text-xs">
                       {t("orders.center_form.list_price", {
@@ -630,7 +646,11 @@ export function CenterOrderForm({
                       data-testid="line-list-price"
                     >
                       {pricesVisible && pv?.list != null
-                        ? money(Number(pv.list))
+                        ? cut
+                          ? t("orders.measure.per_meter", {
+                              unit: money(Number(pv.list)),
+                            })
+                          : money(Number(pv.list))
                         : "—"}
                     </div>
                   </div>
@@ -653,7 +673,7 @@ export function CenterOrderForm({
                         (touched && err === "discount_invalid") || undefined
                       }
                       onChange={(e) =>
-                        update(line.product_uuid, {
+                        update(key, {
                           discount_pct: e.target.value,
                         })
                       }
@@ -680,7 +700,7 @@ export function CenterOrderForm({
                             (touched && err === "price_invalid") || undefined
                           }
                           onChange={(e) =>
-                            update(line.product_uuid, {
+                            update(key, {
                               unit_price: e.target.value,
                             })
                           }
@@ -696,7 +716,11 @@ export function CenterOrderForm({
                           dir="ltr"
                           data-testid="line-discounted-price"
                         >
-                          {money(pv?.unit ?? null)}
+                          {cut && pv?.unit != null
+                            ? t("orders.measure.per_meter", {
+                                unit: money(pv.unit),
+                              })
+                            : money(pv?.unit ?? null)}
                         </div>
                       </>
                     )}
@@ -717,7 +741,7 @@ export function CenterOrderForm({
                       checked={gift}
                       data-testid="line-gift"
                       onCheckedChange={(v) =>
-                        update(line.product_uuid, { is_gift: v === true })
+                        update(key, { is_gift: v === true })
                       }
                     />
                     <Label htmlFor={`${id}-gift`} className="text-xs">
@@ -731,13 +755,7 @@ export function CenterOrderForm({
                       variant="ghost"
                       aria-label={t("orders.form.remove")}
                       data-testid="line-remove"
-                      onClick={() =>
-                        setLines((ls) =>
-                          ls.filter(
-                            (l) => l.product_uuid !== line.product_uuid,
-                          ),
-                        )
-                      }
+                      onClick={() => setLines((ls) => removeLine(ls, key))}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -747,7 +765,7 @@ export function CenterOrderForm({
                       className="text-destructive text-xs sm:col-span-2 lg:col-span-7"
                       data-testid="line-error"
                     >
-                      {t(`orders.form.errors.${err}`)}
+                      {lineErrorText(t, err, line)}
                     </p>
                   ) : null}
                 </div>

@@ -311,20 +311,24 @@ describe("order form validation", () => {
   it("checks quantity and meters", () => {
     let lines: OrderFormLine[] = addLine(addLine([], piece), roll);
     expect(lines.map((l) => l.amount)).toEqual(["1", ""]);
-    expect(validateOrderForm(lines).lines).toEqual({ p2: "meters_invalid" });
+    expect(validateOrderForm(lines).lines).toEqual({
+      "p2:meter": "meters_invalid",
+    });
     lines = lines.map((l) =>
       l.product_uuid === "p1"
         ? { ...l, amount: "1.5" }
         : { ...l, amount: "12,5" },
     );
-    expect(validateOrderForm(lines).lines).toEqual({ p1: "quantity_invalid" });
+    expect(validateOrderForm(lines).lines).toEqual({
+      "p1:box": "quantity_invalid",
+    });
     lines = lines.map((l) =>
       l.product_uuid === "p1" ? { ...l, amount: "3" } : l,
     );
     expect(formIsValid(validateOrderForm(lines))).toBe(true);
     expect(toItemInputs(lines)).toEqual([
-      { product_uuid: "p1", quantity: 3 },
-      { product_uuid: "p2", meters: "12.5" },
+      { product_uuid: "p1", quantity: 3, sale_measure: "box" },
+      { product_uuid: "p2", meters: "12.5", sale_measure: "meter" },
     ]);
   });
 
@@ -336,16 +340,18 @@ describe("order form validation", () => {
       unit_type,
       amount,
     });
-    expect(validateOrderForm([line("0")]).lines.x).toBe("quantity_invalid");
-    expect(validateOrderForm([line("1000001")]).lines.x).toBe(
+    expect(validateOrderForm([line("0")]).lines["x:box"]).toBe(
       "quantity_invalid",
     );
-    expect(validateOrderForm([line("0", "roll_meter")]).lines.x).toBe(
+    expect(validateOrderForm([line("1000001")]).lines["x:box"]).toBe(
+      "quantity_invalid",
+    );
+    expect(validateOrderForm([line("0", "roll_meter")]).lines["x:meter"]).toBe(
       "meters_invalid",
     );
-    expect(validateOrderForm([line("1.234", "roll_meter")]).lines.x).toBe(
-      "meters_invalid",
-    );
+    expect(
+      validateOrderForm([line("1.234", "roll_meter")]).lines["x:meter"],
+    ).toBe("meters_invalid");
   });
 
   it("adds a product once and caps the line count", () => {
@@ -379,7 +385,7 @@ describe("center order for a dealer (TEC-1024)", () => {
     expect(unitPriceValid("-1")).toBe(false);
     expect(unitPriceValid("1.23456")).toBe(false);
     expect(validateOrderForm([line({ unit_price: "abc" })]).lines).toEqual({
-      p1: "price_invalid",
+      "p1:box": "price_invalid",
     });
   });
 
@@ -389,12 +395,17 @@ describe("center order for a dealer (TEC-1024)", () => {
       line({ product_uuid: "p2", unit_price: "" }),
     ];
     expect(toItemInputs(lines, true)).toEqual([
-      { product_uuid: "p1", quantity: 2, unit_price: "12.5" },
-      { product_uuid: "p2", quantity: 2 },
+      {
+        product_uuid: "p1",
+        quantity: 2,
+        sale_measure: "box",
+        unit_price: "12.5",
+      },
+      { product_uuid: "p2", quantity: 2, sale_measure: "box" },
     ]);
     expect(toItemInputs(lines)).toEqual([
-      { product_uuid: "p1", quantity: 2 },
-      { product_uuid: "p2", quantity: 2 },
+      { product_uuid: "p1", quantity: 2, sale_measure: "box" },
+      { product_uuid: "p2", quantity: 2, sale_measure: "box" },
     ]);
   });
 });
@@ -565,11 +576,14 @@ describe("plotter mark (TEC-1058)", () => {
       unit_type: "piece",
       amount: "2",
     };
-    expect(toItemInputs([base])).toEqual([{ product_uuid: "p1", quantity: 2 }]);
+    expect(toItemInputs([base])).toEqual([
+      { product_uuid: "p1", quantity: 2, sale_measure: "box" },
+    ]);
     expect(toItemInputs([{ ...base, plotter_cut: true }])).toEqual([
       {
         product_uuid: "p1",
         quantity: 2,
+        sale_measure: "box",
         plotter_cut: true,
         plotter_credits: 0,
       },
@@ -590,6 +604,7 @@ describe("plotter mark (TEC-1058)", () => {
       {
         product_uuid: "p1",
         quantity: 2,
+        sale_measure: "box",
         plotter_cut: true,
         plotter_credits: 7,
       },
@@ -597,9 +612,16 @@ describe("plotter mark (TEC-1058)", () => {
     // Switched off: the typed credits are not sent (the API clears them).
     expect(
       toItemInputs([{ ...base, plotter_cut: false, plotter_credits: "7" }]),
-    ).toEqual([{ product_uuid: "p1", quantity: 2, plotter_cut: false }]);
+    ).toEqual([
+      {
+        product_uuid: "p1",
+        quantity: 2,
+        sale_measure: "box",
+        plotter_cut: false,
+      },
+    ]);
     expect(toItemInputs([{ ...base, plotter_credits: "7" }])).toEqual([
-      { product_uuid: "p1", quantity: 2 },
+      { product_uuid: "p1", quantity: 2, sale_measure: "box" },
     ]);
   });
 
@@ -620,7 +642,7 @@ describe("plotter mark (TEC-1058)", () => {
     };
     expect(validateOrderForm([line]).lines).toEqual({});
     expect(validateOrderForm([{ ...line, plotter_cut: true }]).lines).toEqual({
-      p1: "credits_invalid",
+      "p1:box": "credits_invalid",
     });
   });
 
@@ -630,6 +652,7 @@ describe("plotter mark (TEC-1058)", () => {
       uuid: "i1",
       product: { uuid: "p1", sku: "S", name: "N", unit_type: "piece" },
       quantity: 2,
+      sale_measure: "box",
       meters: null,
       plotter_cut: true,
       plotter_credits: 3,

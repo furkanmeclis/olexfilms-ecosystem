@@ -37,8 +37,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { routes } from "@/config/routes";
 import { useStoreOrder } from "@/features/orders/components/order-action-dialog";
 import { lineAmount } from "@/features/orders/lib/access";
+import { MeasureBadge } from "@/features/orders/components/order-line-measure";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
-import { orderStatusTone } from "@/features/orders/lib/form";
+import { itemMeasure, orderStatusTone } from "@/features/orders/lib/form";
 import {
   ordersService,
   type Order,
@@ -53,7 +54,14 @@ const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
 const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
 /** A line that is short of its amount: what goes to the backorder. */
-export type ShortLine = { name: string; picked: number; rest: number };
+export type ShortLine = {
+  key: string;
+  name: string;
+  /** TEC-1239: the line's measure (a product may have a box and a meter line). */
+  measure: "box" | "meter";
+  picked: number;
+  rest: number;
+};
 
 /** TEC-1227: the lines a partial shipment would move to the backorder. */
 export function shortLines(order: Order): ShortLine[] {
@@ -61,7 +69,13 @@ export function shortLines(order: Order): ShortLine[] {
     .map((it) => {
       const want = lineAmount(it);
       const picked = Number(it.assigned) || 0;
-      return { name: it.product.name, picked, rest: want - picked };
+      return {
+        key: it.uuid,
+        name: it.product.name,
+        measure: itemMeasure(it),
+        picked,
+        rest: want - picked,
+      };
     })
     .filter((l) => l.rest > 1e-9);
 }
@@ -125,8 +139,11 @@ export function PartialShipButton({
           </DialogHeader>
           <ul className="space-y-1 text-sm" data-testid="partial-short-lines">
             {short.map((l) => (
-              <li key={l.name} className="flex justify-between gap-2">
-                <span className="truncate">{l.name}</span>
+              <li key={l.key} className="flex justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{l.name}</span>
+                  <MeasureBadge measure={l.measure} />
+                </span>
                 <span className="text-muted-foreground shrink-0">
                   {t("orders.partial.line", {
                     picked: format.number(l.picked),
