@@ -1,0 +1,17 @@
+{
+  "reconnected": "रियलटाइम कनेक्शन बहाल हो गया",
+  "offline": "आप ऑफ़लाइन हैं — रियलटाइम रुका हुआ है",
+  "event_fallback": "अपडेट: {{type}}",
+  "event_notifications_sent": "सूचना भेजी गई",
+  "event_notifications_delivered": "सूचना पहुँचा दी गई",
+  "event_notifications_failed": "सूचना विफल रही",
+  "event_jobs_completed": "जॉब पूर्ण हुआ",
+  "event_jobs_failed": "जॉब विफल रहा",
+  "event_imports_completed": "आयात पूर्ण हुआ",
+  "event_imports_failed": "आयात विफल रहा",
+  "event_exports_completed": "निर्यात पूर्ण हुआ",
+  "event_exports_failed": "निर्यात विफल रहा",
+  "event_exports_cancelled": "निर्यात रद्द किया गया",
+  "event_reports_export_completed": "रिपोर्ट निर्यात तैयार है",
+  "event_reports_export_failed": "रिपोर्ट निर्यात विफल रहा"
+}

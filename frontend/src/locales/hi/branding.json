@@ -1,0 +1,8 @@
+{
+  "logo.upload": "लोगो अपलोड करें",
+  "logo.replace": "लोगो बदलें",
+  "logo.clear": "लोगो हटाएँ",
+  "logo.uploading": "अपलोड हो रहा है…",
+  "logo.too_large": "लोगो 2 MB या उससे छोटा होना चाहिए।",
+  "logo.invalid_type": "JPEG, PNG या WebP छवि का उपयोग करें।"
+}
