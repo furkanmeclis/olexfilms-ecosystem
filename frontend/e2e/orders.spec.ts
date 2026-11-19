@@ -42,7 +42,7 @@ test("order: create → approve → ship → receive", async ({ page }) => {
 
   await expect(page).toHaveURL(detailUrl);
   expect(api.bodies["POST /v1/orders"]?.[0]).toEqual({
-    items: [{ product_uuid: PRODUCT.uuid, quantity: 2 }],
+    items: [{ product_uuid: PRODUCT.uuid, quantity: 2, sale_measure: "box" }],
   });
   expect(api.bodies[`POST /v1/orders/${ORDER_UUID}/transitions`]?.[0]).toEqual({
     status: "submitted",
