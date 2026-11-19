@@ -24226,7 +24226,7 @@ export interface components {
             width_cm: number | null;
             min_cut_meters: number | null;
             waste_pct: number | null;
-            /** @description TEC-1238 (K1): the product is also sold by the meter, cut from a box of default_meters (always set in a product view; absent in a PUT keeps the switch). Needs a piece product without a fixed barcode, default_meters and no Glorian sync (422 field sellable_by_meter, codes glorian_synced, not_piece_product, fixed_barcode; default_meters box_meters_required). roll_meter products are always sold by the meter and keep it false. */
+            /** @description TEC-1238 (K1): the product is also sold by the meter, cut from a box of default_meters (always set in a product view; absent in a PUT keeps the switch). Needs a piece product without a fixed barcode and default_meters (422 field sellable_by_meter, codes not_piece_product, fixed_barcode; default_meters box_meters_required). TEC-1251: a Glorian synced product is sold by the meter too; the sync never rewrites these settings. roll_meter products are always sold by the meter and keep it false. */
             sellable_by_meter?: boolean;
         };
         /** @description TEC-1008 bulk barcode job (super_admin). */

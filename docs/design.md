@@ -175,7 +175,7 @@ Aynı ürün hem kapalı kutu hem metre olarak satılır. Ürün tek kalır; öl
 
 | # | Konu | Karar ve uygulama |
 | -- | -- | -- |
-| K1 | Hangi ürünler | Ürün kartında "Metreyle satılabilir" anahtarı (`products.sellable_by_meter`). Yalnız seri adet üründe ve kutu metresi (varsayılan uzunluk) doluyken açılır. Glorian ile senkron üründe açılmaz. roll_meter ürünler her zaman metreyle satılır. |
+| K1 | Hangi ürünler | Ürün kartında "Metreyle satılabilir" anahtarı (`products.sellable_by_meter`). Yalnız seri adet üründe ve kutu metresi (varsayılan uzunluk) doluyken açılır. ~~Glorian ile senkron üründe açılmaz.~~ 19.11 (TEC-1251, Hüseyin Bey): Glorian ile senkron ürün de metreyle satılır (migration 000200 `chk_products_sellable_by_meter`'dan `connection_id IS NULL` koşulunu kaldırır); Glorian çekimi metre ayarlarını (`sellable_by_meter`, kutu metresi, minimum kesim, `meter_price`) ezmez. roll_meter ürünler her zaman metreyle satılır. |
 | K2 | Metre fiyatı | Ürün başına tek metre liste fiyatı (`product_prices.meter_price`). Boşsa alıcının kutu fiyatı ÷ kutu metresi. Bayi iskontosu ve kur dönüşümü metre fiyatına da uygulanır. |
 | K3 | Kullanım hakkı | Her metre satırında sorulur (`order_items.line_credits`), varsayılan ürünün hakkı (5). Kesik parça sevk edildiği satırın hakkını taşır. |
 | K4 | Hizmette kullanım | Hak taşıyan parça hizmette bütün kullanılır (`full`). Her hizmet 1 hak düşer, parçadan metre düşülmez; kesim (`partial`) reddedilir. |
@@ -189,6 +189,8 @@ Aynı ürün hem kapalı kutu hem metre olarak satılır. Ürün tek kalır; öl
 | K12 | Plotter | Metre satırında da seçilir; hak alanı ortaktır. |
 | K13 | Hızlı satış | Kesik parça bayinin hızlı satışında satılmaz (`CUT_PIECE_NOT_SELLABLE`). |
 | K14 | Kritik stok | İki ayrı eşik: kapalı kutu adedi (`min_quantity`) ve metre (`min_meters`, açık rulo + kesik parça; artık parça sayılmaz). İki uyarı ayrı çalışır. |
+
+**Glorian ile metre satışı (TEC-1251, 19.11):** Ekosistemde senkron ürünün metre satırı Olex ürünüyle aynı akışla sipariş edilir, toplanır ve sevk edilir. Glorian'ın henüz metre satırı ve kesik parça modeli yoktur; ekosistem bu yüzden güvenli tarafta kalır ve her atlamayı loglar: (1) sipariş outbound'u (`POST /orders`) yalnız kutu satırlarını gönderir, metre satırını ve onun parçalarını göndermez (`glorian order: meter line of a synced product left out`); (2) barkod push'u açılmış kutuyu ve kesik parçayı (metreli adet ürün birimi) hub'a kutu olarak göndermez (`glorian_push_metered_piece_skipped`); (3) bu birimlerin çıkış PATCH'i yapılmaz (`glorian_patch_metered_piece_skipped`). Sonuç: kapalı kutu Glorian'a gönderilmiş ve sonra depoda açılmışsa hub onu hâlâ "available" kutu sanır; metre satırıyla çıkan parça ve kutular hub'da düşmez. Glorian uyum planının girdileri: hub'da metre satırı (`sale_measure`, `meters`, `line_credits`), kutu açma (`measure_conversion`) ve kesik parça (`split`, yeni barkod, metre) kavramları; açılan kutunun hub'da kapanması; Glorian'dan gelen siparişte metre satırı. Glorian reposundaki iş ayrı planlanır.
 
 İade tutarı (bulgu 6): kesik parça, satıldığı metre satırının fiyatıyla metre × metre fiyatı olarak alacaklandırılır; kapalı kutu kutu fiyatıyla.
 

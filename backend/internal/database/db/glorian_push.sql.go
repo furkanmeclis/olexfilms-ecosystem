@@ -20,7 +20,9 @@ SELECT m.id AS movement_id,
        u.barcode,
        u.unit_kind,
        p.connection_id,
-       p.external_id
+       p.external_id,
+       -- TEC-1251 (K1): see ListGlorianPushUnits.
+       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id
 JOIN products p ON p.id = m.product_id
@@ -37,6 +39,7 @@ type GetGlorianPushMovementRow struct {
 	UnitKind       string      `json:"unit_kind"`
 	ConnectionID   pgtype.Int8 `json:"connection_id"`
 	ExternalID     pgtype.Text `json:"external_id"`
+	MeteredPiece   bool        `json:"metered_piece"`
 }
 
 // A movement with its unit's barcode and the product's sync link, for the
@@ -54,6 +57,7 @@ func (q *Queries) GetGlorianPushMovement(ctx context.Context, id int64) (GetGlor
 		&i.UnitKind,
 		&i.ConnectionID,
 		&i.ExternalID,
+		&i.MeteredPiece,
 	)
 	return i, err
 }
@@ -144,7 +148,11 @@ const listGlorianPushUnits = `-- name: ListGlorianPushUnits :many
 SELECT m.id AS movement_id,
        m.created_at,
        u.barcode,
-       p.external_id::text AS product_external_id
+       p.external_id::text AS product_external_id,
+       -- TEC-1251 (K1): a unit with meters of a piece product (an opened
+       -- box or a cut piece) has no Glorian model yet; the push leaves it
+       -- out and logs it.
+       (p.unit_type = 'piece' AND u.initial_meters IS NOT NULL)::bool AS metered_piece
 FROM stock_movements m
 JOIN units u ON u.id = m.unit_id
 JOIN products p ON p.id = m.product_id
@@ -172,6 +180,7 @@ type ListGlorianPushUnitsRow struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	Barcode           string             `json:"barcode"`
 	ProductExternalID string             `json:"product_external_id"`
+	MeteredPiece      bool               `json:"metered_piece"`
 }
 
 // Serial units entered or placed into a warehouse bin after the keyset
@@ -197,6 +206,7 @@ func (q *Queries) ListGlorianPushUnits(ctx context.Context, arg ListGlorianPushU
 			&i.CreatedAt,
 			&i.Barcode,
 			&i.ProductExternalID,
+			&i.MeteredPiece,
 		); err != nil {
 			return nil, err
 		}
