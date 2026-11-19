@@ -499,6 +499,7 @@ var trCatalog = map[string]string{
 	"orders.pdf.amount":                       "Miktar",
 	"orders.pdf.barcodes":                     "Barkodlar",
 	"orders.pdf.unit_pcs":                     "adet",
+	"orders.pdf.line_credits":                 "Kullanım kredisi: parça başına {{credits}}",
 	"orders.pdf.delivered_by":                 "Teslim eden",
 	"orders.pdf.received_by":                  "Teslim alan",
 	"orders.pdf.generated_at":                 "Oluşturulma",
@@ -1298,6 +1299,7 @@ var trCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Kod birden fazla göze uyuyor; tam kodu kullanın.",
 	"entry_import.error.product_mismatch":       "Barkod başka bir ürüne ait.",
 	"entry_import.error.unit_not_enterable":     "Birim girişe alınabilir basılı etiket değil.",
+	"labels.unit.credits":                       "{{n}} hak", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Mevcut barkod seçilen politikayla atlandı.",
 	"entry_import.error.center_only":            "Yeni birimi yalnız markanın merkezi oluşturabilir.",
 	"entry_import.error.roll_meters_required":   "Yeni rulo için metraj gerekli (metraj kolonu veya ürünün varsayılan rulo uzunluğu).",
@@ -1798,6 +1800,7 @@ var enCatalog = map[string]string{
 	"orders.pdf.amount":                       "Amount",
 	"orders.pdf.barcodes":                     "Barcodes",
 	"orders.pdf.unit_pcs":                     "pcs",
+	"orders.pdf.line_credits":                 "Usage credits: {{credits}} per piece",
 	"orders.pdf.delivered_by":                 "Delivered by",
 	"orders.pdf.received_by":                  "Received by",
 	"orders.pdf.generated_at":                 "Generated at",
@@ -2597,6 +2600,7 @@ var enCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Several bins match this code; use the full code.",
 	"entry_import.error.product_mismatch":       "The barcode belongs to another product.",
 	"entry_import.error.unit_not_enterable":     "This unit is not an enterable printed label.",
+	"labels.unit.credits":                       "{{n}} credits", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "An existing barcode was skipped by policy.",
 	"entry_import.error.center_only":            "Only the brand center can create a new unit.",
 	"entry_import.error.roll_meters_required":   "A new roll needs meters (the meters column or the product's default roll length).",

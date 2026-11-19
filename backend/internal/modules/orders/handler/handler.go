@@ -30,15 +30,20 @@ const (
 	CodeInsufficientStock         = "ORDER_INSUFFICIENT_STOCK"
 	CodeOverAssigned              = "ORDER_ITEM_OVER_ASSIGNED"
 	CodeRollMetersExceed          = "ROLL_METERS_EXCEED_REMAINING"
-	CodeNotFullyAssigned          = "ORDER_NOT_FULLY_ASSIGNED"
-	CodeStockUnavailable          = "ORDER_STOCK_UNAVAILABLE"
-	CodePriceNotFound             = ord.CodePriceNotFound
-	CodeNotInvoiceable            = "ORDER_NOT_INVOICEABLE"
-	CodeNotSupplementable         = "ORDER_NOT_SUPPLEMENTABLE"
-	CodeOrderInvoiced             = "ORDER_INVOICED"
-	CodeItemAlreadyInvoiced       = "ORDER_ITEM_ALREADY_INVOICED"
-	CodeNothingToInvoice          = "ORDER_NOTHING_TO_INVOICE"
-	CodeInvoiceNoTaken            = "ORDER_INVOICE_NO_TAKEN"
+	// TEC-1241: cutting a meter line from a roll or a closed box.
+	CodeBoxOpenConfirm      = "BOX_OPEN_CONFIRM_REQUIRED"
+	CodePartialPieceConfirm = "PARTIAL_PIECE_CONFIRM_REQUIRED"
+	CodeCutBelowMinCut      = "CUT_BELOW_MIN_CUT"
+	CodeNotCutLine          = "ORDER_ITEM_NOT_CUT_LINE"
+	CodeNotFullyAssigned    = "ORDER_NOT_FULLY_ASSIGNED"
+	CodeStockUnavailable    = "ORDER_STOCK_UNAVAILABLE"
+	CodePriceNotFound       = ord.CodePriceNotFound
+	CodeNotInvoiceable      = "ORDER_NOT_INVOICEABLE"
+	CodeNotSupplementable   = "ORDER_NOT_SUPPLEMENTABLE"
+	CodeOrderInvoiced       = "ORDER_INVOICED"
+	CodeItemAlreadyInvoiced = "ORDER_ITEM_ALREADY_INVOICED"
+	CodeNothingToInvoice    = "ORDER_NOTHING_TO_INVOICE"
+	CodeInvoiceNoTaken      = "ORDER_INVOICE_NO_TAKEN"
 	// TEC-1228 work queue.
 	CodeAlreadyClaimed = "ORDER_ALREADY_CLAIMED"
 	CodeNotClaimable   = "ORDER_NOT_CLAIMABLE"
@@ -100,6 +105,14 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeInsufficientStock, "Not enough unreserved stock for this barcode")
 	case errors.Is(err, ord.ErrRollMetersExceed):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeRollMetersExceed, "The roll has fewer meters left than requested")
+	case errors.Is(err, ord.ErrBoxOpenConfirm):
+		response.Conflict(w, r, CodeBoxOpenConfirm, "The unit is a closed box; confirm opening it (open_box)")
+	case errors.Is(err, ord.ErrPartialPieceConfirm):
+		response.Conflict(w, r, CodePartialPieceConfirm, "The piece is shorter than the rest of the line; confirm a partial piece with a note")
+	case errors.Is(err, ord.ErrCutBelowMinCut):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeCutBelowMinCut, "The cut is shorter than the product's minimum cut")
+	case errors.Is(err, ord.ErrNotCutLine):
+		response.Conflict(w, r, CodeNotCutLine, "The order line is not a meter line cut from a box")
 	case errors.Is(err, ord.ErrOverAssigned):
 		response.Conflict(w, r, CodeOverAssigned, "The assignment exceeds the order line amount")
 	case errors.Is(err, ord.ErrNotFullyAssigned):
@@ -391,6 +404,11 @@ type assignBody struct {
 	Quantity       *int64       `json:"quantity"`
 	Meters         *json.Number `json:"meters"`
 	IdempotencyKey string       `json:"idempotency_key"`
+	// TEC-1241: cut lines.
+	OpenBox bool   `json:"open_box"`
+	Partial bool   `json:"partial"`
+	Note    string `json:"note"`
+	Credits *int64 `json:"credits"`
 }
 
 type markInvoicedBody struct {
@@ -468,6 +486,7 @@ func (h *Handler) AssignUnit(w http.ResponseWriter, r *http.Request) {
 	in := ord.AssignInput{
 		Barcode: body.Barcode, UnitUUID: body.UnitUUID, Quantity: body.Quantity,
 		IdempotencyKey: body.IdempotencyKey,
+		OpenBox:        body.OpenBox, Partial: body.Partial, Note: body.Note, Credits: body.Credits,
 	}
 	if in.IdempotencyKey == "" {
 		in.IdempotencyKey = r.Header.Get("Idempotency-Key")
@@ -482,6 +501,27 @@ func (h *Handler) AssignUnit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, o)
+}
+
+// CutPreview (GET /v1/orders/{uuid}/items/{item_uuid}/cut-preview): what
+// assigning the scanned roll or closed box to a meter line does (TEC-1241);
+// nothing is written.
+func (h *Handler) CutPreview(w http.ResponseWriter, r *http.Request) {
+	id, item, ok := pathItem(w, r)
+	if !ok {
+		return
+	}
+	qv := r.URL.Query()
+	in := ord.AssignInput{Barcode: qv.Get("barcode"), UnitUUID: qv.Get("unit_uuid")}
+	if m := qv.Get("meters"); m != "" {
+		in.Meters = &m
+	}
+	out, err := h.svc.CutPreview(r.Context(), caller(r), id, item, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
 }
 
 // UnassignUnit (DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}):

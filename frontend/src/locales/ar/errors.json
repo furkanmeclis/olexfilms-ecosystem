@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "اللفائف والرموز الشريطية الثابتة لا تحمل أرصدة استخدام.",
   "codes.ORDER_ALREADY_CLAIMED": "تولّى شخص آخر هذا العمل.",
   "codes.ORDER_NOT_CLAIMABLE": "العمل المستودعي هو فقط طلب معتمد لم يُشحن بعد.",
-  "codes.ORDER_SCHEDULE_LOCKED": "لا يمكن تغيير الأولوية والموعد في هذه الحالة."
+  "codes.ORDER_SCHEDULE_LOCKED": "لا يمكن تغيير الأولوية والموعد في هذه الحالة.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "لا يمكن أن تقل الأمتار عن أدنى قص للمنتج.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "هذا المنتج لا يُباع بالمتر؛ أضِفه كصندوق."
 }

@@ -49,7 +49,7 @@ export function canMarkPlotter(
   return order.role === 'seller' && order.status !== 'draft' && order.status !== 'cancelled' && (can.write || can.ship);
 }
 
-type LineChange ={ product: string; before: string | null; after: string | null; plotter_cut?: boolean };
+type LineChange = { product: string; before: string | null; after: string | null; plotter_cut?: boolean; sale_measure?: 'box' | 'meter' };
 
 /** One translated part of a timeline step: the key under `orders:` and its parameters. */
 export type StepPart = { key: string; params?: Record<string, string> };
@@ -66,8 +66,16 @@ export function stepParts(step: {
   priority?: string;
   due_date?: string;
   previous_picker?: string;
-}): StepPart[] {
+}, measures?: { box: string; meter: string }): StepPart[] {
   const parts: StepPart[] = [];
+  // TEC-1240: a meter line, or a product with both lines in the step, names its measure.
+  const withMeter = new Set(
+    (step.changes ?? []).filter((c) => c.sale_measure === 'meter').map((c) => c.product),
+  );
+  const named = (c: LineChange) =>
+    measures && c.sale_measure && (c.sale_measure === 'meter' || withMeter.has(c.product))
+      ? `${c.product} · ${measures[c.sale_measure]}`
+      : c.product;
   // TEC-1228: the new schedule, and whose job was taken over or released.
   if (step.action === 'schedule_updated') {
     if (step.priority) parts.push({ key: `queue.priority_${step.priority}` });
@@ -77,7 +85,8 @@ export function stepParts(step: {
   if (step.action === 'plotter_marked' && step.plotter_cut != null) {
     parts.push({ key: step.plotter_cut ? 'plotter.marked_on' : 'plotter.marked_off' });
   }
-  for (const c of step.changes ?? []) {
+  for (const raw of step.changes ?? []) {
+    const c = { ...raw, product: named(raw) };
     if (c.before == null && c.after != null) parts.push({ key: 'change.added', params: { product: c.product, after: c.after } });
     else if (c.after == null && c.before != null) parts.push({ key: 'change.removed', params: { product: c.product, before: c.before } });
     else if (c.before !== c.after) {
@@ -171,4 +180,17 @@ export function stockState(
   const s = map.get(product);
   if (s && (s.quantity > 0 || s.meters > 0)) return { kind: 'in', ...s };
   return complete || s ? { kind: 'out' } : { kind: 'unknown' };
+}
+
+/**
+ * TEC-1240: whether an order line shows its measure badge: a meter line of a
+ * piece product, or a box line whose product has a meter line on the order.
+ */
+export function showsMeasure(
+  item: { product: { uuid: string; unit_type: string }; sale_measure?: 'box' | 'meter' },
+  items: readonly { product: { uuid: string }; sale_measure?: 'box' | 'meter' }[],
+): boolean {
+  if (item.product.unit_type === 'roll_meter' || !item.sale_measure) return false;
+  if (item.sale_measure === 'meter') return true;
+  return items.some((i) => i.product.uuid === item.product.uuid && i.sale_measure === 'meter');
 }

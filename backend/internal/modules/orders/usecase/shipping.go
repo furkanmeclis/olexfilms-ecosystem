@@ -370,10 +370,13 @@ type ShippingParty struct {
 // the order slip adds its prices in OrderSlipLine.
 type ShippingLine struct {
 	// IsGift: a line charged 0 (TEC-1064), marked on the order slip.
-	IsGift   bool
-	SKU      string
-	Name     string
-	Amount   string
+	IsGift bool
+	SKU    string
+	Name   string
+	Amount string
+	// Note (TEC-1239): the usage credits of a meter line of a piece
+	// product ("Usage credits: 5 per piece", glossary term), under the product name.
+	Note     string
 	Barcodes []string
 	// itemID links the line to its order item (the order slip's prices).
 	itemID int64
@@ -480,7 +483,7 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		bc := u.Barcode
 		switch {
 		case u.Meters.Valid:
-			bc += " (" + numericText(u.Meters, 2) + " m)"
+			bc += " (" + meterAmount(loc, u.Meters) + ")"
 		case u.UnitKind == "fixed" && u.Quantity.Valid:
 			bc += " ×" + strconv.Itoa(int(u.Quantity.Int32))
 		}
@@ -492,12 +495,49 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 			return ShippingDoc{}, fmt.Errorf("orders: product: %w", err)
 		}
 		amount := strconv.Itoa(int(it.Quantity.Int32)) + " " + i18n.Translate(loc, "orders.pdf.unit_pcs")
+		note := ""
 		if it.Meters.Valid {
-			amount = numericText(it.Meters, 2) + " m"
+			amount = meterAmount(loc, it.Meters)
+			note = lineCreditsNote(loc, it.LineCredits)
 		}
-		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Barcodes: byItem[it.ID], IsGift: it.IsGift, itemID: it.ID})
+		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Note: note, Barcodes: byItem[it.ID], IsGift: it.IsGift, itemID: it.ID})
 	}
 	return d, nil
+}
+
+// meterAmount writes meters for a reader (TEC-1239): at least one decimal,
+// at most two, with the locale's decimal separator — "3,0 m" in Turkish,
+// "2.25 m" in English.
+func meterAmount(loc i18n.Locale, n pgtype.Numeric) string {
+	v := strings.TrimRight(numericText(n, 2), "0")
+	if strings.HasSuffix(v, ".") {
+		v += "0"
+	}
+	if !strings.Contains(v, ".") {
+		v += ".0"
+	}
+	if decimalComma(loc) {
+		v = strings.Replace(v, ".", ",", 1)
+	}
+	return v + " m"
+}
+
+// decimalComma reports the locales that write a decimal comma.
+func decimalComma(loc i18n.Locale) bool {
+	switch loc {
+	case i18n.LocaleEN, i18n.LocaleZhCN, i18n.LocaleAR, i18n.LocaleFA:
+		return false
+	}
+	return true
+}
+
+// lineCreditsNote is the usage credits note of a meter line of a piece
+// product (TEC-1239, K3); "" on a line without credits (roll_meter).
+func lineCreditsNote(loc i18n.Locale, credits pgtype.Int4) string {
+	if !credits.Valid {
+		return ""
+	}
+	return i18n.TranslateParams(loc, "orders.pdf.line_credits", map[string]string{"credits": strconv.Itoa(int(credits.Int32))})
 }
 
 // ShippingDocumentHTML renders the shipping note. Every value is escaped.
@@ -553,6 +593,9 @@ func ShippingDocumentHTML(d ShippingDoc) string {
 		b.WriteString(`<tr><td class="num">` + strconv.Itoa(i+1) + `</td><td><strong>` + esc(l.Name) + `</strong>`)
 		if l.SKU != "" {
 			b.WriteString(`<br><span class="muted" dir="ltr">` + esc(l.SKU) + `</span>`)
+		}
+		if l.Note != "" {
+			b.WriteString(`<br><span class="muted">` + esc(l.Note) + `</span>`)
 		}
 		b.WriteString(`</td><td class="num" dir="ltr">` + esc(l.Amount) + `</td><td class="codes" dir="ltr">`)
 		for j, bc := range l.Barcodes {

@@ -497,6 +497,7 @@ var arCatalog = map[string]string{
 	"orders.pdf.amount":                       "الكمية",
 	"orders.pdf.barcodes":                     "الباركودات",
 	"orders.pdf.unit_pcs":                     "قطعة",
+	"orders.pdf.line_credits":                 "أرصدة الاستخدام: {{credits}} لكل قطعة",
 	"orders.pdf.delivered_by":                 "سلّمه",
 	"orders.pdf.received_by":                  "استلمه",
 	"orders.pdf.generated_at":                 "تاريخ الإنشاء",
@@ -1296,6 +1297,7 @@ var arCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "الرمز يطابق عدة مواقع؛ استخدم الرمز الكامل.",
 	"entry_import.error.product_mismatch":       "الرمز الشريطي يخص منتجًا آخر.",
 	"entry_import.error.unit_not_enterable":     "الوحدة ليست ملصقًا مطبوعًا صالحًا للإدخال.",
+	"labels.unit.credits":                       "{{n}} رصيد استخدام", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "تم تخطي الرمز الموجود حسب السياسة.",
 	"entry_import.error.center_only":            "المركز فقط يمكنه إنشاء وحدة جديدة.",
 	"entry_import.error.roll_meters_required":   "تحتاج اللفة الجديدة إلى طولها؛ استخدم استيراد المخزون.",

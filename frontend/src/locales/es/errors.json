@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Los rollos y los códigos de barras fijos no tienen créditos de uso.",
   "codes.ORDER_ALREADY_CLAIMED": "Otra persona ha tomado este trabajo.",
   "codes.ORDER_NOT_CLAIMABLE": "Solo un pedido aprobado y no enviado es un trabajo de almacén.",
-  "codes.ORDER_SCHEDULE_LOCKED": "La prioridad y la fecha límite no pueden cambiar en este estado."
+  "codes.ORDER_SCHEDULE_LOCKED": "La prioridad y la fecha límite no pueden cambiar en este estado.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "Los metros no pueden ser menos que el corte mínimo del producto.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Este producto no se vende por metro; añádelo como caja."
 }

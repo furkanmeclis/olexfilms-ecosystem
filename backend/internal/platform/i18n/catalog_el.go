@@ -497,6 +497,7 @@ var elCatalog = map[string]string{
 	"orders.pdf.amount":                       "Ποσότητα",
 	"orders.pdf.barcodes":                     "Γραμμωτοί κώδικες",
 	"orders.pdf.unit_pcs":                     "τεμ.",
+	"orders.pdf.line_credits":                 "Πιστώσεις χρήσης: {{credits}} ανά τεμάχιο",
 	"orders.pdf.delivered_by":                 "Παρέδωσε",
 	"orders.pdf.received_by":                  "Παρέλαβε",
 	"orders.pdf.generated_at":                 "Δημιουργήθηκε",
@@ -1296,6 +1297,7 @@ var elCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Ο κωδικός ταιριάζει σε πολλές θέσεις· χρησιμοποιήστε τον πλήρη.",
 	"entry_import.error.product_mismatch":       "Το barcode ανήκει σε άλλο προϊόν.",
 	"entry_import.error.unit_not_enterable":     "Η μονάδα δεν είναι διαθέσιμη εκτυπωμένη ετικέτα.",
+	"labels.unit.credits":                       "{{n}} χρήσεις", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Το υπάρχον barcode παραλείφθηκε.",
 	"entry_import.error.center_only":            "Μόνο το κέντρο δημιουργεί νέες μονάδες.",
 	"entry_import.error.roll_meters_required":   "Η νέα ρολό απαιτεί μήκος· χρησιμοποιήστε εισαγωγή αποθέματος.",

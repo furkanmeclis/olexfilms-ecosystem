@@ -148,7 +148,13 @@ func orderSlipItemsHTML(d OrderSlipDoc) string {
 		if l.IsGift {
 			discount = i18n.Translate(d.Locale, "orders.pdf.gift")
 		}
-		for _, v := range []string{l.Name, ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, slipMoney(l.UnitPrice, d.Currency), discount, "—", slipMoney(l.LineTotal, d.Currency)} {
+		// TEC-1239: a meter line's usage credits sit under the product name.
+		name := esc(l.Name)
+		if l.Note != "" {
+			name += `<br><small>` + esc(l.Note) + `</small>`
+		}
+		b.WriteString(`<td>` + name + `</td>`)
+		for _, v := range []string{ioengine.JoinNonEmpty(" / ", l.SKU, strings.Join(l.Barcodes, ", ")), l.Amount, slipMoney(l.UnitPrice, d.Currency), discount, "—", slipMoney(l.LineTotal, d.Currency)} {
 			b.WriteString(`<td>` + esc(v) + `</td>`)
 		}
 		b.WriteString(`</tr>`)

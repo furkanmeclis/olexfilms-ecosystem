@@ -2211,6 +2211,8 @@ type OrderItemUnit struct {
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Credits          pgtype.Int4        `json:"credits"`
+	PieceNote        pgtype.Text        `json:"piece_note"`
 }
 
 type OrderOutbound struct {

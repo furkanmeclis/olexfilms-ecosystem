@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "رول‌ها و بارکدهای ثابت اعتبار مصرف ندارند.",
   "codes.ORDER_ALREADY_CLAIMED": "فرد دیگری این کار را برداشته است.",
   "codes.ORDER_NOT_CLAIMABLE": "فقط سفارش تأییدشده‌ای که هنوز ارسال نشده، کار انبار محسوب می‌شود.",
-  "codes.ORDER_SCHEDULE_LOCKED": "اولویت و تاریخ سررسید در این وضعیت قابل تغییر نیستند."
+  "codes.ORDER_SCHEDULE_LOCKED": "اولویت و تاریخ سررسید در این وضعیت قابل تغییر نیستند.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "متراژ نمی‌تواند از حداقل برش محصول کمتر باشد.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "این محصول متری فروخته نمی‌شود؛ آن را به‌صورت جعبه اضافه کنید."
 }

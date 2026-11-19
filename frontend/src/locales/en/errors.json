@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rolls and fixed barcodes carry no usage credits.",
   "codes.ORDER_ALREADY_CLAIMED": "Someone else has taken this job.",
   "codes.ORDER_NOT_CLAIMABLE": "Only an approved order that has not shipped is a warehouse job.",
-  "codes.ORDER_SCHEDULE_LOCKED": "The priority and due date cannot change in this status."
+  "codes.ORDER_SCHEDULE_LOCKED": "The priority and due date cannot change in this status.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "The meters cannot be shorter than the product's minimum cut.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "This product is not sold by the meter; add it as a box."
 }

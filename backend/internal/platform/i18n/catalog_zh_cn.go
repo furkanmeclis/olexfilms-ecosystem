@@ -497,6 +497,7 @@ var zhCNCatalog = map[string]string{
 	"orders.pdf.amount":                       "数量",
 	"orders.pdf.barcodes":                     "条码",
 	"orders.pdf.unit_pcs":                     "件",
+	"orders.pdf.line_credits":                 "使用额度：每段 {{credits}}",
 	"orders.pdf.delivered_by":                 "交付人",
 	"orders.pdf.received_by":                  "签收人",
 	"orders.pdf.generated_at":                 "生成时间",
@@ -1296,6 +1297,7 @@ var zhCNCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "代码匹配多个库位；请使用完整代码。",
 	"entry_import.error.product_mismatch":       "条码属于其他产品。",
 	"entry_import.error.unit_not_enterable":     "该单元不是可入库的已打印标签。",
+	"labels.unit.credits":                       "{{n}} 次使用", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "已按策略跳过现有条码。",
 	"entry_import.error.center_only":            "只有品牌中心可创建新单元。",
 	"entry_import.error.roll_meters_required":   "新卷材需要长度；请使用库存导入。",

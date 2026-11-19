@@ -9,11 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/credits"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/labels"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -79,7 +82,7 @@ func (s *Labels) PrintBatch(ctx context.Context, c Caller, batchID uuid.UUID, te
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.unitItems(ctx, printable)
+	items, err := s.unitItems(ctx, org, printable)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +118,7 @@ func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, te
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.unitItems(ctx, units)
+	items, err := s.unitItems(ctx, org, units)
 	if err != nil {
 		return nil, err
 	}
@@ -323,10 +326,13 @@ func (s *Labels) resolveTemplate(ctx context.Context, org int64, kind string, re
 	}
 }
 
-// unitItems adds the product name, SKU and meters to each unit.
-func (s *Labels) unitItems(ctx context.Context, units []db.Unit) ([]labels.Item, error) {
+// unitItems adds the product name, SKU and meters to each unit. A cut
+// piece that carries credits (a piece of a meter line, TEC-1241) also
+// prints its remaining credits.
+func (s *Labels) unitItems(ctx context.Context, org int64, units []db.Unit) ([]labels.Item, error) {
 	products := map[int64]db.Product{}
 	items := make([]labels.Item, 0, len(units))
+	locale := i18n.Locale("")
 	for _, u := range units {
 		p, ok := products[u.ProductID]
 		if !ok {
@@ -339,6 +345,20 @@ func (s *Labels) unitItems(ctx context.Context, units []db.Unit) ([]labels.Item,
 		sub := p.Sku
 		if m := labelMeters(u); m.Valid {
 			sub += " · " + numericString(m) + " m"
+			b, ok, err := credits.Get(ctx, s.q, u)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				if locale == "" {
+					locale = i18n.FallbackLocale
+					if o, err := s.q.GetOrganizationByID(ctx, org); err == nil && o.Locale != "" {
+						locale = i18n.Normalize(o.Locale)
+					}
+				}
+				sub += " · " + i18n.TranslateParams(locale, "labels.unit.credits",
+					map[string]string{"n": strconv.Itoa(int(b.Remaining))})
+			}
 		}
 		items = append(items, labels.Item{Code: u.Barcode, Title: p.Name, Subtitle: sub})
 	}

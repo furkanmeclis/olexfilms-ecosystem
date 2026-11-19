@@ -8,13 +8,17 @@
  * --test runs this file directly.
  */
 
-import { discountInvalid, isRoll, normalizeAmount, type CartLine } from './order-lines.ts';
+import { byMeter, discountInvalid, isCutLine, normalizeAmount, type CartLine } from './order-lines.ts';
 
 export type QuoteItem = {
   product_uuid: string;
   list_unit_price: string | null;
   unit_price: string | null;
   price_source: string;
+  /** TEC-1238 (K2): meter prices of a piece product sold by the meter. */
+  sellable_by_meter?: boolean;
+  meter_list_unit_price?: string | null;
+  meter_unit_price?: string | null;
 };
 
 export type Quote = {
@@ -54,7 +58,7 @@ const round = (v: number, digits: number) => {
 function lineAmount(line: CartLine): number | null {
   const v = num(line.amount);
   if (v === null || v <= 0) return null;
-  return isRoll(line.unit_type) || Number.isInteger(v) ? v : null;
+  return byMeter(line) || Number.isInteger(v) ? v : null;
 }
 
 /**
@@ -64,7 +68,10 @@ function lineAmount(line: CartLine): number | null {
  */
 export function linePrice(line: CartLine, quote: Quote | undefined): LinePrice {
   const item = quote?.items.find((i) => i.product_uuid === line.product_uuid);
-  const list = num(item?.list_unit_price);
+  // TEC-1240: a meter line of a piece product is priced by its meter price (K2).
+  const cut = isCutLine(line);
+  const list = num(cut ? item?.meter_list_unit_price : item?.list_unit_price);
+  const quoted = num(cut ? item?.meter_unit_price : item?.unit_price);
   const amount = lineAmount(line);
   const withTotal = (p: Omit<LinePrice, 'total'>): LinePrice => ({
     ...p,
@@ -77,7 +84,7 @@ export function linePrice(line: CartLine, quote: Quote | undefined): LinePrice {
   if (own !== null && list !== null) {
     return withTotal({ list, discountPct: own, unit: round(list * (1 - own / 100), 4), gift: false });
   }
-  return withTotal({ list, discountPct: num(quote?.discount_pct), unit: num(item?.unit_price), gift: false });
+  return withTotal({ list, discountPct: num(quote?.discount_pct), unit: quoted, gift: false });
 }
 
 /** Order total in the order currency and its current TRY value (null without a rate). */

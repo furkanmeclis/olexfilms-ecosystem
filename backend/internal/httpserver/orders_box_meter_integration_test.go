@@ -17,6 +17,10 @@ type boxMeterLine struct {
 	UUID    string `json:"uuid"`
 	Product struct {
 		UUID string `json:"uuid"`
+		// TEC-1239: the meter sale settings of the line's product.
+		SellableByMeter *bool   `json:"sellable_by_meter"`
+		BoxMeters       *string `json:"box_meters"`
+		MinCutMeters    *string `json:"min_cut_meters"`
 	} `json:"product"`
 	SaleMeasure string  `json:"sale_measure"`
 	Quantity    *int32  `json:"quantity"`
@@ -237,6 +241,12 @@ func TestIntegrationOrdersBoxAndMeterLines(t *testing.T) {
 	}
 	if m := whView.line(t, "meter"); m.LineCredits == nil || *m.LineCredits != 7 {
 		t.Fatalf("warehouse meter line = %+v", m)
+	}
+	// TEC-1239: the detail line names the product's box length and minimum
+	// cut, so the order screens can hint them.
+	if p := whView.line(t, "meter").Product; p.SellableByMeter == nil || !*p.SellableByMeter ||
+		!sameAmount(p.BoxMeters, "15") || !sameAmount(p.MinCutMeters, "2") {
+		t.Fatalf("meter line product = %+v", p)
 	}
 
 	// The center's order for the dealer: the same meter price rule.

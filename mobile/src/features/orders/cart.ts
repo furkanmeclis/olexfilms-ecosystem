@@ -4,7 +4,7 @@ import type { MobileMe } from '@/core/auth/api';
 import { useSession } from '@/core/auth/session';
 import { readJSON, storage, writeJSON } from '@/core/storage';
 
-import { addLine, type CartLine } from './order-lines';
+import { addLine, type CartLine, type CartProduct, convertToBoxes, lineKey, lineMeasure, type SaleMeasure } from './order-lines';
 import type { SupplementParent } from './supplement';
 
 /** First cart key: one cart for the whole device (shared between users). Removed on load. */
@@ -27,18 +27,27 @@ function load(key: string | null): Saved {
   return { ...EMPTY, ...((key && readJSON<Saved>(key)) || {}) };
 }
 
+/**
+ * Line actions take the line key (product + measure, TEC-1240): the same
+ * product may have a box and a meter line (K10); a line's measure never changes.
+ */
 type Cart = Saved & {
   key: string | null;
-  add: (product: { uuid: string; sku: string; name: string; unit_type: string }) => void;
-  setAmount: (productUuid: string, amount: string) => void;
-  setPrice: (productUuid: string, price: string) => void;
+  /** Adds the product in that measure (default: its natural one); a measure it is not sold by is ignored. */
+  add: (product: CartProduct, measure?: SaleMeasure) => void;
+  setAmount: (lineKey: string, amount: string) => void;
+  setPrice: (lineKey: string, price: string) => void;
   /** TEC-1059: the center marks a line "sent plotter cut". */
-  setPlotter: (productUuid: string, plotterCut: boolean) => void;
+  setPlotter: (lineKey: string, plotterCut: boolean) => void;
   /** TEC-1221: usage credits of a plotter cut line's barcodes (raw input). */
-  setPlotterCredits: (productUuid: string, credits: string) => void;
-  setDiscount: (productUuid: string, discount: string) => void;
-  setGift: (productUuid: string, gift: boolean) => void;
-  remove: (productUuid: string) => void;
+  setPlotterCredits: (lineKey: string, credits: string) => void;
+  /** TEC-1240 (K3/K12): credits of each cut piece of a meter line (raw input). */
+  setLineCredits: (lineKey: string, credits: string) => void;
+  setDiscount: (lineKey: string, discount: string) => void;
+  setGift: (lineKey: string, gift: boolean) => void;
+  /** TEC-1240: applies the whole box suggestion of a meter line (one tap). */
+  toBoxes: (lineKey: string) => void;
+  remove: (lineKey: string) => void;
   setNote: (note: string) => void;
   /** TEC-1222: start (empty cart) or leave a supplementary order. */
   startSupplement: (parent: SupplementParent) => void;
@@ -54,29 +63,31 @@ export const useCart = create<Cart>((set, get) => {
     const { key, lines, note, parent } = get();
     if (key) writeJSON(key, { lines, note, parent });
   };
+  const patch = (k: string, p: Partial<CartLine>) =>
+    update({ lines: get().lines.map((l) => (lineKey(l) === k ? { ...l, ...p } : l)) });
   return {
     key: initialKey,
     ...load(initialKey),
-    add: (product) => update({ lines: addLine(get().lines, product) }),
-    setAmount: (productUuid, amount) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, amount } : l)) }),
-    setPrice: (productUuid, unit_price) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, unit_price } : l)) }),
-    setPlotter: (productUuid, plotter_cut) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, plotter_cut } : l)) }),
-    setPlotterCredits: (productUuid, plotter_credits) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, plotter_credits } : l)) }),
-    setDiscount: (productUuid, discount_pct) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, discount_pct } : l)) }),
-    setGift: (productUuid, is_gift) =>
-      update({ lines: get().lines.map((l) => (l.product_uuid === productUuid ? { ...l, is_gift } : l)) }),
-    remove: (productUuid) => update({ lines: get().lines.filter((l) => l.product_uuid !== productUuid) }),
+    add: (product, measure) => update({ lines: addLine(get().lines, product, measure) }),
+    setAmount: (k, amount) => patch(k, { amount }),
+    setPrice: (k, unit_price) => patch(k, { unit_price }),
+    setPlotter: (k, plotter_cut) => patch(k, { plotter_cut }),
+    setPlotterCredits: (k, plotter_credits) => patch(k, { plotter_credits }),
+    setLineCredits: (k, line_credits) => patch(k, { line_credits }),
+    setDiscount: (k, discount_pct) => patch(k, { discount_pct }),
+    setGift: (k, is_gift) => patch(k, { is_gift }),
+    toBoxes: (k) => update({ lines: convertToBoxes(get().lines, k) }),
+    remove: (k) => update({ lines: get().lines.filter((l) => lineKey(l) !== k) }),
     setNote: (note) => update({ note }),
     startSupplement: (parent) => update({ ...EMPTY, parent }),
     leaveSupplement: () => update({ parent: null }),
     clear: () => update(EMPTY),
   };
 });
+
+/** Whether the cart holds the product in that measure (catalog marks). */
+export const inCart = (lines: readonly CartLine[], productUuid: string, measure: SaleMeasure) =>
+  lines.some((l) => l.product_uuid === productUuid && lineMeasure(l) === measure);
 
 // Follow the session: switching organization loads that organization's cart,
 // signing out drops the cart from memory and from the device.

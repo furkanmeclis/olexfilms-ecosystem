@@ -1,4 +1,4 @@
-import { type QueryClient, useMutation, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
 import { useCan } from '@/core/spaces';
 import { useDebounced, useFormat } from '@/features/admin/kit';
-import { useProducts } from '@/features/catalog/api';
+import { catalogKeys, useProducts } from '@/features/catalog/api';
 import { PickerSheet } from '@/features/picker-sheet';
 import { Button } from '@/ui/button';
 import { confirmAction } from '@/ui/confirm';
@@ -17,17 +17,29 @@ import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { toast } from '@/ui/toast';
 
+import { AmountStepper, LineCreditsField, MeasureBadge, OtherMeasureButton, WholeBoxHint } from './line-fields';
 import {
   addEditLine,
+  byMeter,
+  type CartProduct,
   cartIsValid,
+  convertToBoxes,
   editChanged,
   type EditLine,
+  isAmountError,
+  isCutLine,
   isRoll,
+  lineKey,
+  lineMeasure,
   linesBelowAssigned,
   linesFromItems,
+  otherMeasure,
   plotterCreditsInvalid,
+  productOf,
+  type SaleMeasure,
   toItemInputs,
   validateCart,
+  withProductInfo,
 } from './order-lines';
 import { canMarkPlotter } from './order-summary';
 
@@ -175,9 +187,12 @@ function LinePlotterCredits({
 export function LinePlotter({
   order,
   item,
+  credits = true,
 }: {
   order: Pick<Order, 'uuid' | 'role' | 'status'>;
   item: { uuid: string; plotter_cut: boolean; plotter_credits?: number | null };
+  /** TEC-1240 (K12): false on a meter line, whose plotter mark shares the line credits shown with the line. */
+  credits?: boolean;
 }) {
   const { t } = useTranslation('orders');
   const can = useCanMarkPlotter(order);
@@ -188,7 +203,7 @@ export function LinePlotter({
     return (
       <>
         <PlotterSwitch value={on} disabled={mark.isPending} onChange={(v) => mark.mutate({ item: item.uuid, plotter_cut: v })} />
-        {on ? <LinePlotterCredits item={item} mark={mark} /> : null}
+        {on && credits ? <LinePlotterCredits item={item} mark={mark} /> : null}
       </>
     );
   }
@@ -197,37 +212,48 @@ export function LinePlotter({
     <View className="flex-row items-center gap-1.5 self-start rounded-md bg-secondary px-2 py-0.5">
       <Icon name="check" tone="primary" size={12} weight="semibold" />
       <Text variant="footnote">
-        {item.plotter_credits != null ? t('plotter.badge_credits', { value: item.plotter_credits }) : t('plotter.badge')}
+        {credits && item.plotter_credits != null ? t('plotter.badge_credits', { value: item.plotter_credits }) : t('plotter.badge')}
       </Text>
     </View>
   );
 }
 
-/** Product list of the editor: the brand catalog by name or SKU; products already on the order are disabled. */
+/**
+ * Product list of the editor: the brand catalog by name or SKU; a product sold
+ * by the meter is listed twice, "Box" and "Meter" (one tap adds that line,
+ * TEC-1240). Lines already on the order are disabled.
+ */
 function ProductPicker({
   picked,
   onPick,
   onClose,
 }: {
   picked: Set<string>;
-  onPick: (p: { uuid: string; sku: string; name: string; unit_type: string }) => void;
+  onPick: (p: CartProduct, measure: SaleMeasure) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation('catalog');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
   const res = useProducts('', query);
+  const options = res.items.flatMap((p) => {
+    const product: CartProduct = { uuid: p.uuid, sku: p.sku, name: p.name, unit_type: p.unit_type, roll: p.roll, usage_credits: p.usage_credits };
+    const natural: SaleMeasure = isRoll(p.unit_type) ? 'meter' : 'box';
+    const measures: SaleMeasure[] = p.roll?.sellable_by_meter && !isRoll(p.unit_type) ? ['box', 'meter'] : [natural];
+    return measures.map((m) => ({
+      key: `${p.uuid}:${m}`,
+      title: p.name,
+      subtitle: measures.length > 1 ? `${p.sku} · ${t(`orders:measure.${m}`)}` : p.sku,
+      disabled: picked.has(`${p.uuid}:${m}`),
+      product,
+      measure: m,
+    }));
+  });
   return (
     <PickerSheet
       visible
       title={t('orders:add_products')}
-      options={res.items.map((p) => ({
-        key: p.uuid,
-        title: p.name,
-        subtitle: p.sku,
-        disabled: picked.has(p.uuid),
-        product: { uuid: p.uuid, sku: p.sku, name: p.name, unit_type: p.unit_type },
-      }))}
+      options={options}
       search={{ value: q, onChange: setQ }}
       searchPlaceholder={t('search')}
       loading={res.isPending}
@@ -238,10 +264,29 @@ function ProductPicker({
         if (res.hasNextPage && !res.isFetchingNextPage) void res.fetchNextPage();
       }}
       emptyText={t('no_results')}
-      onPick={(o) => onPick(o.product)}
+      onPick={(o) => onPick(o.product, o.measure)}
       onClose={onClose}
     />
   );
+}
+
+/**
+ * TEC-1240: catalog settings (box length, minimum cut, meter switch, usage
+ * credits) of the order's non-roll products: an order line carries only the
+ * product ref. Read from the catalog cache; a failed read leaves the line as
+ * it is (the server still checks the minimum cut).
+ */
+function useLineProducts(uuids: string[]) {
+  const results = useQueries({
+    queries: uuids.map((uuid) => ({
+      queryKey: catalogKeys.product(uuid),
+      queryFn: () => unwrap(api.GET('/v1/catalog/products/{uuid}', { params: { path: { uuid } } })),
+      staleTime: 5 * 60_000,
+    })),
+  });
+  const map = new Map<string, CartProduct>();
+  for (const r of results) if (r.data) map.set(r.data.uuid, r.data);
+  return map;
 }
 
 /**
@@ -268,13 +313,20 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
   // The seller sends the plotter marks back; on the buyer's draft the API keeps them.
   const seller = order.role === 'seller';
   const initial = useMemo(() => linesFromItems(order.items ?? [], seller), [order.items, seller]);
-  const [lines, setLines] = useState<EditLine[]>(initial);
+  const [raw, setLines] = useState<EditLine[]>(initial);
+  const productUuids = useMemo(
+    () => [...new Set(initial.filter((l) => !isRoll(l.unit_type)).map((l) => l.product_uuid))],
+    [initial],
+  );
+  const products = useLineProducts(productUuids);
+  // Lines of the order learn their product settings once read; added lines know them already.
+  const lines = useMemo(() => withProductInfo(raw, products), [raw, products]);
   const [touched, setTouched] = useState(false);
   const [picking, setPicking] = useState(false);
   const errors = useMemo(() => validateCart(lines), [lines]);
   const below = useMemo(() => linesBelowAssigned(lines), [lines]);
   const changed = editChanged(initial, lines);
-  const picked = useMemo(() => new Set(lines.map((l) => l.product_uuid)), [lines]);
+  const picked = useMemo(() => new Set(lines.map(lineKey)), [lines]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -313,9 +365,9 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
     });
   };
 
-  const update = (product: string, patch: Partial<EditLine>) =>
-    setLines((ls) => ls.map((l) => (l.product_uuid === product ? { ...l, ...patch } : l)));
-  const drop = (product: string) => setLines((ls) => ls.filter((l) => l.product_uuid !== product));
+  const update = (key: string, patch: Partial<EditLine>) =>
+    setLines(() => lines.map((l) => (lineKey(l) === key ? { ...l, ...patch } : l)));
+  const drop = (key: string) => setLines(() => lines.filter((l) => lineKey(l) !== key));
   const remove = (l: EditLine) =>
     l.assigned > 0
       ? confirmAction({
@@ -323,9 +375,9 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
           body: t('edit.remove_assigned', { name: l.name }),
           action: t('remove'),
           destructive: true,
-          onConfirm: () => drop(l.product_uuid),
+          onConfirm: () => drop(lineKey(l)),
         })
-      : drop(l.product_uuid);
+      : drop(lineKey(l));
 
   return (
     <KeyboardAvoidingView
@@ -352,22 +404,27 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
           </Text>
         ) : null}
         {lines.map((l) => {
-          const roll = isRoll(l.unit_type);
-          const err = touched ? errors.lines[l.product_uuid] : undefined;
-          const isBelow = below.has(l.product_uuid);
+          const k = lineKey(l);
+          const meter = byMeter(l);
+          const cut = isCutLine(l);
+          const err = errors.lines[k];
+          const shown = touched || err === 'below_min_cut' ? err : undefined;
+          const isBelow = below.has(k);
+          const other = otherMeasure(lines, l);
           return (
-            <View key={l.product_uuid} className="gap-2 rounded-lg border border-border bg-card p-3.5">
+            <View key={k} testID={`edit-line-${k}`} className="gap-2.5 rounded-lg border border-border bg-card p-3.5">
               <View className="flex-row items-start gap-3">
-                <View className="flex-1 gap-0.5">
+                <View className="flex-1 gap-1">
                   <Text variant="headline" numberOfLines={2}>
                     {l.name}
                   </Text>
                   <Text variant="footnote" tone="muted" className="font-mono">
                     {l.sku}
                   </Text>
+                  {l.sellable_by_meter || cut ? <MeasureBadge measure={lineMeasure(l)} /> : null}
                   {l.assigned > 0 ? (
                     <Text variant="footnote" tone="muted">
-                      {t('edit.assigned', { amount: roll ? `${f.number(l.assigned, 2)} m` : f.number(l.assigned) })}
+                      {t('edit.assigned', { amount: meter ? `${f.number(l.assigned, 2)} m` : f.number(l.assigned) })}
                     </Text>
                   ) : null}
                 </View>
@@ -376,43 +433,41 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
                   accessibilityLabel={t('remove')}
                   hitSlop={8}
                   onPress={() => remove(l)}
-                  className="size-8 items-center justify-center rounded-md active:bg-muted">
-                  <Icon name="delete" tone="muted-foreground" size={18} />
+                  className="size-11 items-center justify-center rounded-md active:bg-muted">
+                  <Icon name="delete" tone="muted-foreground" size={20} />
                 </Pressable>
               </View>
-              <View className="flex-row items-center gap-3">
-                <Text variant="callout" tone="muted" className="flex-1">
-                  {roll ? t('amount_meters') : t('amount_pieces')}
-                </Text>
-                <TextInput
-                  value={l.amount}
-                  onChangeText={(v) => update(l.product_uuid, { amount: v })}
-                  accessibilityLabel={roll ? t('amount_meters') : t('amount_pieces')}
-                  placeholder={roll ? t('placeholder_meters') : t('placeholder_pieces')}
-                  placeholderTextColorClassName="accent-muted-foreground"
-                  keyboardType={roll ? 'decimal-pad' : 'number-pad'}
-                  selectTextOnFocus
-                  className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
-                />
-              </View>
-              {seller ? (
-                <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => update(l.product_uuid, { plotter_cut: v })} />
-              ) : null}
-              {seller && l.plotter_cut ? (
+              <AmountStepper
+                line={l}
+                onChange={(v) => update(k, { amount: v })}
+                invalid={isAmountError(shown) || isBelow}
+              />
+              {/* A line with units assigned is not converted here: the warehouse unassigns first. */}
+              <WholeBoxHint
+                line={l}
+                disabled={l.assigned > 0}
+                onConvert={() => setLines(() => convertToBoxes(lines, k, { assigned: 0, ...(seller ? { plotter_cut: false } : {}) }))}
+              />
+              <LineCreditsField line={l} onChange={(v) => update(k, { line_credits: v })} invalid={shown === 'line_credits_invalid'} />
+              {seller ? <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => update(k, { plotter_cut: v })} /> : null}
+              {seller && l.plotter_cut && !cut ? (
                 <PlotterCreditsInput
                   value={l.plotter_credits ?? ''}
-                  onChange={(v) => update(l.product_uuid, { plotter_credits: v })}
-                  invalid={err === 'credits_invalid'}
+                  onChange={(v) => update(k, { plotter_credits: v })}
+                  invalid={shown === 'credits_invalid'}
                 />
               ) : null}
-              {err && err !== 'credits_invalid' ? (
+              {shown && shown !== 'credits_invalid' && shown !== 'line_credits_invalid' ? (
                 <Text variant="footnote" tone="danger">
-                  {t(`errors.${err}`)}
+                  {t(`errors.${shown}`, { value: l.min_cut ?? '' })}
                 </Text>
               ) : isBelow ? (
                 <Text variant="footnote" tone="danger">
                   {t('edit.below_assigned')}
                 </Text>
+              ) : null}
+              {other ? (
+                <OtherMeasureButton measure={other} onPress={() => setLines(() => addEditLine(lines, productOf(l), seller, other))} />
               ) : null}
             </View>
           );
@@ -434,7 +489,7 @@ function EditorBody({ order, onClose }: { order: Order; onClose: () => void }) {
       {picking ? (
         <ProductPicker
           picked={picked}
-          onPick={(p) => setLines((ls) => addEditLine(ls, p, seller))}
+          onPick={(p, m) => setLines(() => addEditLine(lines, p, seller, m))}
           onClose={() => setPicking(false)}
         />
       ) : null}

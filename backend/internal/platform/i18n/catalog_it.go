@@ -497,6 +497,7 @@ var itCatalog = map[string]string{
 	"orders.pdf.amount":                       "Quantità",
 	"orders.pdf.barcodes":                     "Codici a barre",
 	"orders.pdf.unit_pcs":                     "pz",
+	"orders.pdf.line_credits":                 "Crediti di utilizzo: {{credits}} per pezzo",
 	"orders.pdf.delivered_by":                 "Consegnato da",
 	"orders.pdf.received_by":                  "Ricevuto da",
 	"orders.pdf.generated_at":                 "Generato il",
@@ -1296,6 +1297,7 @@ var itCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Più ubicazioni corrispondono; usa il codice completo.",
 	"entry_import.error.product_mismatch":       "Il codice appartiene a un altro prodotto.",
 	"entry_import.error.unit_not_enterable":     "L’unità non è un’etichetta stampata ammissibile.",
+	"labels.unit.credits":                       "{{n}} utilizzi", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Codice esistente saltato secondo la regola.",
 	"entry_import.error.center_only":            "Solo il centro può creare unità.",
 	"entry_import.error.roll_meters_required":   "Un nuovo rotolo richiede la lunghezza; usa l’importazione scorte.",

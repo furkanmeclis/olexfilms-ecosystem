@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Les rouleaux et les codes-barres fixes n'ont pas de crédits d'utilisation.",
   "codes.ORDER_ALREADY_CLAIMED": "Quelqu'un d'autre a pris ce travail.",
   "codes.ORDER_NOT_CLAIMABLE": "Seule une commande approuvée non expédiée est un travail d'entrepôt.",
-  "codes.ORDER_SCHEDULE_LOCKED": "La priorité et l'échéance ne peuvent pas changer dans ce statut."
+  "codes.ORDER_SCHEDULE_LOCKED": "La priorité et l'échéance ne peuvent pas changer dans ce statut.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "Les mètres ne peuvent pas être inférieurs à la coupe minimale du produit.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Ce produit n'est pas vendu au mètre ; ajoutez-le en carton."
 }
