@@ -1,0 +1,21 @@
+{
+  "title": "खोजें",
+  "placeholder": "नंबर प्लेट, फ़ोन, नाम, सर्विस नंबर, कोड",
+  "recent": "हाल की खोजें",
+  "clear": "मिटाएँ",
+  "hint_title": "सब कुछ खोजें",
+  "hint_body": "नंबर प्लेट, फ़ोन नंबर, नाम, सर्विस नंबर और वारंटी कोड।",
+  "no_results": "कुछ नहीं मिला",
+  "no_results_body": "नंबर प्लेट, फ़ोन नंबर या सर्विस नंबर आज़माएँ।",
+  "disabled": "खोज अभी उपलब्ध नहीं है।",
+  "open_failed": "खोला नहीं जा सका",
+  "group.customers": "ग्राहक",
+  "group.vehicles": "वाहन",
+  "group.services": "सर्विस",
+  "group.warranties": "वारंटी",
+  "group.orders": "ऑर्डर",
+  "group.organizations": "संगठन",
+  "group.stock_units": "स्टॉक इकाइयाँ",
+  "group.leads": "लीड",
+  "group.products": "उत्पाद"
+}

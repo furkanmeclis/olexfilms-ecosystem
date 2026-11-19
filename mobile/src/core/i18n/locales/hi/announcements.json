@@ -1,0 +1,10 @@
+{
+  "title": "घोषणाएँ",
+  "empty": "अभी कोई घोषणा नहीं",
+  "empty_unread": "आपने सब कुछ पढ़ लिया है",
+  "filter.all": "सभी",
+  "filter.unread": "अपठित",
+  "filter.unread_count": "अपठित ({{count}})",
+  "pinned": "पिन किया गया",
+  "expires": "{{date}} तक मान्य"
+}
