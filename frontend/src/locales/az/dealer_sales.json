@@ -58,6 +58,7 @@
   "quick_sale.empty_cart": "Sətir əlavə etmək üçün barkod oxudun.",
   "quick_sale.already_added": "{{barcode}} barkodu artıq satışdadır.",
   "quick_sale.not_in_stock": "Bu məhsul stokunuzda yoxdur.",
+  "quick_sale.cut_piece": "Bu barkod kəsilmiş parçadır; kəsilmiş parçalar satılmır, yalnız xidmətdə istifadə olunur.",
   "quick_sale.not_found": "Məhsul tapılmadı.",
   "quick_sale.increase": "Miqdarı artır",
   "quick_sale.decrease": "Miqdarı azalt",

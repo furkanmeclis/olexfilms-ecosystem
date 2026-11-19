@@ -372,6 +372,7 @@
   "credits.taken": "Verbrauchtes Guthaben: {{credits}}",
   "credits.refunded": "Guthaben zurückgegeben",
   "credits.finished": "Produkt aufgebraucht",
+  "credits.exhausted": "Guthaben aufgebraucht",
   "credits.movements": "Guthabenbewegungen",
   "credits.no_movement": "Keine Guthabenbewegungen.",
   "credits.type.opening": "Eröffnung",

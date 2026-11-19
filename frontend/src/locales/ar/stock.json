@@ -358,6 +358,7 @@
   "credits.taken": "الأرصدة المخصومة: {{credits}}",
   "credits.refunded": "أُعيدت الأرصدة",
   "credits.finished": "انتهى المنتج",
+  "credits.exhausted": "نفدت الأرصدة",
   "credits.movements": "حركات الأرصدة",
   "credits.no_movement": "لا توجد حركات أرصدة.",
   "credits.type.opening": "افتتاح",

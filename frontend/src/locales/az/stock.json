@@ -358,6 +358,7 @@
   "credits.taken": "Çıxılan kredit: {{credits}}",
   "credits.refunded": "Kredit geri qaytarıldı",
   "credits.finished": "Məhsul bitirildi",
+  "credits.exhausted": "Kredit bitib",
   "credits.movements": "Kredit hərəkətləri",
   "credits.no_movement": "Kredit hərəkəti yoxdur.",
   "credits.type.opening": "Açılış",

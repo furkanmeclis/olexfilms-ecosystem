@@ -58,6 +58,7 @@
   "quick_sale.empty_cart": "扫描条码以添加明细行。",
   "quick_sale.already_added": "条码 {{barcode}} 已在本次销售中。",
   "quick_sale.not_in_stock": "该产品不在您的库存中。",
+  "quick_sale.cut_piece": "此条码是裁切件；裁切件不可销售，只能在服务中使用。",
   "quick_sale.not_found": "未找到产品。",
   "quick_sale.increase": "增加数量",
   "quick_sale.decrease": "减少数量",

@@ -358,6 +358,7 @@
   "credits.taken": "Πιστώσεις που αφαιρέθηκαν: {{credits}}",
   "credits.refunded": "Οι πιστώσεις επιστράφηκαν",
   "credits.finished": "Το προϊόν ολοκληρώθηκε",
+  "credits.exhausted": "Οι πιστώσεις εξαντλήθηκαν",
   "credits.movements": "Κινήσεις πιστώσεων",
   "credits.no_movement": "Δεν υπάρχουν κινήσεις πιστώσεων.",
   "credits.type.opening": "Άνοιγμα",

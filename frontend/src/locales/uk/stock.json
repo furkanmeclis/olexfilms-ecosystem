@@ -372,6 +372,7 @@
   "credits.taken": "Списано кредитів: {{credits}}",
   "credits.refunded": "Кредити повернено",
   "credits.finished": "Продукт використано",
+  "credits.exhausted": "Кредити вичерпано",
   "credits.movements": "Рух кредитів",
   "credits.no_movement": "Руху кредитів немає.",
   "credits.type.opening": "Відкриття",
