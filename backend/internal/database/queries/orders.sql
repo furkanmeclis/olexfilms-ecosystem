@@ -414,10 +414,11 @@ WHERE id = sqlc.arg(id);
 -- name: CreateOrderItemUnit :one
 INSERT INTO order_item_units (
     order_item_id, organization_id, brand_id, unit_id, quantity, meters,
-    reservation_id, movement_id, assigned_by_user_id
+    reservation_id, movement_id, assigned_by_user_id, credits, piece_note
 )
 SELECT i.id, i.organization_id, i.brand_id, sqlc.arg(unit_id), sqlc.narg(quantity), sqlc.narg(meters),
-       sqlc.narg(reservation_id), sqlc.narg(movement_id), sqlc.narg(assigned_by_user_id)
+       sqlc.narg(reservation_id), sqlc.narg(movement_id), sqlc.narg(assigned_by_user_id),
+       sqlc.narg(credits), sqlc.narg(piece_note)
 FROM order_items i
 WHERE i.id = sqlc.arg(order_item_id)
 RETURNING *;
@@ -665,3 +666,22 @@ WHERE om.organization_id = sqlc.arg(organization_id)
     )
   )
 ORDER BY om.user_id;
+
+-- TEC-1241: the cut pieces split off for the order's lines (ledger splits
+-- of the order flow) that are no longer assigned to their line: after a
+-- cancel (the assignment stays, its reservation is released) or an
+-- unassign they stay in stock as separate units.
+-- name: ListOrderDetachedCutPieces :many
+SELECT u.uuid, u.barcode, u.remaining_meters, sp.meters AS cut_meters, sp.created_at
+FROM stock_splits sp
+JOIN order_items i ON i.id = sp.reference_id
+JOIN units u ON u.id = sp.new_unit_id
+WHERE sp.reference_type = 'order_item'
+  AND i.order_id = sqlc.arg(order_id)
+  AND NOT EXISTS (
+    SELECT 1 FROM order_item_units oiu
+    LEFT JOIN stock_reservations r ON r.id = oiu.reservation_id
+    WHERE oiu.unit_id = u.id AND oiu.order_item_id = i.id
+      AND (oiu.movement_id IS NOT NULL OR r.status = 'active')
+  )
+ORDER BY sp.id;

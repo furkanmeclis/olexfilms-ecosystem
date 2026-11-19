@@ -44,6 +44,10 @@ type AssignedUnitView struct {
 	Meters     *string   `json:"meters"`
 	Shipped    bool      `json:"shipped"`
 	AssignedAt time.Time `json:"assigned_at"`
+	// TEC-1241: the credits of a piece of a cut line (null: the line's
+	// line_credits) and the note of a partial piece.
+	Credits   *int32  `json:"credits"`
+	PieceNote *string `json:"piece_note"`
 }
 
 // ItemView is one order line. unit_price is the buyer's purchase price,
@@ -79,9 +83,12 @@ type ItemView struct {
 	// LineCredits (TEC-1238, K3/K12): the usage credits each cut piece of
 	// a meter line of a piece product carries (shared with its plotter
 	// mark); null on box and roll lines.
-	LineCredits *int32             `json:"line_credits"`
-	Assigned    string             `json:"assigned"`
-	Units       []AssignedUnitView `json:"units"`
+	LineCredits *int32 `json:"line_credits"`
+	// MinCutMeters (TEC-1241): the product's minimum cut on meter lines,
+	// for the partial piece and partial shipment warnings.
+	MinCutMeters *string            `json:"min_cut_meters"`
+	Assigned     string             `json:"assigned"`
+	Units        []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
 	Invoiced    bool       `json:"invoiced"`
@@ -218,6 +225,10 @@ type OrderView struct {
 	Split *SplitView `json:"split,omitempty"`
 	// Splits are the roll splits of an applied suggestion (TEC-768).
 	Splits []SplitView `json:"splits,omitempty"`
+	// DetachedCutPieces (TEC-1241): pieces cut for this order's lines that
+	// are no longer on their line (cancelled order, unassigned piece); they
+	// stay in stock as separate units. Seller side only (detail).
+	DetachedCutPieces []DetachedPieceView `json:"detached_cut_pieces,omitempty"`
 }
 
 // SplitView is the roll split an assignment made.
@@ -230,6 +241,10 @@ type SplitView struct {
 	NewUnitUUID           uuid.UUID `json:"new_unit_uuid"`
 	NewBarcode            string    `json:"new_barcode"`
 	Replayed              bool      `json:"replayed"`
+	// TEC-1241: BoxOpened — the source was a closed box opened for the
+	// cut; SourceRemnant — what is left is shorter than the minimum cut.
+	BoxOpened     bool `json:"box_opened"`
+	SourceRemnant bool `json:"source_remnant"`
 }
 
 // hidePrices clears the money of an order for a caller who may not see
@@ -379,6 +394,11 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	if err := s.withDiscrepancies(ctx, q, c, o, &v); err != nil {
 		return OrderView{}, err
 	}
+	if partyOf(c, o) == PartySeller {
+		if v.DetachedCutPieces, err = s.detachedPieces(ctx, q, o); err != nil {
+			return OrderView{}, err
+		}
+	}
 	items, err := q.ListOrderItems(ctx, o.ID)
 	if err != nil {
 		return OrderView{}, fmt.Errorf("orders: lines: %w", err)
@@ -427,6 +447,9 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		if it.Quantity.Valid {
 			qv := it.Quantity.Int32
 			iv.Quantity = &qv
+		}
+		if it.Meters.Valid {
+			iv.MinCutMeters = numericTextPtr(p.MinCutMeters, 2)
 		}
 		iv.Units, iv.Assigned = assignedUnits(byItem[it.ID], it.Meters.Valid)
 		if l, ok := invoicedLines[it.ID]; ok {
@@ -614,6 +637,7 @@ func assignedUnits(rows []db.ListOrderItemUnitsByOrderRow, meters bool) ([]Assig
 		uv := AssignedUnitView{
 			UnitUUID: a.UnitUuid, Barcode: a.Barcode, UnitKind: a.UnitKind,
 			Meters: numericTextPtr(a.Meters, 2), Shipped: a.MovementID.Valid, AssignedAt: a.AssignedAt.Time,
+			Credits: int4Ptr(a.Credits), PieceNote: textPtr(a.PieceNote),
 		}
 		if a.Quantity.Valid {
 			qv := a.Quantity.Int32

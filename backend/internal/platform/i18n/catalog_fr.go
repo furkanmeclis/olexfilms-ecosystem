@@ -1296,6 +1296,7 @@ var frCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Plusieurs emplacements correspondent ; utilisez le code complet.",
 	"entry_import.error.product_mismatch":       "Le code-barres appartient à un autre produit.",
 	"entry_import.error.unit_not_enterable":     "Cette unité ne peut pas être entrée comme étiquette imprimée.",
+	"labels.unit.credits":                       "{{n}} utilisations", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Code existant ignoré selon la règle.",
 	"entry_import.error.center_only":            "Seul le centre peut créer une unité.",
 	"entry_import.error.roll_meters_required":   "Un rouleau neuf nécessite sa longueur ; utilisez l’import de stock.",

@@ -1296,6 +1296,7 @@ var bgCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Кодът съвпада с няколко клетки; използвайте пълния код.",
 	"entry_import.error.product_mismatch":       "Баркодът е за друг продукт.",
 	"entry_import.error.unit_not_enterable":     "Единицата не е допустим отпечатан етикет.",
+	"labels.unit.credits":                       "{{n}} използвания", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Съществуващият баркод е пропуснат.",
 	"entry_import.error.center_only":            "Само центърът може да създава единици.",
 	"entry_import.error.roll_meters_required":   "Новата ролка изисква дължина; използвайте внос на склад.",

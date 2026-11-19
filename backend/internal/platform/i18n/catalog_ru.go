@@ -1296,6 +1296,7 @@ var ruCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Код совпадает с несколькими ячейками; укажите полный код.",
 	"entry_import.error.product_mismatch":       "Штрихкод принадлежит другому товару.",
 	"entry_import.error.unit_not_enterable":     "Единица не является доступной напечатанной этикеткой.",
+	"labels.unit.credits":                       "{{n}} использований", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Существующий штрихкод пропущен по правилу.",
 	"entry_import.error.center_only":            "Новые единицы создаёт только центр.",
 	"entry_import.error.roll_meters_required":   "Для нового рулона нужна длина; используйте импорт запасов.",

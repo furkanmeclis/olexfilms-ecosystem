@@ -1296,6 +1296,7 @@ var deCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Mehrere Lagerplätze passen; vollständigen Code verwenden.",
 	"entry_import.error.product_mismatch":       "Der Barcode gehört zu einem anderen Produkt.",
 	"entry_import.error.unit_not_enterable":     "Diese Einheit kann nicht als gedrucktes Etikett eingebucht werden.",
+	"labels.unit.credits":                       "{{n}} Nutzungen", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Vorhandener Barcode wurde gemäß Regel übersprungen.",
 	"entry_import.error.center_only":            "Nur die Zentrale kann neue Einheiten erstellen.",
 	"entry_import.error.roll_meters_required":   "Eine neue Rolle braucht ihre Länge; Lagerimport verwenden.",

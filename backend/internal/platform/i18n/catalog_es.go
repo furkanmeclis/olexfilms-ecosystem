@@ -1296,6 +1296,7 @@ var esCatalog = map[string]string{
 	"entry_import.error.location_ambiguous":     "Varias ubicaciones coinciden; use el código completo.",
 	"entry_import.error.product_mismatch":       "El código pertenece a otro producto.",
 	"entry_import.error.unit_not_enterable":     "La unidad no es una etiqueta impresa apta.",
+	"labels.unit.credits":                       "{{n}} usos", // TEC-1241: cut piece label
 	"entry_import.error.existing_skipped":       "Código existente omitido por la política.",
 	"entry_import.error.center_only":            "Solo la central puede crear unidades.",
 	"entry_import.error.roll_meters_required":   "Un rollo nuevo requiere su longitud; use la importación de stock.",
