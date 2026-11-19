@@ -41,13 +41,17 @@ import {
   allCovered as everyLineCovered,
   asksWholeRoll,
   assignTarget,
+  cutAssignBody,
   fixedAssignQuantity,
   fixedSuggestionUnits,
   isCovered,
-  isRollItem,
+  isCutItem,
+  isMeterItem,
   parseShipment,
   requiredOf,
 } from './order-assign';
+import { CutConfirm } from './cut-confirm';
+import { canShareLabels, shareLabels } from './label-print';
 import { CancelSheet, cancelActions, DocumentsCard, WorkCard, type CancelKind } from './order-extras';
 import { Card, ErrorState, Field, IconButton, ListSkeleton, Segmented } from './parts';
 import { QtyStepper } from './qty-stepper';
@@ -70,7 +74,7 @@ type ShipExtra = {
   weight_kg?: number;
 };
 
-const isRoll = (i: OrderItem) => isRollItem(i);
+const isRoll = (i: OrderItem) => isMeterItem(i);
 const required = (i: OrderItem) => requiredOf(i);
 const covered = (i: OrderItem) => isCovered(i);
 const amount = (i: OrderItem, v: number | string | null) =>
@@ -113,6 +117,15 @@ export function OrderScreen() {
   const [checking, setChecking] = useState(false);
   const [target, setTarget] = useState<{ uuid: string; code: string } | null>(null);
   const [splitKey] = useState(createRetryKey);
+  // TEC-1241: the cut confirmation over the scanner, and "send in pieces" for the next scan (K11).
+  const [cut, setCut] = useState<{
+    item: OrderItem;
+    barcode: string;
+    name: string;
+    partial: boolean;
+    resolve: (o: ScanOutcome) => void;
+  } | null>(null);
+  const [partialNext, setPartialNext] = useState(false);
 
   const seller = o?.role === 'seller';
   const preparing = o?.status === 'preparing';
@@ -166,6 +179,44 @@ export function OrderScreen() {
       onConfirm: () => void run(`del:${unit}`, () => orderApi.unassign(uuid, item, unit)),
     });
 
+  /**
+   * TEC-1241: a meter line of a box product is cut. The scan waits for the
+   * confirmation (box opening, cut, remainder, remnant, credits); the label
+   * of the new piece is handed to the print share sheet right away.
+   */
+  const askCut = (item: OrderItem, barcode: string, name: string) =>
+    new Promise<ScanOutcome>((resolve) => setCut({ item, barcode, name, partial: partialNext, resolve }));
+
+  const confirmCut = async (
+    c: NonNullable<typeof cut>,
+    preview: Parameters<typeof cutAssignBody>[1],
+    partial: Parameters<typeof cutAssignBody>[2],
+  ) => {
+    const body = cutAssignBody(c.barcode, preview, partial, splitKey.for(`cut:${c.item.uuid}:${c.barcode}:${partial?.meters ?? ''}`));
+    const next = await orderApi.assign(uuid, c.item.uuid, body);
+    store(next);
+    splitKey.done();
+    setPartialNext(false);
+    setCut(null);
+    const label = next.split?.new_barcode ?? c.barcode;
+    if (canShareLabels()) {
+      void shareLabels({ path: '/v1/stock/labels/units.pdf', query: { barcode: [label] }, name: `cut-${label}`, barcodes: [] }).catch(
+        () => undefined,
+      );
+    }
+    c.resolve({
+      ok: true,
+      title: c.name,
+      detail: next.split
+        ? t('orders.cut.done', {
+            barcode: next.split.new_barcode,
+            meters: formatNumber(next.split.meters, 2),
+            rest: formatNumber(next.split.source_remaining_meters, 2),
+          })
+        : t('orders.cut.done_whole', { barcode: label }),
+    });
+  };
+
   /** Scan a unit: it goes to the first open line of its product. */
   const onAssign = async (code: string): Promise<ScanOutcome> => {
     if (!o?.items) return { ok: false, title: t('scan.failed') };
@@ -177,11 +228,13 @@ export function OrderScreen() {
         return await assignFixedByProduct(r.product.uuid, r.product.name);
       }
       if (r.status !== 'ok' || r.type !== 'unit' || !r.unit) return { ok: false, title: t('m.scan_unit_not_product') };
-      const line = assignTarget(o.items, r.product?.uuid);
+      // TEC-1241: a unit with meters goes to the meter line, a closed box to the box line first.
+      const line = assignTarget(o.items, r.product?.uuid, r.unit.unit_kind === 'fixed' ? undefined : r.unit.remaining_meters != null);
       if (line.kind === 'not_on_order') return { ok: false, title: t('m.not_on_order', { barcode: r.unit.barcode }) };
       // Every line of this product is full: say so instead of over-assigning.
       if (line.kind === 'covered') return { ok: false, title: t('orders.assign.line_full', { name: line.item.product.name }) };
       const item = line.item;
+      if (isCutItem(item)) return await askCut(item, r.unit.barcode, r.product?.name ?? r.unit.barcode);
       if (r.unit.unit_kind !== 'fixed' && asksWholeRoll(item, meters)) {
         const whole = await askWholeRoll(r.unit.remaining_meters);
         if (!whole) return { ok: false, title: t('orders.assign.whole_roll_skipped'), detail: r.unit.barcode };
@@ -190,7 +243,7 @@ export function OrderScreen() {
         barcode: r.unit.barcode,
       };
       if (r.unit.unit_kind === 'fixed') body.quantity = fixedAssignQuantity(item, qty, qtyTouched, r.unit.quantity_on_hand);
-      if (isRoll(item) && meters.trim()) {
+      if (isRoll(item) && !isCutItem(item) && meters.trim()) {
         body.meters = meters.trim().replace(',', '.');
         body.idempotency_key = splitKey.for(`${item.uuid}:${r.unit.barcode}:${body.meters}`);
       }
@@ -373,6 +426,20 @@ export function OrderScreen() {
           </View>
         ) : null}
 
+        {/* TEC-1241: pieces cut for this order that stayed in stock (cancelled order, unassigned piece). */}
+        {o.detached_cut_pieces?.length ? (
+          <Card>
+            <View className="flex-row items-center gap-2">
+              <Icon name="alert" tone="destructive" size={18} />
+              <Text variant="callout" className="flex-1 font-semibold">
+                {t('orders.cut.detached', { count: o.detached_cut_pieces.length })}
+              </Text>
+            </View>
+            {o.detached_cut_pieces.map((p) => (
+              <Field key={p.unit_uuid} label={`${formatNumber(p.remaining_meters ?? p.cut_meters, 2)} m`} value={p.barcode} mono />
+            ))}
+          </Card>
+        ) : null}
         {cuts.length ? (
           <>
             <SectionHeader title={t('orders.assign.cuts_title')} />
@@ -539,6 +606,7 @@ export function OrderScreen() {
                     <Text variant="footnote" className="flex-1 font-mono" numberOfLines={1}>
                       {u.barcode}
                       {u.meters ? ` · ${formatNumber(u.meters, 2)} m` : u.unit_kind === 'fixed' && u.quantity ? ` × ${u.quantity}` : ''}
+                      {isCutItem(i) && u.credits != null ? ` · ${t('orders.cut.unit_credits', { credits: u.credits })}` : ''}
                     </Text>
                     {preparing && canShip && !u.shipped ? (
                       <IconButton
@@ -623,13 +691,42 @@ export function OrderScreen() {
 
       <ContinuousScanner
         visible={scanning === 'assign'}
-        onClose={() => setScanning(null)}
+        onClose={() => {
+          // A pending cut confirmation is cancelled with the scanner.
+          cut?.resolve({ ok: false, title: t('orders.cut.cancelled'), detail: cut.barcode });
+          setCut(null);
+          setScanning(null);
+        }}
         title={t('m.scan_to_assign')}
         hint={t('orders.assign.hint')}
         onCode={onAssign}
         complete={allCovered ? { title: t('orders.assign.order_complete'), action: t('common:close') } : undefined}
+        overlay={
+          cut ? (
+            <CutConfirm
+              key={`${cut.item.uuid}:${cut.barcode}`}
+              barcode={cut.barcode}
+              productName={cut.name}
+              partialStart={cut.partial}
+              load={(m) => orderApi.cutPreview(uuid, cut.item.uuid, cut.barcode, m || undefined)}
+              onConfirm={(p, partial) => confirmCut(cut, p, partial)}
+              onCancel={() => {
+                cut.resolve({ ok: false, title: t('orders.cut.cancelled'), detail: cut.barcode });
+                setCut(null);
+              }}
+            />
+          ) : null
+        }
         footer={
           <>
+            {items.some(isCutItem) ? (
+              <View className="flex-row items-center gap-2 rounded-lg bg-card px-3 py-1.5">
+                <Text variant="footnote" className="flex-1 font-medium">
+                  {t('orders.cut.partial_next')}
+                </Text>
+                <Switch value={partialNext} onValueChange={setPartialNext} />
+              </View>
+            ) : null}
             <QtyStepper
               label={qtyTouched ? t('m.fixed_qty') : t('orders.assign.fixed_qty_auto')}
               value={qty}
@@ -638,7 +735,7 @@ export function OrderScreen() {
                 setQtyTouched(true);
               }}
             />
-            {items.some(isRoll) ? (
+            {items.some((i) => isRoll(i) && !isCutItem(i)) ? (
               <View className="gap-1.5 rounded-lg bg-card p-2">
                 {/* The header hint is cut to two lines; the roll rule is told in full here. */}
                 <Text variant="footnote" tone="muted" className="px-2 pt-1">
@@ -767,6 +864,8 @@ function SuggestSheet({
             unit_uuid: x.unit_uuid,
             quantity: x.unit_kind === 'fixed' && x.quantity ? x.quantity : undefined,
             meters: x.meters ?? undefined,
+            // TEC-1241: a proposed closed box is opened on apply.
+            open_box: x.open_box || undefined,
           })),
         }),
       );
@@ -824,7 +923,14 @@ function SuggestSheet({
                     <Text variant="footnote" className="flex-1 font-mono" numberOfLines={1}>
                       {x.barcode}
                     </Text>
-                    <Text variant="callout">{x.meters ? `${formatNumber(x.meters, 2)} m` : `× ${formatNumber(x.quantity)}`}</Text>
+                    <View className="items-end">
+                      <Text variant="callout">{x.meters ? `${formatNumber(x.meters, 2)} m` : `× ${formatNumber(x.quantity)}`}</Text>
+                      {x.open_box ? (
+                        <Text variant="footnote" tone="danger">
+                          {t('orders.cut.suggest_open_box', { box: formatNumber(x.remaining_meters, 2) })}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
               </View>
