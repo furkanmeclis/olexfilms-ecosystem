@@ -7,7 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/model"
 )
 
-// Fixed WhatsApp texts of the identity step, per conversation locale (13
+// Fixed WhatsApp texts of the identity step, per conversation locale (15
 // languages, en fallback).
 const (
 	textMenuHeader = iota
@@ -115,6 +115,13 @@ var identityTexts = map[string][5]string{
 		"برای تغییر حساب در آینده، عبارت «change identity» را بنویسید.",
 		"حساب شما تعلیق شده است و از این کانال نمی\u200cتوان اقدامی انجام داد. لطفاً با مرکز خود تماس بگیرید.",
 		"این شماره به یک پرونده مشتری تأییدنشده متصل است. برای دسترسی، با تلفن خود وارد پورتال شوید و آن را تأیید کنید: %s",
+	},
+	"hi": {
+		"यह नंबर एक से अधिक खातों से जुड़ा है। आप किस खाते के साथ आगे बढ़ना चाहते हैं? उसका नंबर लिखकर उत्तर दें:",
+		"ग्राहक",
+		"बाद में खाता बदलने के लिए \"change identity\" लिखें।",
+		"आपका खाता निलंबित है, इसलिए इस चैनल से कोई कार्रवाई नहीं की जा सकती। कृपया अपने केंद्र से संपर्क करें।",
+		"यह नंबर एक असत्यापित ग्राहक रिकॉर्ड से जुड़ा है। इसे देखने के लिए अपने फ़ोन से पोर्टल में साइन इन करें और इसे सत्यापित करें: %s",
 	},
 }
 

@@ -65,6 +65,7 @@ func TestKeywords(t *testing.T) {
 		"DUR": kwStop, "Stop!": kwStop, "İNSAN": kwHuman, "agent": kwHuman, "EVET": kwYes, "evet.": kwYes,
 		"Yes": kwYes, "HAYIR": kwNo, "hayir": kwNo, "Да": kwYes, "durum nedir": kwNone, "evet ama": kwNone,
 		"بله": kwYes, "خير": kwNo, "لغو اشتراك": kwStop, "نعم": kwYes,
+		"हाँ": kwYes, "हां।": kwYes, "Haan": kwYes, "नहीं": kwNo, "nahi": kwNo, "सदस्यता रद्द करें": kwStop, "प्रतिनिधि": kwHuman,
 	}
 	for in, want := range cases {
 		if got := keywordOf(in).kind; got != want {

@@ -17,11 +17,14 @@ func TestCatalogsHaveNoExtraKeys(t *testing.T) {
 }
 
 // Linear TEC-138 acceptance: Arabic CSV/XLSX headers are translated
-// (TEC-1233: Persian too).
+// (TEC-1233: Persian too; TEC-1248: Hindi in Devanagari).
 func TestArabicExportHeadersTranslated(t *testing.T) {
 	for _, k := range []string{"users.email", "jobs.plate", "cari.balance", "export.title.tenant.jobs"} {
 		if got := Translate(LocaleFA, k); got == enCatalog[k] || !strings.ContainsFunc(got, func(r rune) bool { return r >= 0x0600 && r <= 0x06FF }) {
 			t.Errorf("fa %s not translated: %q", k, got)
+		}
+		if got := Translate(LocaleHI, k); got == enCatalog[k] || !strings.ContainsFunc(got, func(r rune) bool { return r >= 0x0900 && r <= 0x097F }) {
+			t.Errorf("hi %s not translated: %q", k, got)
 		}
 		got := Translate(LocaleAR, k)
 		if got == enCatalog[k] {
@@ -36,7 +39,7 @@ func TestArabicExportHeadersTranslated(t *testing.T) {
 func TestBatchBLocalesResolve(t *testing.T) {
 	want := map[Locale]string{
 		LocaleBG: "Клиент", LocaleEL: "Πελάτης", LocaleZhCN: "客户", LocaleAZ: "Müştəri", LocaleAR: "العميل",
-		LocaleFA: "مشتری",
+		LocaleFA: "مشتری", LocaleHI: "ग्राहक",
 	}
 	for l, v := range want {
 		if got := Translate(l, "cari.customer_name"); got != v {

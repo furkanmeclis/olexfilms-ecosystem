@@ -46,6 +46,7 @@ var keywords = func() map[string]keyword {
 	add(kwStop, "az", "dayan")
 	add(kwStop, "ar", "توقف", "إلغاء الاشتراك")
 	add(kwStop, "fa", "لغو اشتراک", "لغو عضویت")
+	add(kwStop, "hi", "रोकें", "बंद करें", "सदस्यता रद्द करें", "अनसब्सक्राइब", "band karo", "band karen")
 
 	add(kwHuman, "tr", "insan", "temsilci", "müşteri temsilcisi", "yetkili")
 	add(kwHuman, "en", "agent", "human", "representative", "operator")
@@ -60,6 +61,7 @@ var keywords = func() map[string]keyword {
 	add(kwHuman, "az", "nümayəndə")
 	add(kwHuman, "ar", "موظف", "ممثل")
 	add(kwHuman, "fa", "اپراتور", "پشتیبان", "کارشناس")
+	add(kwHuman, "hi", "प्रतिनिधि", "इंसान", "ऑपरेटर", "insaan", "pratinidhi")
 
 	add(kwYes, "tr", "evet", "kabul", "kabul ediyorum", "onaylıyorum")
 	add(kwYes, "en", "yes")
@@ -74,6 +76,7 @@ var keywords = func() map[string]keyword {
 	add(kwYes, "az", "bəli")
 	add(kwYes, "ar", "نعم")
 	add(kwYes, "fa", "بله", "آره", "قبول")
+	add(kwYes, "hi", "हाँ", "हां", "जी हाँ", "जी हां", "स्वीकार", "haan", "haa", "han ji", "haan ji")
 
 	add(kwNo, "tr", "hayır", "vazgeç", "iptal")
 	add(kwNo, "en", "no", "cancel")
@@ -87,6 +90,7 @@ var keywords = func() map[string]keyword {
 	add(kwNo, "az", "xeyr")
 	add(kwNo, "ar", "لا")
 	add(kwNo, "fa", "خیر", "نه", "لغو")
+	add(kwNo, "hi", "नहीं", "नही", "रद्द", "रद्द करें", "nahi", "nahin", "nahee")
 	return m
 }()
 

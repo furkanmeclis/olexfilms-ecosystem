@@ -6,8 +6,9 @@
  * numbers, money, percentages, measurements and counters follow the choice.
  *
  * Identifiers stay in Latin digits whatever the locale: they are printed
- * as is and never pass through Intl (see LATIN_ONLY). Typed Arabic-Indic or
- * Persian digits are stored as Latin (`toLatinDigits`, applied by Input).
+ * as is and never pass through Intl (see LATIN_ONLY). Typed Arabic-Indic,
+ * Persian or Devanagari digits are stored as Latin (`toLatinDigits`,
+ * applied by Input).
  */
 
 export type DigitStyle = "arab" | "latn";
@@ -53,16 +54,22 @@ export function intlLocale(
   if (locale.split("-")[0]?.toLowerCase() === "fa") {
     return `${locale}-u-nu-latn`;
   }
+  // TEC-1248: Hindi keeps Latin digits too, with Indian grouping (1,00,000)
+  // from the hi-IN region.
+  if (locale.split("-")[0]?.toLowerCase() === "hi") {
+    return "hi-IN-u-nu-latn";
+  }
   if (!hasDigitChoice(locale)) return locale;
   return `${locale}-u-nu-${digits}`;
 }
 
-const ARABIC_INDIC = /[٠-٩۰-۹]/g;
+const ARABIC_INDIC = /[٠-٩۰-۹०-९]/g;
 
-/** Arabic-Indic (٠-٩) and Persian (۰-۹) digits to 0-9. */
+/** Arabic-Indic (٠-٩), Persian (۰-۹) and Devanagari (०-९) digits to 0-9. */
 export function toLatinDigits(value: string): string {
   return value.replace(ARABIC_INDIC, (d) => {
     const code = d.charCodeAt(0);
+    if (code >= 0x0966) return String(code - 0x0966);
     return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
   });
 }

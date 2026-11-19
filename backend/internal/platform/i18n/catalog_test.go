@@ -8,10 +8,10 @@ import (
 )
 
 // translatedLocales are the locales whose label catalog must match enCatalog
-// key for key (TEC-138 batch A and batch B, TEC-1233 fa).
+// key for key (TEC-138 batch A and batch B, TEC-1233 fa, TEC-1248 hi).
 var translatedLocales = []Locale{
 	LocaleDE, LocaleFR, LocaleES, LocaleIT, LocaleRU, LocaleUK,
-	LocaleBG, LocaleEL, LocaleZhCN, LocaleAZ, LocaleAR, LocaleFA,
+	LocaleBG, LocaleEL, LocaleZhCN, LocaleAZ, LocaleAR, LocaleFA, LocaleHI,
 }
 
 // universalLabels may stay equal to en in every language.

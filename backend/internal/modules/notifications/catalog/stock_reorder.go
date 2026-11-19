@@ -27,6 +27,7 @@ var stockReorderMetersLowTexts = map[string]localizedText{
 	"az":    {"Kritik stok (metr): {{product_name}}", "{{warehouse_name}} anbarında {{product_name}} üzrə açıq rulon və kəsik hissə metri {{available_meters}} m-dir (hədd {{threshold}} m)."},
 	"ar":    {"مخزون حرج (أمتار): {{product_name}}", "أمتار اللفائف المفتوحة والقطع المقصوصة من {{product_name}} في المستودع {{warehouse_name}}: {{available_meters}} م (الحد {{threshold}} م)."},
 	"fa":    {"موجودی بحرانی (متر): {{product_name}}", "متراژ رول\u200cهای باز و قطعه\u200cهای بریده\u200cشده {{product_name}} در انبار {{warehouse_name}}: {{available_meters}} متر (آستانه {{threshold}} متر)."},
+	"hi":    {"गंभीर स्टॉक (मीटर): {{product_name}}", "गोदाम {{warehouse_name}} में {{product_name}} के खुले रोल और कटे टुकड़ों की लंबाई: {{available_meters}} m (सीमा {{threshold}} m)।"},
 }
 
 var stockReorderLowTexts = map[string]localizedText{
@@ -44,6 +45,7 @@ var stockReorderLowTexts = map[string]localizedText{
 	"az":    {"Kritik stok: {{product_name}}", "{{warehouse_name}} anbarında {{product_name}} üzrə mövcud stok {{available_quantity}} ədəddir (hədd {{threshold}})."},
 	"ar":    {"مخزون حرج: {{product_name}}", "المخزون المتاح من {{product_name}} في المستودع {{warehouse_name}} هو {{available_quantity}} (الحد {{threshold}})."},
 	"fa":    {"موجودی بحرانی: {{product_name}}", "موجودی در دسترس {{product_name}} در انبار {{warehouse_name}} برابر {{available_quantity}} است (آستانه {{threshold}})."},
+	"hi":    {"गंभीर स्टॉक: {{product_name}}", "गोदाम {{warehouse_name}} में {{product_name}} का उपलब्ध स्टॉक {{available_quantity}} है (सीमा {{threshold}})।"},
 }
 
 func stockReorderLowTemplates() []DefaultTemplate {

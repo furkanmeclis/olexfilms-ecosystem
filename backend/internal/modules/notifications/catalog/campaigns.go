@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // reaches the approver organization's members holding campaigns.approve;
 // the decision (approved, rejected, changes requested) reaches the creator.
 // Both sides are panel users, so the defaults are in-app and e-mail. Default
-// templates ship in all 14 locales and are seeded with
+// templates ship in all 15 locales and are seeded with
 // InsertNotificationTemplateIfMissing by SyncCatalog (no migration).
 const (
 	EventCampaignApprovalRequested = "CAMPAIGN_APPROVAL_REQUESTED"
@@ -53,6 +53,8 @@ var campaignTexts = map[string]map[string]localizedText{
 			"قدّمت {{organization_name}} الحملة \"{{campaign_name}}\" للحصول على موافقتك. يرجى مراجعتها في اللوحة واتخاذ القرار."},
 		"fa": {"کمپین در انتظار تأیید: {{campaign_name}}",
 			"{{organization_name}} کمپین «{{campaign_name}}» را برای تأیید شما ارسال کرده است. لطفاً آن را در پنل بررسی کنید و تصمیم بگیرید."},
+		"hi": {"अनुमोदन की प्रतीक्षा में अभियान: {{campaign_name}}",
+			"{{organization_name}} ने अभियान \"{{campaign_name}}\" आपके अनुमोदन के लिए भेजा है। कृपया पैनल में इसकी समीक्षा करें और निर्णय लें।"},
 	},
 	EventCampaignApproved: {
 		"tr": {"Kampanyanız onaylandı: {{campaign_name}}",
@@ -83,6 +85,8 @@ var campaignTexts = map[string]map[string]localizedText{
 			"تمت الموافقة على حملتك \"{{campaign_name}}\". يمكنك الآن جدولتها أو إرسالها فورًا من اللوحة."},
 		"fa": {"کمپین شما تأیید شد: {{campaign_name}}",
 			"کمپین «{{campaign_name}}» شما تأیید شد. اکنون می\u200cتوانید آن را از پنل زمان\u200cبندی کنید یا بی\u200cدرنگ ارسال کنید."},
+		"hi": {"आपका अभियान स्वीकृत हुआ: {{campaign_name}}",
+			"आपका अभियान \"{{campaign_name}}\" स्वीकृत हो गया है। अब आप पैनल से इसे शेड्यूल कर सकते हैं या तुरंत भेज सकते हैं।"},
 	},
 	EventCampaignRejected: {
 		"tr": {"Kampanyanız reddedildi: {{campaign_name}}",
@@ -113,6 +117,8 @@ var campaignTexts = map[string]map[string]localizedText{
 			"تم رفض حملتك \"{{campaign_name}}\". السبب: {{reason}}"},
 		"fa": {"کمپین شما رد شد: {{campaign_name}}",
 			"کمپین «{{campaign_name}}» شما رد شد. دلیل: {{reason}}"},
+		"hi": {"आपका अभियान अस्वीकृत हुआ: {{campaign_name}}",
+			"आपका अभियान \"{{campaign_name}}\" अस्वीकृत कर दिया गया। कारण: {{reason}}"},
 	},
 	EventCampaignChangesRequested: {
 		"tr": {"Kampanyanız için değişiklik istendi: {{campaign_name}}",
@@ -143,6 +149,8 @@ var campaignTexts = map[string]map[string]localizedText{
 			"أُعيدت حملتك \"{{campaign_name}}\" إلى المسودة. التعديل المطلوب: {{reason}}. يمكنك تعديلها وتقديمها مرة أخرى."},
 		"fa": {"درخواست اصلاح کمپین شما: {{campaign_name}}",
 			"کمپین «{{campaign_name}}» شما به پیش\u200cنویس برگردانده شد. اصلاح درخواستی: {{reason}}. می\u200cتوانید آن را ویرایش و دوباره ارسال کنید."},
+		"hi": {"आपके अभियान में बदलाव का अनुरोध: {{campaign_name}}",
+			"आपका अभियान \"{{campaign_name}}\" ड्राफ़्ट में वापस भेज दिया गया है। अनुरोधित बदलाव: {{reason}}। आप इसे संपादित करके फिर से भेज सकते हैं।"},
 	},
 }
 

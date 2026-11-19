@@ -90,6 +90,10 @@ func TestFormatCertificateDate(t *testing.T) {
 	if got := FormatCertificateDate(ts, nil, i18n.LocaleEN); got != "2026-12-31" {
 		t.Fatalf("utc = %s", got)
 	}
+	// TEC-1245: Hindi is day-month-year in Latin digits.
+	if got := FormatCertificateDate(ts, ist, i18n.LocaleHI); got != "01-01-2027" {
+		t.Fatalf("hi = %s", got)
+	}
 }
 
 func TestCertificateVerifyURL(t *testing.T) {

@@ -6,13 +6,13 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // dealer directly under it. The orders use case resolves the recipients
 // (notify_user_ids: the dealer's members holding orders.read, minus the
 // actor) and the party names into the event payload. Default templates ship
-// in all 14 locales for in-app, WhatsApp, web push and Expo push.
+// in all 15 locales for in-app, WhatsApp, web push and Expo push.
 const EventOrderCreatedBySeller = "ORDER_CREATED_BY_SELLER"
 
 // EventOrderWarehouseNew (TEC-1028): a new approved order fell into a
 // seller warehouse. The orders use case resolves the warehouse staff
 // (notify_user_ids: members of the warehouse holding orders.ship, minus the
-// actor). It goes in-app and as web and Expo push, in all 14 locales.
+// actor). It goes in-app and as web and Expo push, in all 15 locales.
 const EventOrderWarehouseNew = "ORDER_WAREHOUSE_NEW"
 
 // OrderWarehouseChannels are the default channels of ORDER_WAREHOUSE_NEW.
@@ -51,6 +51,8 @@ var orderTexts = map[string]localizedText{
 		"أنشأ {{seller_name}} الطلب {{order_no}} لصالح {{buyer_name}} ووافق عليه. سيتم تجهيزه وشحنه إليكم."},
 	"fa": {"سفارشی برای شما ثبت شد: {{order_no}}",
 		"{{seller_name}} سفارش {{order_no}} را برای {{buyer_name}} ایجاد و تأیید کرد. این سفارش آماده و برای شما ارسال می\u200cشود."},
+	"hi": {"आपके लिए एक ऑर्डर खोला गया: {{order_no}}",
+		"{{seller_name}} ने {{buyer_name}} के लिए ऑर्डर {{order_no}} बनाया और स्वीकृत किया है। इसे तैयार करके आपको भेजा जाएगा।"},
 }
 
 var orderWarehouseTexts = map[string]localizedText{
@@ -82,6 +84,8 @@ var orderWarehouseTexts = map[string]localizedText{
 		"تمت الموافقة على الطلب {{order_no}} لصالح {{buyer_name}} وإسناده إلى مستودع {{warehouse_name}}. يمكنكم البدء في تجهيزه."},
 	"fa": {"سفارش جدید برای آماده\u200cسازی: {{order_no}}",
 		"سفارش {{order_no}} برای {{buyer_name}} تأیید شد و به انبار {{warehouse_name}} سپرده شد. می\u200cتوانید آماده\u200cسازی آن را آغاز کنید."},
+	"hi": {"तैयार करने के लिए नया ऑर्डर: {{order_no}}",
+		"{{buyer_name}} के लिए ऑर्डर {{order_no}} स्वीकृत हो गया है और {{warehouse_name}} गोदाम को सौंपा गया है। आप इसे तैयार करना शुरू कर सकते हैं।"},
 }
 
 func orderWarehouseTemplates() []DefaultTemplate {

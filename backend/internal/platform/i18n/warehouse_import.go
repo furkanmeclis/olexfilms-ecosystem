@@ -478,6 +478,40 @@ func init() {
 	} {
 		catalogs[LocaleFA][key] = value
 	}
+	for key, value := range map[string]string{
+		"warehouse_import.room_code":                            "कक्ष कोड",
+		"warehouse_import.room_name":                            "कक्ष का नाम",
+		"warehouse_import.aisle_code":                           "गलियारा कोड",
+		"warehouse_import.shelf_code":                           "शेल्फ़ कोड",
+		"warehouse_import.bin_code":                             "बिन कोड",
+		"warehouse_import.name":                                 "अंतिम स्तर का नाम",
+		"warehouse_import.active":                               "सक्रिय",
+		"warehouse_import.title":                                "Excel से स्थान बनाएँ",
+		"warehouse_import.confirm":                              "{{rooms}} कक्ष, {{aisles}} गलियारे, {{shelves}} शेल्फ़ और {{bins}} बिन बनाए जाएँगे; {{existing}} मौजूदा पंक्तियाँ छोड़ दी जाएँगी।",
+		"warehouse_import.confirm_action":                       "स्थान बनाएँ",
+		"warehouse_import.print_labels":                         "लेबल प्रिंट करें",
+		"warehouse_import.hint.room_code":                       "कक्ष कोड आवश्यक है; A-Z, 0-9 या अंडरस्कोर, अधिकतम 32 वर्ण।",
+		"warehouse_import.hint.room_name":                       "खाली होने पर कक्ष कोड का उपयोग होता है।",
+		"warehouse_import.hint.aisle_code":                      "गलियारा कोड; शेल्फ़ सीधे कक्ष में भी हो सकते हैं।",
+		"warehouse_import.hint.shelf_code":                      "शेल्फ़ कोड; बिन के लिए आवश्यक।",
+		"warehouse_import.hint.bin_code":                        "बिन कोड।",
+		"warehouse_import.hint.name":                            "सबसे निचले स्थान का नाम; खाली होने पर उसका कोड उपयोग होता है।",
+		"warehouse_import.hint.active":                          "हाँ या नहीं; डिफ़ॉल्ट रूप से हाँ।",
+		"warehouse_import.status.new":                           "नया",
+		"warehouse_import.status.exists":                        "पहले से मौजूद",
+		"warehouse_import.status.invalid":                       "अमान्य",
+		"warehouse_import.status.conflict":                      "टकराव",
+		"warehouse_import.status.applied":                       "बनाया गया",
+		"warehouse_import.status.undone":                        "पूर्ववत",
+		"warehouse_import.status.undo_rejected":                 "पूर्ववत करना अस्वीकृत",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_PATH":   "कक्ष और कम से कम एक स्थान स्तर आवश्यक है; बिन के लिए शेल्फ़ आवश्यक है।",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_CODE":   "अमान्य कोड या नाम।",
+		"warehouse_import.error.LOCATION_IMPORT_DUPLICATE":      "फ़ाइल में एक ही पथ दो बार है।",
+		"warehouse_import.error.LOCATION_IMPORT_TYPE_CONFLICT":  "यह कोड पहले से किसी अन्य स्थान प्रकार के लिए उपयोग में है।",
+		"warehouse_import.error.LOCATION_IMPORT_INVALID_ACTIVE": "सक्रिय का मान हाँ या नहीं होना चाहिए।",
+	} {
+		catalogs[LocaleHI][key] = value
+	}
 }
 
 func init() {
@@ -509,4 +543,6 @@ func init() {
 	catalogs[LocaleAR]["imports.template.notes.tenant.warehouse.locations"] = "يحدد كل صف مسار موقع. رمز الغرفة مطلوب. يمكن أن يكون الرف في غرفة أو ممر؛ وتحتاج الخانة إلى رف. يتم تخطي المسارات الموجودة."
 	catalogs[LocaleFA]["resources.tenant.warehouse.locations"] = "مکان\u200cهای انبار"
 	catalogs[LocaleFA]["imports.template.notes.tenant.warehouse.locations"] = "هر ردیف یک مسیر مکان را تعریف می\u200cکند. کد اتاق الزامی است. قفسه می\u200cتواند در اتاق یا راهرو باشد؛ خانه به قفسه نیاز دارد. مسیرهای موجود نادیده گرفته می\u200cشوند."
+	catalogs[LocaleHI]["resources.tenant.warehouse.locations"] = "गोदाम स्थान"
+	catalogs[LocaleHI]["imports.template.notes.tenant.warehouse.locations"] = "हर पंक्ति एक स्थान पथ तय करती है। कक्ष कोड आवश्यक है। शेल्फ़ किसी कक्ष या गलियारे में हो सकता है; बिन के लिए शेल्फ़ आवश्यक है। मौजूदा पथ छोड़ दिए जाते हैं।"
 }

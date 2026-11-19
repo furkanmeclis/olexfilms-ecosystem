@@ -130,6 +130,13 @@ var reportTexts = map[i18n.Locale]reportLabels{
 		Product: "محصول", Items: "اقلام", Pieces: "عدد", Meters: "متراژ", Ends: "پایان",
 		ServiceAmount: "مبلغ سرویس\u200cها", Payments: "پرداخت\u200cها", Balance: "مانده", Empty: "در این دوره رکوردی وجود ندارد.",
 	},
+	i18n.LocaleHI: {
+		Months:  [12]string{"जनवरी", "फ़रवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"},
+		Quarter: "तिमाही {q}, {year}", DateLayout: "02-01-2006",
+		Dealer: "डीलर", Vehicle: "वाहन", Plate: "नंबर प्लेट", Services: "सर्विस", Part: "भाग", Count: "संख्या",
+		Product: "उत्पाद", Items: "मदें", Pieces: "नग", Meters: "मीटर", Ends: "समाप्ति",
+		ServiceAmount: "सर्विस राशि", Payments: "भुगतान", Balance: "शेष राशि", Empty: "इस अवधि में कोई रिकॉर्ड नहीं है।",
+	},
 }
 
 // reportLabelsFor returns the labels of a report locale (fleet_reports

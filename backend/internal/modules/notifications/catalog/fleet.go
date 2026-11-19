@@ -6,7 +6,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // the fleet users (portal) who accept or reject it there; the decision
 // reaches the requesting dealer user; an invited fleet user is told which
 // fleet they joined (the password code arrives in the reset e-mail).
-// Defaults are in-app and e-mail in all 14 locales, seeded by SyncCatalog.
+// Defaults are in-app and e-mail in all 15 locales, seeded by SyncCatalog.
 const (
 	EventFleetLinkRequested = "FLEET_LINK_REQUESTED"
 	EventFleetLinkAccepted  = "FLEET_LINK_ACCEPTED"
@@ -52,6 +52,8 @@ var fleetTexts = map[string]map[string]localizedText{
 			"طلب {{dealer_name}} تقديم الخدمة لأسطولك {{fleet_name}}. يمكنك قبول الطلب أو رفضه في البوابة."},
 		"fa": {"درخواست جدید اتصال نمایندگی: {{dealer_name}}",
 			"{{dealer_name}} درخواست کرده است به ناوگان {{fleet_name}} شما خدمات ارائه دهد. می\u200cتوانید درخواست را در پورتال بپذیرید یا رد کنید."},
+		"hi": {"नया डीलर लिंक अनुरोध: {{dealer_name}}",
+			"{{dealer_name}} ने आपके फ़्लीट {{fleet_name}} को सर्विस देने का अनुरोध किया है। आप पोर्टल में अनुरोध स्वीकार या अस्वीकार कर सकते हैं।"},
 	},
 	EventFleetLinkAccepted: {
 		"tr": {"Filo bağlantınız onaylandı: {{fleet_name}}",
@@ -82,6 +84,8 @@ var fleetTexts = map[string]map[string]localizedText{
 			"قبل الأسطول {{fleet_name}} طلب الربط الخاص بك. يمكنك الآن تقديم الخدمة لمركباته."},
 		"fa": {"اتصال ناوگان شما پذیرفته شد: {{fleet_name}}",
 			"ناوگان {{fleet_name}} درخواست اتصال شما را پذیرفت. اکنون می\u200cتوانید به خودروهای این ناوگان خدمات ارائه دهید."},
+		"hi": {"आपका फ़्लीट लिंक स्वीकार किया गया: {{fleet_name}}",
+			"फ़्लीट {{fleet_name}} ने आपका लिंक अनुरोध स्वीकार कर लिया है। अब आप इस फ़्लीट के वाहनों को सर्विस दे सकते हैं।"},
 	},
 	EventFleetLinkRejected: {
 		"tr": {"Filo bağlantınız reddedildi: {{fleet_name}}",
@@ -112,6 +116,8 @@ var fleetTexts = map[string]map[string]localizedText{
 			"رفض الأسطول {{fleet_name}} طلب الربط الخاص بك. عند الحاجة، تواصل مع مسؤول الأسطول وأرسل طلبًا جديدًا."},
 		"fa": {"اتصال ناوگان شما رد شد: {{fleet_name}}",
 			"ناوگان {{fleet_name}} درخواست اتصال شما را رد کرد. در صورت نیاز با رابط ناوگان صحبت کنید و درخواست جدیدی بفرستید."},
+		"hi": {"आपका फ़्लीट लिंक अस्वीकार किया गया: {{fleet_name}}",
+			"फ़्लीट {{fleet_name}} ने आपका लिंक अनुरोध अस्वीकार कर दिया है। आवश्यकता होने पर फ़्लीट के संपर्क व्यक्ति से बात करें और नया अनुरोध भेजें।"},
 	},
 	EventFleetUserInvited: {
 		"tr": {"{{fleet_name}} filo hesabına davet edildiniz",
@@ -142,6 +148,8 @@ var fleetTexts = map[string]map[string]localizedText{
 			"أضافك {{dealer_name}} إلى حساب الأسطول {{fleet_name}}. سجّل الدخول إلى البوابة بعنوان بريدك الإلكتروني، وعيّن كلمة المرور بالرمز المرسل في رسالة منفصلة."},
 		"fa": {"به حساب ناوگان {{fleet_name}} دعوت شدید",
 			"{{dealer_name}} شما را به حساب ناوگان {{fleet_name}} افزود. با نشانی ایمیل خود وارد پورتال شوید؛ رمز عبور خود را با کدی که در ایمیل جداگانه\u200cای ارسال شده است تعیین کنید."},
+		"hi": {"आपको फ़्लीट खाते {{fleet_name}} में आमंत्रित किया गया है",
+			"{{dealer_name}} ने आपको फ़्लीट खाते {{fleet_name}} में जोड़ा है। अपने ई-मेल पते से पोर्टल में साइन इन करें; अलग ई-मेल में भेजे गए कोड से अपना पासवर्ड सेट करें।"},
 	},
 }
 

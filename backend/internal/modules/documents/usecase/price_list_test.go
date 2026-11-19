@@ -12,7 +12,7 @@ import (
 )
 
 // TEC-506: the price_list kind has a published platform template in each of
-// the 14 languages with only known variables, the price table block and
+// the 15 languages with only known variables, the price table block and
 // translated headings; ar renders right to left.
 func TestPriceListTemplatesEveryLanguage(t *testing.T) {
 	e := newEnv(t, nil, 0)

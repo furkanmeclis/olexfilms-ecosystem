@@ -30,6 +30,11 @@
  *
  * Bilinçli istisnalar (marka, birim, kod, dilde aynı yazılan kelime):
  * scripts/i18n-allowlist.json.
+ *
+ * Mobilde henüz bağlanmamış dil (web + backend'e bağlandı, mobil bağlantısı
+ * ayrı işte): allowlist "mobile-pending" { dil: gerekçe }. Bu dil için mobil
+ * alanı ve mobil dil listesi farkı raporlanmaz; mobil bağlantı işi girdiyi
+ * siler (TEC-1248 → TEC-1249).
  */
 
 import fs from "node:fs";
@@ -86,6 +91,9 @@ if (unknown.length) {
 const allowlist = fs.existsSync(ALLOWLIST_FILE)
   ? JSON.parse(fs.readFileSync(ALLOWLIST_FILE, "utf8"))
   : {};
+
+/** Diller whose mobile app link is still pending (see header). */
+const MOBILE_PENDING = new Set(Object.keys(allowlist["mobile-pending"] ?? {}));
 
 /** Her dilde aynı kalan kelimeler (marka, kısaltma, birim, dosya türü). */
 const UNIVERSAL_WORDS = new Set(
@@ -205,6 +213,8 @@ function readGoCatalog(varName, locale) {
 const goVar = (locale) => `${locale.replace(/-([A-Za-z]+)/g, (_, r) => r)}Catalog`;
 
 /** Bir dili kaynağa (en, tr) karşı karşılaştırır. */
+const emptyResult = () => Object.fromEntries(KINDS.map((k) => [k, []]));
+
 function compareCatalog(area, locale, en, tr, cat) {
   const out = Object.fromEntries(KINDS.map((k) => [k, []]));
   if (!cat) {
@@ -341,7 +351,9 @@ function localeListFindings() {
     ["mobile/scripts/i18n-languages.mjs", mob],
     ["backend/internal/platform/i18n/locale.go Supported", be],
   ]) {
-    const miss = SUPPORTED.filter((l) => !list.includes(l));
+    const miss = SUPPORTED.filter(
+      (l) => !list.includes(l) && !(name.startsWith("mobile/") && MOBILE_PENDING.has(l)),
+    );
     const extra = list.filter((l) => !SUPPORTED.includes(l));
     if (miss.length || extra.length) {
       out.push(`${name}: eksik [${miss.join(", ")}] fazla [${extra.join(", ")}]`);
@@ -367,7 +379,9 @@ export function scan(locales = selected) {
   for (const l of locales) {
     report[l] = {
       web: compareCatalog("web", l, webEn, webTr, l === "en" ? webEn : readJsonCatalogs(WEB_DIR, l)),
-      mobile: compareCatalog("mobile", l, mobEn, mobTr, l === "en" ? mobEn : readJsonCatalogs(MOBILE_DIR, l)),
+      mobile: MOBILE_PENDING.has(l)
+        ? emptyResult()
+        : compareCatalog("mobile", l, mobEn, mobTr, l === "en" ? mobEn : readJsonCatalogs(MOBILE_DIR, l)),
       "backend-labels": compareCatalog(
         "backend-labels",
         l,

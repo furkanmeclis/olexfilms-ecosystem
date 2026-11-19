@@ -18,4 +18,5 @@ export const catalogLoaders: Record<AppLocale, () => Promise<LocaleCatalog>> = {
   az: () => import("@/locales/az").then((m) => m.default),
   ar: () => import("@/locales/ar").then((m) => m.default),
   fa: () => import("@/locales/fa").then((m) => m.default),
+  hi: () => import("@/locales/hi").then((m) => m.default),
 };

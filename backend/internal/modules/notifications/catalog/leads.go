@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Dealer application notifications (TEC-317, F3-03f). A public dealer
 // application opens a lead in the territory distributor (or the brand
 // center); the members of that organization holding leads.read are told
-// over in-app and e-mail. Default templates ship in all 14 locales and are
+// over in-app and e-mail. Default templates ship in all 15 locales and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const EventLeadDealerApplication = "LEAD_DEALER_APPLICATION"
 const EventLeadWebsiteReceived = "LEAD_WEBSITE_RECEIVED"
@@ -45,6 +45,8 @@ var leadApplicationTexts = map[string]localizedText{
 		"تقدّمت {{company_name}} ({{contact_name}}، {{location}}) بطلب لتصبح وكيلاً. أُضيف الطلب إلى العملاء المحتملين لديك؛ يرجى مراجعته في اللوحة."},
 	"fa": {"درخواست جدید نمایندگی: {{company_name}}",
 		"{{company_name}} ({{contact_name}}، {{location}}) برای اخذ نمایندگی درخواست داده است. این درخواست به سرنخ\u200cهای فروش شما افزوده شد؛ لطفاً آن را در پنل بررسی کنید."},
+	"hi": {"नया डीलर आवेदन: {{company_name}}",
+		"{{company_name}} ({{contact_name}}, {{location}}) ने डीलर बनने के लिए आवेदन किया है। आवेदन आपकी लीड में जोड़ दिया गया है; कृपया पैनल में इसकी समीक्षा करें।"},
 }
 
 func leadApplicationTemplates() []DefaultTemplate {
@@ -79,6 +81,7 @@ var leadWebsiteTexts = map[string]localizedText{
 	"az":    {"Yeni vitrin sorğusu: {{contact_name}}", "{{contact_name}} ({{phone}}) #{{dealer_code}} vitrinindən təklif istədi. Lead siyahınıza əlavə olundu."},
 	"ar":    {"طلب واجهة جديد: {{contact_name}}", "طلب {{contact_name}} ({{phone}}) عرض سعر من الواجهة #{{dealer_code}}. تمت إضافته إلى قائمة العملاء المحتملين."},
 	"fa":    {"درخواست جدید از ویترین: {{contact_name}}", "{{contact_name}} ({{phone}}) از ویترین #{{dealer_code}} درخواست پیش\u200cفاکتور کرده است. این درخواست به سرنخ\u200cهای فروش شما افزوده شد."},
+	"hi":    {"नया शोकेस अनुरोध: {{contact_name}}", "{{contact_name}} ({{phone}}) ने शोकेस #{{dealer_code}} से कोटेशन का अनुरोध किया है। इसे आपकी लीड में जोड़ दिया गया है।"},
 }
 
 func leadWebsiteTemplates() []DefaultTemplate {

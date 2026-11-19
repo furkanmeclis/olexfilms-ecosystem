@@ -44,6 +44,14 @@ describe("Arabic digits (TEC-1009)", () => {
     expect(toLatinDigits("٣٤ ABC ١٢")).toBe("34 ABC 12");
     expect(toLatinDigits("۱۲۳٫۵")).toBe("123٫5");
     expect(toLatinDigits("WBA0123")).toBe("WBA0123");
+    expect(toLatinDigits("MH 01 AB १२३४")).toBe("MH 01 AB 1234");
+  });
+
+  it("keeps Latin digits with Indian grouping for Hindi (TEC-1248)", () => {
+    expect(intlLocale("hi")).toBe("hi-IN-u-nu-latn");
+    expect(formatNumber(1234567.5, { locale: "hi" })).toMatch(
+      /^12,34,567(\.5)?$/,
+    );
   });
 
   it("localizes hand-built text only for Arabic digits", () => {

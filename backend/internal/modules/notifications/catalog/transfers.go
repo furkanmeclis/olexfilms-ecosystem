@@ -7,7 +7,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // event; the transfer use case resolves the recipients (notify_user_ids:
 // members of the notified sides holding the transfer permission, minus the
 // actor) and the organization names into the event payload. Default
-// templates ship in all 14 locales for in-app and WhatsApp (K16/K21) and are
+// templates ship in all 15 locales for in-app and WhatsApp (K16/K21) and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const (
 	EventTransferRequested = "TRANSFER_REQUESTED"
@@ -57,6 +57,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"طلب {{sender_name}} نقل مخزون إلى {{receiver_name}} ({{transfer_no}}). يرجى مراجعته في اللوحة."},
 		"fa": {"درخواست جدید انتقال موجودی {{transfer_no}}",
 			"{{sender_name}} درخواست انتقال موجودی به {{receiver_name}} را ثبت کرده است ({{transfer_no}}). لطفاً آن را در پنل بررسی کنید."},
+		"hi": {"नया स्टॉक स्थानांतरण अनुरोध {{transfer_no}}",
+			"{{sender_name}} ने {{receiver_name}} को स्टॉक स्थानांतरण का अनुरोध किया है ({{transfer_no}})। कृपया पैनल में इसकी समीक्षा करें।"},
 	},
 	EventTransferApproved: {
 		"tr": {"Stok transferi {{transfer_no}} onaylandı",
@@ -87,6 +89,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"تمت الموافقة على نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}}). يمكن للمرسل الآن شحنه."},
 		"fa": {"انتقال موجودی {{transfer_no}} تأیید شد",
 			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) تأیید شد. اکنون فرستنده می\u200cتواند آن را ارسال کند."},
+		"hi": {"स्टॉक स्थानांतरण {{transfer_no}} स्वीकृत",
+			"{{sender_name}} से {{receiver_name}} को स्टॉक स्थानांतरण ({{transfer_no}}) स्वीकृत हो गया है। अब प्रेषक इसे भेज सकता है।"},
 	},
 	EventTransferRejected: {
 		"tr": {"Stok transferi {{transfer_no}} reddedildi",
@@ -117,6 +121,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"تم رفض نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}})."},
 		"fa": {"انتقال موجودی {{transfer_no}} رد شد",
 			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) رد شد."},
+		"hi": {"स्टॉक स्थानांतरण {{transfer_no}} अस्वीकृत",
+			"{{sender_name}} से {{receiver_name}} को स्टॉक स्थानांतरण ({{transfer_no}}) अस्वीकृत कर दिया गया।"},
 	},
 	EventTransferShipped: {
 		"tr": {"Stok transferi {{transfer_no}} sevk edildi",
@@ -147,6 +153,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"قام {{sender_name}} بشحن نقل المخزون {{transfer_no}} إلى {{receiver_name}}. أكد الاستلام في اللوحة عند الوصول."},
 		"fa": {"انتقال موجودی {{transfer_no}} ارسال شد",
 			"{{sender_name}} انتقال موجودی {{transfer_no}} را برای {{receiver_name}} ارسال کرد. پس از رسیدن، دریافت آن را در پنل تأیید کنید."},
+		"hi": {"स्टॉक स्थानांतरण {{transfer_no}} भेजा गया",
+			"{{sender_name}} ने स्टॉक स्थानांतरण {{transfer_no}} {{receiver_name}} को भेज दिया है। पहुँचने पर पैनल में प्राप्ति की पुष्टि करें।"},
 	},
 	EventTransferReceived: {
 		"tr": {"Stok transferi {{transfer_no}} teslim alındı",
@@ -177,6 +185,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"استلم {{receiver_name}} نقل المخزون {{transfer_no}} من {{sender_name}}. تم قيد مبلغ النقل في الحساب الجاري."},
 		"fa": {"انتقال موجودی {{transfer_no}} دریافت شد",
 			"{{receiver_name}} انتقال موجودی {{transfer_no}} را از {{sender_name}} دریافت کرد. مبلغ انتقال در حساب جاری ثبت شد."},
+		"hi": {"स्टॉक स्थानांतरण {{transfer_no}} प्राप्त हुआ",
+			"{{receiver_name}} ने {{sender_name}} से स्टॉक स्थानांतरण {{transfer_no}} प्राप्त कर लिया है। स्थानांतरण राशि चालू खाते (cari) में दर्ज की गई।"},
 	},
 	EventTransferCancelled: {
 		"tr": {"Stok transferi {{transfer_no}} iptal edildi",
@@ -207,6 +217,8 @@ var transferTexts = map[string]map[string]localizedText{
 			"تم إلغاء نقل المخزون من {{sender_name}} إلى {{receiver_name}} ({{transfer_no}})."},
 		"fa": {"انتقال موجودی {{transfer_no}} لغو شد",
 			"انتقال موجودی از {{sender_name}} به {{receiver_name}} ({{transfer_no}}) لغو شد."},
+		"hi": {"स्टॉक स्थानांतरण {{transfer_no}} रद्द किया गया",
+			"{{sender_name}} से {{receiver_name}} को स्टॉक स्थानांतरण ({{transfer_no}}) रद्द कर दिया गया।"},
 	},
 }
 

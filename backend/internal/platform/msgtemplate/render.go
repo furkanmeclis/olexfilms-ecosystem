@@ -37,7 +37,8 @@ func Render(tpl string, vars map[string]string) string {
 // Arabic the formatted values (dates, amounts, counts) are written with
 // Arabic-Indic digits; identifiers (plate, VIN, codes, links, numbers, ids;
 // i18n.LatinOnlyKey) and the template text itself are left as they are.
-// Persian (fa) keeps Latin digits (TEC-1233, see i18n.Digits).
+// Persian (fa) and Hindi (hi) keep Latin digits (TEC-1233, TEC-1245, see
+// i18n.Digits).
 func RenderLocale(tpl string, vars map[string]string, lang string) string {
 	loc, ok := i18n.Parse(lang)
 	if !ok || loc != i18n.LocaleAR || len(vars) == 0 {

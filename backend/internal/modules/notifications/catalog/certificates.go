@@ -25,6 +25,7 @@ var certificateTexts = map[string]map[string]localizedText{
 		"az":    {"Sertifikatın vaxtı yaxınlaşır: {{type_name}}", "{{organization_name}} üzrə {{type_name}} sertifikatının müddəti {{expires_date}} tarixində bitəcək."},
 		"ar":    {"ستنتهي صلاحية الشهادة قريبًا: {{type_name}}", "ستنتهي صلاحية شهادة {{type_name}} في {{organization_name}} بتاريخ {{expires_date}}."},
 		"fa":    {"گواهی\u200cنامه به\u200cزودی منقضی می\u200cشود: {{type_name}}", "گواهی\u200cنامه {{type_name}} در {{organization_name}} در تاریخ {{expires_date}} منقضی می\u200cشود."},
+		"hi":    {"प्रमाणपत्र जल्द समाप्त हो रहा है: {{type_name}}", "{{organization_name}} में {{type_name}} प्रमाणपत्र {{expires_date}} को समाप्त हो रहा है।"},
 	},
 	EventCertificateExpired: {
 		"tr":    {"Sertifika süresi doldu: {{type_name}}", "{{organization_name}} ekibindeki {{type_name}} sertifikasının süresi {{expires_date}} tarihinde doldu; açık hizmetler yeniden değerlendirildi."},
@@ -41,6 +42,7 @@ var certificateTexts = map[string]map[string]localizedText{
 		"az":    {"Sertifikatın müddəti bitdi: {{type_name}}", "{{organization_name}} üzrə {{type_name}} sertifikatının müddəti {{expires_date}} tarixində bitdi; açıq xidmətlər yenidən yoxlandı."},
 		"ar":    {"انتهت صلاحية الشهادة: {{type_name}}", "انتهت صلاحية شهادة {{type_name}} في {{organization_name}} بتاريخ {{expires_date}}؛ تمت إعادة فحص الخدمات المفتوحة."},
 		"fa":    {"گواهی\u200cنامه منقضی شد: {{type_name}}", "گواهی\u200cنامه {{type_name}} در {{organization_name}} در تاریخ {{expires_date}} منقضی شد؛ سرویس\u200cهای باز دوباره بررسی شدند."},
+		"hi":    {"प्रमाणपत्र समाप्त हो गया: {{type_name}}", "{{organization_name}} में {{type_name}} प्रमाणपत्र {{expires_date}} को समाप्त हो गया; खुली सर्विस की फिर से जाँच की गई।"},
 	},
 }
 

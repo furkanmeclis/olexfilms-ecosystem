@@ -8,7 +8,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // holding orders.approve are told). The orders use case resolves the
 // recipients (notify_user_ids, minus the actor) and the party names into
 // the orders.shipped / orders.delivered / orders.received payloads. They go
-// in-app and as web and Expo push, in all 14 locales.
+// in-app and as web and Expo push, in all 15 locales.
 const (
 	EventOrderShipped   = "ORDER_SHIPPED"
 	EventOrderDelivered = "ORDER_DELIVERED"
@@ -49,6 +49,8 @@ var orderShippedTexts = map[string]localizedText{
 		"قام {{seller_name}} بشحن الطلب {{order_no}}. ضعوا علامة \"تم الاستلام\" على الطلب عند وصول البضاعة."},
 	"fa": {"سفارش شما در راه است: {{order_no}}",
 		"{{seller_name}} سفارش {{order_no}} را ارسال کرد. پس از رسیدن کالا، سفارش را «دریافت\u200cشده» علامت بزنید."},
+	"hi": {"आपका ऑर्डर रास्ते में है: {{order_no}}",
+		"{{seller_name}} ने ऑर्डर {{order_no}} भेज दिया है। माल पहुँचने पर ऑर्डर को \"प्राप्त\" के रूप में चिह्नित करें।"},
 }
 
 var orderDeliveredTexts = map[string]localizedText{
@@ -80,6 +82,8 @@ var orderDeliveredTexts = map[string]localizedText{
 		"وضع {{seller_name}} علامة \"تم التسليم\" على الطلب {{order_no}}. تحققوا من البضاعة وأكدوا الطلب كـ \"تم الاستلام\"."},
 	"fa": {"سفارش شما تحویل داده شد: {{order_no}}",
 		"{{seller_name}} سفارش {{order_no}} را تحویل\u200cشده علامت زد. کالا را بررسی کنید و سفارش را «دریافت\u200cشده» تأیید کنید."},
+	"hi": {"आपका ऑर्डर डिलीवर किया गया: {{order_no}}",
+		"{{seller_name}} ने ऑर्डर {{order_no}} को डिलीवर किया गया के रूप में चिह्नित किया है। माल की जाँच करें और ऑर्डर को \"प्राप्त\" के रूप में पुष्टि करें।"},
 }
 
 var orderReceivedTexts = map[string]localizedText{
@@ -111,6 +115,8 @@ var orderReceivedTexts = map[string]localizedText{
 		"استلم {{buyer_name}} الطلب {{order_no}}. تم قيد المبلغ في حساب الوكيل."},
 	"fa": {"سفارش دریافت شد: {{order_no}}",
 		"{{buyer_name}} سفارش {{order_no}} را دریافت کرد. مبلغ آن در حساب نمایندگی ثبت شد."},
+	"hi": {"ऑर्डर प्राप्त हुआ: {{order_no}}",
+		"{{buyer_name}} ने ऑर्डर {{order_no}} प्राप्त कर लिया है। राशि डीलर के चालू खाते में दर्ज की गई।"},
 }
 
 // orderStatusTemplates builds the default templates of texts for channels.

@@ -27,6 +27,7 @@ var quoteSentTexts = map[string]localizedText{
 	"az":    {"Təklifiniz hazırdır", "Salam {{recipient_name}}, {{organization_name}} təklifiniz hazırdır: {{quote_url}} Cəmi: {{total_amount}}"},
 	"ar":    {"عرض السعر جاهز", "مرحبًا {{recipient_name}}، عرض السعر من {{organization_name}} جاهز: {{quote_url}} الإجمالي: {{total_amount}}"},
 	"fa":    {"پیش\u200cفاکتور شما آماده است", "سلام {{recipient_name}}، پیش\u200cفاکتور شما از {{organization_name}} آماده است: {{quote_url}} جمع کل: {{total_amount}}"},
+	"hi":    {"आपका कोटेशन तैयार है", "नमस्ते {{recipient_name}}, {{organization_name}} से आपका कोटेशन तैयार है: {{quote_url}} कुल: {{total_amount}}"},
 }
 
 func quoteSentTemplates() []DefaultTemplate {

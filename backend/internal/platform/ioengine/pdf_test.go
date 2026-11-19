@@ -64,7 +64,7 @@ func TestEncodePDFLocalesGoThroughGotenberg(t *testing.T) {
 			h := req.HTML
 			want := []string{
 				`<html lang="` + tc.lang + `" dir="` + tc.dir + `">`,
-				`font-family:"Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans CJK SC"`,
+				`font-family:"Noto Sans","Vazirmatn","Noto Sans Arabic","Noto Sans Devanagari","Noto Sans CJK SC"`,
 				`@font-face{font-family:"Noto Sans"`,
 				`--primary:#112233`,
 				`<th>` + tc.label + `</th>`,

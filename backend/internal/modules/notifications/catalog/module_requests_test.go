@@ -7,7 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 )
 
-// TEC-508: the decision event ships in-app and e-mail templates in all 14
+// TEC-508: the decision event ships in-app and e-mail templates in all 15
 // locales and every locale has its decision labels.
 func TestModuleRequestDecidedTemplatesCoverEveryLocale(t *testing.T) {
 	ev, ok := Lookup(EventFeaturesModuleRequestDecided)

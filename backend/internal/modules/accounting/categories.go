@@ -20,7 +20,7 @@ const (
 // Category is one entry of the F1 category catalog. F1 keeps the catalog in
 // code (no table, no migration): finance_entries.category stores Key, which
 // must satisfy chk_finance_entries_category. LabelKey is resolved by the
-// backend i18n catalog in all 14 languages.
+// backend i18n catalog in all 15 languages.
 type Category struct {
 	Key       string `json:"key"`
 	Direction string `json:"direction"`

@@ -525,7 +525,7 @@ func meterAmount(loc i18n.Locale, n pgtype.Numeric) string {
 // decimalComma reports the locales that write a decimal comma.
 func decimalComma(loc i18n.Locale) bool {
 	switch loc {
-	case i18n.LocaleEN, i18n.LocaleZhCN, i18n.LocaleAR, i18n.LocaleFA:
+	case i18n.LocaleEN, i18n.LocaleZhCN, i18n.LocaleAR, i18n.LocaleFA, i18n.LocaleHI:
 		return false
 	}
 	return true

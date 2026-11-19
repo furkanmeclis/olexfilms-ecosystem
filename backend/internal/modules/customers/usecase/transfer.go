@@ -859,7 +859,7 @@ func transferMessageID(id uuid.UUID, side string) string {
 
 // --- Messages ------------------------------------------------------------
 
-// transferMessages holds the code texts per locale (K10, 14 locales):
+// transferMessages holds the code texts per locale (K10, 15 locales):
 // [0] goes to the current owner, [1] to the new owner. Placeholders:
 // {app} {org} {vehicle} {code} {minutes}.
 var transferMessages = map[i18n.Locale][2]string{
@@ -918,6 +918,10 @@ var transferMessages = map[i18n.Locale][2]string{
 	"fa": {
 		"{app} – {org}: کد تأیید انتقال خودروی {vehicle} شما: {code}\nاین کد {minutes} دقیقه اعتبار دارد. فقط در صورتی که انتقال را تأیید می\u200cکنید آن را به نمایندگی بدهید؛ در غیر این صورت آن را در اختیار کسی قرار ندهید.",
 		"{app} – {org}: کد شما برای تحویل گرفتن خودروی {vehicle}: {code}\nاین کد {minutes} دقیقه اعتبار دارد. فقط در صورتی که انتقال را تأیید می\u200cکنید آن را به نمایندگی بدهید؛ در غیر این صورت آن را در اختیار کسی قرار ندهید.",
+	},
+	"hi": {
+		"{app} – {org}: आपके वाहन {vehicle} के स्वामित्व स्थानांतरण को स्वीकृत करने के लिए आपका कोड: {code}\nयह {minutes} मिनट तक मान्य है। यदि आप स्थानांतरण स्वीकृत करते हैं, तो ही यह कोड डीलर को दें; अन्यथा इसे किसी के साथ साझा न करें।",
+		"{app} – {org}: वाहन {vehicle} का स्वामित्व प्राप्त करने के लिए आपका कोड: {code}\nयह {minutes} मिनट तक मान्य है। यदि आप स्थानांतरण स्वीकृत करते हैं, तो ही यह कोड डीलर को दें; अन्यथा इसे किसी के साथ साझा न करें।",
 	},
 }
 

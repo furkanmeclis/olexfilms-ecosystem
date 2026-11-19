@@ -261,7 +261,7 @@ func normalizeReviewLocale(locale string) string {
 	if loc == "zh-cn" {
 		return "zh-CN"
 	}
-	if slices.Contains([]string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "az", "ar", "fa"}, loc) {
+	if slices.Contains([]string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "az", "ar", "fa", "hi"}, loc) {
 		return loc
 	}
 	return ""

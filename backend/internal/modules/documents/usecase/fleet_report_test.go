@@ -18,7 +18,7 @@ var fleetReportBlocks = []string{
 }
 
 // Acceptance (TEC-476): the fleet_report kind has a published platform
-// template in each of the 14 languages: a name, a body with only known
+// template in each of the 15 languages: a name, a body with only known
 // variables, every table block and its translated headings; ar is RTL.
 func TestFleetReportTemplatesEveryLanguage(t *testing.T) {
 	e := newEnv(t, nil, 0)
@@ -27,7 +27,7 @@ func TestFleetReportTemplatesEveryLanguage(t *testing.T) {
 	if !ok {
 		t.Fatal("fleet_report kind is not registered")
 	}
-	if len(model.Languages) != 14 {
+	if len(model.Languages) != 15 {
 		t.Fatalf("languages = %d", len(model.Languages))
 	}
 	headings := map[string]string{}

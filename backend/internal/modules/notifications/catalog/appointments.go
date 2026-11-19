@@ -27,6 +27,7 @@ var appointmentCreatedTexts = map[string]localizedText{
 	"az":    {"Görüş yaradıldı", "Salam, {{organization_name}} görüşünüz {{starts_at}} vaxtına təyin edildi. Avtomobil: {{plate}}"},
 	"ar":    {"تم إنشاء الموعد", "مرحبًا، تم تحديد موعدك لدى {{organization_name}} في {{starts_at}}. المركبة: {{plate}}"},
 	"fa":    {"نوبت ثبت شد", "سلام، نوبت شما نزد {{organization_name}} برای {{starts_at}} ثبت شد. خودرو: {{plate}}"},
+	"hi":    {"अपॉइंटमेंट बनाया गया", "नमस्ते, {{organization_name}} के साथ आपका अपॉइंटमेंट {{starts_at}} के लिए तय किया गया है। वाहन: {{plate}}"},
 }
 
 var appointmentCancelledTexts = map[string]localizedText{
@@ -44,6 +45,7 @@ var appointmentCancelledTexts = map[string]localizedText{
 	"az":    {"Görüş ləğv edildi", "Salam, {{organization_name}} görüşünüz ləğv edildi. Vaxt: {{starts_at}} Avtomobil: {{plate}}"},
 	"ar":    {"تم إلغاء الموعد", "مرحبًا، تم إلغاء موعدك لدى {{organization_name}}. الوقت: {{starts_at}} المركبة: {{plate}}"},
 	"fa":    {"نوبت لغو شد", "سلام، نوبت شما نزد {{organization_name}} لغو شد. زمان: {{starts_at}} خودرو: {{plate}}"},
+	"hi":    {"अपॉइंटमेंट रद्द किया गया", "नमस्ते, {{organization_name}} के साथ आपका अपॉइंटमेंट रद्द कर दिया गया है। समय: {{starts_at}} वाहन: {{plate}}"},
 }
 
 var appointmentReminderTexts = map[string]localizedText{
@@ -61,6 +63,7 @@ var appointmentReminderTexts = map[string]localizedText{
 	"az":    {"Görüş xatırlatması", "Salam, {{organization_name}} görüşünüz yaxınlaşır: {{starts_at}}. Avtomobil: {{plate}}"},
 	"ar":    {"تذكير بالموعد", "مرحبًا، موعدك لدى {{organization_name}} يقترب: {{starts_at}}. المركبة: {{plate}}"},
 	"fa":    {"یادآوری نوبت", "سلام، نوبت شما نزد {{organization_name}} در {{starts_at}} نزدیک است. خودرو: {{plate}}"},
+	"hi":    {"अपॉइंटमेंट रिमाइंडर", "नमस्ते, {{organization_name}} के साथ {{starts_at}} पर आपका अपॉइंटमेंट निकट है। वाहन: {{plate}}"},
 }
 
 func appointmentTemplates(texts map[string]localizedText) []DefaultTemplate {

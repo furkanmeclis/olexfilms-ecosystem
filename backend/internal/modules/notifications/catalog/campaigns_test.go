@@ -8,11 +8,11 @@ import (
 )
 
 // TEC-406: every campaign approval event ships a default template in every
-// locale (14) for in-app and e-mail, names the campaign and, for a
+// locale (15) for in-app and e-mail, names the campaign and, for a
 // rejection or a change request, carries the reason.
 func TestCampaignTemplatesCoverEveryLocale(t *testing.T) {
-	if len(msgtemplate.Locales) != 14 {
-		t.Fatalf("locales = %d, want 14", len(msgtemplate.Locales))
+	if len(msgtemplate.Locales) != 15 {
+		t.Fatalf("locales = %d, want 15", len(msgtemplate.Locales))
 	}
 	for _, code := range CampaignEvents {
 		ev, ok := Lookup(code)

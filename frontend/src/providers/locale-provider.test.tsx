@@ -98,6 +98,24 @@ describe("LocaleProvider RTL", () => {
     expect(probe?.format.time("2026-01-01T12:00:00Z")).toMatch(/^[0-9:]+$/);
   });
 
+  it("switching to Hindi is LTR with Hindi text and Latin digits (TEC-1248)", async () => {
+    await mount("tr");
+    await act(async () => {
+      await probe!.setLocale("hi");
+    });
+    expect(document.documentElement.getAttribute("dir")).toBe("ltr");
+    expect(document.documentElement.getAttribute("lang")).toBe("hi");
+    expect(probe?.radixDir).toBe("ltr");
+    expect(document.cookie).toContain("NEXT_LOCALE=hi");
+    expect(container.textContent).toBe("सहेजें");
+    expect(/[\u0900-\u097F]/.test(container.textContent ?? "")).toBe(true);
+    // Amounts and dates keep Latin digits in Hindi (no ०-९).
+    const time = probe?.format.time("2026-01-01T12:00:00Z") ?? "";
+    expect(time).toMatch(/[0-9]{1,2}:[0-9]{2}/);
+    expect(time).not.toMatch(/[\u0966-\u096F]/);
+    expect(probe?.format.number(1234567)).toBe("12,34,567");
+  });
+
   it("starts RTL when the server resolved Arabic from the cookie", async () => {
     document.cookie = "NEXT_LOCALE=ar; Path=/";
     await mount("ar");

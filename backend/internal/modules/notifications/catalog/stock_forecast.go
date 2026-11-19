@@ -21,6 +21,7 @@ var stockForecastLowTexts = map[string]localizedText{
 	"az":    {"Stok azalır: {{product_name}}", "{{organization_name}} üzrə {{product_name}} stoku {{days_left}} gün qalıb ({{status}})."},
 	"ar":    {"انخفاض المخزون: {{product_name}}", "تبقى مخزون {{product_name}} لدى {{organization_name}} لمدة {{days_left}} يومًا ({{status}})."},
 	"fa":    {"موجودی رو به اتمام است: {{product_name}}", "موجودی {{product_name}} در {{organization_name}} برای {{days_left}} روز دیگر کافی است ({{status}})."},
+	"hi":    {"स्टॉक कम हो रहा है: {{product_name}}", "{{organization_name}} में {{product_name}} का स्टॉक {{days_left}} दिन का बचा है ({{status}})।"},
 }
 
 func stockForecastLowTemplates() []DefaultTemplate {

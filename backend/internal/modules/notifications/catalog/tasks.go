@@ -5,7 +5,7 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // Center task notifications (TEC-221, F1-11b). tasks.assigned (the task use
 // case) and tasks.due_soon / tasks.overdue (tasks:due_scan) carry the
 // recipients in notify_user_ids; these catalog events reach center members,
-// so the defaults are in-app and e-mail. Default templates ship in all 14
+// so the defaults are in-app and e-mail. Default templates ship in all 15
 // locales and are seeded with InsertNotificationTemplateIfMissing by
 // SyncCatalog (no migration).
 const (
@@ -50,6 +50,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"تم إسناد المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} إليك. افتح اللوحة للاطلاع على التفاصيل."},
 		"fa": {"وظیفه\u200cای به شما محول شد: {{task_title}}",
 			"وظیفه «{{task_title}}» درباره {{subject_name}} به شما محول شد. برای جزئیات، پنل را باز کنید."},
+		"hi": {"आपको एक कार्य सौंपा गया: {{task_title}}",
+			"{{subject_name}} से संबंधित कार्य \"{{task_title}}\" आपको सौंपा गया है। विवरण के लिए पैनल खोलें।"},
 	},
 	EventTaskDueSoon: {
 		"tr": {"Görevin son tarihi yaklaşıyor: {{task_title}}",
@@ -80,6 +82,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"موعد استحقاق المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} هو {{due_date}}. يرجى إنجازها في الوقت المحدد."},
 		"fa": {"سررسید وظیفه نزدیک است: {{task_title}}",
 			"سررسید وظیفه «{{task_title}}» درباره {{subject_name}}، {{due_date}} است. لطفاً آن را به\u200cموقع انجام دهید."},
+		"hi": {"कार्य की नियत तिथि निकट है: {{task_title}}",
+			"{{subject_name}} से संबंधित कार्य \"{{task_title}}\" की नियत तिथि {{due_date}} है। कृपया इसे समय पर पूरा करें।"},
 	},
 	EventTaskOverdue: {
 		"tr": {"Görevin son tarihi geçti: {{task_title}}",
@@ -110,6 +114,8 @@ var taskTexts = map[string]map[string]localizedText{
 			"كان موعد استحقاق المهمة \"{{task_title}}\" المتعلقة بـ {{subject_name}} هو {{due_date}} وما زالت مفتوحة."},
 		"fa": {"سررسید وظیفه گذشته است: {{task_title}}",
 			"سررسید وظیفه «{{task_title}}» درباره {{subject_name}}، {{due_date}} بود و هنوز باز است."},
+		"hi": {"कार्य की नियत तिथि बीत गई: {{task_title}}",
+			"{{subject_name}} से संबंधित कार्य \"{{task_title}}\" की नियत तिथि {{due_date}} थी और यह अभी भी खुला है।"},
 	},
 }
 

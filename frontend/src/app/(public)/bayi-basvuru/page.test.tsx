@@ -89,7 +89,7 @@ describe("/bayi-basvuru (TEC-320)", () => {
   it("has hreflang alternates while open", async () => {
     const meta = await generateMetadata(props);
     const languages = meta.alternates?.languages as Record<string, string>;
-    expect(Object.keys(languages)).toHaveLength(15);
+    expect(Object.keys(languages)).toHaveLength(16);
     expect(languages.ar).toMatch(/\/bayi-basvuru\?lang=ar$/);
   });
 });

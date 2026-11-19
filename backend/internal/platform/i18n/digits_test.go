@@ -12,8 +12,14 @@ func TestDigits(t *testing.T) {
 	if got := Digits(LocaleFA, "26.10.2026 · 1.250,50 ₺"); got != "26.10.2026 · 1.250,50 ₺" {
 		t.Fatalf("fa keeps Latin digits, got %q", got)
 	}
+	if got := Digits(LocaleHI, "26-10-2026 · 1,25,000.50 ₹"); got != "26-10-2026 · 1,25,000.50 ₹" {
+		t.Fatalf("hi keeps Latin digits, got %q", got)
+	}
 	if got := LatinDigits("٣٤ ABC ١٢ / ۱۲۳"); got != "34 ABC 12 / 123" {
 		t.Fatalf("latin = %q", got)
+	}
+	if got := LatinDigits("MH 01 AB १२३४"); got != "MH 01 AB 1234" {
+		t.Fatalf("devanagari latin = %q", got)
 	}
 }
 
