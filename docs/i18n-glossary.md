@@ -42,3 +42,43 @@ Uygulamanın 14 dilinde alan terimlerinin kullanılan karşılıkları. Tablo we
 | Müşteri | `customers:detail.title` | Müşteri | Customer | Клиент | Kunde | Πελάτης | Клієнт | Клиент | Client | Cliente | Cliente | 客户 | Müştəri | العميل | مشتری |
 | Ürün | `stock_forecast:columns.product` | Ürün | Product | Продукт | Produkt | Προϊόν | Товар | Товар | Produit | Producto | Prodotto | 产品 | Məhsul | المنتج | محصول |
 | Alacak | `accounting:statement.credit` | Alacak | Credit | Кредит | Haben | Πίστωση | Кредит | Кредит | Crédit | Haber | Avere | 贷方 | Kredit | دائن | بستانکار |
+
+## Hintçe (hi) — TEC-1245
+
+Hintçe 15. dil olarak eklenmektedir (TEC-1245). Web çeviri dosyaları `frontend/src/locales/hi/` altındadır; dil uygulamaya bağlanana kadar (TEC-1248) yukarıdaki tabloya sütun olarak eklenmez. Ayrıntılı sözlük ve üslup: `frontend/scripts/i18n-glossary.hi.json`.
+
+- Standart Hintçe, Devanagari; resmî hitap «आप». Düğmeler kibar emir kipi: सहेजें, रद्द करें, हटाएँ, जोड़ें. Cümle sonu «।».
+- Yön soldan sağa (LTR); `RTL_LOCALES`'e eklenmez.
+- Rakamlar her yerde Latin (0–9); Devanagari rakam kullanılmaz. Intl biçimi `hi-IN-u-nu-latn`, Hint gruplaması (1,00,000) kabul.
+- Çoğul biçimleri: `_one` / `_other`.
+- Hindistan'da İngilizce yerleşik kısaltmalar Latin kalır (PPF, QR, PDF, SMS, OTP); yerleşik alıntı kelimeler Devanagari ile yazılır (ऑर्डर, स्टॉक, डीलर, बारकोड).
+
+| Terim | anahtar | tr | en | hi |
+|---|---|---|---|---|
+| PPF (boya koruma filmi) | `literal:PPF` | PPF | PPF | PPF |
+| Cam filmi | `landing:solutions.window_film.title` | Cam filmi | Window film | विंडो फ़िल्म |
+| Rulo | `services:stock.mode.roll` | Rulo | Roll | रोल |
+| Barkod | `warehouse:fields.barcode` | Barkod | Barcode | बारकोड |
+| Garanti | `warranty:detail.title` | Garanti | Warranty | वारंटी |
+| Garanti belgesi | `documents:kinds.warranty` | Garanti belgesi | Warranty certificate | वारंटी प्रमाणपत्र |
+| Bayi | `customers:actions.upgrade.dealer` | Bayi | Dealer | डीलर |
+| Distribütör | `geo:territories.distributor` | Distribütör | Distributor | वितरक |
+| Merkez | `ai_admin:org_type.center` | Merkez | Center | केंद्र |
+| Depo | `warehouse:fields.warehouse` | Depo | Warehouse | गोदाम |
+| Stok | `stock:nav` | Stok | Stock | स्टॉक |
+| Sevk (gönder) | `warehouse:transfer.ship` | Sevk et | Ship | भेजें |
+| İrsaliye | `warehouse:receiving.attachment_kind.waybill` | İrsaliye | Waybill | डिलीवरी चालान |
+| Fatura | `orders:items.invoice` | Fatura | Invoice | इनवॉइस |
+| Kullanım kredisi | `catalog:fields.usage_credits` | Kullanım kredisi | Usage credits | उपयोग क्रेडिट |
+| Kod | `warehouse:fields.code` | Kod | Code | कोड |
+| Transfer | `warehouse:transfer.title` | Transfer | Transfer | स्थानांतरण |
+| Konum | `warehouse:fields.location` | Konum | Location | स्थान |
+| Fire | `stock_adjustments:type.waste` | Fire | Waste | अपव्यय |
+| Sipariş | `orders:detail.title` | Sipariş | Order | ऑर्डर |
+| Kısmi sevk / bekleyen sipariş | `orders:partial.badge` | Bakiye | Backorder | बैकऑर्डर |
+| Tedarikçi | `warehouse:delivery.supplier` | Tedarikçi | Supplier | आपूर्तिकर्ता |
+| Plaka | `fleets:fields.plate` | Plaka | Plate | नंबर प्लेट |
+| Araç | `services:vehicle.title` | Araç | Vehicle | वाहन |
+| Müşteri | `customers:detail.title` | Müşteri | Customer | ग्राहक |
+| Ürün | `stock_forecast:columns.product` | Ürün | Product | उत्पाद |
+| Alacak | `accounting:statement.credit` | Alacak | Credit | जमा |

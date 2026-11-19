@@ -1,0 +1,22 @@
+{
+  "title": "व्यवसाय पंजीकरण",
+  "description": "कुछ ही मिनटों में Olexfilms पर अपना संगठन बनाएँ।",
+  "submit": "पंजीकरण पूरा करें",
+  "submitting": "खाता बनाया जा रहा है…",
+  "error": "पंजीकरण पूरा नहीं हो सका। अपना विवरण जाँचें और फिर से प्रयास करें।",
+  "error_sign_in": "पंजीकरण सफल रहा, लेकिन साइन इन नहीं हो सका। लॉगिन पेज से प्रयास करें।",
+  "fields.name": "संपर्क व्यक्ति का पहला नाम",
+  "fields.surname": "संपर्क व्यक्ति का उपनाम",
+  "fields.organization_name": "व्यवसाय का नाम",
+  "fields.city": "शहर",
+  "fields.district": "ज़िला",
+  "fields.phone": "फ़ोन",
+  "fields.email": "ईमेल",
+  "fields.address": "पता",
+  "fields.password": "पासवर्ड",
+  "validation.organization_name_required": "व्यवसाय का नाम आवश्यक है",
+  "validation.city_required": "शहर आवश्यक है",
+  "validation.district_required": "ज़िला आवश्यक है",
+  "validation.phone_required": "फ़ोन आवश्यक है",
+  "validation.address_required": "पता आवश्यक है"
+}

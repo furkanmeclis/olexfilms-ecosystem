@@ -1222,6 +1222,14 @@
       "organizations:placeholders.plan_code": "Plan kodu örneği (trial)",
       "stock:label_templates.output_format.zpl": "Yazıcı dili adı (ZPL)",
       "storage:field_etag": "Teknik terim (ETag)"
+    },
+    "hi": {
+      "auth:passkey.name_placeholder": "Cihaz adı örneği (MacBook Touch ID)",
+      "measurements:units.mil": "Birim kısaltması (mil)",
+      "measurements:units.um": "Birim kısaltması (µm)",
+      "organizations:placeholders.plan_code": "Plan kodu örneği (trial)",
+      "stock:label_templates.output_format.zpl": "Yazıcı dili adı (ZPL)",
+      "storage:field_etag": "Teknik terim (ETag)"
     }
   },
   "mobile": {

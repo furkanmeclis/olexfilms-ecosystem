@@ -7,6 +7,8 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SUPPORTED_LOCALES } from "@/config/i18n";
+
 const api = vi.hoisted(() => ({
   list: vi.fn(),
   get: vi.fn(),
@@ -342,7 +344,9 @@ describe("SystemSettingsPage (TEC-222)", () => {
     const locales = readdirSync(dir).filter((l) =>
       existsSync(path.join(dir, l, "settings.json")),
     );
-    expect(locales).toHaveLength(14);
+    // Every supported language is present; a translation folder that is
+    // not wired yet (e.g. hi, TEC-1246) may exist alongside them.
+    expect(locales).toEqual(expect.arrayContaining([...SUPPORTED_LOCALES]));
     for (const locale of locales) {
       const messages = JSON.parse(
         readFileSync(path.join(dir, locale, "settings.json"), "utf8"),
