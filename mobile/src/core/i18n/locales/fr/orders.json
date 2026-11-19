@@ -200,5 +200,6 @@
   "measure.pick_hint": "Carton {{box}} m · coupe minimale {{min}} m. Ajouter en carton ou au mètre.",
   "errors.below_min_cut": "Au moins {{value}} m peuvent être commandés (coupe minimale).",
   "errors.line_credits_invalid": "Les crédits doivent être un entier de 1 à 1000.",
-  "unit_price_meter": "Prix unitaire (m)"
+  "unit_price_meter": "Prix unitaire (m)",
+  "partial.below_min_cut": "Les {{rest}} m laissés au reliquat sont plus courts que la découpe minimale ({{min}} m)."
 }

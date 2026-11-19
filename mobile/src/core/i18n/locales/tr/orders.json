@@ -199,5 +199,6 @@
   "measure.pick_hint": "Kutu {{box}} m · en az kesim {{min}} m. Kutu ya da metre olarak ekle.",
   "errors.below_min_cut": "En az {{value}} m sipariş verilebilir (minimum kesim).",
   "errors.line_credits_invalid": "Hak 1 ile 1000 arasında tam sayı olmalı.",
-  "unit_price_meter": "Birim fiyat (m)"
+  "unit_price_meter": "Birim fiyat (m)",
+  "partial.below_min_cut": "Bakiyeye kalan {{rest}} m minimum kesimden ({{min}} m) kısa."
 }
