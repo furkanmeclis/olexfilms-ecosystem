@@ -182,5 +182,12 @@
   "service_point.hint": "Wenn aktiv, sehen Kunden diesen Namen und dieses Logo auf Garantieseite und -PDF, im Portal und in WhatsApp; im Panel bleibt der Organisationsname.",
   "service_point.enabled": "Servicepunkt-Namen Kunden zeigen",
   "service_point.name": "Name des Servicepunkts",
-  "service_point.no_logo": "Kein Logo; das Organisationslogo wird verwendet."
+  "service_point.no_logo": "Kein Logo; das Organisationslogo wird verwendet.",
+  "excess_meter_billing.title": "Zusätzliche Meter, wenn die ganze Rolle geht",
+  "excess_meter_billing.hint": "Wäre der Rest nach dem Schnitt kürzer als der Mindestschnitt, wird die Rolle nicht geschnitten und geht ganz mit der Bestellung. Wählen Sie, wie die zusätzlichen Meter dem Händler berechnet werden.",
+  "excess_meter_billing.free": "Kostenlos (Standard)",
+  "excess_meter_billing.free_hint": "Der Händler zahlt die bestellten Meter; die zusätzlichen Meter sind kostenlos.",
+  "excess_meter_billing.charge": "Kostenpflichtig",
+  "excess_meter_billing.charge_hint": "Der Händler zahlt alle gelieferten Meter; Position, Rechnung und Konto rechnen mit den tatsächlichen Metern.",
+  "excess_meter_billing.frozen": "Die Einstellung wird in die Bestellposition geschrieben, wenn das Lager die Rolle zuordnet; eine Änderung wirkt nicht auf bestehende Bestellungen."
 }

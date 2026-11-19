@@ -546,7 +546,7 @@ SELECT o.id, o.organization_id, o.brand_id, $1, $2, $3,
        $14
 FROM orders o
 WHERE o.id = $15
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters
 `
 
 type CreateOrderItemParams struct {
@@ -613,6 +613,8 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
@@ -1133,7 +1135,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) 
 }
 
 const getOrderItem = `-- name: GetOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters FROM order_items
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -1168,12 +1170,14 @@ func (q *Queries) GetOrderItem(ctx context.Context, arg GetOrderItemParams) (Ord
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
 
 const getOrderItemByUUID = `-- name: GetOrderItemByUUID :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters FROM order_items
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1208,6 +1212,8 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUID
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
@@ -1763,7 +1769,7 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 }
 
 const listOrderItems = `-- name: ListOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters FROM order_items
 WHERE order_id = $1
 ORDER BY id
 `
@@ -1800,6 +1806,8 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.PlotterCredits,
 			&i.SaleMeasure,
 			&i.LineCredits,
+			&i.ExcessBilling,
+			&i.OrderedMeters,
 		); err != nil {
 			return nil, err
 		}
@@ -2491,7 +2499,7 @@ func (q *Queries) LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams
 }
 
 const lockOrderItem = `-- name: LockOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters FROM order_items
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2527,12 +2535,14 @@ func (q *Queries) LockOrderItem(ctx context.Context, arg LockOrderItemParams) (O
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
 
 const lockOrderItems = `-- name: LockOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters FROM order_items
 WHERE order_id = $1
 ORDER BY id
 FOR UPDATE
@@ -2570,6 +2580,8 @@ func (q *Queries) LockOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.PlotterCredits,
 			&i.SaleMeasure,
 			&i.LineCredits,
+			&i.ExcessBilling,
+			&i.OrderedMeters,
 		); err != nil {
 			return nil, err
 		}
@@ -2981,11 +2993,70 @@ func (q *Queries) SetOrderExternalReference(ctx context.Context, arg SetOrderExt
 	return i, err
 }
 
+const setOrderItemExcessBilling = `-- name: SetOrderItemExcessBilling :one
+UPDATE order_items
+SET excess_billing = $1,
+    ordered_meters = $2,
+    meters = $3,
+    line_total = $4
+WHERE id = $5
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters
+`
+
+type SetOrderItemExcessBillingParams struct {
+	ExcessBilling pgtype.Text    `json:"excess_billing"`
+	OrderedMeters pgtype.Numeric `json:"ordered_meters"`
+	Meters        pgtype.Numeric `json:"meters"`
+	LineTotal     pgtype.Numeric `json:"line_total"`
+	ID            int64          `json:"id"`
+}
+
+// TEC-1250 (K7): freezes the excess billing mode of a meter line and, on a
+// 'charge' line, its billed meters (ordered_meters keeps the order). A
+// NULL mode clears it (no extra meters left on the line).
+func (q *Queries) SetOrderItemExcessBilling(ctx context.Context, arg SetOrderItemExcessBillingParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, setOrderItemExcessBilling,
+		arg.ExcessBilling,
+		arg.OrderedMeters,
+		arg.Meters,
+		arg.LineTotal,
+		arg.ID,
+	)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.Meters,
+		&i.UnitPrice,
+		&i.PriceSource,
+		&i.RecommendedPriceSnapshot,
+		&i.LineTotal,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
+		&i.PlotterCut,
+		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
+	)
+	return i, err
+}
+
 const setOrderItemLineCredits = `-- name: SetOrderItemLineCredits :one
 UPDATE order_items
 SET line_credits = $1
 WHERE id = $2
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters
 `
 
 type SetOrderItemLineCreditsParams struct {
@@ -3021,6 +3092,8 @@ func (q *Queries) SetOrderItemLineCredits(ctx context.Context, arg SetOrderItemL
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
@@ -3031,7 +3104,7 @@ SET plotter_cut = $1,
     -- TEC-1221: the custom credits live only on a plotter cut line.
     plotter_credits = CASE WHEN $1::bool THEN $2::int END
 WHERE id = $3
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters
 `
 
 type SetOrderItemPlotterCutParams struct {
@@ -3067,6 +3140,8 @@ func (q *Queries) SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPl
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }
@@ -3648,6 +3723,9 @@ func (q *Queries) UpdateOrderDraft(ctx context.Context, arg UpdateOrderDraftPara
 const updateOrderItem = `-- name: UpdateOrderItem :one
 UPDATE order_items
 SET quantity = $1,
+    -- TEC-1250 (K7): a new meter figure drops the frozen excess billing.
+    excess_billing = CASE WHEN meters IS DISTINCT FROM $2 THEN NULL ELSE excess_billing END,
+    ordered_meters = CASE WHEN meters IS DISTINCT FROM $2 THEN NULL ELSE ordered_meters END,
     meters = $2,
     unit_price = $3,
     price_source = $4,
@@ -3657,7 +3735,7 @@ SET quantity = $1,
     list_unit_price = $8,
     discount_pct = $9
 WHERE id = $10
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits, excess_billing, ordered_meters
 `
 
 type UpdateOrderItemParams struct {
@@ -3710,6 +3788,8 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.PlotterCredits,
 		&i.SaleMeasure,
 		&i.LineCredits,
+		&i.ExcessBilling,
+		&i.OrderedMeters,
 	)
 	return i, err
 }

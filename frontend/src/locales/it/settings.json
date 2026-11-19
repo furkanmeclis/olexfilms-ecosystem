@@ -182,5 +182,12 @@
   "service_point.hint": "Se attivo, nome e logo sono mostrati ai clienti su pagina e PDF di garanzia, portale e WhatsApp; il pannello mantiene il nome dell'organizzazione.",
   "service_point.enabled": "Mostra ai clienti il nome del punto di servizio",
   "service_point.name": "Nome del punto di servizio",
-  "service_point.no_logo": "Nessun logo; si usa quello dell'organizzazione."
+  "service_point.no_logo": "Nessun logo; si usa quello dell'organizzazione.",
+  "excess_meter_billing.title": "Metri in più quando parte l'intero rotolo",
+  "excess_meter_billing.hint": "Quando il resto dopo il taglio sarebbe più corto del taglio minimo, il rotolo non viene tagliato e parte intero con l'ordine. Scegli come addebitare al rivenditore i metri in più.",
+  "excess_meter_billing.free": "Gratuiti (predefinito)",
+  "excess_meter_billing.free_hint": "Il rivenditore paga i metri ordinati; i metri in più sono gratuiti.",
+  "excess_meter_billing.charge": "A pagamento",
+  "excess_meter_billing.charge_hint": "Il rivenditore paga tutti i metri spediti; riga, fattura e conto usano i metri reali.",
+  "excess_meter_billing.frozen": "L'impostazione viene scritta sulla riga dell'ordine quando il magazzino assegna il rotolo; cambiarla non tocca gli ordini esistenti."
 }

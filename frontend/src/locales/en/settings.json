@@ -182,5 +182,12 @@
   "service_point.hint": "While on, this name and logo are shown to customers on the warranty page and PDF, the portal and WhatsApp messages; the panel keeps the organization name.",
   "service_point.enabled": "Show the service point name to customers",
   "service_point.name": "Service point name",
-  "service_point.no_logo": "No logo; the organization logo is used."
+  "service_point.no_logo": "No logo; the organization logo is used.",
+  "excess_meter_billing.title": "Extra meters when the whole roll goes",
+  "excess_meter_billing.hint": "When the rest after a cut would be shorter than the minimum cut, the roll is not cut and goes whole with the order. Choose how the extra meters are billed to the dealer.",
+  "excess_meter_billing.free": "Free of charge (default)",
+  "excess_meter_billing.free_hint": "The dealer pays the meters ordered; the extra meters go free.",
+  "excess_meter_billing.charge": "Charged",
+  "excess_meter_billing.charge_hint": "The dealer pays every meter that goes; the line, the invoice and the account use the real meters.",
+  "excess_meter_billing.frozen": "The setting is written on the order line when the warehouse assigns the roll; changing it does not affect existing orders."
 }

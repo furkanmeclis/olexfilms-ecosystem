@@ -31,7 +31,7 @@ import {
   RECEIPT_MAX_BYTES,
   useStoreOrder,
 } from "@/features/orders/components/order-action-dialog";
-import { excessOf } from "@/features/orders/components/order-cut";
+import { excessKey, excessOf } from "@/features/orders/components/order-cut";
 import { orderErrorMessage } from "@/features/orders/lib/errors";
 import { isRoll } from "@/features/orders/lib/form";
 import {
@@ -167,9 +167,16 @@ export function SuggestDialog({
                       className="ms-2"
                       data-testid="suggestion-whole"
                     >
-                      {t("orders.cut.suggest_whole", {
-                        excess: s.excess_meters ?? "",
-                      })}
+                      {t(
+                        excessKey(
+                          s,
+                          "orders.cut.suggest_whole",
+                          "orders.cut.suggest_whole_charge",
+                        ),
+                        {
+                          excess: s.excess_meters ?? "",
+                        },
+                      )}
                     </Badge>
                   ) : null}
                 </span>

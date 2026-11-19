@@ -409,3 +409,13 @@ SELECT (
                   OR ca.counterparty_org_id = sqlc.arg(org_id)::bigint)
     OR EXISTS (SELECT 1 FROM finance_entries fe WHERE fe.organization_id = sqlc.arg(org_id)::bigint)
 )::bool AS has_ledger;
+
+-- name: UpdateOrganizationExcessMeterBilling :one
+-- TEC-1250 (K7): whether the extra meters of a whole roll are charged.
+UPDATE organizations
+SET excess_meter_billing = sqlc.arg(excess_meter_billing)::text
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+RETURNING *;
+
+-- name: GetOrganizationExcessMeterBilling :one
+SELECT excess_meter_billing FROM organizations WHERE id = sqlc.arg(id);

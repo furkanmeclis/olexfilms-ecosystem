@@ -706,9 +706,12 @@ function Items({
                     className="ms-1"
                     data-testid="line-excess"
                   >
-                    {t("orders.cut.excess_free", {
-                      excess: item.excess_meters,
-                    })}
+                    {t(
+                      item.excess_billing === "charge"
+                        ? "orders.cut.excess_charged"
+                        : "orders.cut.excess_free",
+                      { excess: item.excess_meters },
+                    )}
                   </Badge>
                 ) : null}
               </>

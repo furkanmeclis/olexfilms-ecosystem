@@ -243,7 +243,10 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 		if err := s.recordAssigned(ctx, q, c, o, it, before); err != nil {
 			return err
 		}
-		result = o
+		// TEC-1250: a charged whole roll changed the order total.
+		if result, err = q.GetOrder(ctx, db.GetOrderParams{ID: o.ID, BrandID: o.BrandID}); err != nil {
+			return fmt.Errorf("orders: reload: %w", err)
+		}
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
 	})
 	if err != nil {
@@ -288,8 +291,11 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 		// TEC-1241: a meter line of a piece product is cut from a roll or
 		// a closed box (cutting.go).
 		if isCutLine(it) {
-			split, err = s.assignCutLocked(ctx, q, tx, c, o, it, u, in)
-			return err
+			if split, err = s.assignCutLocked(ctx, q, tx, c, o, it, u, in); err != nil {
+				return err
+			}
+			// TEC-1250 (K7): a whole roll's extra meters, free or charged.
+			return s.settleExcess(ctx, q, c, o, it.ID)
 		}
 		if in.OpenBox || in.Partial || in.Credits != nil {
 			return invalid("barcode", "open_box, partial and credits apply to meter lines of box products only")
@@ -680,7 +686,17 @@ func (s *Service) UnassignUnit(ctx context.Context, c Caller, orderUUID, itemUUI
 		if err := s.recordUnassigned(ctx, q, c, o, it, u, a); err != nil {
 			return err
 		}
-		result = o
+		// TEC-1250 (K7): a charged line goes back to its ordered meters
+		// when the whole roll leaves it.
+		if isCutLine(it) {
+			if err := s.settleExcess(ctx, q, c, o, it.ID); err != nil {
+				return err
+			}
+		}
+		// TEC-1250: a charged whole roll changed the order total.
+		if result, err = q.GetOrder(ctx, db.GetOrderParams{ID: o.ID, BrandID: o.BrandID}); err != nil {
+			return fmt.Errorf("orders: reload: %w", err)
+		}
 		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
 	})
 	if err != nil {

@@ -424,7 +424,8 @@ SELECT
   -- buyer ordered (its piece, at most the line's meters: a whole roll's
   -- free extra meters are not demand), else its initial meters.
   COALESCE((
-    SELECT LEAST(oiu.meters, oi.meters)
+    -- 19.11: a charged line's meters were raised; demand is the order.
+    SELECT LEAST(oiu.meters, COALESCE(oi.ordered_meters, oi.meters))
     FROM order_item_units oiu
     JOIN order_items oi ON oi.id = oiu.order_item_id
     WHERE u.initial_meters IS NOT NULL

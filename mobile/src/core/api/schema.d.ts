@@ -22754,6 +22754,11 @@ export interface components {
             latitude?: number | null;
             longitude?: number | null;
             service_point?: components["schemas"]["TenantServicePoint"];
+            /**
+             * @description TEC-1250 (K7, 19.11): when a meter line takes the whole roll or box because the rest would be shorter than the minimum cut, the extra meters are free (default; the buyer pays the ordered meters) or charged (the line is billed every meter that goes). The mode is frozen on the line when the extra meters are decided.
+             * @enum {string}
+             */
+            excess_meter_billing?: "free" | "charge";
         };
         /**
          * @description TEC-1003, brand center only (absent elsewhere). While enabled, the
@@ -22790,6 +22795,11 @@ export interface components {
             service_point_enabled?: boolean;
             /** @description TEC-1003, brand center only; an empty string clears it. */
             service_point_name?: string;
+            /**
+             * @description TEC-1250 (19.11). Any other value is 400 VALIDATION_ERROR.
+             * @enum {string}
+             */
+            excess_meter_billing?: "free" | "charge";
         };
         NearbyDealer: {
             /**
@@ -30249,10 +30259,20 @@ export interface components {
             /** @description TEC-1241: the product's minimum cut on meter lines (null on box lines or without a minimum); clients warn when a partial piece or a partial shipment leaves less. */
             min_cut_meters?: string | null;
             /**
-             * @description TEC-1250 (K7): the meters the line's pieces carry over the line (a whole roll whose rest was shorter than the minimum cut); they go free, the line is billed its own meters. Null when the pieces do not exceed the line.
+             * @description TEC-1250 (K7): the meters the line's pieces carry over the line (a whole roll whose rest was shorter than the minimum cut); they go free, the line is billed its own meters. Null when the pieces do not exceed the line. 19.11: measured over ordered_meters on a charge line.
              * @example 0.50
              */
             excess_meters?: string | null;
+            /**
+             * @description TEC-1250 (19.11): the seller's excess meter setting frozen on the line when its pieces exceeded the order; null otherwise. On a charge line meters, line_total and the order total are raised to the real meters of the pieces.
+             * @enum {string|null}
+             */
+            excess_billing?: "free" | "charge" | null;
+            /**
+             * @description TEC-1250 (19.11): what the buyer ordered on a charge line whose meters were raised; null otherwise (meters is the order).
+             * @example 3.00
+             */
+            ordered_meters?: string | null;
             /**
              * @description TEC-1064: the buyer's purchase price before the discount (NUMERIC(14,4)). Seller side with pricing.sale.read only; null for the buyer, without a list price or without the permission.
              * @example 100.0000
@@ -30671,6 +30691,11 @@ export interface components {
              * @example 0.50
              */
             excess_meters: string;
+            /**
+             * @description TEC-1250 (19.11): whether excess_meters go free or are added to the invoice (the line's frozen mode, else the seller's setting). Never an amount; warehouse roles see it.
+             * @enum {string}
+             */
+            excess_billing: "free" | "charge";
             min_cut_meters: string | null;
             /** @description What the line still needs */
             missing_meters: string;
@@ -30768,6 +30793,11 @@ export interface components {
             open_box?: boolean;
             /** @description TEC-1250 (K7): the whole roll or box goes to the line because the rest would be shorter than the minimum cut; meters is the whole length and excess_meters what goes free. Null when the piece is cut to the line. */
             excess_meters?: string | null;
+            /**
+             * @description TEC-1250 (19.11) free | charge, set with excess_meters.
+             * @enum {string|null}
+             */
+            excess_billing?: "free" | "charge" | null;
         };
         OrderSuggestions: {
             /** Format: uuid */

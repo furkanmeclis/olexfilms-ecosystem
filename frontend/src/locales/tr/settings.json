@@ -182,5 +182,12 @@
   "service_point.hint": "Açıkken bu ad ve logo garanti sayfası ve PDF'i, portal ve WhatsApp mesajlarında müşteriye gösterilir; panelde kurum adı kalır.",
   "service_point.enabled": "Müşterilere hizmet noktası adını göster",
   "service_point.name": "Hizmet noktası adı",
-  "service_point.no_logo": "Logo yok; kurum logosu kullanılır."
+  "service_point.no_logo": "Logo yok; kurum logosu kullanılır.",
+  "excess_meter_billing.title": "Rulonun tamamı gittiğinde fazla metre",
+  "excess_meter_billing.hint": "Kesimden sonra kalan minimum kesimden kısa kalacaksa rulo kesilmez, tamamı siparişle gider. Fazladan giden metrenin bayiye nasıl yansıyacağını seçin.",
+  "excess_meter_billing.free": "Ücretsiz (varsayılan)",
+  "excess_meter_billing.free_hint": "Bayi sipariş ettiği metreyi öder; fazla metre ücretsiz gider.",
+  "excess_meter_billing.charge": "Ücretli",
+  "excess_meter_billing.charge_hint": "Bayi giden metrenin tamamını öder; satır, fatura ve cari gerçek metreyle hesaplanır.",
+  "excess_meter_billing.frozen": "Ayar, depo ruloyu atadığı anda siparişin satırına yazılır; değiştirmek mevcut siparişleri etkilemez."
 }

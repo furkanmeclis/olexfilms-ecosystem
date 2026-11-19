@@ -508,7 +508,7 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		note := ""
 		if it.Meters.Valid {
 			amount = meterAmount(loc, it.Meters)
-			note = joinNotes(lineCreditsNote(loc, it.LineCredits), excessNote(loc, it.Meters, pieceMeters[it.ID]))
+			note = joinNotes(lineCreditsNote(loc, it.LineCredits), excessNote(loc, it, pieceMeters[it.ID]))
 		}
 		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Note: note, Barcodes: byItem[it.ID], IsGift: it.IsGift, itemID: it.ID})
 	}
@@ -541,11 +541,12 @@ func decimalComma(loc i18n.Locale) bool {
 	return true
 }
 
-// excessNote is the free extra meters note of a meter line whose pieces
-// carry more than the line (TEC-1250, K7: "Fazla 0,5 m ücretsiz"); ""
-// when they do not.
-func excessNote(loc i18n.Locale, line pgtype.Numeric, pieces *big.Rat) string {
-	lm := numericRat(line)
+// excessNote is the extra meters note of a meter line whose pieces carry
+// more than the buyer ordered (TEC-1250, K7): "Fazla 0,5 m ücretsiz" on a
+// free line, "Fazla 0,5 m faturaya eklendi" on a charged one; "" when they
+// do not.
+func excessNote(loc i18n.Locale, it db.OrderItem, pieces *big.Rat) string {
+	lm := orderedMeters(it)
 	if pieces == nil || lm == nil {
 		return ""
 	}
@@ -557,7 +558,11 @@ func excessNote(loc i18n.Locale, line pgtype.Numeric, pieces *big.Rat) string {
 	if err != nil {
 		return ""
 	}
-	return i18n.TranslateParams(loc, "orders.pdf.excess_free", map[string]string{"meters": meterAmount(loc, n)})
+	key := "orders.pdf.excess_free"
+	if it.ExcessBilling.Valid && it.ExcessBilling.String == ExcessBillingCharge {
+		key = "orders.pdf.excess_charged"
+	}
+	return i18n.TranslateParams(loc, key, map[string]string{"meters": meterAmount(loc, n)})
 }
 
 // joinNotes joins the non-empty notes of a line.

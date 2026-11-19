@@ -8,13 +8,17 @@ import type {
 /**
  * What the assigned units cover of a line: the assigned amount less the
  * free extra meters of a whole roll (TEC-1250, K7: a 3.5 m roll on a 3 m
- * line covers 3 m).
+ * line covers 3 m). On a charge line (19.11) the line was raised to 3.5 m
+ * and the roll covers all of it.
  */
 export function lineCovered(item: {
   assigned?: string | null;
   excess_meters?: string | null;
+  excess_billing?: string | null;
 }): number {
   const assigned = Number(item.assigned ?? 0) || 0;
+  // TEC-1250 (19.11): a charge line's meters were raised to its pieces.
+  if (item.excess_billing === "charge") return assigned;
   const excess = Number(item.excess_meters ?? 0) || 0;
   return Math.max(assigned - Math.max(excess, 0), 0);
 }
