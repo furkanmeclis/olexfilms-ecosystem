@@ -32,6 +32,25 @@ type ProductRef struct {
 	SKU      string    `json:"sku"`
 	Name     string    `json:"name"`
 	UnitType string    `json:"unit_type"`
+	// TEC-1239: the product's meter sale settings on an order detail line,
+	// so the order screens hint the minimum cut and the box length and warn
+	// about a kept draft meter line whose switch was turned off. Absent on
+	// the picking views.
+	SellableByMeter *bool   `json:"sellable_by_meter,omitempty"`
+	BoxMeters       *string `json:"box_meters,omitempty"`
+	MinCutMeters    *string `json:"min_cut_meters,omitempty"`
+}
+
+// orderProductRef is the product of an order detail line with its meter
+// sale settings (TEC-1239).
+func orderProductRef(p db.Product) ProductRef {
+	sellable := p.SellableByMeter
+	return ProductRef{
+		UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType,
+		SellableByMeter: &sellable,
+		BoxMeters:       numericTextPtr(p.DefaultRollMeters, 2),
+		MinCutMeters:    numericTextPtr(p.MinCutMeters, 2),
+	}
 }
 
 // AssignedUnitView is a unit assigned to a line (TEC-167). Shipped is true
@@ -407,7 +426,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 		products[it.ID] = p.Name
 		iv := ItemView{
 			UUID:      it.Uuid,
-			Product:   ProductRef{UUID: p.Uuid, SKU: p.Sku, Name: p.Name, UnitType: p.UnitType},
+			Product:   orderProductRef(p),
 			Meters:    numericTextPtr(it.Meters, 2),
 			UnitPrice: textRef(numericText(it.UnitPrice, 4)), PriceSource: textRef(it.PriceSource),
 			PriceMissing: it.PriceSource == PriceSourceMissing && !it.IsGift,

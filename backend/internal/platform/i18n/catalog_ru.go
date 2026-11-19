@@ -497,6 +497,7 @@ var ruCatalog = map[string]string{
 	"orders.pdf.amount":                       "Количество",
 	"orders.pdf.barcodes":                     "Штрихкоды",
 	"orders.pdf.unit_pcs":                     "шт.",
+	"orders.pdf.line_credits":                 "Кредиты использования: {{credits}} на отрезок",
 	"orders.pdf.delivered_by":                 "Передал",
 	"orders.pdf.received_by":                  "Принял",
 	"orders.pdf.generated_at":                 "Создано",

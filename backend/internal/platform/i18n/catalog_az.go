@@ -497,6 +497,7 @@ var azCatalog = map[string]string{
 	"orders.pdf.amount":                       "Miqdar",
 	"orders.pdf.barcodes":                     "Barkodlar",
 	"orders.pdf.unit_pcs":                     "əd.",
+	"orders.pdf.line_credits":                 "İstifadə krediti: hər parça üçün {{credits}}",
 	"orders.pdf.delivered_by":                 "Təhvil verən",
 	"orders.pdf.received_by":                  "Təhvil alan",
 	"orders.pdf.generated_at":                 "Yaradılıb",

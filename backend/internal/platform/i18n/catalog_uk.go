@@ -497,6 +497,7 @@ var ukCatalog = map[string]string{
 	"orders.pdf.amount":                       "Кількість",
 	"orders.pdf.barcodes":                     "Штрихкоди",
 	"orders.pdf.unit_pcs":                     "шт.",
+	"orders.pdf.line_credits":                 "Кредити використання: {{credits}} на відрізок",
 	"orders.pdf.delivered_by":                 "Передав",
 	"orders.pdf.received_by":                  "Прийняв",
 	"orders.pdf.generated_at":                 "Створено",

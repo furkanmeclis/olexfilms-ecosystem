@@ -497,6 +497,7 @@ var bgCatalog = map[string]string{
 	"orders.pdf.amount":                       "Количество",
 	"orders.pdf.barcodes":                     "Баркодове",
 	"orders.pdf.unit_pcs":                     "бр.",
+	"orders.pdf.line_credits":                 "Кредити за употреба: {{credits}} на парче",
 	"orders.pdf.delivered_by":                 "Предал",
 	"orders.pdf.received_by":                  "Приел",
 	"orders.pdf.generated_at":                 "Създадено",
