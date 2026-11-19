@@ -190,7 +190,12 @@ WITH stock AS (
 )
 SELECT u.id AS unit_id, u.uuid AS unit_uuid, u.product_id, u.barcode, u.unit_kind,
        u.initial_meters, u.remaining_meters,
-       stock.owner_type, stock.owner_id, stock.holder_org_id, stock.quantity_on_hand
+       stock.owner_type, stock.owner_id, stock.holder_org_id, stock.quantity_on_hand,
+       -- TEC-1242 (K13): a cut piece (cut from a roll, or carrying the
+       -- credits of a meter line) is only used in services, never sold.
+       (u.unit_kind = 'serial' AND u.initial_meters IS NOT NULL AND (
+            EXISTS (SELECT 1 FROM stock_splits ss WHERE ss.new_unit_id = u.id)
+            OR unit_credit_default(u.id) IS NOT NULL))::bool AS cut_piece
 FROM stock
 JOIN units u ON u.id = stock.unit_id
 WHERE u.brand_id = sqlc.arg(brand_id)

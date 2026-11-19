@@ -102,7 +102,12 @@ func (s *Service) CancelCompleted(ctx context.Context, c Caller, id uuid.UUID, i
 			if err != nil {
 				return fmt.Errorf("services: lock unit: %w", err)
 			}
-			if credits.Applies(unit) {
+			// TEC-1242: a cut piece with line credits is a credit unit too.
+			creditUnit, err := credits.Carries(ctx, q, unit)
+			if err != nil {
+				return err
+			}
+			if creditUnit {
 				ids, err := s.cancelCreditItem(ctx, q, tx, l, svc, item, unit, c, reason)
 				if err != nil {
 					return err
@@ -213,6 +218,19 @@ func (s *Service) cancelCreditItem(ctx context.Context, q *db.Queries, tx pgx.Tx
 	from := ledger.Owner{Type: ledger.OwnerService, ID: st.OwnerID, OrgID: st.HolderOrgID}
 	to := ledger.Owner{Type: ledger.OwnerOrganization, ID: svc.OrganizationID, OrgID: svc.OrganizationID}
 	m.Type, m.UnitID, m.From, m.To = ledger.TypeReturn, unit.ID, &from, &to
+	if unit.InitialMeters.Valid {
+		// TEC-1242: a cut piece with credits is never cut, its consumption
+		// took every meter left; the return gives them all back.
+		initial, err := ledger.NumericToCentimeters(unit.InitialMeters)
+		if err != nil {
+			return nil, fmt.Errorf("services: initial meters: %w", err)
+		}
+		remaining, err := ledger.NumericToCentimeters(unit.RemainingMeters)
+		if err != nil {
+			return nil, fmt.Errorf("services: remaining meters: %w", err)
+		}
+		m.Centimeters = initial - remaining
+	}
 	mv, err := post(ctx, l, tx, m, item)
 	if err != nil {
 		return nil, err

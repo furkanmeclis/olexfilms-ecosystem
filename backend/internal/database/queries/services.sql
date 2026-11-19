@@ -480,11 +480,14 @@ JOIN products p ON p.id = u.product_id AND p.brand_id = u.brand_id
 JOIN product_categories c ON c.id = p.category_id AND c.brand_id = p.brand_id
 LEFT JOIN LATERAL (
     -- TEC-1221: credits of a serial piece unit (balance, else the default).
+    -- TEC-1242: a cut piece shipped on a meter line carries that line's
+    -- credits (unit_credit_default); a roll without such a line has none
+    -- (NULL here).
     SELECT COALESCE(b.credits_total, unit_credit_default(u.id)) AS credits_total,
            COALESCE(b.credits_remaining, unit_credit_default(u.id)) AS credits_remaining
     FROM (SELECT 1) one
     LEFT JOIN unit_credit_balances b ON b.unit_id = u.id
-    WHERE u.unit_kind = 'serial' AND u.initial_meters IS NULL
+    WHERE u.unit_kind = 'serial'
 ) cr ON TRUE
 WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
   AND (sqlc.narg(q)::text IS NULL
@@ -492,14 +495,18 @@ WHERE (sqlc.narg(barcode)::text IS NULL OR u.barcode = sqlc.narg(barcode)::text)
        OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
        OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
-  AND (sqlc.narg(min_meters)::numeric IS NULL OR u.remaining_meters >= sqlc.narg(min_meters)::numeric)
+  -- min_meters looks for a roll to cut: a credit cut piece is never cut.
+  AND (sqlc.narg(min_meters)::numeric IS NULL
+       OR (u.remaining_meters >= sqlc.narg(min_meters)::numeric AND cr.credits_total IS NULL))
   AND (u.unit_kind = 'fixed'
        -- TEC-1221: a credit unit stays listed while it has credits, in
-       -- other open services too, but not twice in the same service.
-       OR (u.initial_meters IS NULL AND cr.credits_remaining > 0 AND NOT EXISTS (
+       -- other open services too, but not twice in the same service
+       -- (TEC-1242: a credit cut piece too; one without credits left is
+       -- hidden).
+       OR (cr.credits_total IS NOT NULL AND cr.credits_remaining > 0 AND NOT EXISTS (
             SELECT 1 FROM service_items i
             WHERE i.unit_id = u.id AND i.service_id = sqlc.arg(service_id)::bigint))
-       OR (u.initial_meters IS NOT NULL AND NOT EXISTS (
+       OR (u.initial_meters IS NOT NULL AND cr.credits_total IS NULL AND NOT EXISTS (
             SELECT 1 FROM service_items i
             JOIN services sv ON sv.id = i.service_id
             WHERE i.unit_id = u.id

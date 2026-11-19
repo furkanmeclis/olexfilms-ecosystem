@@ -41,13 +41,16 @@ const (
 )
 
 var (
-	ErrForbidden           = errors.New("dealer accounting: forbidden")
-	ErrProductNotFound     = errors.New("dealer accounting: product not found")
-	ErrCustomerNotFound    = errors.New("dealer accounting: customer not found")
-	ErrSupplierNotFound    = errors.New("dealer accounting: supplier not found")
-	ErrSaleNotFound        = errors.New("dealer accounting: sale not found")
-	ErrPurchaseNotFound    = errors.New("dealer accounting: purchase not found")
-	ErrStockUnavailable    = errors.New("dealer accounting: stock unavailable")
+	ErrForbidden        = errors.New("dealer accounting: forbidden")
+	ErrProductNotFound  = errors.New("dealer accounting: product not found")
+	ErrCustomerNotFound = errors.New("dealer accounting: customer not found")
+	ErrSupplierNotFound = errors.New("dealer accounting: supplier not found")
+	ErrSaleNotFound     = errors.New("dealer accounting: sale not found")
+	ErrPurchaseNotFound = errors.New("dealer accounting: purchase not found")
+	ErrStockUnavailable = errors.New("dealer accounting: stock unavailable")
+	// ErrCutPieceNotSellable: the scanned barcode is a cut piece (TEC-1242,
+	// K13), used only in services (CUT_PIECE_NOT_SELLABLE).
+	ErrCutPieceNotSellable = errors.New("dealer accounting: cut piece not sellable")
 	ErrSaleAlreadyVoided   = errors.New("dealer accounting: sale already voided")
 	ErrVoidWindowExpired   = errors.New("dealer accounting: void window expired")
 	ErrIdempotencyConflict = errors.New("dealer accounting: idempotency conflict")
@@ -617,6 +620,10 @@ func (s *Service) prepareSaleLine(ctx context.Context, q *db.Queries, o db.Organ
 	if qty < 0 {
 		return preparedSaleLine{}, invalid(field+".quantity", "must be positive")
 	}
+	rows, err = saleCandidates(rows)
+	if err != nil {
+		return preparedSaleLine{}, err
+	}
 	for _, r := range rows {
 		if r.UnitKind != ledger.KindFixed && qty != 1 {
 			continue
@@ -640,6 +647,22 @@ func (s *Service) prepareSaleLine(ctx context.Context, q *db.Queries, o db.Organ
 		}, nil
 	}
 	return preparedSaleLine{}, ErrStockUnavailable
+}
+
+// saleCandidates drops the cut pieces (TEC-1242, K13: a cut piece is only
+// used in services). When only cut pieces are left (a cut piece's barcode
+// was scanned) the answer is ErrCutPieceNotSellable, not "not in stock".
+func saleCandidates(rows []db.ListProductSaleStockCandidatesRow) ([]db.ListProductSaleStockCandidatesRow, error) {
+	out := rows[:0:0]
+	for _, r := range rows {
+		if !r.CutPiece {
+			out = append(out, r)
+		}
+	}
+	if len(out) == 0 && len(rows) > 0 {
+		return nil, ErrCutPieceNotSellable
+	}
+	return out, nil
 }
 
 func (s *Service) postSaleStock(ctx context.Context, tx pgx.Tx, sale db.ProductSale, p preparedSaleLine, c Caller) (db.StockMovement, error) {
