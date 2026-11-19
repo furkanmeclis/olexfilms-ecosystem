@@ -61,7 +61,7 @@
   "orders.from": "से: {{name}}",
   "orders.confirm.submitted": "यह ऑर्डर सबमिट करें?",
   "orders.confirm.approved": "यह ऑर्डर स्वीकृत करें?",
-  "orders.confirm.received": "शिपमेंट को प्राप्त के रूप में चिह्नित करें?",
+  "orders.confirm.received": "प्रेषण को प्राप्त के रूप में चिह्नित करें?",
   "orders.confirm.cancelled": "यह ऑर्डर रद्द करें?",
   "orders.action.submitted": "सबमिट करें",
   "orders.action.approved": "स्वीकृत करें",
