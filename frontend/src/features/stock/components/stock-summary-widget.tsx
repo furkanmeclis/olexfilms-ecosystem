@@ -154,6 +154,15 @@ export function StockSummaryWidget({ slug }: { slug: string }) {
                         : t("stock.widget.quantity_value", {
                             quantity: format.number(row.quantity),
                           })}
+                      {/* TEC-1243: the opened boxes of a piece product. */}
+                      {row.product.unit_type !== "roll_meter" &&
+                      Number(row.meters) > 0 ? (
+                        <div className="text-muted-foreground text-xs">
+                          {t("stock.widget.meters_value", {
+                            meters: row.meters,
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   </li>
                 ))}

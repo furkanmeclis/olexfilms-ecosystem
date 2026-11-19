@@ -231,6 +231,8 @@ export const routes = {
      */
     stock: {
       root: (slug: string) => `/t/${slug}/stock`,
+      /** TEC-1243: the on-hand units filtered to remnants ("ragle"). */
+      remnants: (slug: string) => `/t/${slug}/stock?remnant=true`,
       unit: (slug: string, barcode: string) =>
         `/t/${slug}/stock/units/${encodeURIComponent(barcode)}`,
       reclassifications: (slug: string) => `/t/${slug}/stock/reclassifications`,

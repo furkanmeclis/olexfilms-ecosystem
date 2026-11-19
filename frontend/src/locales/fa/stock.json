@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "یک فایل .zpl برای چاپگرهای Zebra (203 dpi). لوگوی تصویری چاپ نمی‌شود.",
   "label_templates.form.thermal_sizes": "اندازه‌های رایج:",
   "columns.remnant": "ته‌رول",
-  "remnant.badge": "ته‌رول"
+  "remnant.badge": "ته‌رول",
+  "measure.boxes": "کارتن بسته {{boxes}}",
+  "measure.open": "باز {{rolls}} رول / {{meters}} متر",
+  "measure.cut": "بریده {{pieces}} قطعه / {{meters}} متر",
+  "measure.remnant": "باقی‌مانده {{meters}} متر",
+  "columns.measures": "کارتن / رول / بریده / باقی‌مانده"
 }

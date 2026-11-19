@@ -59,12 +59,20 @@ export function canRequestReclassification(unit: OperableUnit): boolean {
   );
 }
 
-/** Only a roll with meters left on hand can be split (TEC-184). */
+/**
+ * Only a roll with meters left on hand can be split (TEC-184). TEC-1243: a
+ * unit is a roll when it carries meters, whatever the product's default
+ * measure (an opened box of a product sold by the meter), as the ledger
+ * decides; a fixed barcode never is.
+ */
 export function canSplitRoll(unit: OperableUnit): boolean {
   return (
     onHand(unit.status) &&
-    unit.product?.unit_type === "roll_meter" &&
-    toCents(unit.remaining_meters ?? "") > 0
+    unit.product !== null &&
+    unit.product !== undefined &&
+    !unit.product.uses_fixed_barcode &&
+    unit.remaining_meters != null &&
+    toCents(unit.remaining_meters) > 0
   );
 }
 

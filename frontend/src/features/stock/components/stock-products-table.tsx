@@ -20,6 +20,9 @@ import {
 } from "@/features/stock/services/stock.service";
 import { useLocale } from "@/providers/locale-provider";
 
+import { hasMetered, metersText } from "../lib/measures";
+import { StockMeasureLine } from "./stock-measure-line";
+
 export const STOCK_PRODUCTS_PERSIST_KEY = "tenant-stock-products-v1";
 
 const PRODUCT_STATUSES = ["in_stock", "out_of_stock"] as const;
@@ -104,10 +107,23 @@ export function StockProductsTable({
           labelKey: "stock.columns.meters",
           enableSorting: true,
           meta: { cellClassName: "text-end whitespace-nowrap tabular-nums" },
+          // TEC-1243: an opened box of a piece product carries meters too;
+          // they used to be hidden for every product but roll_meter.
           cell: ({ row }) =>
-            row.original.product.unit_type === "roll_meter"
-              ? t("stock.widget.meters_value", { meters: row.original.meters })
+            Number(row.original.meters) > 0
+              ? metersText(row.original.meters, t, format.number)
               : "—",
+        }),
+        createColumn<StockProduct>({
+          id: "measures",
+          labelKey: "stock.columns.measures",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const m = row.original.balance?.measures;
+            return m && hasMetered(m) ? (
+              <StockMeasureLine measures={m} />
+            ) : null;
+          },
         }),
         createColumn<StockProduct>({
           accessorKey: "updated_at",
@@ -180,9 +196,12 @@ export function StockProductsTable({
           </p>
           <p className="text-sm">
             {r.product.unit_type === "roll_meter"
-              ? t("stock.widget.meters_value", { meters: r.meters })
+              ? metersText(r.meters, t, format.number)
               : t("stock.widget.quantity_value", { quantity: r.quantity })}
           </p>
+          {r.balance?.measures && hasMetered(r.balance.measures) ? (
+            <StockMeasureLine measures={r.balance.measures} />
+          ) : null}
         </div>
       )}
       toolbarExtra={

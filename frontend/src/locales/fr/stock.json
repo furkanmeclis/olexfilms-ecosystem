@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Un fichier .zpl pour imprimantes Zebra (203 dpi). Le logo image n'est pas imprimé.",
   "label_templates.form.thermal_sizes": "Tailles courantes :",
   "columns.remnant": "Chute",
-  "remnant.badge": "Chute"
+  "remnant.badge": "Chute",
+  "measure.boxes": "Cartons fermés {{boxes}}",
+  "measure.open": "Ouverts {{rolls}} rouleaux / {{meters}} m",
+  "measure.cut": "Coupés {{pieces}} pièces / {{meters}} m",
+  "measure.remnant": "Chute {{meters}} m",
+  "columns.measures": "Cartons / rouleaux / coupes / chutes"
 }

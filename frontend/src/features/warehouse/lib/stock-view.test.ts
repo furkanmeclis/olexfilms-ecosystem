@@ -19,6 +19,7 @@ const form = {
   max_quantity: "10",
   warning_days: "",
   cover_days: "",
+  min_meters: "",
 };
 
 describe("reorderInput (TEC-1229)", () => {
@@ -33,8 +34,29 @@ describe("reorderInput (TEC-1229)", () => {
         max_quantity: 10,
         warning_days: null,
         cover_days: null,
+        min_meters: null,
       },
     });
+  });
+  // TEC-1243 (K14): a meter threshold alone is a rule; meters are decimal.
+  it("takes the meter threshold apart from the box thresholds", () => {
+    const meterOnly = {
+      ...form,
+      min_quantity: "",
+      reorder_point: "",
+      max_quantity: "",
+      min_meters: "25,5",
+    };
+    expect(reorderInput(meterOnly)).toMatchObject({
+      ok: true,
+      value: { min_quantity: 0, min_meters: "25.5" },
+    });
+    for (const bad of ["0", "-1", "abc", "100000.01", "1.234"]) {
+      expect(reorderInput({ ...form, min_meters: bad })).toMatchObject({
+        ok: false,
+        error: "meters",
+      });
+    }
   });
   it("refuses inconsistent or empty thresholds", () => {
     expect(reorderInput({ ...form, reorder_point: "1" })).toMatchObject({

@@ -5,6 +5,8 @@ import { useMemo } from "react";
 
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { createColumn } from "@/components/tables";
+import { StockMeasureLine } from "@/features/stock/components/stock-measure-line";
+import { hasMetered } from "@/features/stock/lib/measures";
 import { enumFilterOptions } from "@/features/warehouse/components/table-options";
 import { EOD_GROUPS, netQuantity } from "@/features/warehouse/lib/eod";
 import type { EodReport } from "@/features/warehouse/services/warehouse.service";
@@ -164,8 +166,37 @@ export function EodBalancesTable({ balances }: { balances: EodBalanceRow[] }) {
               >
                 {row.original.sku}
               </div>
+              {/* TEC-1243: the K14 split when the report was written. */}
+              {row.original.measures && hasMetered(row.original.measures) ? (
+                <StockMeasureLine
+                  measures={{
+                    ...row.original.measures,
+                    boxes:
+                      row.original.closing_boxes ?? row.original.measures.boxes,
+                  }}
+                  className="mt-0.5"
+                />
+              ) : null}
             </div>
           ),
+        }),
+        createColumn<EodBalanceRow>({
+          id: "boxes",
+          accessorFn: (p) => p.closing_boxes ?? -1,
+          labelKey: "warehouse.eod.boxes",
+          cell: ({ row }) =>
+            row.original.closing_boxes == null
+              ? "—"
+              : `${format.number(row.original.opening_boxes ?? 0)} → ${format.number(row.original.closing_boxes)}`,
+        }),
+        createColumn<EodBalanceRow>({
+          id: "rolls",
+          accessorFn: (p) => p.closing_rolls ?? -1,
+          labelKey: "warehouse.eod.rolls",
+          cell: ({ row }) =>
+            row.original.closing_rolls == null
+              ? "—"
+              : `${format.number(row.original.opening_rolls ?? 0)} → ${format.number(row.original.closing_rolls)}`,
         }),
         createColumn<EodBalanceRow>({
           accessorKey: "opening_quantity",

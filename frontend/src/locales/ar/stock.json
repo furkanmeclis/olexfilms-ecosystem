@@ -402,5 +402,10 @@
   "bulk.reason.previously_unplaced": "لم يكن في خانة من قبل",
   "bulk.reason.roll_cut": "تم قص اللفة",
   "bulk.reason.not_found": "غير موجود",
-  "movement.measure_conversion": "تحويل وحدة القياس (قطعة ↔ لفة)"
+  "movement.measure_conversion": "تحويل وحدة القياس (قطعة ↔ لفة)",
+  "measure.boxes": "صناديق مغلقة {{boxes}}",
+  "measure.open": "مفتوح {{rolls}} لفائف / {{meters}} م",
+  "measure.cut": "مقصوص {{pieces}} قطع / {{meters}} م",
+  "measure.remnant": "بقايا {{meters}} م",
+  "columns.measures": "صناديق / لفائف / مقصوص / بقايا"
 }

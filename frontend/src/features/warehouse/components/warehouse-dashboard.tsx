@@ -29,6 +29,7 @@ import {
   type OrderListQuery,
 } from "@/features/orders/services/orders.service";
 import { performanceService } from "@/features/performance/services/performance.service";
+import { metersText } from "@/features/stock/lib/measures";
 import {
   stockKeys,
   stockService,
@@ -136,6 +137,10 @@ function WarehouseStockCard({ slug }: { slug: string }) {
     staleTime: 60_000,
   });
   const rows = query.data?.items ?? [];
+  const rollsValue = (count: number, meters: string) =>
+    count > 0
+      ? `${format.number(count)} · ${metersText(meters, t, format.number)}`
+      : format.number(0);
   return (
     <Card data-testid="warehouse-stock-card">
       <CardHeader className="flex flex-row items-start justify-between gap-2">
@@ -185,23 +190,43 @@ function WarehouseStockCard({ slug }: { slug: string }) {
                     </Badge>
                   ) : null}
                 </div>
-                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {/* TEC-1243 (K14): closed boxes, open rolls, cut pieces and
+                    remnants apart; the remnants open the remnant list. */}
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   <Stat
                     label={t("warehouse.home.stock_products")}
                     value={format.number(row.products)}
                   />
                   <Stat
-                    label={t("warehouse.home.stock_pieces")}
+                    label={t("warehouse.home.stock_boxes")}
                     value={format.number(row.pieces)}
                   />
                   <Stat
-                    label={t("warehouse.home.stock_rolls")}
-                    value={format.number(row.rolls)}
+                    label={t("warehouse.home.stock_open")}
+                    value={rollsValue(row.open_rolls, row.open_meters)}
                   />
                   <Stat
-                    label={t("warehouse.home.stock_meters")}
-                    value={format.number(Number(row.meters))}
+                    label={t("warehouse.home.stock_cut")}
+                    value={rollsValue(row.cut_pieces, row.cut_meters)}
                   />
+                  {row.remnants > 0 ? (
+                    <Link
+                      href={routes.tenant.stock.remnants(slug)}
+                      className="hover:bg-muted rounded-md"
+                      data-testid="warehouse-stock-remnants"
+                    >
+                      <Stat
+                        label={t("warehouse.home.stock_remnants")}
+                        value={rollsValue(row.remnants, row.remnant_meters)}
+                        tone="warning"
+                      />
+                    </Link>
+                  ) : (
+                    <Stat
+                      label={t("warehouse.home.stock_remnants")}
+                      value={format.number(0)}
+                    />
+                  )}
                 </dl>
               </li>
             ))}
@@ -212,11 +237,25 @@ function WarehouseStockCard({ slug }: { slug: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "warning";
+}) {
   return (
-    <div className="bg-muted/40 rounded-md border px-2.5 py-1.5">
+    <div
+      className={
+        tone === "warning"
+          ? "rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 dark:border-amber-800 dark:bg-amber-950/40"
+          : "bg-muted/40 rounded-md border px-2.5 py-1.5"
+      }
+    >
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="font-semibold tabular-nums">{value}</dd>
+      <dd className="font-semibold whitespace-nowrap tabular-nums">{value}</dd>
     </div>
   );
 }

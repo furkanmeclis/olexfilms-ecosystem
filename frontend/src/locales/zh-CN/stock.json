@@ -402,5 +402,10 @@
   "bulk.reason.previously_unplaced": "之前未放入货位",
   "bulk.reason.roll_cut": "该卷材已被裁切",
   "bulk.reason.not_found": "未找到",
-  "movement.measure_conversion": "计量单位已转换（件 ↔ 卷材）"
+  "movement.measure_conversion": "计量单位已转换（件 ↔ 卷材）",
+  "measure.boxes": "未开封箱 {{boxes}}",
+  "measure.open": "已开卷 {{rolls}} 卷 / {{meters}} 米",
+  "measure.cut": "裁切段 {{pieces}} 段 / {{meters}} 米",
+  "measure.remnant": "余料 {{meters}} 米",
+  "columns.measures": "箱 / 卷 / 裁切段 / 余料"
 }

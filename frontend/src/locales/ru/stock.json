@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Файл .zpl для принтеров Zebra (203 dpi). Логотип-изображение не печатается.",
   "label_templates.form.thermal_sizes": "Типовые размеры:",
   "columns.remnant": "Остаток",
-  "remnant.badge": "Остаток"
+  "remnant.badge": "Остаток",
+  "measure.boxes": "Закрытые коробки {{boxes}}",
+  "measure.open": "Открытые {{rolls}} рул. / {{meters}} м",
+  "measure.cut": "Отрезы {{pieces}} шт. / {{meters}} м",
+  "measure.remnant": "Остаток {{meters}} м",
+  "columns.measures": "Коробки / рулоны / отрезы / остаток"
 }

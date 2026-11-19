@@ -59,11 +59,28 @@ export type ReorderForm = {
   max_quantity: string;
   warning_days: string;
   cover_days: string;
+  /** TEC-1243 (K14): meter threshold over open rolls + cut pieces. */
+  min_meters: string;
 };
 
 export type ReorderParse =
   | { ok: true; value: StockReorderRuleInput }
-  | { ok: false; error: "required" | "number" | "order" | "days" | "empty" };
+  | {
+      ok: false;
+      error: "required" | "number" | "order" | "days" | "empty" | "meters";
+    };
+
+/** Meters as the backend takes them: up to 6 digits, 2 decimals. */
+const METERS = /^\d{1,6}([.,]\d{1,2})?$/;
+
+const meters = (s: string): string | null | undefined => {
+  const v = s.trim();
+  if (v === "") return null;
+  if (!METERS.test(v)) return undefined;
+  const n = Number(v.replace(",", "."));
+  if (n <= 0 || n > 100000) return undefined;
+  return v.replace(",", ".");
+};
 
 const num = (s: string): number | null | undefined => {
   const v = s.trim();
@@ -74,7 +91,9 @@ const num = (s: string): number | null | undefined => {
 
 /**
  * Validates the form like the backend: integers, min <= reorder point <=
- * max, days 1..3650 and at least one threshold.
+ * max, days 1..3650, meters 0.01..100000 and at least one threshold.
+ * TEC-1243 (K14): the quantities count closed boxes, min_meters the meters
+ * of open rolls and cut pieces; the two thresholds alert apart.
  */
 export function reorderInput(f: ReorderForm): ReorderParse {
   if (!f.warehouse_uuid || !f.product_uuid) {
@@ -88,6 +107,8 @@ export function reorderInput(f: ReorderForm): ReorderParse {
   if ([min, point, maxQ, warn, cover].some((v) => v === undefined)) {
     return { ok: false, error: "number" };
   }
+  const minMeters = meters(f.min_meters ?? "");
+  if (minMeters === undefined) return { ok: false, error: "meters" };
   const m = min ?? 0;
   if (point != null && point < m) return { ok: false, error: "order" };
   if (maxQ != null && (maxQ < Math.max(m, point ?? 0) || maxQ === 0)) {
@@ -96,7 +117,13 @@ export function reorderInput(f: ReorderForm): ReorderParse {
   for (const d of [warn, cover]) {
     if (d != null && (d < 1 || d > 3650)) return { ok: false, error: "days" };
   }
-  if (m === 0 && point == null && maxQ == null && warn == null) {
+  if (
+    m === 0 &&
+    point == null &&
+    maxQ == null &&
+    warn == null &&
+    minMeters == null
+  ) {
     return { ok: false, error: "empty" };
   }
   return {
@@ -109,6 +136,7 @@ export function reorderInput(f: ReorderForm): ReorderParse {
       max_quantity: maxQ ?? null,
       warning_days: warn ?? null,
       cover_days: cover ?? null,
+      min_meters: minMeters ?? null,
     },
   };
 }

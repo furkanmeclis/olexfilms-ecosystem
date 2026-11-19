@@ -402,5 +402,10 @@
   "bulk.reason.previously_unplaced": "Преди не е било в клетка",
   "bulk.reason.roll_cut": "Ролката е рязана",
   "bulk.reason.not_found": "Не е намерено",
-  "movement.measure_conversion": "Преобразувана мярка (бройка ↔ ролка)"
+  "movement.measure_conversion": "Преобразувана мярка (бройка ↔ ролка)",
+  "measure.boxes": "Затворени кутии {{boxes}}",
+  "measure.open": "Отворени {{rolls}} ролки / {{meters}} м",
+  "measure.cut": "Отрязани {{pieces}} парчета / {{meters}} м",
+  "measure.remnant": "Остатък {{meters}} м",
+  "columns.measures": "Кутии / ролки / отрязани / остатък"
 }

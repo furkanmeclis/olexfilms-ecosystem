@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Un archivo .zpl para impresoras Zebra (203 dpi). El logo de imagen no se imprime.",
   "label_templates.form.thermal_sizes": "Tamaños comunes:",
   "columns.remnant": "Retal",
-  "remnant.badge": "Retal"
+  "remnant.badge": "Retal",
+  "measure.boxes": "Cajas cerradas {{boxes}}",
+  "measure.open": "Abiertos {{rolls}} rollos / {{meters}} m",
+  "measure.cut": "Cortados {{pieces}} piezas / {{meters}} m",
+  "measure.remnant": "Retal {{meters}} m",
+  "columns.measures": "Cajas / rollos / cortes / retales"
 }

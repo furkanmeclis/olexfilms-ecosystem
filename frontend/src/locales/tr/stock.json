@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Zebra yazıcılar için .zpl dosyası (203 dpi). Görsel logo basılmaz.",
   "label_templates.form.thermal_sizes": "Hazır boyutlar:",
   "columns.remnant": "Ragle",
-  "remnant.badge": "Ragle"
+  "remnant.badge": "Ragle",
+  "measure.boxes": "Kapalı kutu {{boxes}}",
+  "measure.open": "Açık {{rolls}} rulo / {{meters}} m",
+  "measure.cut": "Kesik {{pieces}} parça / {{meters}} m",
+  "measure.remnant": "Ragle {{meters}} m",
+  "columns.measures": "Kutu / rulo / kesik / ragle"
 }

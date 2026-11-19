@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "A .zpl file for Zebra printers (203 dpi). An image logo is not printed.",
   "label_templates.form.thermal_sizes": "Common sizes:",
   "columns.remnant": "Remnant",
-  "remnant.badge": "Remnant"
+  "remnant.badge": "Remnant",
+  "measure.boxes": "Closed boxes {{boxes}}",
+  "measure.open": "Open {{rolls}} rolls / {{meters}} m",
+  "measure.cut": "Cut {{pieces}} pieces / {{meters}} m",
+  "measure.remnant": "Remnant {{meters}} m",
+  "columns.measures": "Boxes / rolls / cut / remnant"
 }
