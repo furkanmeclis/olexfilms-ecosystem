@@ -55,7 +55,7 @@
   "rating.title": "Google रेटिंग",
   "rating.none": "अभी तक कोई रेटिंग नहीं",
   "rating.reviews": "{count} समीक्षाएँ",
-  "rating.place_id": "Google Place ID",
+  "rating.place_id": "Google प्लेस ID",
   "rating.save": "रेटिंग सहेजें",
   "rating.places_readonly": "Places कनेक्ट है; रेटिंग अपने-आप रीफ़्रेश होती है।",
   "rating.manual": "Places कनेक्ट नहीं है, इसलिए रेटिंग मैन्युअल रूप से दर्ज की जा सकती है।",
