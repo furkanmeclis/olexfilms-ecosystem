@@ -331,9 +331,11 @@ ORDER BY sort, name, id;
 
 -- name: UpdateProductRollSettings :one
 -- TEC-1008: default roll length, width, minimum cut and waste of a product.
+-- TEC-1238 (K1): with the "sold by the meter" switch.
 UPDATE products
 SET default_roll_meters = sqlc.narg(default_roll_meters), roll_width_cm = sqlc.narg(roll_width_cm),
-    min_cut_meters = sqlc.narg(min_cut_meters), waste_pct = sqlc.narg(waste_pct)
+    min_cut_meters = sqlc.narg(min_cut_meters), waste_pct = sqlc.narg(waste_pct),
+    sellable_by_meter = sqlc.arg(sellable_by_meter)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
 

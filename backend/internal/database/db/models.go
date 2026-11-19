@@ -2193,6 +2193,8 @@ type OrderItem struct {
 	IsGift                   bool               `json:"is_gift"`
 	PlotterCut               bool               `json:"plotter_cut"`
 	PlotterCredits           pgtype.Int4        `json:"plotter_credits"`
+	SaleMeasure              pgtype.Text        `json:"sale_measure"`
+	LineCredits              pgtype.Int4        `json:"line_credits"`
 }
 
 type OrderItemUnit struct {
@@ -2587,6 +2589,7 @@ type Product struct {
 	WastePct               pgtype.Numeric     `json:"waste_pct"`
 	DealerOrderable        bool               `json:"dealer_orderable"`
 	UsageCredits           int32              `json:"usage_credits"`
+	SellableByMeter        bool               `json:"sellable_by_meter"`
 }
 
 type ProductCategory struct {
@@ -2612,6 +2615,7 @@ type ProductPrice struct {
 	RecommendedSalePrice   pgtype.Numeric     `json:"recommended_sale_price"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	MeterPrice             pgtype.Numeric     `json:"meter_price"`
 }
 
 type ProductSale struct {

@@ -2666,6 +2666,10 @@ type Querier interface {
 	// Every category of the brand in display order (reorder input).
 	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
 	ListProductConsumptionSeries(ctx context.Context, arg ListProductConsumptionSeriesParams) ([]ListProductConsumptionSeriesRow, error)
+	// TEC-1238 (K2): what a buyer's meter price is computed from: the product's
+	// unit type and box length and the center's box and meter list prices in
+	// one currency (NULL when the currency has no list row).
+	ListProductMeterTerms(ctx context.Context, arg ListProductMeterTermsParams) ([]ListProductMeterTermsRow, error)
 	// The seller's warehouse locations holding a product (bin_product_stocks:
 	// pieces/rolls and meters), by location code (TEC-1028: with
 	// warehouse_id, only that warehouse's).
@@ -3477,6 +3481,7 @@ type Querier interface {
 	// shelves and bins are unique by full_code).
 	MigratorFindLocation(ctx context.Context, arg MigratorFindLocationParams) (uuid.UUID, error)
 	MigratorFindOrderByExternalReference(ctx context.Context, arg MigratorFindOrderByExternalReferenceParams) (uuid.UUID, error)
+	// TEC-1238: legacy lines are box (quantity) lines.
 	MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error)
 	MigratorFindProductBySKU(ctx context.Context, arg MigratorFindProductBySKUParams) (uuid.UUID, error)
 	// Products of the brand with the name (case insensitive); the warehouse
@@ -4073,6 +4078,9 @@ type Querier interface {
 	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
 	// The picked part of a line stays on the shipped order.
 	SetOrderItemAmount(ctx context.Context, arg SetOrderItemAmountParams) (OrderItem, error)
+	// TEC-1238 (K3/K12): the credits of a meter line (shared with its plotter
+	// mark).
+	SetOrderItemLineCredits(ctx context.Context, arg SetOrderItemLineCreditsParams) (OrderItem, error)
 	// TEC-1058: the information-only "sent plotter cut" mark of a line.
 	SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPlotterCutParams) (OrderItem, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
@@ -4403,6 +4411,7 @@ type Querier interface {
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	// TEC-1008: default roll length, width, minimum cut and waste of a product.
+	// TEC-1238 (K1): with the "sold by the meter" switch.
 	UpdateProductRollSettings(ctx context.Context, arg UpdateProductRollSettingsParams) (Product, error)
 	UpdateQuoteDeliveryStatus(ctx context.Context, arg UpdateQuoteDeliveryStatusParams) (QuoteDelivery, error)
 	UpdateQuoteTotals(ctx context.Context, arg UpdateQuoteTotalsParams) (Quote, error)

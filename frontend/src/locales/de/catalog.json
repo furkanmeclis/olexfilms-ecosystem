@@ -319,5 +319,15 @@
   "related.empty_stock": "Keine Lagereinheiten dieses Produkts.",
   "fields.usage_credits": "Nutzungsguthaben",
   "products.usage_credits_hint": "In wie vielen Services ein Barcode (Einzelstück) verwendet werden kann. Jede Auswahl in einem Service verbraucht 1 Guthaben; Rollen und feste Barcodes haben kein Guthaben.",
-  "validation.usage_credits": "Geben Sie eine ganze Zahl von 1 bis {{max}} ein"
+  "validation.usage_credits": "Geben Sie eine ganze Zahl von 1 bis {{max}} ein",
+  "roll.sellable_by_meter": "Meterweise verkäuflich",
+  "roll.sellable_by_meter_hint": "Wenn aktiv, wird das Produkt neben dem Karton auch meterweise bestellt; das Stück wird aus einem Karton der Standardlänge geschnitten.",
+  "roll.sellable_needs_meters": "Für den Meterverkauf ist die Standardlänge (Kartonmeter) erforderlich.",
+  "roll.sellable_min_cut_hint": "Ein Mindestzuschnitt wird empfohlen; eine Bestellzeile darf nicht kürzer sein.",
+  "roll.sellable_glorian": "Ein mit Glorian synchronisiertes Produkt kann nicht meterweise verkauft werden.",
+  "roll.sellable_roll_product": "Rollenprodukte werden immer meterweise verkauft.",
+  "roll.sellable_fixed": "Ein Produkt mit festem Barcode kann nicht meterweise verkauft werden.",
+  "prices.meter_price": "Meter-Listenpreis",
+  "prices.meter_computed": "Leer gelassen berechnet das System {{price}} / m (Kartonpreis ÷ Kartonmeter).",
+  "prices.meter_computed_hint": "Leer gelassen wird Kartonpreis ÷ Kartonmeter verwendet."
 }

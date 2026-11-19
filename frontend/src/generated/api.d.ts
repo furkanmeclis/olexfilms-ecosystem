@@ -22010,6 +22010,8 @@ export interface components {
             purchase_price: string | null;
             sale_to_distributor_price: string | null;
             recommended_sale_price: string | null;
+            /** @description TEC-1238 meter list price (converted with the others) */
+            meter_price?: string | null;
         };
         BrandPriceConversion: {
             brand: components["schemas"]["PlatformBrand"];
@@ -24204,6 +24206,8 @@ export interface components {
             width_cm: number | null;
             min_cut_meters: number | null;
             waste_pct: number | null;
+            /** @description TEC-1238 (K1): the product is also sold by the meter, cut from a box of default_meters (always set in a product view; absent in a PUT keeps the switch). Needs a piece product without a fixed barcode, default_meters and no Glorian sync (422 field sellable_by_meter, codes glorian_synced, not_piece_product, fixed_barcode; default_meters box_meters_required). roll_meter products are always sold by the meter and keep it false. */
+            sellable_by_meter?: boolean;
         };
         /** @description TEC-1008 bulk barcode job (super_admin). */
         StockBulkJob: {
@@ -27737,6 +27741,8 @@ export interface components {
             purchase_price_source?: "own" | "list" | "override" | "distributor";
             sale_price?: components["schemas"]["PriceAmount"];
             recommended_sale_price?: components["schemas"]["PriceAmount"];
+            /** @description TEC-1238 (K2): the center's meter list price of a product sold by the meter (center, pricing.sale.read). Absent: a buyer's meter price is computed as its box price / the box length (roll.default_meters). A buyer's meter price keeps the ratio of its box price to the box list price. */
+            meter_price?: components["schemas"]["PriceAmount"];
             /** @description TEC-506. distributor and dealer viewers with pricing.recommended.read: the recommended price in force for the organization's country, else the currency-wide price. */
             recommended?: components["schemas"]["RecommendedPriceRef"];
             /**
@@ -27759,6 +27765,8 @@ export interface components {
             purchase_price?: components["schemas"]["PriceAmount"] | null;
             sale_to_distributor_price?: components["schemas"]["PriceAmount"] | null;
             recommended_sale_price?: components["schemas"]["PriceAmount"] | null;
+            /** @description TEC-1238 (K2) meter list price; null = computed from the box price and length. */
+            meter_price?: components["schemas"]["PriceAmount"] | null;
         };
         PriceInput: {
             price: components["schemas"]["PriceAmount"];
@@ -30129,6 +30137,13 @@ export interface components {
         };
         OrderItem: {
             /**
+             * @description TEC-1238: the line's measure. box counts quantity, meter counts meters (roll_meter products, or a piece product sold by the meter). An order holds one line per product and measure (K10).
+             * @enum {string}
+             */
+            sale_measure: "box" | "meter";
+            /** @description TEC-1238 (K3/K12): usage credits each cut piece of a meter line of a piece product carries (shared with its plotter mark); null on box and roll_meter lines. */
+            line_credits: number | null;
+            /**
              * @description TEC-1064: the buyer's purchase price before the discount (NUMERIC(14,4)). Seller side with pricing.sale.read only; null for the buyer, without a list price or without the permission.
              * @example 100.0000
              */
@@ -30153,9 +30168,9 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             product: components["schemas"]["OrderProductRef"];
-            /** @description Pieces (null for roll_meter products) */
+            /** @description Pieces (box lines; null on meter lines) */
             quantity: number | null;
-            /** @description Meters with two decimals (roll_meter products) */
+            /** @description Meters with two decimals (meter lines) */
             meters: string | null;
             /**
              * @description Buyer's purchase price (NUMERIC(14,4)); locked at approval; null without a price permission (TEC-1050: none of pricing.purchase.read, pricing.sale.read, pricing.sale.write, pricing.recommended.read, pricing.recommended.write; e.g. warehouse roles)
@@ -30476,6 +30491,11 @@ export interface components {
             after: string | null;
             /** @description TEC-1058 — the line's plotter mark after the edit, set when it changed (or on an added marked line) */
             plotter_cut?: boolean;
+            /**
+             * @description TEC-1238 — the line's measure
+             * @enum {string}
+             */
+            sale_measure?: "box" | "meter";
         };
         OrderUserRef: {
             /** Format: uuid */
@@ -30674,10 +30694,17 @@ export interface components {
             discount_pct?: string;
             /** @description TEC-1064: only with buyer_org_uuid; the line is a gift charged 0 (no discount). Ignored on the buyer's own order. */
             is_gift?: boolean;
-            /** @description Pieces (piece/fixed products) */
+            /** @description Pieces (box lines) */
             quantity?: number;
-            /** @description Meters (roll_meter products); a JSON number is accepted too */
+            /** @description Meters (meter lines: roll_meter products, or a piece product sold by the meter); a JSON number is accepted too. TEC-1238 (K6): not shorter than the product's roll.min_cut_meters (422 ORDER_LINE_BELOW_MIN_CUT; a kept line with unchanged meters is not checked again). */
             meters?: string;
+            /**
+             * @description TEC-1238: the line's measure; absent = meter when meters is given, else box. A meter line of a piece product needs roll.sellable_by_meter (422 PRODUCT_NOT_SOLD_BY_METER; a kept draft line stays after the switch is turned off). Lines are matched by product and measure; one product may have a box and a meter line (K10).
+             * @enum {string}
+             */
+            sale_measure?: "box" | "meter";
+            /** @description TEC-1238 (K3): usage credits of each cut piece of a meter line of a piece product; absent = the product's usage_credits (5 by default) on a new line, unchanged on a kept one. Refused on box and roll_meter lines. On such a meter line plotter_credits sets the same field (K12). */
+            line_credits?: number;
             note?: string;
             /** @description TEC-1058: "sent plotter cut" (information only). A new line without it is off; on a kept line of a seller edit, absent keeps the mark. */
             plotter_cut?: boolean;
@@ -30686,7 +30713,7 @@ export interface components {
         };
         OrderItemPatchInput: {
             plotter_cut: boolean;
-            /** @description TEC-1221: usage credits of the line's barcodes; absent keeps, 0 clears; turning plotter_cut off clears it. */
+            /** @description TEC-1221: usage credits of the line's barcodes; absent keeps, 0 clears; turning plotter_cut off clears it. TEC-1238 (K12): on a meter line of a piece product it sets the line's line_credits (0 keeps them). */
             plotter_credits?: number;
         };
         OrderItemsInput: {
@@ -31116,6 +31143,12 @@ export interface components {
             product_uuids: string[];
         };
         OrderQuoteItem: {
+            /** @description TEC-1238 (K1) — the piece product may also be ordered by the meter */
+            sellable_by_meter: boolean;
+            /** @description TEC-1238 (K2) — meter price before the discount (center quote only) */
+            meter_list_unit_price: string | null;
+            /** @description TEC-1238 (K2) — meter price after the default discount: the box price × (meter list ÷ box list), else box price ÷ box length; null when not sold by the meter, without a price or the permission. A roll_meter product's unit_price is already per meter. */
+            meter_unit_price: string | null;
             /** Format: uuid */
             product_uuid: string;
             /** @description Price before the discount (center quote only) */

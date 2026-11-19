@@ -319,5 +319,15 @@
   "related.empty_stock": "No hay unidades de stock de este producto.",
   "fields.usage_credits": "Créditos de uso",
   "products.usage_credits_hint": "En cuántos servicios se puede usar un código de barras (unidad individual). Cada selección en un servicio consume 1 crédito; los rollos y los códigos de barras fijos no tienen créditos.",
-  "validation.usage_credits": "Introduzca un número entero de 1 a {{max}}"
+  "validation.usage_credits": "Introduzca un número entero de 1 a {{max}}",
+  "roll.sellable_by_meter": "Se vende por metro",
+  "roll.sellable_by_meter_hint": "Si está activo, el producto también se pide por metro además de la caja; la pieza se corta de una caja de longitud predeterminada.",
+  "roll.sellable_needs_meters": "Vender por metro requiere la longitud predeterminada (metros de la caja).",
+  "roll.sellable_min_cut_hint": "Se recomienda un corte mínimo; una línea de pedido no puede ser más corta.",
+  "roll.sellable_glorian": "Un producto sincronizado con Glorian no se puede vender por metro.",
+  "roll.sellable_roll_product": "Los productos en rollo siempre se venden por metro.",
+  "roll.sellable_fixed": "Un producto con código de barras fijo no se puede vender por metro.",
+  "prices.meter_price": "Precio de lista por metro",
+  "prices.meter_computed": "Si queda vacío, el sistema calcula {{price}} / m (precio de caja ÷ metros de caja).",
+  "prices.meter_computed_hint": "Si queda vacío, se usa precio de caja ÷ metros de caja."
 }

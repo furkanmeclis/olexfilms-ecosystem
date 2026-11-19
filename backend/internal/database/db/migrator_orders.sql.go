@@ -41,7 +41,8 @@ func (q *Queries) MigratorFindOrderByExternalReference(ctx context.Context, arg 
 }
 
 const migratorFindOrderItem = `-- name: MigratorFindOrderItem :one
-SELECT uuid FROM order_items WHERE order_id = $1 AND product_id = $2
+SELECT uuid FROM order_items
+WHERE order_id = $1 AND product_id = $2 AND sale_measure = 'box'
 `
 
 type MigratorFindOrderItemParams struct {
@@ -49,6 +50,7 @@ type MigratorFindOrderItemParams struct {
 	ProductID int64 `json:"product_id"`
 }
 
+// TEC-1238: legacy lines are box (quantity) lines.
 func (q *Queries) MigratorFindOrderItem(ctx context.Context, arg MigratorFindOrderItemParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, migratorFindOrderItem, arg.OrderID, arg.ProductID)
 	var uuid uuid.UUID

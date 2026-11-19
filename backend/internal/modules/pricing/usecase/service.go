@@ -45,6 +45,8 @@ type Querier interface {
 	ListProductsByUUIDs(ctx context.Context, arg db.ListProductsByUUIDsParams) ([]db.ListProductsByUUIDsRow, error)
 	CountPricedProducts(ctx context.Context, arg db.CountPricedProductsParams) (int64, error)
 	ListProductPricesForProducts(ctx context.Context, arg db.ListProductPricesForProductsParams) ([]db.ListProductPricesForProductsRow, error)
+	// TEC-1238: what a buyer's meter price is computed from.
+	ListProductMeterTerms(ctx context.Context, arg db.ListProductMeterTermsParams) ([]db.ListProductMeterTermsRow, error)
 	ListDistributorOverridesForProducts(ctx context.Context, arg db.ListDistributorOverridesForProductsParams) ([]db.ListDistributorOverridesForProductsRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg db.ListDealerPricesForProductsParams) ([]db.ListDealerPricesForProductsRow, error)
 
@@ -120,6 +122,10 @@ type EffectivePrice struct {
 	// (center: to distributors; distributor: to its dealers).
 	SalePrice            *string `json:"sale_price,omitempty"`
 	RecommendedSalePrice *string `json:"recommended_sale_price,omitempty"`
+	// MeterPrice (TEC-1238, K2) is the center's meter list price of a
+	// product sold by the meter (center, pricing.sale.read). Absent: the
+	// buyer's meter price is computed from its box price / the box length.
+	MeterPrice *string `json:"meter_price,omitempty"`
 	// Recommended (TEC-506) is the recommended price in force for a
 	// distributor's or dealer's country (else the currency-wide price),
 	// with pricing.recommended.read only; DeviationPct compares the
@@ -129,7 +135,8 @@ type EffectivePrice struct {
 }
 
 func (e EffectivePrice) empty() bool {
-	return e.PurchasePrice == nil && e.SalePrice == nil && e.RecommendedSalePrice == nil && e.Recommended == nil
+	return e.PurchasePrice == nil && e.SalePrice == nil && e.RecommendedSalePrice == nil && e.Recommended == nil &&
+		e.MeterPrice == nil
 }
 
 // ProductPriceView is the effective price view of one product.
@@ -269,6 +276,7 @@ func (s *Service) centerPrices(ctx context.Context, v Viewer, ids []int64, at fu
 		}
 		if v.SaleRead {
 			e.SalePrice = numericText(r.SaleToDistributorPrice)
+			e.MeterPrice = numericText(r.MeterPrice)
 		}
 		if v.RecommendedRead {
 			e.RecommendedSalePrice = numericText(r.RecommendedSalePrice)
@@ -509,6 +517,8 @@ type ListPriceInput struct {
 	Purchase          OptionalPrice
 	SaleToDistributor OptionalPrice
 	Recommended       OptionalPrice
+	// Meter (TEC-1238, K2): the meter list price; pricing.sale.write.
+	Meter OptionalPrice
 }
 
 func mergePrice(field string, in OptionalPrice, current pgtype.Numeric) (pgtype.Text, error) {
@@ -576,9 +586,13 @@ func (s *Service) SetListPrice(ctx context.Context, v Viewer, productUUID uuid.U
 	if err != nil {
 		return ProductPriceView{}, err
 	}
+	meter, err := mergePrice("meter_price", in.Meter, current.MeterPrice)
+	if err != nil {
+		return ProductPriceView{}, err
+	}
 	if _, err := s.q.UpsertProductPrice(ctx, db.UpsertProductPriceParams{
 		ProductID: p.ID, BrandID: v.BrandID, Currency: cur,
-		PurchasePrice: purchase, SaleToDistributorPrice: sale, RecommendedSalePrice: rec,
+		PurchasePrice: purchase, SaleToDistributorPrice: sale, RecommendedSalePrice: rec, MeterPrice: meter,
 	}); err != nil {
 		return ProductPriceView{}, fmt.Errorf("upsert price: %w", err)
 	}

@@ -218,7 +218,8 @@ SELECT id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at
+    created_at, updated_at,
+    meter_price
 FROM product_prices
 WHERE product_id = $1 AND brand_id = $2
   AND currency = $3
@@ -243,6 +244,7 @@ func (q *Queries) GetProductPrice(ctx context.Context, arg GetProductPriceParams
 		&i.RecommendedSalePrice,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MeterPrice,
 	)
 	return i, err
 }
@@ -573,12 +575,66 @@ func (q *Queries) ListPricedProducts(ctx context.Context, arg ListPricedProducts
 	return items, nil
 }
 
+const listProductMeterTerms = `-- name: ListProductMeterTerms :many
+SELECT p.id AS product_id, p.unit_type, p.default_roll_meters,
+       pp.sale_to_distributor_price AS list_box_price,
+       pp.meter_price AS list_meter_price
+FROM products p
+LEFT JOIN product_prices pp ON pp.product_id = p.id AND pp.currency = $1::text
+WHERE p.brand_id = $2 AND p.id = ANY($3::bigint[])
+ORDER BY p.id
+`
+
+type ListProductMeterTermsParams struct {
+	Currency   string  `json:"currency"`
+	BrandID    int64   `json:"brand_id"`
+	ProductIds []int64 `json:"product_ids"`
+}
+
+type ListProductMeterTermsRow struct {
+	ProductID         int64          `json:"product_id"`
+	UnitType          string         `json:"unit_type"`
+	DefaultRollMeters pgtype.Numeric `json:"default_roll_meters"`
+	ListBoxPrice      pgtype.Numeric `json:"list_box_price"`
+	ListMeterPrice    pgtype.Numeric `json:"list_meter_price"`
+}
+
+// TEC-1238 (K2): what a buyer's meter price is computed from: the product's
+// unit type and box length and the center's box and meter list prices in
+// one currency (NULL when the currency has no list row).
+func (q *Queries) ListProductMeterTerms(ctx context.Context, arg ListProductMeterTermsParams) ([]ListProductMeterTermsRow, error) {
+	rows, err := q.db.Query(ctx, listProductMeterTerms, arg.Currency, arg.BrandID, arg.ProductIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductMeterTermsRow{}
+	for rows.Next() {
+		var i ListProductMeterTermsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.UnitType,
+			&i.DefaultRollMeters,
+			&i.ListBoxPrice,
+			&i.ListMeterPrice,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductPrices = `-- name: ListProductPrices :many
 SELECT id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at
+    created_at, updated_at,
+    meter_price
 FROM product_prices
 WHERE product_id = $1 AND brand_id = $2
 ORDER BY currency ASC
@@ -608,6 +664,7 @@ func (q *Queries) ListProductPrices(ctx context.Context, arg ListProductPricesPa
 			&i.RecommendedSalePrice,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MeterPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -623,7 +680,8 @@ const listProductPricesForProducts = `-- name: ListProductPricesForProducts :man
 SELECT product_id, currency,
     purchase_price,
     sale_to_distributor_price,
-    recommended_sale_price
+    recommended_sale_price,
+    meter_price
 FROM product_prices
 WHERE brand_id = $1 AND product_id = ANY($2::bigint[])
 ORDER BY product_id ASC, currency ASC
@@ -640,6 +698,7 @@ type ListProductPricesForProductsRow struct {
 	PurchasePrice          pgtype.Numeric `json:"purchase_price"`
 	SaleToDistributorPrice pgtype.Numeric `json:"sale_to_distributor_price"`
 	RecommendedSalePrice   pgtype.Numeric `json:"recommended_sale_price"`
+	MeterPrice             pgtype.Numeric `json:"meter_price"`
 }
 
 func (q *Queries) ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error) {
@@ -657,6 +716,7 @@ func (q *Queries) ListProductPricesForProducts(ctx context.Context, arg ListProd
 			&i.PurchasePrice,
 			&i.SaleToDistributorPrice,
 			&i.RecommendedSalePrice,
+			&i.MeterPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -824,23 +884,28 @@ func (q *Queries) UpsertDistributorPriceOverride(ctx context.Context, arg Upsert
 const upsertProductPrice = `-- name: UpsertProductPrice :one
 
 INSERT INTO product_prices (
-    product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price
+    product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price,
+    meter_price
 )
 VALUES (
     $1, $2, $3,
     $4::text::numeric,
     $5::text::numeric,
-    $6::text::numeric
+    $6::text::numeric,
+    -- TEC-1238 (K2): the meter list price; NULL = computed from the box.
+    $7::text::numeric
 )
 ON CONFLICT (product_id, currency) DO UPDATE SET
     purchase_price = EXCLUDED.purchase_price,
     sale_to_distributor_price = EXCLUDED.sale_to_distributor_price,
-    recommended_sale_price = EXCLUDED.recommended_sale_price
+    recommended_sale_price = EXCLUDED.recommended_sale_price,
+    meter_price = EXCLUDED.meter_price
 RETURNING id, product_id, brand_id, currency,
     purchase_price,
     sale_to_distributor_price,
     recommended_sale_price,
-    created_at, updated_at
+    created_at, updated_at,
+    meter_price
 `
 
 type UpsertProductPriceParams struct {
@@ -850,6 +915,7 @@ type UpsertProductPriceParams struct {
 	PurchasePrice          pgtype.Text `json:"purchase_price"`
 	SaleToDistributorPrice pgtype.Text `json:"sale_to_distributor_price"`
 	RecommendedSalePrice   pgtype.Text `json:"recommended_sale_price"`
+	MeterPrice             pgtype.Text `json:"meter_price"`
 }
 
 // TEC-144: product price list and distributor-specific prices (K8). Prices
@@ -865,6 +931,7 @@ func (q *Queries) UpsertProductPrice(ctx context.Context, arg UpsertProductPrice
 		arg.PurchasePrice,
 		arg.SaleToDistributorPrice,
 		arg.RecommendedSalePrice,
+		arg.MeterPrice,
 	)
 	var i ProductPrice
 	err := row.Scan(
@@ -877,6 +944,7 @@ func (q *Queries) UpsertProductPrice(ctx context.Context, arg UpsertProductPrice
 		&i.RecommendedSalePrice,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MeterPrice,
 	)
 	return i, err
 }

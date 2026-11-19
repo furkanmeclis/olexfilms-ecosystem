@@ -160,6 +160,7 @@ type listPriceBody struct {
 	PurchasePrice          optionalPrice `json:"purchase_price"`
 	SaleToDistributorPrice optionalPrice `json:"sale_to_distributor_price"`
 	RecommendedSalePrice   optionalPrice `json:"recommended_sale_price"`
+	MeterPrice             optionalPrice `json:"meter_price"`
 }
 
 // SetListPrice writes the center list price of one currency
@@ -178,6 +179,7 @@ func (h *Handler) SetListPrice(w http.ResponseWriter, r *http.Request) {
 		Purchase:          in.PurchasePrice.OptionalPrice,
 		SaleToDistributor: in.SaleToDistributorPrice.OptionalPrice,
 		Recommended:       in.RecommendedSalePrice.OptionalPrice,
+		Meter:             in.MeterPrice.OptionalPrice,
 	})
 	if err != nil {
 		writeError(w, r, err)

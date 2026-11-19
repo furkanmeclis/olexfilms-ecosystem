@@ -319,5 +319,15 @@
   "related.empty_stock": "Bu məhsulun stok vahidi yoxdur.",
   "fields.usage_credits": "İstifadə krediti",
   "products.usage_credits_hint": "Bir barkodun (tək vahid) neçə xidmətdə istifadə oluna biləcəyi. Hər xidmət seçimi 1 kredit çıxır; rulonlar və sabit barkodlar kredit daşımır.",
-  "validation.usage_credits": "1 ilə {{max}} arasında tam ədəd daxil edin"
+  "validation.usage_credits": "1 ilə {{max}} arasında tam ədəd daxil edin",
+  "roll.sellable_by_meter": "Metrlə satıla bilər",
+  "roll.sellable_by_meter_hint": "Açıq olduqda məhsul qutu ilə yanaşı metrlə də sifariş edilir; parça standart uzunluqlu qutudan kəsilir.",
+  "roll.sellable_needs_meters": "Metrlə satış üçün standart uzunluq (qutu metri) lazımdır.",
+  "roll.sellable_min_cut_hint": "Minimum kəsim daxil etmək tövsiyə olunur; sifariş sətri bundan qısa ola bilməz.",
+  "roll.sellable_glorian": "Glorian ilə sinxron məhsul metrlə satıla bilməz.",
+  "roll.sellable_roll_product": "Rulon məhsullar həmişə metrlə satılır.",
+  "roll.sellable_fixed": "Sabit barkodlu məhsul metrlə satıla bilməz.",
+  "prices.meter_price": "Metr üzrə siyahı qiyməti",
+  "prices.meter_computed": "Boş qalsa, sistem {{price}} / m hesablayır (qutu qiyməti ÷ qutu metri).",
+  "prices.meter_computed_hint": "Boş qalsa, qutu qiyməti ÷ qutu metri istifadə olunur."
 }

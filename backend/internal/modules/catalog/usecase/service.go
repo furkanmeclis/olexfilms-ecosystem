@@ -417,6 +417,14 @@ func (s *Service) UpdateProduct(ctx context.Context, org orgctx.Scope, id uuid.U
 	if locked := lockedChanges(cur, p, cat.ID); len(locked) > 0 {
 		return model.Product{}, &LockedError{Fields: locked}
 	}
+	if cur.SellableByMeter {
+		// TEC-1238: the switch is turned off first (roll card).
+		verr := &ValidationError{}
+		checkSellableByMeter(verr, p.UnitType, p.UsesFixedBarcode, false)
+		if err := verr.orNil(); err != nil {
+			return model.Product{}, err
+		}
+	}
 	row, err := s.store.UpdateProduct(ctx, p.updateParams(cur.ID, org.BrandID, cat.ID))
 	if err != nil {
 		return model.Product{}, mapDBError(err)
@@ -778,6 +786,7 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 	if locked == nil {
 		locked = []string{}
 	}
+	sellable := r.SellableByMeter
 	return model.Product{
 		UUID: r.Uuid, Category: model.CategoryRef{UUID: cat.Uuid, Name: cat.Name},
 		SKU: r.Sku, Name: r.Name, DescriptionMD: r.DescriptionMd,
@@ -788,13 +797,42 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 		Roll: model.RollSettings{
 			DefaultMeters: numericPtr(r.DefaultRollMeters), WidthCm: numericPtr(r.RollWidthCm),
 			MinCutMeters: numericPtr(r.MinCutMeters), WastePct: numericPtr(r.WastePct),
+			SellableByMeter: &sellable,
 		},
 		CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,
 	}
 }
 
+// Field error codes of the "sold by the meter" switch (TEC-1238, K1).
+const (
+	// CodeGlorianSynced: a product synced from Glorian is not sold by the
+	// meter (its cut pieces would be lost to the hub sync).
+	CodeGlorianSynced = "glorian_synced"
+	// CodeNotPieceProduct: a roll_meter product is always sold by the
+	// meter; the switch is for piece (box) products.
+	CodeNotPieceProduct = "not_piece_product"
+	// CodeFixedBarcode: a fixed barcode product has no serial box to cut.
+	CodeFixedBarcode = "fixed_barcode"
+	// CodeBoxMetersRequired: the box length (default_meters) is needed.
+	CodeBoxMetersRequired = "box_meters_required"
+)
+
+// checkSellableByMeter adds the reasons a product cannot be sold by the
+// meter (chk_products_sellable_by_meter).
+func checkSellableByMeter(verr *ValidationError, unitType string, fixed, synced bool) {
+	switch {
+	case synced:
+		verr.add("sellable_by_meter", CodeGlorianSynced, "a product synced from Glorian is not sold by the meter")
+	case unitType != model.UnitPiece:
+		verr.add("sellable_by_meter", CodeNotPieceProduct, "a roll product is always sold by the meter")
+	case fixed:
+		verr.add("sellable_by_meter", CodeFixedBarcode, "a fixed barcode product is not sold by the meter")
+	}
+}
+
 // UpdateRollSettings replaces the roll defaults of a product (center only,
-// TEC-1008). Nil clears a value.
+// TEC-1008). Nil clears a value; a nil SellableByMeter keeps the switch
+// (TEC-1238).
 func (s *Service) UpdateRollSettings(ctx context.Context, org orgctx.Scope, id uuid.UUID, in model.RollSettings) (model.Product, error) {
 	if err := requireCenter(org); err != nil {
 		return model.Product{}, err
@@ -814,12 +852,27 @@ func (s *Service) UpdateRollSettings(ctx context.Context, org orgctx.Scope, id u
 	if in.DefaultMeters != nil && in.MinCutMeters != nil && *in.MinCutMeters > *in.DefaultMeters {
 		verr.add("min_cut_meters", "out_of_range", "the minimum cut is longer than the roll")
 	}
+	cur, err := s.product(ctx, org.BrandID, id)
+	if err != nil {
+		return model.Product{}, err
+	}
+	sellable := cur.SellableByMeter
+	if in.SellableByMeter != nil {
+		sellable = *in.SellableByMeter
+	}
+	if sellable {
+		checkSellableByMeter(verr, cur.UnitType, cur.UsesFixedBarcode, cur.ConnectionID.Valid)
+		if in.DefaultMeters == nil {
+			verr.add("default_meters", CodeBoxMetersRequired, "a product sold by the meter needs its box length")
+		}
+	}
 	if err := verr.orNil(); err != nil {
 		return model.Product{}, err
 	}
 	row, err := s.store.UpdateProductRollSettings(ctx, db.UpdateProductRollSettingsParams{
 		Uuid: id, BrandID: org.BrandID, DefaultRollMeters: numericArg(in.DefaultMeters),
 		RollWidthCm: numericArg(in.WidthCm), MinCutMeters: numericArg(in.MinCutMeters), WastePct: numericArg(in.WastePct),
+		SellableByMeter: sellable,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return model.Product{}, ErrNotFound

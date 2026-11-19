@@ -773,7 +773,8 @@ func (CreateOrderDraft) Spec() Spec {
 	return Spec{
 		Name: ToolCreateOrderDraft,
 		Description: "Propose a DRAFT order of your organization to its supplier (product uuids from search_products; " +
-			"quantity for piece products, meters for roll products). The draft is never submitted: the user reviews " +
+			"quantity for piece products (boxes), meters for roll products and for products sold by the meter; " +
+			"one product may have a box line and a meter line). The draft is never submitted: the user reviews " +
 			"and submits it in the orders screen. The user confirms the draft on a card before it is saved.",
 		InputSchema: object(map[string]any{
 			"items": map[string]any{"type": "array", "minItems": 1, "maxItems": maxOrderDraftItems, "items": object(map[string]any{

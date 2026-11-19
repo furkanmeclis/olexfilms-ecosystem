@@ -5,7 +5,7 @@ import type {
 } from "@/features/catalog/services/pricing.service";
 
 export type PriceField =
-  "purchase_price" | "sale_price" | "recommended_sale_price";
+  "purchase_price" | "sale_price" | "recommended_sale_price" | "meter_price";
 
 /**
  * Columns a viewer type may ever see (K8, TEC-146 EffectivePrice):
@@ -14,7 +14,12 @@ export type PriceField =
  * dealer: its purchase only.
  */
 const VIEWER_FIELDS: Record<PriceViewer, PriceField[]> = {
-  center: ["purchase_price", "sale_price", "recommended_sale_price"],
+  center: [
+    "purchase_price",
+    "sale_price",
+    "recommended_sale_price",
+    "meter_price",
+  ],
   distributor: ["purchase_price", "sale_price"],
   dealer: ["purchase_price"],
 };
@@ -30,6 +35,7 @@ const LABEL_KEYS: Record<PriceViewer, Partial<Record<PriceField, string>>> = {
     purchase_price: "catalog.prices.center_purchase",
     sale_price: "catalog.prices.center_sale",
     recommended_sale_price: "catalog.prices.recommended",
+    meter_price: "catalog.prices.meter_price",
   },
   distributor: {
     purchase_price: "catalog.prices.my_purchase",
@@ -97,5 +103,24 @@ export function listPriceBody(
     );
     if (rec !== undefined) body.recommended_sale_price = rec;
   }
+  // TEC-1238 (K2): the meter list price; only sent when the dialog shows it.
+  if ("meter_price" in values) {
+    const meter = pick(values.meter_price, original?.meter_price);
+    if (meter !== undefined) body.meter_price = meter;
+  }
   return body;
+}
+
+/**
+ * TEC-1238 (K2): the meter price the system computes when the meter list
+ * price is empty: box price ÷ box length (400 / 15 = 26.6667). null when
+ * either is missing.
+ */
+export function computedMeterPrice(
+  boxPrice: string | undefined | null,
+  boxMeters: number | null | undefined,
+): number | null {
+  const box = priceNumber(boxPrice);
+  if (box === null || !boxMeters || boxMeters <= 0) return null;
+  return Math.round((box / boxMeters) * 10000) / 10000;
 }

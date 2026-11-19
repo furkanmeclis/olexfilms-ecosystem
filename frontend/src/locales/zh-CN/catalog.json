@@ -319,5 +319,15 @@
   "related.empty_stock": "该产品没有库存单元。",
   "fields.usage_credits": "使用额度",
   "products.usage_credits_hint": "一个条码（单件单位）可用于多少次服务。每次在服务中选择扣除 1 个额度；卷材和固定条码没有额度。",
-  "validation.usage_credits": "请输入 1 到 {{max}} 之间的整数"
+  "validation.usage_credits": "请输入 1 到 {{max}} 之间的整数",
+  "roll.sellable_by_meter": "可按米销售",
+  "roll.sellable_by_meter_hint": "开启后，该产品除整箱外还可按米订购；按默认长度的整箱裁切。",
+  "roll.sellable_needs_meters": "按米销售需要默认长度（每箱米数）。",
+  "roll.sellable_min_cut_hint": "建议填写最小裁切长度；订单行不能更短。",
+  "roll.sellable_glorian": "与 Glorian 同步的产品不能按米销售。",
+  "roll.sellable_roll_product": "卷材产品始终按米销售。",
+  "roll.sellable_fixed": "固定条码产品不能按米销售。",
+  "prices.meter_price": "每米目录价",
+  "prices.meter_computed": "留空时系统计算为 {{price}} / m（整箱价格 ÷ 每箱米数）。",
+  "prices.meter_computed_hint": "留空时使用整箱价格 ÷ 每箱米数。"
 }

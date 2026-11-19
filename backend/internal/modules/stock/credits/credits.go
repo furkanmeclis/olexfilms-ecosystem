@@ -56,10 +56,39 @@ var (
 	ErrInvalidAmount = errors.New("credits: invalid amount")
 )
 
-// Applies reports whether the unit carries credits: a serial unit without
-// meters.
+// Applies reports whether the unit carries credits by its shape alone: a
+// serial unit without meters. A cut piece (a serial unit with meters) may
+// also carry credits — those of the meter line it was shipped on (TEC-1238,
+// K3/K4) — which only the database knows: see Carries.
 func Applies(u db.Unit) bool {
 	return u.UnitKind == "serial" && !u.InitialMeters.Valid
+}
+
+// mayCarry: a serial unit; whether one with meters carries credits is
+// decided by unit_credit_default (its meter line's line_credits).
+func mayCarry(u db.Unit) bool { return u.UnitKind == "serial" }
+
+// Carries reports whether the unit carries credits: a credit piece
+// (Applies) or a cut piece shipped on a meter line with line credits
+// (TEC-1238). Rolls and cut pieces without such a line keep their meter
+// consumption.
+func Carries(ctx context.Context, q *db.Queries, u db.Unit) (bool, error) {
+	if Applies(u) {
+		return true, nil
+	}
+	if !mayCarry(u) {
+		return false, nil
+	}
+	if _, err := q.GetUnitCreditBalance(ctx, u.ID); err == nil {
+		return true, nil
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return false, fmt.Errorf("credits: balance: %w", err)
+	}
+	def, err := q.GetUnitCreditDefault(ctx, u.ID)
+	if err != nil {
+		return false, fmt.Errorf("credits: default: %w", err)
+	}
+	return def >= 0, nil
 }
 
 // Balance is the credit state of a unit. Opened is false while the unit has
@@ -77,7 +106,7 @@ func (b Balance) Exhausted() bool { return b.Remaining <= 0 }
 // Get reads the credit state of a unit without opening it. ok is false
 // for a unit that carries no credits.
 func Get(ctx context.Context, q *db.Queries, u db.Unit) (Balance, bool, error) {
-	if !Applies(u) {
+	if !mayCarry(u) {
 		return Balance{}, false, nil
 	}
 	b, err := q.GetUnitCreditBalance(ctx, u.ID)
@@ -121,7 +150,7 @@ type entry struct {
 
 // open locks (or opens) the balance of a credit unit.
 func open(ctx context.Context, q *db.Queries, u db.Unit, a Actor) (db.UnitCreditBalance, error) {
-	if !Applies(u) {
+	if !mayCarry(u) {
 		return db.UnitCreditBalance{}, ErrNotApplicable
 	}
 	b, err := q.LockUnitCreditBalance(ctx, u.ID)

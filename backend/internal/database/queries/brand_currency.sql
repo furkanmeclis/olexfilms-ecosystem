@@ -84,10 +84,12 @@ SELECT p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name,
        src.purchase_price AS purchase_price,
        src.sale_to_distributor_price AS sale_to_distributor_price,
        src.recommended_sale_price AS recommended_sale_price,
+       src.meter_price AS meter_price,
        (dst.id IS NOT NULL)::bool AS target_exists,
        dst.purchase_price AS target_purchase_price,
        dst.sale_to_distributor_price AS target_sale_to_distributor_price,
-       dst.recommended_sale_price AS target_recommended_sale_price
+       dst.recommended_sale_price AS target_recommended_sale_price,
+       dst.meter_price AS target_meter_price
 FROM product_prices src
 JOIN products p ON p.id = src.product_id AND p.brand_id = src.brand_id
 LEFT JOIN product_prices dst ON dst.product_id = src.product_id AND dst.currency = sqlc.arg(target)::text
@@ -97,14 +99,17 @@ WHERE src.brand_id = sqlc.arg(brand_id)
 ORDER BY p.sku, p.id;
 
 -- name: UpsertConvertedPrice :exec
-INSERT INTO product_prices (product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price)
+INSERT INTO product_prices (product_id, brand_id, currency, purchase_price, sale_to_distributor_price, recommended_sale_price,
+                            meter_price)
 VALUES (sqlc.arg(product_id), sqlc.arg(brand_id), sqlc.arg(currency)::text,
         sqlc.narg(purchase_price)::numeric, sqlc.narg(sale_to_distributor_price)::numeric,
-        sqlc.narg(recommended_sale_price)::numeric)
+        sqlc.narg(recommended_sale_price)::numeric, sqlc.narg(meter_price)::numeric)
 ON CONFLICT (product_id, currency) DO UPDATE SET
     purchase_price = EXCLUDED.purchase_price,
     sale_to_distributor_price = EXCLUDED.sale_to_distributor_price,
-    recommended_sale_price = EXCLUDED.recommended_sale_price;
+    recommended_sale_price = EXCLUDED.recommended_sale_price,
+    -- TEC-1238: the meter list price is converted with the others.
+    meter_price = EXCLUDED.meter_price;
 
 -- name: GetSessionCurrencies :one
 -- /auth/me (TEC-1214): the brand currency (price and order currency) of the

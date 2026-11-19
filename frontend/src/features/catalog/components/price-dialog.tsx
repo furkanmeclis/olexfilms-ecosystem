@@ -25,6 +25,8 @@ export type PriceDialogField = {
   labelKey: string;
   /** Required fields reject an empty value; optional empty means "clear". */
   required?: boolean;
+  /** Help text under the field (TEC-1238: the computed meter price). */
+  description?: string;
 };
 
 export type PriceDialogValues = Record<string, string>;
@@ -142,6 +144,7 @@ export function PriceDialog({
                 name={field.name}
                 inputMode="decimal"
                 label={t(field.labelKey)}
+                description={field.description}
                 placeholder="0.00"
               />
             ))}

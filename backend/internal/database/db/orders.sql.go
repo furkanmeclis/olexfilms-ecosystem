@@ -535,16 +535,18 @@ const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (
     order_id, organization_id, brand_id, product_id, quantity, meters,
     unit_price, price_source, recommended_price_snapshot, line_total, note,
-    list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+    list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, line_credits
 )
 SELECT o.id, o.organization_id, o.brand_id, $1, $2, $3,
        $4, $5, $6,
        $7, $8,
        $9, $10, COALESCE($11::boolean, false),
-       $12, $13
+       $12, $13,
+       -- TEC-1238 (K3): the credits of a meter line's cut pieces.
+       $14
 FROM orders o
-WHERE o.id = $14
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+WHERE o.id = $15
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
 `
 
 type CreateOrderItemParams struct {
@@ -561,6 +563,7 @@ type CreateOrderItemParams struct {
 	IsGift                   pgtype.Bool    `json:"is_gift"`
 	PlotterCut               bool           `json:"plotter_cut"`
 	PlotterCredits           pgtype.Int4    `json:"plotter_credits"`
+	LineCredits              pgtype.Int4    `json:"line_credits"`
 	OrderID                  int64          `json:"order_id"`
 }
 
@@ -583,6 +586,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.IsGift,
 		arg.PlotterCut,
 		arg.PlotterCredits,
+		arg.LineCredits,
 		arg.OrderID,
 	)
 	var i OrderItem
@@ -607,6 +611,8 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
@@ -1120,7 +1126,7 @@ func (q *Queries) GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) 
 }
 
 const getOrderItem = `-- name: GetOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -1153,12 +1159,14 @@ func (q *Queries) GetOrderItem(ctx context.Context, arg GetOrderItemParams) (Ord
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
 
 const getOrderItemByUUID = `-- name: GetOrderItemByUUID :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -1191,6 +1199,8 @@ func (q *Queries) GetOrderItemByUUID(ctx context.Context, arg GetOrderItemByUUID
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
@@ -1684,7 +1694,7 @@ func (q *Queries) ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) 
 }
 
 const listOrderItems = `-- name: ListOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
 WHERE order_id = $1
 ORDER BY id
 `
@@ -1719,6 +1729,8 @@ func (q *Queries) ListOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.IsGift,
 			&i.PlotterCut,
 			&i.PlotterCredits,
+			&i.SaleMeasure,
+			&i.LineCredits,
 		); err != nil {
 			return nil, err
 		}
@@ -2410,7 +2422,7 @@ func (q *Queries) LockOrderByUUID(ctx context.Context, arg LockOrderByUUIDParams
 }
 
 const lockOrderItem = `-- name: LockOrderItem :one
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -2444,12 +2456,14 @@ func (q *Queries) LockOrderItem(ctx context.Context, arg LockOrderItemParams) (O
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
 
 const lockOrderItems = `-- name: LockOrderItems :many
-SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits FROM order_items
+SELECT id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits FROM order_items
 WHERE order_id = $1
 ORDER BY id
 FOR UPDATE
@@ -2485,6 +2499,8 @@ func (q *Queries) LockOrderItems(ctx context.Context, orderID int64) ([]OrderIte
 			&i.IsGift,
 			&i.PlotterCut,
 			&i.PlotterCredits,
+			&i.SaleMeasure,
+			&i.LineCredits,
 		); err != nil {
 			return nil, err
 		}
@@ -2896,13 +2912,57 @@ func (q *Queries) SetOrderExternalReference(ctx context.Context, arg SetOrderExt
 	return i, err
 }
 
+const setOrderItemLineCredits = `-- name: SetOrderItemLineCredits :one
+UPDATE order_items
+SET line_credits = $1
+WHERE id = $2
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
+`
+
+type SetOrderItemLineCreditsParams struct {
+	LineCredits pgtype.Int4 `json:"line_credits"`
+	ID          int64       `json:"id"`
+}
+
+// TEC-1238 (K3/K12): the credits of a meter line (shared with its plotter
+// mark).
+func (q *Queries) SetOrderItemLineCredits(ctx context.Context, arg SetOrderItemLineCreditsParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, setOrderItemLineCredits, arg.LineCredits, arg.ID)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.Meters,
+		&i.UnitPrice,
+		&i.PriceSource,
+		&i.RecommendedPriceSnapshot,
+		&i.LineTotal,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ListUnitPrice,
+		&i.DiscountPct,
+		&i.IsGift,
+		&i.PlotterCut,
+		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
+	)
+	return i, err
+}
+
 const setOrderItemPlotterCut = `-- name: SetOrderItemPlotterCut :one
 UPDATE order_items
 SET plotter_cut = $1,
     -- TEC-1221: the custom credits live only on a plotter cut line.
     plotter_credits = CASE WHEN $1::bool THEN $2::int END
 WHERE id = $3
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
 `
 
 type SetOrderItemPlotterCutParams struct {
@@ -2936,6 +2996,8 @@ func (q *Queries) SetOrderItemPlotterCut(ctx context.Context, arg SetOrderItemPl
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
@@ -3524,7 +3586,7 @@ SET quantity = $1,
     list_unit_price = $8,
     discount_pct = $9
 WHERE id = $10
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
 `
 
 type UpdateOrderItemParams struct {
@@ -3575,6 +3637,8 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }

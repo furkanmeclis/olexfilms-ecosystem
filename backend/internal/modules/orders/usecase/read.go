@@ -72,9 +72,16 @@ type ItemView struct {
 	PlotterCut bool `json:"plotter_cut"`
 	// PlotterCredits (TEC-1221): the usage credits of the units of a
 	// plotter cut line; nil = the product default.
-	PlotterCredits *int32             `json:"plotter_credits"`
-	Assigned       string             `json:"assigned"`
-	Units          []AssignedUnitView `json:"units"`
+	PlotterCredits *int32 `json:"plotter_credits"`
+	// SaleMeasure (TEC-1238): box (quantity) or meter (meters); one order
+	// may hold a box and a meter line of the same product (K10).
+	SaleMeasure string `json:"sale_measure"`
+	// LineCredits (TEC-1238, K3/K12): the usage credits each cut piece of
+	// a meter line of a piece product carries (shared with its plotter
+	// mark); null on box and roll lines.
+	LineCredits *int32             `json:"line_credits"`
+	Assigned    string             `json:"assigned"`
+	Units       []AssignedUnitView `json:"units"`
 	// Invoiced: the line is on a manual invoice record (TEC-1030);
 	// InvoiceNo and InvoiceUUID name it.
 	Invoiced    bool       `json:"invoiced"`
@@ -406,6 +413,7 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 			PriceMissing: it.PriceSource == PriceSourceMissing && !it.IsGift,
 			IsGift:       it.IsGift,
 			PlotterCut:   it.PlotterCut, PlotterCredits: int4Ptr(it.PlotterCredits),
+			SaleMeasure: itemMeasure(it), LineCredits: int4Ptr(it.LineCredits),
 			LineTotal: textRef(numericText(it.LineTotal, 2)), Note: textPtr(it.Note),
 		}
 		if showTerms {

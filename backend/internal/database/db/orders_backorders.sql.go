@@ -446,7 +446,7 @@ const moveOrderItemToOrder = `-- name: MoveOrderItemToOrder :one
 UPDATE order_items
 SET order_id = $1
 WHERE id = $2
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
 `
 
 type MoveOrderItemToOrderParams struct {
@@ -480,6 +480,8 @@ func (q *Queries) MoveOrderItemToOrder(ctx context.Context, arg MoveOrderItemToO
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }
@@ -539,7 +541,7 @@ SET quantity = $1,
     meters = $2,
     line_total = $3
 WHERE id = $4
-RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits
+RETURNING id, uuid, order_id, organization_id, brand_id, product_id, quantity, meters, unit_price, price_source, recommended_price_snapshot, line_total, note, created_at, updated_at, list_unit_price, discount_pct, is_gift, plotter_cut, plotter_credits, sale_measure, line_credits
 `
 
 type SetOrderItemAmountParams struct {
@@ -579,6 +581,8 @@ func (q *Queries) SetOrderItemAmount(ctx context.Context, arg SetOrderItemAmount
 		&i.IsGift,
 		&i.PlotterCut,
 		&i.PlotterCredits,
+		&i.SaleMeasure,
+		&i.LineCredits,
 	)
 	return i, err
 }

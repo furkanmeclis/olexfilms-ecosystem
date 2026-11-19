@@ -256,6 +256,7 @@ func splitLine(ctx context.Context, q *db.Queries, b db.Order, sp pickedSplit) e
 		UnitPrice: it.UnitPrice, PriceSource: it.PriceSource, RecommendedPriceSnapshot: it.RecommendedPriceSnapshot,
 		LineTotal: restNum, Note: it.Note, ListUnitPrice: it.ListUnitPrice, DiscountPct: it.DiscountPct,
 		IsGift: pgtype.Bool{Bool: it.IsGift, Valid: true}, PlotterCut: it.PlotterCut, PlotterCredits: it.PlotterCredits,
+		LineCredits: it.LineCredits,
 	}); err != nil {
 		return fmt.Errorf("orders: backorder line: %w", err)
 	}
