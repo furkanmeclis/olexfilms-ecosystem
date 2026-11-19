@@ -5,6 +5,20 @@ import type {
   OrderStatus,
 } from "@/features/orders/services/orders.service";
 
+/**
+ * What the assigned units cover of a line: the assigned amount less the
+ * free extra meters of a whole roll (TEC-1250, K7: a 3.5 m roll on a 3 m
+ * line covers 3 m).
+ */
+export function lineCovered(item: {
+  assigned?: string | null;
+  excess_meters?: string | null;
+}): number {
+  const assigned = Number(item.assigned ?? 0) || 0;
+  const excess = Number(item.excess_meters ?? 0) || 0;
+  return Math.max(assigned - Math.max(excess, 0), 0);
+}
+
 /** API limits of OrderCreateInput / OrderItemInput. */
 export const MAX_ORDER_LINES = 200;
 export const MAX_QUANTITY = 1_000_000;
@@ -532,7 +546,7 @@ export function linesBelowAssigned(
   const out = new Set<string>();
   for (const line of lines) {
     const item = orderItemOf(order, line);
-    const assigned = Number(item?.assigned ?? 0);
+    const assigned = item ? lineCovered(item) : 0;
     if (!item || !(assigned > 0)) continue;
     const v = Number(normalizeAmount(line.amount));
     if (Number.isFinite(v) && v < assigned - 1e-9) out.add(lineKey(line));

@@ -498,6 +498,7 @@ var deCatalog = map[string]string{
 	"orders.pdf.barcodes":                     "Strichcodes",
 	"orders.pdf.unit_pcs":                     "Stk.",
 	"orders.pdf.line_credits":                 "Nutzungsguthaben: {{credits}} je Stück",
+	"orders.pdf.excess_free":                  "Zusätzliche {{meters}} kostenlos",
 	"orders.pdf.delivered_by":                 "Übergeben von",
 	"orders.pdf.received_by":                  "Empfangen von",
 	"orders.pdf.generated_at":                 "Erstellt am",

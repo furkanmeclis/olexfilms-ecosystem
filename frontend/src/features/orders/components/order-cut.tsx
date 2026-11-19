@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, PackageOpen, Scissors } from "lucide-react";
+import { AlertTriangle, Info, PackageOpen, Scissors } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { toast } from "@/lib/toast";
 
@@ -50,12 +50,27 @@ export function cutMeters(raw: string): string {
   return /^\d{1,8}(\.\d{1,2})?$/.test(v) && Number(v) > 0 ? v : "";
 }
 
-/** The warnings the confirmation shows for a preview (keys and values). */
+/** TEC-1250 (K7): free extra meters of a whole roll; 0 when none. */
+export function excessOf(v: { excess_meters?: string | null }): number {
+  const n = Number(v.excess_meters ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * The notes the confirmation shows for a preview (keys and values). A
+ * warning needs attention; an info (TEC-1250, K7: the whole roll goes
+ * with free extra meters) is confirmed with the same single step.
+ */
 export function cutWarnings(p: OrderCutPreview): {
   key: string;
   values: Record<string, string>;
+  tone: "warning" | "info";
 }[] {
-  const out: { key: string; values: Record<string, string> }[] = [];
+  const out: {
+    key: string;
+    values: Record<string, string>;
+    tone: "warning" | "info";
+  }[] = [];
   if (p.closed_box) {
     out.push({
       key: p.whole ? "orders.cut.box_whole" : "orders.cut.box_open",
@@ -64,21 +79,43 @@ export function cutWarnings(p: OrderCutPreview): {
         rest: p.remaining_meters,
         box: p.source_meters,
       },
+      tone: "warning",
+    });
+  }
+  if (excessOf(p) > 0) {
+    out.push({
+      key: "orders.cut.whole_excess",
+      values: {
+        excess: p.excess_meters,
+        min: p.min_cut_meters ?? "",
+        whole: p.source_meters,
+      },
+      tone: "info",
     });
   }
   if (p.remnant) {
     out.push({
       key: "orders.cut.remnant",
       values: { rest: p.remaining_meters, min: p.min_cut_meters ?? "" },
+      tone: "warning",
     });
   }
   if (p.partial) {
     out.push({
       key: "orders.cut.partial_short",
       values: { cut: p.cut_meters, missing: p.missing_meters },
+      tone: "warning",
     });
   }
   return out;
+}
+
+/** The confirm button of a preview: cut, or assign the whole roll / box. */
+export function confirmKey(p: OrderCutPreview | undefined): string {
+  if (p?.closed_box) {
+    return p.whole ? "orders.cut.confirm_box_whole" : "orders.cut.confirm_box";
+  }
+  return p?.whole ? "orders.cut.confirm_whole" : "orders.cut.confirm";
 }
 
 function newKey(): string {
@@ -245,7 +282,7 @@ export function CutDialog({
                 </div>
                 <div>
                   <dt className="text-muted-foreground text-xs">
-                    {t("orders.cut.cut")}
+                    {p.whole ? t("orders.cut.goes") : t("orders.cut.cut")}
                   </dt>
                   <dd
                     className="text-primary text-lg font-semibold tabular-nums"
@@ -263,16 +300,27 @@ export function CutDialog({
                   </dd>
                 </div>
               </dl>
-              {cutWarnings(p).map((w) => (
-                <p
-                  key={w.key}
-                  className="flex items-start gap-2 rounded bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
-                  data-testid="cut-warning"
-                >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {t(w.key, w.values)}
-                </p>
-              ))}
+              {cutWarnings(p).map((w) =>
+                w.tone === "info" ? (
+                  <p
+                    key={w.key}
+                    className="flex items-start gap-2 rounded bg-sky-50 p-2 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-100"
+                    data-testid="cut-info"
+                  >
+                    <Info className="mt-0.5 size-4 shrink-0" />
+                    {t(w.key, w.values)}
+                  </p>
+                ) : (
+                  <p
+                    key={w.key}
+                    className="flex items-start gap-2 rounded bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+                    data-testid="cut-warning"
+                  >
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    {t(w.key, w.values)}
+                  </p>
+                ),
+              )}
               <p className="text-sm" data-testid="cut-credits">
                 {t("orders.cut.credits", {
                   credits: String(p.credits),
@@ -368,9 +416,7 @@ export function CutDialog({
               disabled={!ready || mutation.isPending}
               data-testid="cut-confirm"
             >
-              {p?.closed_box
-                ? t("orders.cut.confirm_box")
-                : t("orders.cut.confirm")}
+              {t(confirmKey(p))}
             </Button>
           </DialogFooter>
         </form>

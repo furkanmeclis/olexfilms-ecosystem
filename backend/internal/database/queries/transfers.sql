@@ -215,7 +215,9 @@ ORDER BY om.user_id;
 -- name: GetUnitLastOrderPrice :one
 -- TEC-1244: meter_line tells the price is per meter (a meter line of a
 -- roll or of a piece product sold by the meter), else per piece / box.
-SELECT oi.id AS order_item_id, oi.unit_price, (oi.sale_measure = 'meter')::bool AS meter_line
+SELECT oi.id AS order_item_id, oi.unit_price, (oi.sale_measure = 'meter')::bool AS meter_line,
+       -- TEC-1250 (K7): the line's meters cap a piece that went whole.
+       oi.meters AS line_meters
 FROM order_item_units oiu
 JOIN order_items oi ON oi.id = oiu.order_item_id
 JOIN orders o ON o.id = oi.order_id

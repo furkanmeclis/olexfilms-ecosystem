@@ -157,7 +157,8 @@ WITH svc AS (
     JOIN service_items si ON si.service_id = svc.id
     JOIN units u ON u.id = si.unit_id
     LEFT JOIN LATERAL (
-        SELECT oi.unit_price, oiu.quantity, oiu.meters
+        -- TEC-1250 (K7): free extra meters of a whole roll cost nothing.
+        SELECT oi.unit_price, oiu.quantity, LEAST(oiu.meters, oi.meters) AS meters
         FROM order_item_units oiu
         JOIN order_items oi ON oi.id = oiu.order_item_id
         JOIN orders o ON o.id = oi.order_id

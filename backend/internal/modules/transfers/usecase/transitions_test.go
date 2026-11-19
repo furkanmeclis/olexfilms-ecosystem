@@ -148,19 +148,26 @@ func TestOrderLineAmount(t *testing.T) {
 	piece := db.ListTransferRequestItemsRow{Meters: m, ProductUnitType: "piece"}
 	box := db.ListTransferRequestItemsRow{ProductUnitType: "piece"}
 	fixed := db.ListTransferRequestItemsRow{Quantity: pgtype.Int4{Int32: 4, Valid: true}}
+	three, _ := numeric("3.00")
+	four, _ := numeric("4.00")
 	cases := []struct {
 		row   db.ListTransferRequestItemsRow
 		meter bool
+		line  pgtype.Numeric
 		want  *big.Rat
 	}{
-		{piece, true, big.NewRat(7, 2)},
-		{piece, false, big.NewRat(1, 1)},
-		{box, false, big.NewRat(1, 1)},
-		{box, true, big.NewRat(1, 1)},
-		{fixed, false, big.NewRat(4, 1)},
+		{piece, true, pgtype.Numeric{}, big.NewRat(7, 2)},
+		{piece, false, pgtype.Numeric{}, big.NewRat(1, 1)},
+		{box, false, pgtype.Numeric{}, big.NewRat(1, 1)},
+		{box, true, pgtype.Numeric{}, big.NewRat(1, 1)},
+		{fixed, false, pgtype.Numeric{}, big.NewRat(4, 1)},
+		// TEC-1250 (K7): a 3.5 m roll that went whole on a 3 m line is
+		// priced 3 m; a piece within the line keeps its meters.
+		{piece, true, three, big.NewRat(3, 1)},
+		{piece, true, four, big.NewRat(7, 2)},
 	}
 	for i, c := range cases {
-		if got := orderLineAmount(c.row, c.meter); got.Cmp(c.want) != 0 {
+		if got := orderLineAmount(c.row, c.meter, c.line); got.Cmp(c.want) != 0 {
 			t.Errorf("case %d: %s, want %s", i, got.RatString(), c.want.RatString())
 		}
 	}

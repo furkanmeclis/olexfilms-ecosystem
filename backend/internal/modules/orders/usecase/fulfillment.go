@@ -125,8 +125,24 @@ func reservationAmount(r db.StockReservation) *big.Rat {
 	return new(big.Rat).SetInt64(int64(r.Quantity.Int32))
 }
 
-// reservedOnLine sums the active reservations of a line.
-func reservedOnLine(ctx context.Context, q *db.Queries, itemID int64) (*big.Rat, error) {
+// reservedOnLine sums the active reservations of a line, at most the line
+// amount: a whole roll that completes a cut line may carry more meters than
+// the line (TEC-1250, K7: the rest was shorter than the minimum cut and
+// goes free with the piece); the line counts as exactly covered.
+func reservedOnLine(ctx context.Context, q *db.Queries, it db.OrderItem) (*big.Rat, error) {
+	sum, err := reservedOnLineRaw(ctx, q, it.ID)
+	if err != nil {
+		return nil, err
+	}
+	if line := lineAmount(it); sum.Cmp(line) > 0 {
+		return line, nil
+	}
+	return sum, nil
+}
+
+// reservedOnLineRaw sums the active reservations of a line as they are
+// (the real meters of its pieces).
+func reservedOnLineRaw(ctx context.Context, q *db.Queries, itemID int64) (*big.Rat, error) {
 	rows, err := q.ListActiveReservationsByItem(ctx, itemID)
 	if err != nil {
 		return nil, fmt.Errorf("orders: line reservations: %w", err)
@@ -353,7 +369,7 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 				}
 				if want.Cmp(rest) < 0 {
 					// Check the line first: an over-assignment never splits.
-					done, err := reservedOnLine(ctx, q, it.ID)
+					done, err := reservedOnLine(ctx, q, it)
 					if err != nil {
 						return err
 					}
@@ -388,7 +404,7 @@ func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 		if it.Meters.Valid != meters.Valid {
 			return invalid("barcode", "the unit does not use the line's measure")
 		}
-		done, err := reservedOnLine(ctx, q, it.ID)
+		done, err := reservedOnLine(ctx, q, it)
 		if err != nil {
 			return err
 		}
@@ -567,7 +583,7 @@ func (s *Service) fixedQuantity(ctx context.Context, q *db.Queries, o db.Order, 
 	if want != nil {
 		n = *want
 	} else {
-		done, err := reservedOnLine(ctx, q, it.ID)
+		done, err := reservedOnLine(ctx, q, it)
 		if err != nil {
 			return 0, err
 		}
@@ -602,7 +618,7 @@ func (s *Service) growFixedLocked(ctx context.Context, q *db.Queries, c Caller, 
 	if err != nil {
 		return err
 	}
-	done, err := reservedOnLine(ctx, q, it.ID)
+	done, err := reservedOnLine(ctx, q, it)
 	if err != nil {
 		return err
 	}
@@ -683,7 +699,7 @@ func checkFullyAssigned(ctx context.Context, q *db.Queries, o db.Order) error {
 		return ErrNotFullyAssigned
 	}
 	for _, it := range items {
-		done, err := reservedOnLine(ctx, q, it.ID)
+		done, err := reservedOnLine(ctx, q, it)
 		if err != nil {
 			return err
 		}

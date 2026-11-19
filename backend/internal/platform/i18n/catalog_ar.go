@@ -498,6 +498,7 @@ var arCatalog = map[string]string{
 	"orders.pdf.barcodes":                     "الباركودات",
 	"orders.pdf.unit_pcs":                     "قطعة",
 	"orders.pdf.line_credits":                 "أرصدة الاستخدام: {{credits}} لكل قطعة",
+	"orders.pdf.excess_free":                  "{{meters}} إضافية مجانًا",
 	"orders.pdf.delivered_by":                 "سلّمه",
 	"orders.pdf.received_by":                  "استلمه",
 	"orders.pdf.generated_at":                 "تاريخ الإنشاء",

@@ -59,6 +59,11 @@ type SuggestionView struct {
 	// OpenBox (TEC-1241): a closed box to open and cut for a meter line;
 	// RemainingMeters is then the box length.
 	OpenBox bool `json:"open_box"`
+	// ExcessMeters (TEC-1250, K7): the whole roll or box goes to the line
+	// because the rest would be shorter than the minimum cut; Meters is
+	// then the whole length and ExcessMeters what goes free. Null when the
+	// piece is cut to the line.
+	ExcessMeters *string `json:"excess_meters"`
 }
 
 // SuggestionsView answers a suggestion request for one line.
@@ -92,7 +97,7 @@ func (s *Service) Suggest(ctx context.Context, c Caller, orderUUID, itemUUID uui
 }
 
 func (s *Service) suggest(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, in SuggestInput) (SuggestionsView, error) {
-	done, err := reservedOnLine(ctx, q, it.ID)
+	done, err := reservedOnLine(ctx, q, it)
 	if err != nil {
 		return SuggestionsView{}, err
 	}
@@ -234,8 +239,26 @@ func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem,
 		return nil, err
 	}
 	m := missing.FloatString(2)
-	var best *db.ListOrderSuggestSerialCandidatesRow
-	var bestMeters *big.Rat
+	// excessOf is what goes free when the source covers the line: the
+	// whole rest when it is shorter than the minimum cut (K7, TEC-1250),
+	// else nil (the piece is cut to the line, the rest stays usable).
+	excessOf := func(src *big.Rat) *big.Rat {
+		rest := new(big.Rat).Sub(src, missing)
+		if rest.Sign() <= 0 {
+			return nil
+		}
+		n, err := numeric(rest.FloatString(2))
+		if err != nil || !ledger.IsRemnant(n, p.MinCutMeters) {
+			return nil
+		}
+		return rest
+	}
+	// TEC-1250: an open roll cut cleanly (exactly, or leaving at least the
+	// minimum cut) first, the smallest; else an open roll that goes whole,
+	// the least excess first (it would end as a remnant anyway); else a
+	// closed box. Remnants are never proposed.
+	var clean, whole *db.ListOrderSuggestSerialCandidatesRow
+	var cleanMeters, wholeMeters *big.Rat
 	for i := range rows {
 		r := &rows[i]
 		if !r.RemainingMeters.Valid || ledger.IsRemnant(r.RemainingMeters, p.MinCutMeters) {
@@ -245,13 +268,26 @@ func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem,
 		if rm == nil || rm.Cmp(missing) < 0 {
 			continue
 		}
-		if best == nil || rm.Cmp(bestMeters) < 0 {
-			best, bestMeters = r, rm
+		if excessOf(rm) != nil {
+			if whole == nil || rm.Cmp(wholeMeters) < 0 {
+				whole, wholeMeters = r, rm
+			}
+			continue
+		}
+		if clean == nil || rm.Cmp(cleanMeters) < 0 {
+			clean, cleanMeters = r, rm
 		}
 	}
-	if best != nil {
-		v := serialSuggestion(*best)
+	if clean != nil {
+		v := serialSuggestion(*clean)
 		v.Meters = &m
+		covered.Add(covered, missing)
+		return []SuggestionView{v}, nil
+	}
+	if whole != nil {
+		v := serialSuggestion(*whole)
+		all, ex := wholeMeters.FloatString(2), excessOf(wholeMeters).FloatString(2)
+		v.Meters, v.ExcessMeters = &all, &ex
 		covered.Add(covered, missing)
 		return []SuggestionView{v}, nil
 	}
@@ -273,6 +309,10 @@ func suggestCut(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem,
 		v := serialSuggestion(r)
 		v.Meters, v.OpenBox = &m, true
 		v.RemainingMeters = numericTextPtr(p.DefaultRollMeters, 2)
+		if ex := excessOf(box); ex != nil {
+			all, exs := box.FloatString(2), ex.FloatString(2)
+			v.Meters, v.ExcessMeters = &all, &exs
+		}
 		covered.Add(covered, missing)
 		return []SuggestionView{v}, nil
 	}
@@ -589,7 +629,7 @@ func (s *Service) PickList(ctx context.Context, c Caller, orderUUID uuid.UUID) (
 			}
 			out.Rows = append(out.Rows, row)
 		}
-		done, err := reservedOnLine(ctx, s.q, it.ID)
+		done, err := reservedOnLine(ctx, s.q, it)
 		if err != nil {
 			return PickListView{}, err
 		}
