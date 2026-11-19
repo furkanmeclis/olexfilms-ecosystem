@@ -217,7 +217,8 @@ func TestIntegrationKMReturnAmounts(t *testing.T) {
 // TEC-1244 acceptance (bayi muhasebesi maliyeti): the dealer's purchase
 // cost of a unit is meters × the meter cost for a cut piece (the meter
 // line it was bought on, else the dealer's meter price) and the box price
-// for a closed box. Before, a cut piece cost one meter's price.
+// for a closed box. Before, a cut piece cost one meter's price. A piece
+// shipped on a meter line is a cut piece and is not sold (TEC-1242, K13).
 func TestIntegrationKMDealerCost(t *testing.T) {
 	it := newIntegration(t)
 	f := newKMMoney(t, it, "t1244c")
@@ -244,14 +245,21 @@ func TestIntegrationKMDealerCost(t *testing.T) {
 		want string
 	}{
 		{f.shipped(t, f.film, "", "box"), "400"},
-		{f.shipped(t, f.film, "3.50", "meter"), "105"},       // 3.5 m × 30 (meter line)
-		{f.shipped(t, f.computed, "3.50", "meter"), "93.33"}, // 3.5 m × 26.6667
-		{f.shipped(t, f.film, "2.50", ""), "75"},             // 2.5 m × 30 (price list)
+		{f.shipped(t, f.film, "2.50", ""), "75"}, // 2.5 m × 30 (price list)
 		{f.shipped(t, f.computed, "", ""), "400"},
 	}
 	for _, c := range cases {
 		if got := cost(c.unit); !sameAmount(&got, c.want) {
 			t.Errorf("%s cost = %s, want %s", c.unit.Barcode, got, c.want)
+		}
+	}
+	// A piece shipped on a meter line carries the line's credits: it is a
+	// cut piece, used only in services and never offered for a quick sale
+	// (TEC-1242, K13), so the lookup refuses it instead of pricing it.
+	for _, u := range []db.Unit{f.shipped(t, f.film, "3.50", "meter"), f.shipped(t, f.computed, "3.50", "meter")} {
+		if code, env := it.do("GET", "/v1/product-sales/lookup?barcode="+u.Barcode, hostOlex, f.dealerTok, nil); code != http.StatusUnprocessableEntity ||
+			errCode(env) != "CUT_PIECE_NOT_SELLABLE" {
+			t.Errorf("%s lookup = %d %s, want CUT_PIECE_NOT_SELLABLE", u.Barcode, code, errCode(env))
 		}
 	}
 }
