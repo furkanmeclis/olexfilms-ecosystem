@@ -58,6 +58,7 @@
   "quick_sale.empty_cart": "Scannen Sie einen Barcode, um eine Position hinzuzufügen.",
   "quick_sale.already_added": "Barcode {{barcode}} ist bereits im Verkauf.",
   "quick_sale.not_in_stock": "Dieses Produkt ist nicht in Ihrem Bestand.",
+  "quick_sale.cut_piece": "Dieser Barcode ist ein Zuschnitt; Zuschnitte werden nicht verkauft, sondern nur in Services verwendet.",
   "quick_sale.not_found": "Produkt nicht gefunden.",
   "quick_sale.increase": "Menge erhöhen",
   "quick_sale.decrease": "Menge verringern",

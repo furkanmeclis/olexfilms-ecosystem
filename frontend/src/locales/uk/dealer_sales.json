@@ -58,6 +58,7 @@
   "quick_sale.empty_cart": "Відскануйте штрихкод, щоб додати рядок.",
   "quick_sale.already_added": "Штрихкод {{barcode}} уже є в продажу.",
   "quick_sale.not_in_stock": "Цього товару немає на вашому складі.",
+  "quick_sale.cut_piece": "Цей штрихкод — відрізаний шматок; відрізані шматки не продаються, лише використовуються в послугах.",
   "quick_sale.not_found": "Товар не знайдено.",
   "quick_sale.increase": "Збільшити кількість",
   "quick_sale.decrease": "Зменшити кількість",

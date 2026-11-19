@@ -279,6 +279,28 @@ describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
     expect(lastTable().rowCount).toBe(2);
   });
 
+  it("marks a unit whose usage credits are used up (TEC-1242)", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(
+      page([
+        unit({ credits_total: 5, credits_remaining: 0, credits_used: 5 }),
+        unit({
+          uuid: "u-2",
+          credits_total: 5,
+          credits_remaining: 2,
+          credits_used: 3,
+        }),
+      ]),
+    );
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    // The whole rendered row (the stock-row cell's parent).
+    const [spent, left] = Array.from(rows()).map((r) => r.parentElement);
+    expect(spent?.textContent).toContain("0 / 5");
+    expect(spent?.textContent).toContain("stock.credits.exhausted");
+    expect(left?.textContent).toContain("2 / 5");
+    expect(left?.textContent).not.toContain("stock.credits.exhausted");
+  });
+
   it("shows the purchase price column when the API answers a price", async () => {
     state.grants = new Set([Permission.StockRead]);
     api.listUnits.mockResolvedValue(

@@ -55,13 +55,19 @@ export type PickerUnit = {
   unit_kind: "serial" | "fixed";
   initial_meters: string | null;
   product: { unit_type: string };
+  credits?: { credits_total: number; credits_remaining: number } | null;
 };
 
-export type UnitMode = "roll" | "fixed" | "piece";
+export type UnitMode = "roll" | "fixed" | "piece" | "cut";
 
-/** roll: meters are entered; fixed: pieces; piece: the serial unit itself. */
+/**
+ * roll: meters are entered; fixed: pieces; piece: the serial unit itself;
+ * cut: a cut piece with usage credits (TEC-1242, K4) — used whole like a
+ * piece, one credit per service, its meters are never cut.
+ */
 export function unitMode(u: PickerUnit): UnitMode {
   if (u.unit_kind === "fixed") return "fixed";
+  if (u.credits && u.initial_meters !== null) return "cut";
   if (u.product.unit_type === "roll_meter" || u.initial_meters !== null) {
     return "roll";
   }

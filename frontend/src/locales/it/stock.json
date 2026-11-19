@@ -372,6 +372,7 @@
   "credits.taken": "Crediti consumati: {{credits}}",
   "credits.refunded": "Crediti restituiti",
   "credits.finished": "Prodotto terminato",
+  "credits.exhausted": "Crediti esauriti",
   "credits.movements": "Movimenti dei crediti",
   "credits.no_movement": "Nessun movimento dei crediti.",
   "credits.type.opening": "Apertura",

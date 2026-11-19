@@ -358,6 +358,7 @@
   "credits.taken": "扣除额度：{{credits}}",
   "credits.refunded": "额度已退回",
   "credits.finished": "产品已用完",
+  "credits.exhausted": "额度已用完",
   "credits.movements": "额度变动",
   "credits.no_movement": "暂无额度变动。",
   "credits.type.opening": "期初",
