@@ -497,7 +497,7 @@ var esCatalog = map[string]string{
 	"orders.pdf.amount":                       "Cantidad",
 	"orders.pdf.barcodes":                     "Códigos de barras",
 	"orders.pdf.unit_pcs":                     "uds.",
-	"orders.pdf.line_credits":                 "Derecho de uso: {{credits}} por pieza",
+	"orders.pdf.line_credits":                 "Créditos de uso: {{credits}} por pieza",
 	"orders.pdf.delivered_by":                 "Entregado por",
 	"orders.pdf.received_by":                  "Recibido por",
 	"orders.pdf.generated_at":                 "Generado el",

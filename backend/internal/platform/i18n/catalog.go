@@ -499,7 +499,7 @@ var trCatalog = map[string]string{
 	"orders.pdf.amount":                       "Miktar",
 	"orders.pdf.barcodes":                     "Barkodlar",
 	"orders.pdf.unit_pcs":                     "adet",
-	"orders.pdf.line_credits":                 "Kullanım hakkı: parça başına {{credits}}",
+	"orders.pdf.line_credits":                 "Kullanım kredisi: parça başına {{credits}}",
 	"orders.pdf.delivered_by":                 "Teslim eden",
 	"orders.pdf.received_by":                  "Teslim alan",
 	"orders.pdf.generated_at":                 "Oluşturulma",

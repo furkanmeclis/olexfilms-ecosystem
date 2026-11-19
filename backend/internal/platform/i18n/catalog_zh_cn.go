@@ -497,7 +497,7 @@ var zhCNCatalog = map[string]string{
 	"orders.pdf.amount":                       "数量",
 	"orders.pdf.barcodes":                     "条码",
 	"orders.pdf.unit_pcs":                     "件",
-	"orders.pdf.line_credits":                 "使用次数：每段 {{credits}} 次",
+	"orders.pdf.line_credits":                 "使用额度：每段 {{credits}}",
 	"orders.pdf.delivered_by":                 "交付人",
 	"orders.pdf.received_by":                  "签收人",
 	"orders.pdf.generated_at":                 "生成时间",

@@ -64,7 +64,7 @@ func TestMeterLineDocuments(t *testing.T) {
 		t.Errorf("no credits: %q", got)
 	}
 	note := lineCreditsNote(i18n.LocaleTR, pgtype.Int4{Int32: 5, Valid: true})
-	if note != "Kullanım hakkı: parça başına 5" {
+	if note != "Kullanım kredisi: parça başına 5" {
 		t.Fatalf("note = %q", note)
 	}
 	for _, loc := range i18n.Supported {
@@ -76,7 +76,7 @@ func TestMeterLineDocuments(t *testing.T) {
 	ship := ShippingDocumentHTML(ShippingDoc{Locale: i18n.LocaleTR, OrderNo: "ORD-1", Zone: time.UTC, Lines: []ShippingLine{line}})
 	slip := OrderSlipHTML(OrderSlipDoc{ShippingDoc: ShippingDoc{Locale: i18n.LocaleTR, OrderNo: "ORD-1", Zone: time.UTC}, Lines: []OrderSlipLine{{ShippingLine: line}}})
 	for name, out := range map[string]string{"shipping": ship, "slip": slip} {
-		for _, want := range []string{"3,0 m", "Kullanım hakkı: parça başına 5", "CUT-1 (3,0 m)"} {
+		for _, want := range []string{"3,0 m", "Kullanım kredisi: parça başına 5", "CUT-1 (3,0 m)"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("%s: missing %q", name, want)
 			}

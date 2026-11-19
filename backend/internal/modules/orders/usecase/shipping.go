@@ -375,7 +375,7 @@ type ShippingLine struct {
 	Name   string
 	Amount string
 	// Note (TEC-1239): the usage credits of a meter line of a piece
-	// product ("Usage credits: 5 per piece"), under the product name.
+	// product ("Usage credits: 5 per piece", glossary term), under the product name.
 	Note     string
 	Barcodes []string
 	// itemID links the line to its order item (the order slip's prices).

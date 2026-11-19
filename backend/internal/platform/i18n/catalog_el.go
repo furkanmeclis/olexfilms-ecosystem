@@ -497,7 +497,7 @@ var elCatalog = map[string]string{
 	"orders.pdf.amount":                       "Ποσότητα",
 	"orders.pdf.barcodes":                     "Γραμμωτοί κώδικες",
 	"orders.pdf.unit_pcs":                     "τεμ.",
-	"orders.pdf.line_credits":                 "Δικαίωμα χρήσης: {{credits}} ανά τεμάχιο",
+	"orders.pdf.line_credits":                 "Πιστώσεις χρήσης: {{credits}} ανά τεμάχιο",
 	"orders.pdf.delivered_by":                 "Παρέδωσε",
 	"orders.pdf.received_by":                  "Παρέλαβε",
 	"orders.pdf.generated_at":                 "Δημιουργήθηκε",
