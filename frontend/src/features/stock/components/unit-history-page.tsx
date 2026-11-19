@@ -198,7 +198,9 @@ function UnitSummary({ slug, data }: { slug: string; data: StockUnitHistory }) {
   const { t, format } = useLocale();
   const { unit, current, holdings } = data;
   const status = (current?.status ?? unit.status) as StockUnitStatus;
-  const roll = unit.product.unit_type === "roll_meter";
+  // TEC-1243: a unit with meters is a roll (an opened box too).
+  const roll =
+    unit.product.unit_type === "roll_meter" || unit.remaining_meters != null;
 
   return (
     <Card data-testid="unit-summary">

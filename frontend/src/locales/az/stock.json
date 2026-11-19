@@ -402,5 +402,10 @@
   "bulk.reason.previously_unplaced": "Əvvəl gözdə deyildi",
   "bulk.reason.roll_cut": "Rulon kəsilib",
   "bulk.reason.not_found": "Tapılmadı",
-  "movement.measure_conversion": "Ölçü vahidi çevrildi (ədəd ↔ rulon)"
+  "movement.measure_conversion": "Ölçü vahidi çevrildi (ədəd ↔ rulon)",
+  "measure.boxes": "Bağlı qutu {{boxes}}",
+  "measure.open": "Açıq {{rolls}} rulon / {{meters}} m",
+  "measure.cut": "Kəsik {{pieces}} hissə / {{meters}} m",
+  "measure.remnant": "Qalıq {{meters}} m",
+  "columns.measures": "Qutu / rulon / kəsik / qalıq"
 }

@@ -402,5 +402,10 @@
   "bulk.reason.previously_unplaced": "Δεν ήταν προηγουμένως σε θυρίδα",
   "bulk.reason.roll_cut": "Το ρολό έχει κοπεί",
   "bulk.reason.not_found": "Δεν βρέθηκε",
-  "movement.measure_conversion": "Μετατροπή μονάδας μέτρησης (τεμάχιο ↔ ρολό)"
+  "movement.measure_conversion": "Μετατροπή μονάδας μέτρησης (τεμάχιο ↔ ρολό)",
+  "measure.boxes": "Κλειστά κουτιά {{boxes}}",
+  "measure.open": "Ανοιχτά {{rolls}} ρολά / {{meters}} μ",
+  "measure.cut": "Κομμένα {{pieces}} τεμάχια / {{meters}} μ",
+  "measure.remnant": "Υπόλειμμα {{meters}} μ",
+  "columns.measures": "Κουτιά / ρολά / κομμένα / υπόλειμμα"
 }

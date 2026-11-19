@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Файл .zpl для принтерів Zebra (203 dpi). Логотип-зображення не друкується.",
   "label_templates.form.thermal_sizes": "Типові розміри:",
   "columns.remnant": "Залишок",
-  "remnant.badge": "Залишок"
+  "remnant.badge": "Залишок",
+  "measure.boxes": "Закриті коробки {{boxes}}",
+  "measure.open": "Відкриті {{rolls}} рул. / {{meters}} м",
+  "measure.cut": "Відрізи {{pieces}} шт. / {{meters}} м",
+  "measure.remnant": "Залишок {{meters}} м",
+  "columns.measures": "Коробки / рулони / відрізи / залишок"
 }

@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Eine .zpl-Datei für Zebra-Drucker (203 dpi). Ein Bildlogo wird nicht gedruckt.",
   "label_templates.form.thermal_sizes": "Übliche Größen:",
   "columns.remnant": "Restrolle",
-  "remnant.badge": "Restrolle"
+  "remnant.badge": "Restrolle",
+  "measure.boxes": "Geschlossene Kartons {{boxes}}",
+  "measure.open": "Offen {{rolls}} Rollen / {{meters}} m",
+  "measure.cut": "Zuschnitt {{pieces}} Stück / {{meters}} m",
+  "measure.remnant": "Rest {{meters}} m",
+  "columns.measures": "Kartons / Rollen / Zuschnitt / Rest"
 }

@@ -85,11 +85,14 @@ function barcodeParams(value: unknown): Record<string, string | undefined> {
 export function MyStockPage({
   slug,
   initialBarcode,
+  initialRemnant,
   initialOrganization,
 }: {
   slug: string;
   /** TEC-213: palette deep link (?barcode=). */
   initialBarcode?: string;
+  /** TEC-1243: open the on-hand units filtered to remnants ("ragle"). */
+  initialRemnant?: boolean;
   /** TEC-213: palette deep link to an organization's stock (?organization=). */
   initialOrganization?: string;
 }) {
@@ -106,9 +109,10 @@ export function MyStockPage({
   const [dealer, setDealer] = useState<string>(initialOrganization || OWN);
   const [product, setProduct] = useState<ComboboxOption | null>(null);
   const [printing, setPrinting] = useState(false);
-  const [initialFilters] = useState(() =>
-    initialBarcode ? [{ id: "barcode", value: initialBarcode }] : [],
-  );
+  const [initialFilters] = useState(() => [
+    ...(initialBarcode ? [{ id: "barcode", value: initialBarcode }] : []),
+    ...(initialRemnant ? [{ id: "remnant", value: true }] : []),
+  ]);
 
   const targetUuid = dealer === OWN ? (org?.uuid ?? "") : dealer;
 
@@ -256,7 +260,6 @@ export function MyStockPage({
         enableSorting: true,
         meta: { cellClassName: "text-end whitespace-nowrap tabular-nums" },
         cell: ({ row }) =>
-          row.original.product.unit_type === "roll_meter" &&
           row.original.remaining_meters
             ? t("stock.list.meters_of", {
                 remaining: row.original.remaining_meters,
@@ -636,7 +639,7 @@ export function MyStockPage({
             </p>
             <div className="text-muted-foreground flex justify-between gap-2 text-xs">
               <span>
-                {r.product.unit_type === "roll_meter" && r.remaining_meters
+                {r.remaining_meters
                   ? t("stock.list.meters_of", {
                       remaining: r.remaining_meters,
                       initial: r.initial_meters ?? r.remaining_meters,

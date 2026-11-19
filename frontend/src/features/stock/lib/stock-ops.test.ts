@@ -31,9 +31,17 @@ describe("unit operation gates (TEC-763)", () => {
     expect(canSplitRoll({ ...roll, status: "used" })).toBe(false);
     expect(canSplitRoll({ ...roll, status: "in_transit" })).toBe(false);
     expect(canSplitRoll({ ...roll, remaining_meters: "0.00" })).toBe(false);
+    // TEC-1243: an opened box of a piece product carries meters: a roll.
     expect(
       canSplitRoll({
         ...roll,
+        product: { ...roll.product!, unit_type: "piece" },
+      }),
+    ).toBe(true);
+    expect(
+      canSplitRoll({
+        ...roll,
+        remaining_meters: null,
         product: { ...roll.product!, unit_type: "piece" },
       }),
     ).toBe(false);

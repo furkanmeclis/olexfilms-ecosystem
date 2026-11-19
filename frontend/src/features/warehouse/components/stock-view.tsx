@@ -41,6 +41,8 @@ import {
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { catalogService } from "@/features/catalog/services/catalog.service";
+import { StockMeasureLine } from "@/features/stock/components/stock-measure-line";
+import { hasMetered, metersText } from "@/features/stock/lib/measures";
 import { enumFilterOptions } from "@/features/warehouse/components/table-options";
 import {
   listExportQuery,
@@ -104,6 +106,13 @@ export function WarehouseProductsTab({ uuid }: { uuid: string }) {
               >
                 {row.original.product.sku}
               </div>
+              {row.original.balance?.measures &&
+              hasMetered(row.original.balance.measures) ? (
+                <StockMeasureLine
+                  measures={row.original.balance.measures}
+                  className="mt-0.5"
+                />
+              ) : null}
             </div>
           ),
         }),
@@ -513,11 +522,22 @@ export function ReorderRulesPage({ slug }: { slug: string }) {
           labelKey: "warehouse.reorder.columns.level",
           enableSorting: true,
           gridSecondary: true,
+          // TEC-1243 (K14): the box and meter thresholds alert apart.
           cell: ({ row }) => (
-            <StatusChip
-              label={t(`warehouse.reorder.level.${row.original.level}`)}
-              tone={reorderLevelTone(row.original.level)}
-            />
+            <div className="flex flex-wrap gap-1">
+              <StatusChip
+                label={t(`warehouse.reorder.level.${row.original.level}`)}
+                tone={reorderLevelTone(row.original.level)}
+              />
+              {row.original.meter_level === "below_min" ? (
+                <span data-testid="reorder-meter-low">
+                  <StatusChip
+                    label={t("warehouse.reorder.meter_level.below_min")}
+                    tone="danger"
+                  />
+                </span>
+              ) : null}
+            </div>
           ),
         }),
         createColumn<StockReorderRule>({
@@ -525,16 +545,63 @@ export function ReorderRulesPage({ slug }: { slug: string }) {
           accessorFn: (r) => r.balance.available_quantity,
           labelKey: "warehouse.stock.available",
           enableSorting: true,
-          cell: ({ row }) => (
-            <span>
-              <strong>
-                {format.number(row.original.balance.available_quantity)}
-              </strong>
-              <span className="text-muted-foreground ms-1 text-xs">
-                / {format.number(row.original.balance.on_hand_quantity)}
+          // TEC-1243: the box threshold counts closed boxes (a roll_meter
+          // product has none and keeps counting its rolls).
+          cell: ({ row }) => {
+            const r = row.original;
+            const roll = r.product.unit_type === "roll_meter";
+            const m = r.balance.measures;
+            // A rule written before TEC-1243 may come without measures.
+            const boxes = roll || !m;
+            return (
+              <span>
+                <strong>
+                  {format.number(
+                    boxes ? r.balance.available_quantity : m.available_boxes,
+                  )}
+                </strong>
+                <span className="text-muted-foreground ms-1 text-xs">
+                  /{" "}
+                  {format.number(boxes ? r.balance.on_hand_quantity : m.boxes)}
+                </span>
+                {hasMetered(m) ? (
+                  <StockMeasureLine measures={m} className="mt-0.5" />
+                ) : null}
               </span>
-            </span>
-          ),
+            );
+          },
+        }),
+        createColumn<StockReorderRule>({
+          id: "meters",
+          accessorFn: (r) => Number(r.balance.measures?.available_meters ?? 0),
+          labelKey: "warehouse.reorder.columns.meters",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const r = row.original;
+            if (!r.min_meters && !hasMetered(r.balance.measures)) return "—";
+            return (
+              <span className="whitespace-nowrap">
+                <strong
+                  className={
+                    r.meter_level === "below_min"
+                      ? "text-destructive"
+                      : undefined
+                  }
+                >
+                  {metersText(
+                    r.balance.measures?.available_meters ?? "0",
+                    t,
+                    format.number,
+                  )}
+                </strong>
+                {r.min_meters ? (
+                  <span className="text-muted-foreground ms-1 text-xs">
+                    / {metersText(r.min_meters, t, format.number)}
+                  </span>
+                ) : null}
+              </span>
+            );
+          },
         }),
         createColumn<StockReorderRule>({
           id: "incoming",
@@ -553,6 +620,9 @@ export function ReorderRulesPage({ slug }: { slug: string }) {
             <span className="text-xs" dir="ltr">
               {row.original.min_quantity} / {row.original.reorder_point ?? "—"}{" "}
               / {row.original.max_quantity ?? "—"}
+              {row.original.min_meters
+                ? ` · ${metersText(row.original.min_meters, t, format.number)}`
+                : ""}
             </span>
           ),
         }),
@@ -738,6 +808,7 @@ export function ReorderRuleDialog({
     max_quantity: rule?.max_quantity?.toString() ?? "",
     warning_days: rule?.warning_days?.toString() ?? "",
     cover_days: rule?.cover_days?.toString() ?? "",
+    min_meters: rule?.min_meters ?? "",
   });
   const [product, setProduct] = useState<ComboboxOption | null>(
     rule
@@ -779,12 +850,16 @@ export function ReorderRuleDialog({
   });
   const set = (key: keyof ReorderForm) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }));
-  const field = (key: keyof ReorderForm, labelKey: string) => (
+  const field = (
+    key: keyof ReorderForm,
+    labelKey: string,
+    inputMode: "numeric" | "decimal" = "numeric",
+  ) => (
     <div className="space-y-1">
       <Label htmlFor={`reorder-${key}`}>{t(labelKey)}</Label>
       <Input
         id={`reorder-${key}`}
-        inputMode="numeric"
+        inputMode={inputMode}
         value={form[key]}
         onChange={(e) => set(key)(e.target.value)}
         data-testid={`reorder-${key}`}
@@ -825,6 +900,12 @@ export function ReorderRuleDialog({
             {field("min_quantity", "warehouse.reorder.min")}
             {field("reorder_point", "warehouse.reorder.point")}
             {field("max_quantity", "warehouse.reorder.max")}
+          </div>
+          <div className="space-y-1">
+            {field("min_meters", "warehouse.reorder.min_meters", "decimal")}
+            <p className="text-muted-foreground text-xs">
+              {t("warehouse.reorder.min_meters_hint")}
+            </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {field("warning_days", "warehouse.reorder.warning_days")}

@@ -402,5 +402,10 @@
   "label_templates.output_format_hint.zpl": "Un file .zpl per stampanti Zebra (203 dpi). Il logo immagine non viene stampato.",
   "label_templates.form.thermal_sizes": "Formati comuni:",
   "columns.remnant": "Scarto",
-  "remnant.badge": "Scarto"
+  "remnant.badge": "Scarto",
+  "measure.boxes": "Scatole chiuse {{boxes}}",
+  "measure.open": "Aperti {{rolls}} rotoli / {{meters}} m",
+  "measure.cut": "Tagliati {{pieces}} pezzi / {{meters}} m",
+  "measure.remnant": "Scampolo {{meters}} m",
+  "columns.measures": "Scatole / rotoli / tagli / scampoli"
 }
