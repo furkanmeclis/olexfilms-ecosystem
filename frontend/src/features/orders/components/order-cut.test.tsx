@@ -46,6 +46,7 @@ const preview = (over: Partial<OrderCutPreview>): OrderCutPreview => ({
   whole: false,
   remnant: false,
   excess_meters: "0.00",
+  excess_billing: "free",
   min_cut_meters: "2.00",
   missing_meters: "3.00",
   partial: false,
@@ -146,6 +147,42 @@ describe("TEC-1241 cut helpers", () => {
       "orders.cut.confirm_box_whole",
     );
     expect(confirmKey(preview({}))).toBe("orders.cut.confirm");
+  });
+
+  it("TEC-1250 (19.11): the charge setting says the extra meters go on the invoice", () => {
+    const charged = cutWarnings(
+      preview({
+        source_meters: "3.50",
+        cut_meters: "3.50",
+        remaining_meters: "0.00",
+        whole: true,
+        excess_meters: "0.50",
+        excess_billing: "charge",
+        min_cut_meters: "1.00",
+      }),
+    );
+    expect(charged).toEqual([
+      {
+        key: "orders.cut.whole_excess_charge",
+        values: { excess: "0.50", min: "1.00", whole: "3.50" },
+        tone: "info",
+      },
+    ]);
+    // A charge line was raised to its pieces: the roll covers it all.
+    expect(
+      lineCovered({
+        assigned: "3.50",
+        excess_meters: "0.50",
+        excess_billing: "charge",
+      }),
+    ).toBe(3.5);
+    expect(
+      lineCovered({
+        assigned: "3.50",
+        excess_meters: "0.50",
+        excess_billing: "free",
+      }),
+    ).toBe(3);
   });
 
   it("TEC-1250 (K7): a line covered by a whole roll is covered, not over", () => {

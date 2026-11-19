@@ -18,6 +18,11 @@ export const ORDER_ACTIVITY_ACTIONS = [
   "claimed",
   "claim_taken_over",
   "claim_released",
+  // TEC-1241 / TEC-1250: a box opened for a meter line and the extra
+  // meters of a whole roll added to (or taken off) the invoice.
+  "box_opened",
+  "excess_charged",
+  "excess_uncharged",
 ] as const;
 
 type Translate = (

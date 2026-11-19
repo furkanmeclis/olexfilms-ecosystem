@@ -499,6 +499,7 @@ var zhCNCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "件",
 	"orders.pdf.line_credits":                 "使用额度：每段 {{credits}}",
 	"orders.pdf.excess_free":                  "额外 {{meters}} 免费",
+	"orders.pdf.excess_charged":               "额外 {{meters}} 已计入发票",
 	"orders.pdf.delivered_by":                 "交付人",
 	"orders.pdf.received_by":                  "签收人",
 	"orders.pdf.generated_at":                 "生成时间",

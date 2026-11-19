@@ -182,5 +182,12 @@
   "service_point.hint": "Activé, ce nom et ce logo sont montrés aux clients (page et PDF de garantie, portail, WhatsApp) ; le panneau garde le nom de l'organisation.",
   "service_point.enabled": "Afficher le nom du point de service aux clients",
   "service_point.name": "Nom du point de service",
-  "service_point.no_logo": "Pas de logo ; celui de l'organisation est utilisé."
+  "service_point.no_logo": "Pas de logo ; celui de l'organisation est utilisé.",
+  "excess_meter_billing.title": "Mètres en plus quand le rouleau part entier",
+  "excess_meter_billing.hint": "Quand le reste après la coupe serait plus court que la coupe minimale, le rouleau n'est pas coupé et part entier avec la commande. Choisissez comment les mètres en plus sont facturés au revendeur.",
+  "excess_meter_billing.free": "Gratuits (par défaut)",
+  "excess_meter_billing.free_hint": "Le revendeur paie les mètres commandés ; les mètres en plus sont gratuits.",
+  "excess_meter_billing.charge": "Facturés",
+  "excess_meter_billing.charge_hint": "Le revendeur paie tous les mètres expédiés ; la ligne, la facture et le compte utilisent les mètres réels.",
+  "excess_meter_billing.frozen": "Le réglage est inscrit sur la ligne de commande lorsque l'entrepôt affecte le rouleau ; le modifier n'affecte pas les commandes existantes."
 }

@@ -702,7 +702,7 @@ func (q *Queries) GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalA
 }
 
 const getPortalAppointmentDealer = `-- name: GetPortalAppointmentDealer :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, s.portal_appointments_enabled
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, o.billing_title, o.tax_office, o.tax_no, o.billing_address, o.billing_email, o.iban, o.billing_updated_at, o.billing_updated_by_user_id, o.standard_discount_pct, o.first_order_discount_pct, o.excess_meter_billing, s.portal_appointments_enabled
 FROM organizations o
 JOIN appointment_settings s ON s.organization_id = o.id
 WHERE o.uuid = $1
@@ -780,6 +780,7 @@ type GetPortalAppointmentDealerRow struct {
 	BillingUpdatedByUserID    pgtype.Int8        `json:"billing_updated_by_user_id"`
 	StandardDiscountPct       pgtype.Numeric     `json:"standard_discount_pct"`
 	FirstOrderDiscountPct     pgtype.Numeric     `json:"first_order_discount_pct"`
+	ExcessMeterBilling        string             `json:"excess_meter_billing"`
 	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
 }
 
@@ -848,6 +849,7 @@ func (q *Queries) GetPortalAppointmentDealer(ctx context.Context, arg GetPortalA
 		&i.BillingUpdatedByUserID,
 		&i.StandardDiscountPct,
 		&i.FirstOrderDiscountPct,
+		&i.ExcessMeterBilling,
 		&i.PortalAppointmentsEnabled,
 	)
 	return i, err

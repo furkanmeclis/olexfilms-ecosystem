@@ -182,5 +182,12 @@
   "service_point.hint": "Aktiv olduqda bu ad və loqo zəmanət səhifəsi və PDF-də, portalda və WhatsApp-da müştəriyə göstərilir; paneldə qurum adı qalır.",
   "service_point.enabled": "Müştərilərə xidmət nöqtəsinin adını göstər",
   "service_point.name": "Xidmət nöqtəsinin adı",
-  "service_point.no_logo": "Loqo yoxdur; qurumun loqosu istifadə olunur."
+  "service_point.no_logo": "Loqo yoxdur; qurumun loqosu istifadə olunur.",
+  "excess_meter_billing.title": "Bütün rulon gedəndə artıq metr",
+  "excess_meter_billing.hint": "Kəsimdən sonra qalan minimum kəsimdən qısa olacaqsa, rulon kəsilmir və tamamı sifarişlə gedir. Artıq metrlərin dilerə necə hesablanacağını seçin.",
+  "excess_meter_billing.free": "Ödənişsiz (standart)",
+  "excess_meter_billing.free_hint": "Diler sifariş etdiyi metri ödəyir; artıq metr ödənişsiz gedir.",
+  "excess_meter_billing.charge": "Ödənişli",
+  "excess_meter_billing.charge_hint": "Diler gedən bütün metrləri ödəyir; sətir, faktura və cari hesab real metrlə hesablanır.",
+  "excess_meter_billing.frozen": "Ayar anbar rulonu təyin etdiyi anda sifariş sətrinə yazılır; onu dəyişmək mövcud sifarişlərə təsir etmir."
 }

@@ -103,8 +103,12 @@ type CutPreviewView struct {
 	Remnant bool `json:"remnant"`
 	// ExcessMeters (TEC-1250, K7): the meters over the line that go with
 	// the whole roll free of charge; "0.00" when the piece fits the line.
-	ExcessMeters string  `json:"excess_meters"`
-	MinCutMeters *string `json:"min_cut_meters"`
+	ExcessMeters string `json:"excess_meters"`
+	// ExcessBilling (TEC-1250, 19.11): whether the excess goes free or is
+	// added to the invoice: the line's frozen mode, else the seller's
+	// setting (free | charge). Never an amount.
+	ExcessBilling string  `json:"excess_billing"`
+	MinCutMeters  *string `json:"min_cut_meters"`
 	// MissingMeters is what the line still needs; Partial is true when the
 	// piece is shorter (partial and a note are required).
 	MissingMeters string `json:"missing_meters"`
@@ -326,8 +330,13 @@ func (s *Service) CutPreview(ctx context.Context, c Caller, orderUUID, itemUUID 
 		if err != nil {
 			return err
 		}
+		mode, err := excessBillingOf(ctx, q, o, it)
+		if err != nil {
+			return err
+		}
 		out = CutPreviewView{
-			ItemUUID: it.Uuid, UnitUUID: u.Uuid, Barcode: u.Barcode, ClosedBox: p.closedBox,
+			ExcessBilling: mode,
+			ItemUUID:      it.Uuid, UnitUUID: u.Uuid, Barcode: u.Barcode, ClosedBox: p.closedBox,
 			SourceMeters: cmString(p.sourceCm), CutMeters: cmString(p.cutCm),
 			RemainingMeters: cmString(p.sourceCm - p.cutCm), Whole: p.whole, Remnant: p.remnant,
 			ExcessMeters: cmString(p.excessCm),

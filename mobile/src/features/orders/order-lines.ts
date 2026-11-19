@@ -493,6 +493,8 @@ type EditableItem = {
   line_credits?: number | null;
   /** TEC-1250 (K7): free extra meters of a whole roll on the line. */
   excess_meters?: string | null;
+  /** TEC-1250 (19.11): on a charge line meters were raised to the pieces. */
+  excess_billing?: string | null;
 };
 
 /**
@@ -509,8 +511,11 @@ export function linesFromItems(
   return items.map((i) => {
     // TEC-1250 (K7): a whole roll's free extra meters do not count — a
     // 3.5 m roll on a 3 m line covers 3 m, so keeping 3 m is not "below".
+    // On a charge line (19.11) the line was raised to the roll: all counts.
     const assigned =
-      Number(i.assigned) - Math.max(Number(i.excess_meters ?? 0) || 0, 0);
+      i.excess_billing === "charge"
+        ? Number(i.assigned)
+        : Number(i.assigned) - Math.max(Number(i.excess_meters ?? 0) || 0, 0);
     const measure: SaleMeasure =
       i.sale_measure ?? (i.meters != null ? "meter" : "box");
     const line: EditLine = {

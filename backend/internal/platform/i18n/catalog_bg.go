@@ -499,6 +499,7 @@ var bgCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "бр.",
 	"orders.pdf.line_credits":                 "Кредити за употреба: {{credits}} на парче",
 	"orders.pdf.excess_free":                  "Допълнителни {{meters}} безплатно",
+	"orders.pdf.excess_charged":               "Допълнителните {{meters}} са добавени към фактурата",
 	"orders.pdf.delivered_by":                 "Предал",
 	"orders.pdf.received_by":                  "Приел",
 	"orders.pdf.generated_at":                 "Създадено",

@@ -8,6 +8,8 @@ export type PatchSettingsRequest = Partial<
   /** TEC-1003: brand center only. An empty name clears it. */
   service_point_enabled?: boolean;
   service_point_name?: string;
+  /** TEC-1250 (19.11): free | charge. */
+  excess_meter_billing?: "free" | "charge";
 };
 
 function settingsBase(scope: ExportJobScope = "platform") {

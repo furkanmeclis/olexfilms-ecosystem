@@ -499,6 +499,7 @@ var ukCatalog = map[string]string{
 	"orders.pdf.unit_pcs":                     "шт.",
 	"orders.pdf.line_credits":                 "Кредити використання: {{credits}} на відрізок",
 	"orders.pdf.excess_free":                  "Додатково {{meters}} безкоштовно",
+	"orders.pdf.excess_charged":               "Додаткові {{meters}} додано до рахунку",
 	"orders.pdf.delivered_by":                 "Передав",
 	"orders.pdf.received_by":                  "Прийняв",
 	"orders.pdf.generated_at":                 "Створено",

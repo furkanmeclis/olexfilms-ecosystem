@@ -50,10 +50,27 @@ export function cutMeters(raw: string): string {
   return /^\d{1,8}(\.\d{1,2})?$/.test(v) && Number(v) > 0 ? v : "";
 }
 
-/** TEC-1250 (K7): free extra meters of a whole roll; 0 when none. */
+/** TEC-1250 (K7): extra meters of a whole roll; 0 when none. */
 export function excessOf(v: { excess_meters?: string | null }): number {
   const n = Number(v.excess_meters ?? 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * TEC-1250 (19.11): the extra meters are added to the invoice (the
+ * seller's setting, frozen on the line); free otherwise.
+ */
+export function excessCharged(v: { excess_billing?: string | null }): boolean {
+  return v.excess_billing === "charge";
+}
+
+/** The key of an extra meters note: free or added to the invoice. */
+export function excessKey(
+  v: { excess_billing?: string | null },
+  free: string,
+  charge: string,
+): string {
+  return excessCharged(v) ? charge : free;
 }
 
 /**
@@ -84,7 +101,11 @@ export function cutWarnings(p: OrderCutPreview): {
   }
   if (excessOf(p) > 0) {
     out.push({
-      key: "orders.cut.whole_excess",
+      key: excessKey(
+        p,
+        "orders.cut.whole_excess",
+        "orders.cut.whole_excess_charge",
+      ),
       values: {
         excess: p.excess_meters,
         min: p.min_cut_meters ?? "",
