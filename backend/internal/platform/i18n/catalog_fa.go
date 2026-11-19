@@ -466,6 +466,7 @@ var faCatalog = map[string]string{
 	"orders.pdf.amount":                                     "مبلغ",
 	"orders.pdf.barcodes":                                   "بارکدها",
 	"orders.pdf.unit_pcs":                                   "عدد",
+	"orders.pdf.line_credits":                               "حق استفاده: {{credits}} برای هر قطعه",
 	"orders.pdf.delivered_by":                               "تحویل\u200cدهنده",
 	"orders.pdf.received_by":                                "تحویل\u200cگیرنده",
 	"orders.pdf.generated_at":                               "تاریخ تهیه",

@@ -30106,6 +30106,18 @@ export interface components {
             sku: string;
             name: string;
             unit_type: string;
+            /** @description TEC-1239 (K1): the piece product is sold by the meter now (order detail lines only). False on a kept draft meter line means the switch was turned off after the line was added. */
+            sellable_by_meter?: boolean;
+            /**
+             * @description TEC-1239: meters of one closed box (roll.default_meters, two decimals); order detail lines only, absent when not set.
+             * @example 15.00
+             */
+            box_meters?: string;
+            /**
+             * @description TEC-1239 (K6): the product's minimum cut (two decimals); order detail lines only, absent when not set.
+             * @example 1.00
+             */
+            min_cut_meters?: string;
         };
         OrderAssignedUnit: {
             /** Format: uuid */

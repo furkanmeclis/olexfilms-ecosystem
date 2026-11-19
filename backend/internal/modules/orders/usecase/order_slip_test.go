@@ -8,6 +8,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestOrderSlipHTML(t *testing.T) {
@@ -29,5 +30,56 @@ func TestOrderSlipHTML(t *testing.T) {
 				t.Error("Arabic must be RTL")
 			}
 		})
+	}
+}
+
+// TEC-1239: a meter line reads "3,0 m" in Turkish and carries its usage
+// credits in a note on the slip and the shipping note.
+func TestMeterLineDocuments(t *testing.T) {
+	num := func(s string) pgtype.Numeric {
+		var n pgtype.Numeric
+		if err := n.Scan(s); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	for _, tc := range []struct {
+		loc  i18n.Locale
+		in   string
+		want string
+	}{
+		{i18n.LocaleTR, "3", "3,0 m"},
+		{i18n.LocaleTR, "3.00", "3,0 m"},
+		{i18n.LocaleTR, "2.5", "2,5 m"},
+		{i18n.LocaleDE, "2.25", "2,25 m"},
+		{i18n.LocaleEN, "3", "3.0 m"},
+		{i18n.LocaleEN, "12.40", "12.4 m"},
+		{i18n.LocaleFA, "0.5", "0.5 m"},
+	} {
+		if got := meterAmount(tc.loc, num(tc.in)); got != tc.want {
+			t.Errorf("meterAmount(%s, %s) = %q, want %q", tc.loc, tc.in, got, tc.want)
+		}
+	}
+	if got := lineCreditsNote(i18n.LocaleTR, pgtype.Int4{}); got != "" {
+		t.Errorf("no credits: %q", got)
+	}
+	note := lineCreditsNote(i18n.LocaleTR, pgtype.Int4{Int32: 5, Valid: true})
+	if note != "Kullanım hakkı: parça başına 5" {
+		t.Fatalf("note = %q", note)
+	}
+	for _, loc := range i18n.Supported {
+		if n := lineCreditsNote(loc, pgtype.Int4{Int32: 7, Valid: true}); !strings.Contains(n, "7") || strings.Contains(n, "{{") {
+			t.Errorf("%s: note %q", loc, n)
+		}
+	}
+	line := ShippingLine{Name: "Black PPF", SKU: "BLK", Amount: "3,0 m", Note: note, Barcodes: []string{"CUT-1 (3,0 m)"}}
+	ship := ShippingDocumentHTML(ShippingDoc{Locale: i18n.LocaleTR, OrderNo: "ORD-1", Zone: time.UTC, Lines: []ShippingLine{line}})
+	slip := OrderSlipHTML(OrderSlipDoc{ShippingDoc: ShippingDoc{Locale: i18n.LocaleTR, OrderNo: "ORD-1", Zone: time.UTC}, Lines: []OrderSlipLine{{ShippingLine: line}}})
+	for name, out := range map[string]string{"shipping": ship, "slip": slip} {
+		for _, want := range []string{"3,0 m", "Kullanım hakkı: parça başına 5", "CUT-1 (3,0 m)"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%s: missing %q", name, want)
+			}
+		}
 	}
 }

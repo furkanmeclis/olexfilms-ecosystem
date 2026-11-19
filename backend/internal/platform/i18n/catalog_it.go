@@ -497,6 +497,7 @@ var itCatalog = map[string]string{
 	"orders.pdf.amount":                       "Quantità",
 	"orders.pdf.barcodes":                     "Codici a barre",
 	"orders.pdf.unit_pcs":                     "pz",
+	"orders.pdf.line_credits":                 "Diritto d'uso: {{credits}} per pezzo",
 	"orders.pdf.delivered_by":                 "Consegnato da",
 	"orders.pdf.received_by":                  "Ricevuto da",
 	"orders.pdf.generated_at":                 "Generato il",
