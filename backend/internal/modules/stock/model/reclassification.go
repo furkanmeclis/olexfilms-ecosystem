@@ -54,7 +54,7 @@ type SplitUnit struct {
 	// the new unit of a split).
 	LabelURL string `json:"label_url,omitempty"`
 	// Remnant: meters are left but fewer than the product's minimum cut
-	// (TEC-1230, "ragle"/artık).
+	// (TEC-1230/artık).
 	Remnant bool `json:"remnant"`
 }
 

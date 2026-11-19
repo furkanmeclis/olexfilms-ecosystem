@@ -31,7 +31,7 @@ describe("stock measure line (TEC-1243, K14)", () => {
         .map((p) => p.text)
         .join(" · "),
     ).toBe(
-      "Kapalı kutu 12 · Açık 2 rulo / 18,4 m · Kesik 3 parça / 9 m · Ragle 1,2 m",
+      "Kapalı kutu 12 · Açık 2 rulo / 18,4 m · Kesik 3 parça / 9 m · Artık 1,2 m",
     );
   });
 

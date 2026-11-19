@@ -91,7 +91,7 @@ export function MyStockPage({
   slug: string;
   /** TEC-213: palette deep link (?barcode=). */
   initialBarcode?: string;
-  /** TEC-1243: open the on-hand units filtered to remnants ("ragle"). */
+  /** TEC-1243: open the on-hand units filtered to remnants. */
   initialRemnant?: boolean;
   /** TEC-213: palette deep link to an organization's stock (?organization=). */
   initialOrganization?: string;
@@ -268,7 +268,7 @@ export function MyStockPage({
               })
             : "—",
       }) as ColumnDef<StockUnitRow, unknown>,
-      // TEC-1230: a roll left under the product's minimum cut ("ragle").
+      // TEC-1230: a roll left under the product's minimum cut.
       createColumn<StockUnitRow>({
         accessorKey: "remnant",
         labelKey: "stock.columns.remnant",

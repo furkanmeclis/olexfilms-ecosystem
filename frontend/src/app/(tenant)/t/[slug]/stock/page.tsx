@@ -8,7 +8,7 @@ export default function Page() {
   const params = useParams<{ slug: string }>();
   // TEC-213: the command palette opens a unit (?barcode=) or an
   // organization's stock (?organization=); TEC-1243: ?remnant=true lists
-  // the remnants ("ragle").
+  // the remnants.
   const search = useSearchParams();
   return (
     <MyStockPage

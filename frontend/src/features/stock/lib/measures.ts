@@ -29,7 +29,7 @@ export type MeasurePart = {
 
 /**
  * The stock line of TEC-1243: "Kapalı kutu 12 · Açık 2 rulo / 18,4 m ·
- * Kesik 3 parça / 9 m · Ragle 1,2 m". Closed boxes always show; the metered
+ * Kesik 3 parça / 9 m · Artık 1,2 m". Closed boxes always show; the metered
  * groups only when present, so a box-only product reads "Kapalı kutu 4".
  */
 export function measureParts(

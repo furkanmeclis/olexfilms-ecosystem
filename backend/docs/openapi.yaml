@@ -10997,7 +10997,7 @@ paths:
           required: false
           description: >-
             TEC-1230: `true` keeps only remnants (rolls with meters left but
-            fewer than the product's `min_cut_meters`, "ragle"), `false`
+            fewer than the product's `min_cut_meters`), `false`
             leaves them out. Searches Postgres, not the index.
           schema: { type: boolean }
       responses:
@@ -28582,7 +28582,7 @@ paths:
         TEC-1241. Read only, the same checks as POST .../units without
         writing: whether the unit is a closed box to open, the box length or
         the roll's remaining meters, the cut, what stays in stock, whether
-        the remainder is a remnant (shorter than the minimum cut, "ragle"),
+        the remainder is a remnant (shorter than the minimum cut),
         whether the piece is partial and the credits it would carry. Only
         for a meter line of a piece product (409 ORDER_ITEM_NOT_CUT_LINE)
         while preparing. No price is returned.
@@ -44487,7 +44487,7 @@ components:
         open_meters: { type: string }
         cut_pieces: { type: integer, format: int64, description: "TEC-1243: units cut off another unit or reserved for an order line." }
         cut_meters: { type: string }
-        remnants: { type: integer, format: int64, description: "TEC-1243: rest below the product's minimum cut (ragle)." }
+        remnants: { type: integer, format: int64, description: "TEC-1243: rest below the product's minimum cut." }
         remnant_meters: { type: string }
     EnvelopeStockWarehouseUnitPage:
       type: object
@@ -44725,7 +44725,7 @@ components:
       description: >-
         TEC-1243 (K14): the on-hand stock split. boxes are the closed boxes
         (serial units without meters plus fixed barcode pieces). Metered
-        units are remnants ("ragle", rest below the product's
+        units are remnants (rest below the product's
         min_cut_meters; not offered, not counted in the meter threshold),
         cut pieces (cut off another unit, or reserved for an order line)
         or open rolls (the rest: a box opened or entered as a roll).
@@ -45001,7 +45001,7 @@ components:
           type: boolean
           description: >-
             TEC-1230: a roll with meters left but fewer than the product's
-            minimum cut (`min_cut_meters`), shown apart as a remnant ("ragle").
+            minimum cut (`min_cut_meters`), shown apart as a remnant.
         product:
           type: object
           required: [uuid, sku, name, unit_type, uses_fixed_barcode]
@@ -47241,7 +47241,7 @@ components:
           type: boolean
           description: >-
             TEC-1230: meters are left but fewer than the product's minimum cut
-            (a remnant, "ragle").
+            (a remnant).
 
     StockSplit:
       type: object
@@ -52192,7 +52192,7 @@ components:
         new_barcode: { type: string }
         replayed: { type: boolean }
         box_opened: { type: boolean, description: "TEC-1241: the source was a closed box opened for the cut" }
-        source_remnant: { type: boolean, description: "TEC-1241: what is left is shorter than the minimum cut (ragle)" }
+        source_remnant: { type: boolean, description: "TEC-1241: what is left is shorter than the minimum cut" }
 
     OrderCutPreview:
       type: object
@@ -52208,7 +52208,7 @@ components:
         cut_meters: { type: string, example: "3.00" }
         remaining_meters: { type: string, description: What stays in stock as an open roll, example: "12.00" }
         whole: { type: boolean, description: The whole roll or box goes; no new barcode }
-        remnant: { type: boolean, description: "The remainder is shorter than the minimum cut (ragle, K7)" }
+        remnant: { type: boolean, description: "The remainder is shorter than the minimum cut (K7)" }
         min_cut_meters: { type: [string, "null"] }
         missing_meters: { type: string, description: What the line still needs }
         partial: { type: boolean, description: The piece is shorter than missing_meters (needs partial and a note) }

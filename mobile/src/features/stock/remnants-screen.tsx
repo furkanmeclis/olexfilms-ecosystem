@@ -12,7 +12,7 @@ import { useRemnantUnits } from './api';
 import { UnitRow } from './stock-product-screen';
 
 /**
- * TEC-1243 (K7, K14): the remnants ("ragle") on hand: rolls left under the
+ * TEC-1243 (K7, K14): the remnants on hand: rolls left under the
  * product's minimum cut. They are not offered to orders; the warehouse
  * writes them off with a stock adjustment document.
  */

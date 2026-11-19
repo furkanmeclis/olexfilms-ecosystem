@@ -18,7 +18,7 @@ package usecase
 // is refused before anything is opened (checkSerialStock under the unit
 // row lock). The minimum cut (products.min_cut_meters) applies to every cut
 // except taking the whole remainder; a remainder shorter than the minimum
-// becomes a remnant ("ragle", K7) and the preview warns about it.
+// becomes a remnant (K7) and the preview warns about it.
 //
 // One piece covers the line by default. A shorter piece is a partial piece
 // ("parçalı gönder", K11): the client confirms it (partial) with a note.
@@ -92,7 +92,7 @@ type CutPreviewView struct {
 	RemainingMeters string `json:"remaining_meters"`
 	// Whole: the whole roll (or box) goes to the line; no new barcode.
 	Whole bool `json:"whole"`
-	// Remnant: the remainder is shorter than the minimum cut ("ragle").
+	// Remnant: the remainder is shorter than the minimum cut.
 	Remnant      bool    `json:"remnant"`
 	MinCutMeters *string `json:"min_cut_meters"`
 	// MissingMeters is what the line still needs; Partial is true when the
