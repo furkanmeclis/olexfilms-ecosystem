@@ -324,7 +324,9 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
 -- warehouse home (counts only, no prices). Units on a location count for the
 -- location's warehouse; units held by the organization without a location
 -- (legacy, unplaced) form the row with a NULL warehouse. Fixed barcodes add
--- their quantity on hand; a unit with meters is a roll.
+-- their quantity on hand; a unit with meters is a roll. pieces are the
+-- closed boxes; rolls / meters split into open rolls, cut pieces and
+-- remnants (TEC-1243).
 WITH held AS (
     SELECT s.unit_id, 1::bigint AS quantity, s.owner_type, s.owner_id
     FROM unit_current_state s
@@ -343,9 +345,28 @@ SELECT w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_n
        COUNT(DISTINCT u.product_id)::bigint AS products,
        COALESCE(SUM(held.quantity) FILTER (WHERE u.remaining_meters IS NULL), 0)::bigint AS pieces,
        COUNT(*) FILTER (WHERE u.remaining_meters IS NOT NULL)::bigint AS rolls,
-       COALESCE(SUM(u.remaining_meters) FILTER (WHERE u.remaining_meters IS NOT NULL), 0)::text AS meters
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE u.remaining_meters IS NOT NULL), 0)::text AS meters,
+       COUNT(*) FILTER (WHERE k.kind = 'open')::bigint AS open_rolls,
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE k.kind = 'open'), 0)::numeric(14,2)::text AS open_meters,
+       COUNT(*) FILTER (WHERE k.kind = 'cut')::bigint AS cut_pieces,
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE k.kind = 'cut'), 0)::numeric(14,2)::text AS cut_meters,
+       COUNT(*) FILTER (WHERE k.kind = 'remnant')::bigint AS remnants,
+       COALESCE(SUM(u.remaining_meters) FILTER (WHERE k.kind = 'remnant'), 0)::numeric(14,2)::text AS remnant_meters
 FROM held
 JOIN units u ON u.id = held.unit_id
+JOIN products p ON p.id = u.product_id
+-- TEC-1243 (K14): a metered unit is a remnant (rest under the minimum
+-- cut), a cut piece (cut off another unit or reserved for an order line)
+-- or an open roll; ListStockMeasureBreakdownByProduct uses the same rule.
+CROSS JOIN LATERAL (
+    SELECT CASE
+        WHEN u.remaining_meters IS NULL THEN NULL
+        WHEN p.min_cut_meters IS NOT NULL AND u.remaining_meters > 0 AND u.remaining_meters < p.min_cut_meters THEN 'remnant'
+        WHEN EXISTS (SELECT 1 FROM stock_splits ss WHERE ss.new_unit_id = u.id)
+          OR EXISTS (SELECT 1 FROM stock_reservations r WHERE r.unit_id = u.id AND r.status = 'active') THEN 'cut'
+        ELSE 'open'
+    END AS kind
+) k
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
 LEFT JOIN warehouses w ON w.id = l.warehouse_id
 WHERE u.status IN ('available', 'placed')

@@ -828,6 +828,10 @@ type Querier interface {
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	DisableFleetUser(ctx context.Context, id int64) (FleetUser, error)
+	// TEC-1243: current metered serial units on hand per product of the
+	// organization or of one warehouse; the closed boxes of a balance are its
+	// quantity minus these (EODBalances).
+	EODCurrentMeteredUnits(ctx context.Context, arg EODCurrentMeteredUnitsParams) ([]EODCurrentMeteredUnitsRow, error)
 	// TEC-1229: current on-hand stock per product of the organization
 	// (warehouse_id NULL: organization_product_stocks, the whole organization)
 	// or of one warehouse (bin_product_stocks of its locations).
@@ -1456,8 +1460,16 @@ type Querier interface {
 	GetStockEntryImportSource(ctx context.Context, id int64) (GetStockEntryImportSourceRow, error)
 	GetStockEntrySupplierDetails(ctx context.Context, id int64) (GetStockEntrySupplierDetailsRow, error)
 	GetStockEntryUserRef(ctx context.Context, id int64) (GetStockEntryUserRefRow, error)
+	// qty / meters: the consumption of the period (pieces and roll meters).
+	// TEC-1243: metered_qty is the part of qty that left as metered units (a
+	// cut piece or an opened roll leaving whole: quantity -1, meters 0) and
+	// metered_meters their meters (the unit's initial meters, the cut length
+	// of a cut piece), so a product sold by the meter can count them as box
+	// equivalents.
 	GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error)
 	GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error)
+	// metered is the number of metered serial units on hand (TEC-1243): the
+	// closed boxes are quantity - metered.
 	GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error)
 	GetStockForecastOpenIncomingOrders(ctx context.Context, arg GetStockForecastOpenIncomingOrdersParams) (GetStockForecastOpenIncomingOrdersRow, error)
 	GetStockForecastPartialMetersAndServices(ctx context.Context, arg GetStockForecastPartialMetersAndServicesParams) (GetStockForecastPartialMetersAndServicesRow, error)
@@ -2968,6 +2980,18 @@ type Querier interface {
 	// the buyer location when given). Serial units count one each (rolls add
 	// their remaining meters); fixed barcodes their line quantity.
 	ListStockIncomingByProduct(ctx context.Context, arg ListStockIncomingByProductParams) ([]ListStockIncomingByProductRow, error)
+	// TEC-1243 (K14): the metered serial units on hand (available / placed)
+	// held by the organization, per product, split into open rolls, cut pieces
+	// and remnants (warehouse_id / location_id narrow to the units there).
+	// A remnant is a metered unit whose rest is below the product's minimum
+	// cut (the TEC-1230 rule of the unit list's remnant filter); a cut piece is
+	// another unit cut off a unit (stock_splits target) or with an active
+	// order reservation; the rest are open rolls. Closed boxes are the on-hand quantity minus these units (the
+	// caller subtracts). reserved_metered_count is the piece quantity reserved
+	// on metered units (a box line served by a metered unit; ListStockReserved
+	// counts it as a piece) and reserved_meters the meters reserved on open
+	// rolls and cut pieces (remnants are never offered).
+	ListStockMeasureBreakdownByProduct(ctx context.Context, arg ListStockMeasureBreakdownByProductParams) ([]ListStockMeasureBreakdownByProductRow, error)
 	// TEC-763: the document behind each movement of a history page (entry,
 	// warehouse transfer, count, service, order, dealer transfer request,
 	// reclassification); line references resolve to their parent document.
@@ -4193,6 +4217,8 @@ type Querier interface {
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
 	SetStockReorderRuleAlert(ctx context.Context, arg SetStockReorderRuleAlertParams) error
+	// TEC-1243: the meter threshold's own alert state (K14, alerts run apart).
+	SetStockReorderRuleMeterAlert(ctx context.Context, arg SetStockReorderRuleMeterAlertParams) error
 	// TEC-212: bulk engine adapter (assign one task, logged + undoable).
 	SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams) (Task, error)
 	SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams) (Task, error)
@@ -4632,7 +4658,12 @@ type Querier interface {
 	// warehouse home (counts only, no prices). Units on a location count for the
 	// location's warehouse; units held by the organization without a location
 	// (legacy, unplaced) form the row with a NULL warehouse. Fixed barcodes add
-	// their quantity on hand; a unit with meters is a roll.
+	// their quantity on hand; a unit with meters is a roll. pieces are the
+	// closed boxes; rolls / meters split into open rolls, cut pieces and
+	// remnants (TEC-1243).
+	// TEC-1243 (K14): a metered unit is a remnant (rest under the minimum
+	// cut), a cut piece (cut off another unit or reserved for an order line)
+	// or an open roll; ListStockMeasureBreakdownByProduct uses the same rule.
 	WarehouseStockSummary(ctx context.Context, arg WarehouseStockSummaryParams) ([]WarehouseStockSummaryRow, error)
 	// Transfer aggregate report: per product, the transfers and units of the
 	// organization's warehouse transfers matching the list filters (status,

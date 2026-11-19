@@ -3692,6 +3692,9 @@ type StockReorderRule struct {
 	UpdatedByUserID pgtype.Int8        `json:"updated_by_user_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	MinMeters       pgtype.Numeric     `json:"min_meters"`
+	MeterAlertState string             `json:"meter_alert_state"`
+	MeterAlertedAt  pgtype.Timestamptz `json:"meter_alerted_at"`
 }
 
 type StockReservation struct {

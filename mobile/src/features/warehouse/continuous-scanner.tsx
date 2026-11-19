@@ -41,6 +41,7 @@ export function ContinuousScanner({
   footer,
   single,
   complete,
+  overlay,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -53,6 +54,11 @@ export function ContinuousScanner({
   single?: boolean;
   /** The job is done (e.g. every order line is covered): a success row with a close button. */
   complete?: { title: string; action: string };
+  /**
+   * TEC-1241: a confirmation over the feed (e.g. the cut of a closed box).
+   * Scanning pauses while it is shown; it takes the reader's Enter.
+   */
+  overlay?: React.ReactNode;
 }) {
   const { t } = useTranslation('warehouse');
   const insets = useSafeAreaInsets();
@@ -117,7 +123,7 @@ export function ContinuousScanner({
             <Text variant="footnote" className="text-center text-white/70">
               {t('scan:input.ready_hint')}
             </Text>
-            {visible ? <WedgeInput paused={typing} onCode={(c) => void handle(c)} /> : null}
+            {visible ? <WedgeInput paused={typing || !!overlay} onCode={(c) => void handle(c)} /> : null}
           </View>
         ) : !permission ? null : !permission.granted ? (
           <View className="flex-1 justify-center bg-black">
@@ -138,7 +144,7 @@ export function ContinuousScanner({
             facing="back"
             enableTorch={torch}
             barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
-            onBarcodeScanned={typing ? undefined : ({ data }) => void handle(data)}
+            onBarcodeScanned={typing || overlay ? undefined : ({ data }) => void handle(data)}
           />
         ) : null}
 
@@ -252,6 +258,7 @@ export function ContinuousScanner({
           ))}
           {footer}
         </View>
+        {overlay}
         </KeyboardAvoidingView>
       </ScopedTheme>
       <ToastHost inModal />

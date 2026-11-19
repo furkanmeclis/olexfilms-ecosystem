@@ -6274,7 +6274,7 @@ export interface paths {
         get: operations["listStockReorderRules"];
         /**
          * Create or replace the reorder rule of a warehouse and product (TEC-1229)
-         * @description Needs `stock.write` and the warehouse module. min_quantity <= reorder_point <= max_quantity; warning_days / cover_days 1..3650; at least one of min_quantity, reorder_point, max_quantity or warning_days. The hourly check notifies organization owners and warehouse roles (STOCK_REORDER_LOW) when the level leaves ok.
+         * @description Needs `stock.write` and the warehouse module. min_quantity <= reorder_point <= max_quantity; warning_days / cover_days 1..3650; at least one of min_quantity, reorder_point, max_quantity, warning_days or min_meters. The hourly check notifies organization owners and warehouse roles (STOCK_REORDER_LOW) when the level leaves ok. TEC-1243 (K14): min_quantity / reorder_point / max_quantity count closed boxes (a roll_meter product, which has no boxes, keeps counting its rolls); min_meters is a separate meter threshold over open rolls and cut pieces (remnants excluded) with its own state and notification (STOCK_REORDER_METERS_LOW).
          */
         put: operations["putStockReorderRule"];
         post?: never;
@@ -6316,7 +6316,7 @@ export interface paths {
         };
         /**
          * Critical stock (reorder rules whose level is not ok, TEC-1229)
-         * @description Same as GET /v1/stock/reorder-rules, only the rules at reorder, below_min or days_low. Mobile: /v1/mobile/panel/stock/critical.
+         * @description Same as GET /v1/stock/reorder-rules, only the rules at reorder, below_min or days_low, or whose meter_level is below_min (TEC-1243). Mobile: /v1/mobile/panel/stock/critical.
          */
         get: operations["listStockCritical"];
         put?: never;
@@ -24670,12 +24670,36 @@ export interface components {
             } | null;
             /** Format: int64 */
             products: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Closed boxes (units without meters and fixed barcode pieces).
+             */
             pieces: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description All metered units.
+             */
             rolls: number;
             /** @description Remaining meters of the rolls (decimal string). */
             meters: string;
+            /**
+             * Format: int64
+             * @description TEC-1243: metered units that are neither cut pieces nor remnants.
+             */
+            open_rolls: number;
+            open_meters: string;
+            /**
+             * Format: int64
+             * @description TEC-1243: units cut off another unit or reserved for an order line.
+             */
+            cut_pieces: number;
+            cut_meters: string;
+            /**
+             * Format: int64
+             * @description TEC-1243: rest below the product's minimum cut (ragle).
+             */
+            remnants: number;
+            remnant_meters: string;
         };
         EnvelopeStockWarehouseUnitPage: {
             data: {
@@ -24837,6 +24861,24 @@ export interface components {
             /** Format: int64 */
             quarantine_quantity: number;
             quarantine_meters: string;
+            measures: components["schemas"]["StockMeasures"];
+        };
+        /** @description TEC-1243 (K14): the on-hand stock split. boxes are the closed boxes (serial units without meters plus fixed barcode pieces). Metered units are remnants ("ragle", rest below the product's min_cut_meters; not offered, not counted in the meter threshold), cut pieces (cut off another unit, or reserved for an order line) or open rolls (the rest: a box opened or entered as a roll). available_boxes subtracts the box reservations; available_meters is the open roll and cut piece meters minus their reserved meters (the reorder meter threshold reads it). Meters are decimal strings. No prices. */
+        StockMeasures: {
+            /** Format: int64 */
+            boxes: number;
+            /** Format: int64 */
+            available_boxes: number;
+            /** Format: int64 */
+            open_rolls: number;
+            open_meters: string;
+            /** Format: int64 */
+            cut_pieces: number;
+            cut_meters: string;
+            /** Format: int64 */
+            remnants: number;
+            remnant_meters: string;
+            available_meters: string;
         };
         StockMovementRef: {
             /** Format: uuid */
@@ -24901,6 +24943,8 @@ export interface components {
             max_quantity?: number | null;
             warning_days?: number | null;
             cover_days?: number | null;
+            /** @description TEC-1243 (K14): meter threshold over the open rolls and cut pieces (decimal string, 0.01..100000; null or empty: none). min_quantity / reorder_point / max_quantity count closed boxes. */
+            min_meters?: string | null;
         };
         StockReorderRule: {
             /** Format: uuid */
@@ -24943,6 +24987,16 @@ export interface components {
             alerted_at: string | null;
             /** Format: date-time */
             updated_at: string;
+            min_meters: string | null;
+            /**
+             * @description TEC-1243 (K14): below_min when balance.measures.available_meters is under min_meters; runs apart from level (closed boxes).
+             * @enum {string}
+             */
+            meter_level: "ok" | "below_min";
+            /** @enum {string} */
+            meter_alert_state: "ok" | "low";
+            /** Format: date-time */
+            meter_alerted_at: string | null;
         };
         EnvelopeStockReorderRule: {
             /** @enum {boolean} */
@@ -32529,6 +32583,22 @@ export interface components {
             /** Format: int64 */
             change_quantity: number;
             change_meters: string;
+            /**
+             * Format: int64
+             * @description TEC-1243: closed boxes at the period start (quantity minus the metered units); absent on reports written before TEC-1243, like opening_rolls, closing_boxes and closing_rolls.
+             */
+            opening_boxes?: number;
+            /**
+             * Format: int64
+             * @description Metered units at the period start.
+             */
+            opening_rolls?: number;
+            /** Format: int64 */
+            closing_boxes?: number;
+            /** Format: int64 */
+            closing_rolls?: number;
+            /** @description TEC-1243: open rolls, cut pieces and remnants when the report was written (the ledger keeps no past split); absent without metered stock. */
+            measures?: components["schemas"]["StockMeasures"];
         };
         EodPending: {
             /** Format: date-time */

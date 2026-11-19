@@ -200,5 +200,6 @@
   "measure.pick_hint": "Caja {{box}} m · corte mínimo {{min}} m. Añade por caja o por metro.",
   "errors.below_min_cut": "Se pueden pedir al menos {{value}} m (corte mínimo).",
   "errors.line_credits_invalid": "Los créditos deben ser un número entero de 1 a 1000.",
-  "unit_price_meter": "Precio unitario (m)"
+  "unit_price_meter": "Precio unitario (m)",
+  "partial.below_min_cut": "Los {{rest}} m que pasan al pedido pendiente son más cortos que el corte mínimo ({{min}} m)."
 }

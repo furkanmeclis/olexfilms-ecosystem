@@ -11,6 +11,16 @@ package usecase
 //
 // The hourly check (ReorderAlerts) notifies organization owners and
 // warehouse roles on the ok -> low edge only. No prices anywhere.
+//
+// TEC-1243 (K14): a rule has two thresholds that run apart. min_quantity,
+// reorder_point and max_quantity count closed boxes (StockMeasures
+// .AvailableBoxes; a roll_meter product has no boxes, its rolls count as
+// before). min_meters is the meter threshold over the open rolls and cut
+// pieces (StockMeasures.AvailableMeters, remnants excluded): MeterLevel is
+// below_min under it. Each threshold keeps its own alert state and sends
+// its own notification. The forecast days of a product sold by the meter
+// use the box equivalent (boxes + meters / box meters), as the stock
+// forecast does.
 
 import (
 	"context"
@@ -24,6 +34,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -85,8 +96,21 @@ type ReorderRule struct {
 	SuggestedQuantity int64      `json:"suggested_quantity"`
 	AlertState        string     `json:"alert_state"`
 	AlertedAt         *time.Time `json:"alerted_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	id                int64
+	// MinMeters is the meter threshold (open rolls + cut pieces, TEC-1243).
+	MinMeters *string `json:"min_meters"`
+	// MeterLevel is ok or below_min (always ok without min_meters).
+	MeterLevel      string     `json:"meter_level"`
+	MeterAlertState string     `json:"meter_alert_state"`
+	MeterAlertedAt  *time.Time `json:"meter_alerted_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	id              int64
+	// boxMeters is the product's box length in centimeters (0: none).
+	boxMeters int64
+}
+
+// Critical reports whether either threshold is crossed.
+func (r ReorderRule) Critical() bool {
+	return r.Level != ReorderLevelOK || r.MeterLevel != ReorderLevelOK
 }
 
 // ReorderFilter filters the rule lists.
@@ -130,6 +154,23 @@ type ReorderRuleInput struct {
 	MaxQuantity   *int32 `json:"max_quantity"`
 	WarningDays   *int32 `json:"warning_days"`
 	CoverDays     *int32 `json:"cover_days"`
+	// MinMeters is the meter threshold ("25.50"; null or empty: none).
+	MinMeters *string `json:"min_meters"`
+}
+
+// MaxReorderMeters bounds the meter threshold (centimeters).
+const MaxReorderMeters = 100000 * 100
+
+// minMetersCm parses the meter threshold (0: none).
+func (in ReorderRuleInput) minMetersCm() (int64, error) {
+	if in.MinMeters == nil || strings.TrimSpace(*in.MinMeters) == "" {
+		return 0, nil
+	}
+	v, err := ledger.ParseMeters(*in.MinMeters)
+	if err != nil || v <= 0 || v > MaxReorderMeters {
+		return 0, movementInvalid("min_meters", "must be between 0.01 and 100000")
+	}
+	return v, nil
 }
 
 func i4(p *int32) pgtype.Int4 {
@@ -170,8 +211,12 @@ func (in ReorderRuleInput) validate() error {
 			return bad(field, "must be between 1 and 3650")
 		}
 	}
-	if in.MinQuantity == 0 && in.ReorderPoint == nil && in.MaxQuantity == nil && in.WarningDays == nil {
-		return bad("min_quantity", "set min_quantity, reorder_point, max_quantity or warning_days")
+	meters, err := in.minMetersCm()
+	if err != nil {
+		return err
+	}
+	if in.MinQuantity == 0 && in.ReorderPoint == nil && in.MaxQuantity == nil && in.WarningDays == nil && meters == 0 {
+		return bad("min_quantity", "set min_quantity, reorder_point, max_quantity, warning_days or min_meters")
 	}
 	return nil
 }
@@ -216,10 +261,15 @@ func (s *Service) UpsertReorderRule(ctx context.Context, c Caller, in ReorderRul
 		return ReorderRule{}, fmt.Errorf("stock: reorder product: %w", err)
 	}
 	user := pgtype.Int8{Int64: c.Principal.UserInternal, Valid: c.Principal.UserInternal > 0}
+	metersCm, _ := in.minMetersCm()
+	var minMeters pgtype.Numeric
+	if metersCm > 0 {
+		minMeters = cmNumeric(metersCm)
+	}
 	row, err := s.q.UpsertStockReorderRule(ctx, db.UpsertStockReorderRuleParams{
 		OrganizationID: org, BrandID: p.BrandID, WarehouseID: wh.ID, ProductID: p.ID,
 		MinQuantity: in.MinQuantity, ReorderPoint: i4(in.ReorderPoint), MaxQuantity: i4(in.MaxQuantity),
-		WarningDays: i4(in.WarningDays), CoverDays: i4(in.CoverDays), UserID: user,
+		WarningDays: i4(in.WarningDays), CoverDays: i4(in.CoverDays), MinMeters: minMeters, UserID: user,
 	})
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23514" {
@@ -268,7 +318,7 @@ func (s *Service) ReorderRules(ctx context.Context, c Caller, f ReorderFilter) (
 		return nil, 0, err
 	}
 	if f.CriticalOnly {
-		all = slices.DeleteFunc(all, func(r ReorderRule) bool { return r.Level == ReorderLevelOK })
+		all = slices.DeleteFunc(all, func(r ReorderRule) bool { return !r.Critical() })
 	}
 	if q := strings.ToLower(strings.TrimSpace(f.Q)); q != "" {
 		all = slices.DeleteFunc(all, func(r ReorderRule) bool {
@@ -283,6 +333,11 @@ func (s *Service) ReorderRules(ctx context.Context, c Caller, f ReorderFilter) (
 
 var levelRank = map[string]int{ReorderLevelBelowMin: 0, ReorderLevelReorder: 1, ReorderLevelDaysLow: 2, ReorderLevelOK: 3}
 
+// rank orders a rule by its most urgent level (a meter threshold below its
+// minimum ranks with below_min).
+func (r ReorderRule) rank() int {
+	return min(levelRank[r.Level], levelRank[r.MeterLevel])
+}
 func sortReorder(rows []ReorderRule, s apiquery.ResolvedSort) {
 	key, desc := resolvedSort(s, ReorderSort)
 	slices.SortStableFunc(rows, func(a, b ReorderRule) int {
@@ -293,9 +348,9 @@ func sortReorder(rows []ReorderRule, s apiquery.ResolvedSort) {
 		case "warehouse":
 			c = strings.Compare(strings.ToLower(a.Warehouse.Name), strings.ToLower(b.Warehouse.Name))
 		case "available":
-			c = int(a.Balance.AvailableQuantity - b.Balance.AvailableQuantity)
+			c = int(a.boxCount() - b.boxCount())
 		default:
-			c = levelRank[a.Level] - levelRank[b.Level]
+			c = a.rank() - b.rank()
 		}
 		if desc {
 			c = -c
@@ -393,7 +448,15 @@ func (s *Service) reorderRules(ctx context.Context, org int64, f ReorderFilter) 
 			WarningDays: i4Ptr(r.WarningDays), CoverDays: i4Ptr(r.CoverDays),
 			Balance:    balances[[2]int64{r.WarehouseID, r.ProductID}],
 			AlertState: r.AlertState, UpdatedAt: r.UpdatedAt.Time,
+			MinMeters: numericPtr(r.MinMeters), MeterAlertState: r.MeterAlertState,
 			id: r.ID,
+		}
+		if r.SellableByMeter && r.DefaultRollMeters != "" {
+			rule.boxMeters = cm(r.DefaultRollMeters)
+		}
+		if r.MeterAlertedAt.Valid {
+			t := r.MeterAlertedAt.Time
+			rule.MeterAlertedAt = &t
 		}
 		rule.Product.Active = true
 		if r.AlertedAt.Valid {
@@ -411,14 +474,37 @@ func (s *Service) reorderRules(ctx context.Context, org int64, f ReorderFilter) 
 	return out, nil
 }
 
-// EvaluateReorder sets Level, DaysLeft and SuggestedQuantity of a rule
-// from its Balance and the forecast average daily use (nil: none).
+// boxCount is the quantity the box thresholds compare: the available
+// closed boxes, or for a roll_meter product (no boxes) the available rolls.
+func (r ReorderRule) boxCount() int64 {
+	if r.Product.UnitType == "roll_meter" {
+		return r.Balance.AvailableQuantity
+	}
+	return r.Balance.Measures.AvailableBoxes
+}
+
+// boxEquivalent is the available stock in boxes for the forecast days: a
+// product sold by the meter adds its available meters / box meters.
+func (r ReorderRule) boxEquivalent() float64 {
+	n := float64(r.boxCount())
+	if r.boxMeters > 0 {
+		n += float64(cm(r.Balance.Measures.AvailableMeters)) / float64(r.boxMeters)
+	}
+	return n
+}
+
+// EvaluateReorder sets Level, MeterLevel, DaysLeft and SuggestedQuantity of
+// a rule from its Balance and the forecast average daily use (nil: none).
 func EvaluateReorder(r *ReorderRule, avgDaily *float64) {
-	available := r.Balance.AvailableQuantity
+	available := r.boxCount()
 	r.Level = ReorderLevelOK
+	r.MeterLevel = ReorderLevelOK
+	if r.MinMeters != nil && cm(r.Balance.Measures.AvailableMeters) < cm(*r.MinMeters) {
+		r.MeterLevel = ReorderLevelBelowMin
+	}
 	var days *float64
 	if avgDaily != nil && *avgDaily > 0 {
-		d := float64(available) / *avgDaily
+		d := r.boxEquivalent() / *avgDaily
 		days = &d
 		s := strconv.FormatFloat(math.Floor(d*10)/10, 'f', 1, 64)
 		r.DaysLeft = &s
@@ -508,38 +594,74 @@ func (a *ReorderAlerts) Check(ctx context.Context, orgID int64) (int, error) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := a.svc.q.WithTx(tx)
+	notify := func(r ReorderRule, extra map[string]any) error {
+		if recipients == nil {
+			if recipients, err = q.ListStockForecastNotifyUserIDs(ctx, orgID); err != nil {
+				return fmt.Errorf("stock: reorder recipients: %w", err)
+			}
+		}
+		if len(recipients) == 0 || a.out == nil {
+			return nil
+		}
+		payload := map[string]any{
+			"rule_uuid": r.UUID.String(), "organization_id": orgID, "brand_id": o.BrandID,
+			"product_uuid": r.Product.UUID.String(), "product_name": r.Product.Name,
+			"warehouse_uuid": r.Warehouse.UUID.String(), "warehouse_name": r.Warehouse.Name,
+			"notify_user_ids": recipients,
+		}
+		for k, v := range extra {
+			payload[k] = v
+		}
+		ev := events.New(events.StockReorderLow).WithTenant(orgID).WithPayload(payload)
+		if err := a.out.Enqueue(ctx, tx, ev); err != nil {
+			return fmt.Errorf("stock: reorder event: %w", err)
+		}
+		sent++
+		return nil
+	}
 	for _, r := range rules {
 		low := r.Level != ReorderLevelOK
 		state := ReorderLevelOK
 		if low {
 			state = "low"
 		}
-		notify := low && r.AlertState != "low"
-		if notify {
-			if recipients == nil {
-				if recipients, err = q.ListStockForecastNotifyUserIDs(ctx, orgID); err != nil {
-					return 0, fmt.Errorf("stock: reorder recipients: %w", err)
-				}
-			}
-			if len(recipients) > 0 && a.out != nil {
-				ev := events.New(events.StockReorderLow).WithTenant(orgID).WithPayload(map[string]any{
-					"rule_uuid": r.UUID.String(), "organization_id": orgID, "brand_id": o.BrandID,
-					"product_uuid": r.Product.UUID.String(), "product_name": r.Product.Name,
-					"warehouse_uuid": r.Warehouse.UUID.String(), "warehouse_name": r.Warehouse.Name,
-					"available_quantity": strconv.FormatInt(r.Balance.AvailableQuantity, 10),
-					"threshold":          strconv.Itoa(int(r.threshold())), "level": r.Level,
-					"notify_user_ids": recipients,
-				})
-				if err := a.out.Enqueue(ctx, tx, ev); err != nil {
-					return 0, fmt.Errorf("stock: reorder event: %w", err)
-				}
-				sent++
+		boxNotify := low && r.AlertState != "low"
+		if boxNotify {
+			if err := notify(r, map[string]any{
+				"measure":            "box",
+				"available_quantity": strconv.FormatInt(r.boxCount(), 10),
+				"threshold":          strconv.Itoa(int(r.threshold())), "level": r.Level,
+			}); err != nil {
+				return 0, err
 			}
 		}
 		if err := q.SetStockReorderRuleAlert(ctx, db.SetStockReorderRuleAlertParams{
-			AlertState: state, Alerted: notify, ID: r.id,
+			AlertState: state, Alerted: boxNotify, ID: r.id,
 		}); err != nil {
 			return 0, fmt.Errorf("stock: reorder state: %w", err)
+		}
+		// TEC-1243 (K14): the meter threshold alerts on its own edge.
+		meterLow := r.MeterLevel != ReorderLevelOK
+		meterState := ReorderLevelOK
+		if meterLow {
+			meterState = "low"
+		}
+		meterNotify := meterLow && r.MeterAlertState != "low"
+		if meterNotify {
+			if err := notify(r, map[string]any{
+				"measure":          "meter",
+				"available_meters": r.Balance.Measures.AvailableMeters,
+				"threshold":        *r.MinMeters, "level": r.MeterLevel,
+			}); err != nil {
+				return 0, err
+			}
+		}
+		if meterState != r.MeterAlertState || meterNotify {
+			if err := q.SetStockReorderRuleMeterAlert(ctx, db.SetStockReorderRuleMeterAlertParams{
+				AlertState: meterState, Alerted: meterNotify, ID: r.id,
+			}); err != nil {
+				return 0, fmt.Errorf("stock: reorder meter state: %w", err)
+			}
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {

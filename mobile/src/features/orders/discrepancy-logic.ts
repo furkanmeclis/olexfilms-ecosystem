@@ -29,12 +29,16 @@ export function receiptValid(o: Pick<Order, 'items'>, marks: Record<string, Rece
 }
 
 /** TEC-1227: the lines a partial shipment moves to the backorder. */
-export function shortLines(o: Pick<Order, 'items'>): { name: string; picked: number; rest: number }[] {
+export function shortLines(o: Pick<Order, 'items'>): { name: string; picked: number; rest: number; belowMinCut?: string }[] {
   return (o.items ?? [])
     .map((it) => {
       const want = it.meters != null ? Number(it.meters) : (it.quantity ?? 0);
       const picked = Number(it.assigned) || 0;
-      return { name: it.product.name, picked, rest: want - picked };
+      const rest = want - picked;
+      // TEC-1241: a meter rest shorter than the product's minimum cut is warned about.
+      const min = it.min_cut_meters ? Number(it.min_cut_meters) : 0;
+      const below = it.sale_measure === 'meter' && min > 0 && rest > 1e-9 && rest < min - 1e-9;
+      return { name: it.product.name, picked, rest, ...(below ? { belowMinCut: it.min_cut_meters ?? '' } : {}) };
     })
     .filter((l) => l.rest > 1e-9);
 }

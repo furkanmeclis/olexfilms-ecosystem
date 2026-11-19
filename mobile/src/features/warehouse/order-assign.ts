@@ -9,10 +9,22 @@ export type AssignItem = {
   meters?: string | number | null;
   quantity?: number | null;
   assigned: string | number;
+  /** TEC-1238: box (quantity) or meter (meters) line. */
+  sale_measure?: string | null;
+  /** TEC-1238: set on the meter line of a box product (cut pieces carry it). */
+  line_credits?: number | null;
 };
 
+/** A roll_meter line: a roll is assigned whole or split by the typed meters. */
 export const isRollItem = (i: AssignItem) => i.product.unit_type === 'roll_meter';
-export const requiredOf = (i: AssignItem) => Number(isRollItem(i) ? (i.meters ?? 0) : (i.quantity ?? 0));
+/** A line counted in meters: roll_meter products and meter lines of box products. */
+export const isMeterItem = (i: AssignItem) => isRollItem(i) || i.sale_measure === 'meter';
+/**
+ * TEC-1241: the meter line of a box product. It is picked by cutting one
+ * piece from an open roll or a closed box (box opening confirmed).
+ */
+export const isCutItem = (i: AssignItem) => i.sale_measure === 'meter' && i.line_credits != null;
+export const requiredOf = (i: AssignItem) => Number(isMeterItem(i) ? (i.meters ?? 0) : (i.quantity ?? 0));
 export const isCovered = (i: AssignItem) => Number(i.assigned) >= requiredOf(i) - 1e-9;
 
 /** Every line has what it asks for (an order without lines is not complete). */
@@ -28,11 +40,93 @@ export function allCovered(items: readonly AssignItem[]): boolean {
 export function assignTarget<T extends AssignItem>(
   items: readonly T[],
   productUuid: string | null | undefined,
+  opened?: boolean,
 ): { kind: 'line'; item: T } | { kind: 'not_on_order' } | { kind: 'covered'; item: T } {
   const lines = items.filter((i) => i.product.uuid === productUuid);
   if (!lines.length) return { kind: 'not_on_order' };
-  const open = lines.find((i) => !isCovered(i));
-  return open ? { kind: 'line', item: open } : { kind: 'covered', item: lines[0] };
+  const open = lines.filter((i) => !isCovered(i));
+  if (!open.length) return { kind: 'covered', item: lines[0] };
+  // TEC-1241: one product may have a box and a meter line (K10). An open
+  // roll or a cut piece (it has meters) goes to the meter line; a closed
+  // box to the box line first, else it is opened for the meter line.
+  if (opened !== undefined && open.length > 1) {
+    const meter = open.find((i) => i.sale_measure === 'meter');
+    const box = open.find((i) => i.sale_measure !== 'meter');
+    const pick = (opened ? meter : box) ?? open[0];
+    return { kind: 'line', item: pick };
+  }
+  return { kind: 'line', item: open[0] };
+}
+
+/** What the cut confirmation tells (TEC-1241), as i18n keys with values. */
+export type CutPreviewLike = {
+  closed_box: boolean;
+  whole: boolean;
+  remnant: boolean;
+  partial: boolean;
+  source_meters: string;
+  cut_meters: string;
+  remaining_meters: string;
+  missing_meters: string;
+  min_cut_meters?: string | null;
+};
+
+export function cutWarnings(p: CutPreviewLike): { key: string; values: Record<string, string> }[] {
+  const out: { key: string; values: Record<string, string> }[] = [];
+  if (p.closed_box) {
+    out.push({
+      key: p.whole ? 'orders.cut.box_whole' : 'orders.cut.box_open',
+      values: { cut: p.cut_meters, rest: p.remaining_meters, box: p.source_meters },
+    });
+  }
+  if (p.remnant) out.push({ key: 'orders.cut.remnant', values: { rest: p.remaining_meters, min: p.min_cut_meters ?? '' } });
+  if (p.partial) out.push({ key: 'orders.cut.partial_short', values: { cut: p.cut_meters, missing: p.missing_meters } });
+  return out;
+}
+
+/** Typed piece meters ("3,5" -> "3.5"); '' when empty or invalid. */
+export function pieceMeters(raw: string): string {
+  const v = raw.trim().replace(',', '.');
+  return /^\d{1,8}(\.\d{1,2})?$/.test(v) && Number(v) > 0 ? v : '';
+}
+
+/** Typed piece credits: null when empty, NaN when invalid (0–1000). */
+export function pieceCredits(raw: string): number | null {
+  const v = raw.trim();
+  if (!v) return null;
+  return /^\d{1,4}$/.test(v) && Number(v) <= 1000 ? Number(v) : Number.NaN;
+}
+
+/**
+ * The assign body of a confirmed cut: the box opening, the partial piece
+ * (meters, note, credits) and the retry key.
+ */
+export function cutAssignBody(
+  barcode: string,
+  p: Pick<CutPreviewLike, 'closed_box' | 'partial'>,
+  partial: { meters: string; note: string; credits: string } | null,
+  key: string,
+): { barcode: string; idempotency_key: string; open_box?: boolean; meters?: string; partial?: boolean; note?: string; credits?: number } {
+  const body: ReturnType<typeof cutAssignBody> = { barcode, idempotency_key: key };
+  if (p.closed_box) body.open_box = true;
+  if (partial) {
+    const m = pieceMeters(partial.meters);
+    if (m) body.meters = m;
+    const c = pieceCredits(partial.credits);
+    if (c != null && !Number.isNaN(c)) body.credits = c;
+  }
+  if (p.partial) {
+    body.partial = true;
+    body.note = partial?.note.trim() ?? '';
+  }
+  return body;
+}
+
+/** A partial shipment rest shorter than the minimum cut (TEC-1241 warning). */
+export function restBelowMinCut(i: AssignItem & { min_cut_meters?: string | null }): boolean {
+  if (i.sale_measure !== 'meter' || !i.min_cut_meters) return false;
+  const rest = missingOf(i);
+  return rest > 1e-9 && rest < Number(i.min_cut_meters) - 1e-9;
 }
 
 /** Amount a line still needs (pieces or meters), never below 0. */

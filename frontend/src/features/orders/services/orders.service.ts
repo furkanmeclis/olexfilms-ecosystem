@@ -22,6 +22,7 @@ export type OrderUnitAssignInput = Schemas["OrderUnitAssignInput"];
 export type OrderRateSnapshot = Schemas["OrderRateSnapshot"];
 export type OrderSuggestions = Schemas["OrderSuggestions"];
 export type OrderSuggestion = Schemas["OrderSuggestion"];
+export type OrderCutPreview = Schemas["OrderCutPreview"];
 export type OrderPickLocation = Schemas["OrderPickLocation"];
 export type OrderPickList = Schemas["OrderPickList"];
 export type OrderPickRow = Schemas["OrderPickRow"];
@@ -293,6 +294,17 @@ export const ordersService = {
       { body },
     );
   },
+  /**
+   * TEC-1241: what assigning the scanned roll or closed box to a meter
+   * line does (box opening, cut, remainder, remnant, credits); read only.
+   */
+  cutPreview(uuid: string, item: string, barcode: string, meters?: string) {
+    return platformRequest<OrderCutPreview>(
+      "GET",
+      `/v1/orders/${enc(uuid)}/items/${enc(item)}/cut-preview`,
+      { query: { barcode, ...(meters ? { meters } : {}) } },
+    );
+  },
   /** TEC-1030: the seller's accounting records an external invoice. */
   markInvoiced(uuid: string, body: OrderInvoiceInput) {
     return platformRequest<Order>("POST", `/v1/orders/${enc(uuid)}/invoices`, {
@@ -325,6 +337,8 @@ export const ordersService = {
       unit_uuid: s.unit_uuid,
       ...(s.meters ? { meters: s.meters } : {}),
       ...(s.quantity != null && !s.meters ? { quantity: s.quantity } : {}),
+      // TEC-1241: a proposed closed box is opened on apply.
+      ...(s.open_box ? { open_box: true } : {}),
     }));
     return platformRequest<Order>(
       "POST",
@@ -422,6 +436,8 @@ export const orderKeys = {
     ["orders", "child-buyers", parent, q] as const,
   suggestions: (uuid: string, item: string, unlocated: boolean) =>
     ["orders", "suggestions", uuid, item, unlocated] as const,
+  cutPreview: (uuid: string, item: string, barcode: string, meters: string) =>
+    ["orders", "cut-preview", uuid, item, barcode, meters] as const,
   pickLocations: (uuid: string, item: string) =>
     ["orders", "pick-locations", uuid, item] as const,
   pickList: (uuid: string) => ["orders", "pick-list", uuid] as const,

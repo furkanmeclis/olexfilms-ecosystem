@@ -13,6 +13,8 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	stockmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -156,6 +158,12 @@ type EODSummary struct {
 // EODBalance is the on-hand stock of one product at the period start
 // (opening) and end (closing): pieces / rolls / fixed pieces and roll
 // meters apart. No prices.
+//
+// TEC-1243 (K14): *_boxes are the closed boxes (quantity minus metered
+// units) and *_rolls the metered units at both ends, exact from the
+// ledger. Measures splits the metered stock into open rolls, cut pieces
+// and remnants as it stood when the report was written (the split of a
+// past moment is not kept by the ledger); null on older reports.
 type EODBalance struct {
 	ProductUUID     uuid.UUID `json:"product_uuid"`
 	SKU             string    `json:"sku"`
@@ -166,6 +174,14 @@ type EODBalance struct {
 	ClosingMeters   string    `json:"closing_meters"`
 	ChangeQuantity  int64     `json:"change_quantity"`
 	ChangeMeters    string    `json:"change_meters"`
+	// The box / metered unit split is null on reports written before
+	// TEC-1243.
+	OpeningBoxes *int64 `json:"opening_boxes,omitempty"`
+	OpeningRolls *int64 `json:"opening_rolls,omitempty"`
+	ClosingBoxes *int64 `json:"closing_boxes,omitempty"`
+	ClosingRolls *int64 `json:"closing_rolls,omitempty"`
+	// Measures is the K14 split when the report was written.
+	Measures *stockmodel.StockMeasures `json:"measures,omitempty"`
 }
 
 // EODPending counts the open work of the scope at AsOf: open warehouse
@@ -382,18 +398,25 @@ func (s *EOD) Balances(ctx context.Context, orgID, warehouseID int64, start, end
 	if err != nil {
 		return nil, fmt.Errorf("warehouse eod: stock deltas: %w", err)
 	}
+	metered, err := s.q.EODCurrentMeteredUnits(ctx, db.EODCurrentMeteredUnitsParams{OrganizationID: orgID, WarehouseID: wh})
+	if err != nil {
+		return nil, fmt.Errorf("warehouse eod: metered units: %w", err)
+	}
 	type acc struct {
+		id         int64
 		uuid       uuid.UUID
 		sku, name  string
 		curQ, curC int64
 		perQ, perC int64
 		aftQ, aftC int64
+		curR       int64
+		perR, aftR int64
 	}
 	byID := map[int64]*acc{}
 	get := func(id int64, u uuid.UUID, sku, name string) *acc {
 		a, ok := byID[id]
 		if !ok {
-			a = &acc{uuid: u, sku: sku, name: name}
+			a = &acc{id: id, uuid: u, sku: sku, name: name}
 			byID[id] = a
 		}
 		return a
@@ -406,6 +429,34 @@ func (s *EOD) Balances(ctx context.Context, orgID, warehouseID int64, start, end
 		a := get(r.ProductID, r.ProductUuid, r.Sku, r.ProductName)
 		a.perQ, a.perC = r.PeriodQuantity, cmOrZero(r.PeriodMeters)
 		a.aftQ, a.aftC = r.AfterQuantity, cmOrZero(r.AfterMeters)
+		a.perR, a.aftR = r.PeriodRolls, r.AfterRolls
+	}
+	rolls := make(map[int64]int64, len(metered))
+	for _, r := range metered {
+		rolls[r.ProductID] = r.Rolls
+	}
+	for id, a := range byID {
+		a.curR = rolls[id]
+	}
+	ids := make([]int64, 0, len(byID))
+	for id := range byID {
+		ids = append(ids, id)
+	}
+	measures := map[int64]stockmodel.StockMeasures{}
+	if len(ids) > 0 {
+		ms, err := s.q.ListStockMeasureBreakdownByProduct(ctx, db.ListStockMeasureBreakdownByProductParams{
+			OrganizationID: orgID, WarehouseID: wh, ProductIds: ids,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("warehouse eod: measures: %w", err)
+		}
+		for _, r := range ms {
+			measures[r.ProductID] = stockusecase.ComposeMeasures(byID[r.ProductID].curQ, 0, stockusecase.Breakdown{
+				Open:    stockusecase.Amount{Quantity: r.OpenCount, Centimeters: cmOrZero(r.OpenMeters)},
+				Cut:     stockusecase.Amount{Quantity: r.CutCount, Centimeters: cmOrZero(r.CutMeters)},
+				Remnant: stockusecase.Amount{Quantity: r.RemnantCount, Centimeters: cmOrZero(r.RemnantMeters)},
+			})
+		}
 	}
 	out := make([]EODBalance, 0, len(byID))
 	for _, a := range byID {
@@ -414,12 +465,20 @@ func (s *EOD) Balances(ctx context.Context, orgID, warehouseID int64, start, end
 		if openQ == 0 && openC == 0 && closeQ == 0 && closeC == 0 && a.perQ == 0 && a.perC == 0 {
 			continue
 		}
-		out = append(out, EODBalance{
+		closeR := a.curR - a.aftR
+		openR := closeR - a.perR
+		b := EODBalance{
 			ProductUUID: a.uuid, SKU: a.sku, ProductName: a.name,
 			OpeningQuantity: openQ, OpeningMeters: ledger.FormatMeters(openC),
 			ClosingQuantity: closeQ, ClosingMeters: ledger.FormatMeters(closeC),
 			ChangeQuantity: closeQ - openQ, ChangeMeters: ledger.FormatMeters(closeC - openC),
-		})
+			OpeningBoxes: i64p(max(openQ-openR, 0)), OpeningRolls: i64p(openR),
+			ClosingBoxes: i64p(max(closeQ-closeR, 0)), ClosingRolls: i64p(closeR),
+		}
+		if m, ok := measures[a.id]; ok {
+			b.Measures = &m
+		}
+		out = append(out, b)
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].ProductName != out[j].ProductName {
@@ -429,6 +488,8 @@ func (s *EOD) Balances(ctx context.Context, orgID, warehouseID int64, start, end
 	})
 	return out, nil
 }
+
+func i64p(v int64) *int64 { return &v }
 
 // PendingWork counts the open work of the scope now (TEC-1229).
 func (s *EOD) PendingWork(ctx context.Context, orgID, warehouseID int64) (*EODPending, error) {

@@ -241,6 +241,23 @@ type calcInput struct {
 	CoverDays       int
 	PartialMeters90 float64
 	Services90      int64
+	// OnHandBoxes is the on-hand stock in box equivalents of a product sold
+	// by the meter (TEC-1243): closed boxes + metered meters / box meters.
+	// BoxMeters 0: not a box product, OnHandQty is used.
+	BoxMeters   float64
+	OnHandBoxes float64
+	OpenBoxes   float64
+}
+
+// boxEquivalent is the consumption of a period in boxes for a product of
+// box length boxMeters (TEC-1243): the pieces that left as boxes plus the
+// meters (metered units leaving whole and partial consumption) / box
+// meters. boxMeters 0 keeps the former sum of pieces and meters.
+func boxEquivalent(qty, meters, meteredQty, meteredMeters, boxMeters float64) float64 {
+	if boxMeters <= 0 {
+		return qty + meters
+	}
+	return (qty - meteredQty) + (meters+meteredMeters)/boxMeters
 }
 
 func (s *Service) inputs(ctx context.Context, q *db.Queries, org db.Organization, product db.Product, day time.Time) (calcInput, error) {
@@ -306,13 +323,29 @@ func (s *Service) inputs(ctx context.Context, q *db.Queries, org db.Organization
 			seasonality = clamp(numeric(season.SameMonth)/(yearTotal/12), 0.5, 2.0)
 		}
 	}
+	// TEC-1243: a piece product with a box length (sold by the meter or
+	// opened into rolls) counts its meters as box equivalents.
+	boxMeters := 0.0
+	if product.UnitType != "roll_meter" && product.DefaultRollMeters.Valid {
+		boxMeters = numeric(product.DefaultRollMeters)
+	}
+	avg := func(t db.GetStockForecastConsumptionTotalsRow, days float64) float64 {
+		v := boxEquivalent(numeric(t.Qty), numeric(t.Meters), numeric(t.MeteredQty), numeric(t.MeteredMeters), boxMeters)
+		return math.Max(v, 0) / days
+	}
+	onHandBoxes, openBoxes := 0.0, 0.0
+	if boxMeters > 0 {
+		onHandBoxes = float64(onHand.Quantity-onHand.Metered) + numeric(onHand.Meters)/boxMeters
+		openBoxes = float64(open.Qty) + numeric(open.Meters)/boxMeters
+	}
 	return calcInput{
+		BoxMeters: boxMeters, OnHandBoxes: onHandBoxes, OpenBoxes: openBoxes,
 		OrganizationID: org.ID, BrandID: org.BrandID, ProductID: product.ID,
 		ComputedOn: day, ProductName: product.Name, UnitType: product.UnitType,
 		OnHandQty: onHand.Quantity, OnHandMeters: numeric(onHand.Meters),
 		OpenOrderQty: open.Qty, OpenOrderMeters: numeric(open.Meters),
-		Avg30:       math.Max(numeric(total30.Qty)+numeric(total30.Meters), 0) / 30,
-		Avg90:       math.Max(numeric(total90.Qty)+numeric(total90.Meters), 0) / 90,
+		Avg30:       avg(total30, 30),
+		Avg90:       avg(total90, 90),
 		Seasonality: seasonality, DataDays: dataDays,
 		MinDays:         setting(s.settings, 90, func(st Settings, ctx context.Context) int { return st.ForecastMinDays(ctx) }, ctx),
 		WarningDays:     setting(s.settings, 14, func(st Settings, ctx context.Context) int { return st.ForecastDefaultWarningDays(ctx) }, ctx),
@@ -337,6 +370,9 @@ func calculate(in calcInput) db.UpsertStockForecastSnapshotParams {
 	}
 	onHand := float64(in.OnHandQty)
 	openOrder := float64(in.OpenOrderQty)
+	if in.BoxMeters > 0 {
+		onHand, openOrder = in.OnHandBoxes, in.OpenBoxes
+	}
 	if in.UnitType == "roll_meter" {
 		onHand = in.OnHandMeters
 		openOrder = in.OpenOrderMeters

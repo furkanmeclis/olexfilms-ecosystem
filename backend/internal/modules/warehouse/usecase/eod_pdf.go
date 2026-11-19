@@ -316,6 +316,9 @@ func eodBalancesHTML(b *strings.Builder, s EODSummary, t func(string) string, es
 		if x.SKU != "" {
 			b.WriteString(` <span class="muted" dir="ltr">` + esc(x.SKU) + `</span>`)
 		}
+		if line := eodMeasureLine(x, t); line != "" {
+			b.WriteString(`<br><span class="muted">` + esc(line) + `</span>`)
+		}
 		b.WriteString(`</td>`)
 		for _, v := range []string{
 			strconv.FormatInt(x.OpeningQuantity, 10), x.OpeningMeters,
@@ -329,6 +332,35 @@ func eodBalancesHTML(b *strings.Builder, s EODSummary, t func(string) string, es
 	b.WriteString(`<tr class="total"><td>` + esc(t("warehouse.eod.total")) + `</td><td class="num" dir="ltr">` +
 		strconv.FormatInt(oq, 10) + `</td><td></td><td class="num" dir="ltr">` + strconv.FormatInt(cq, 10) +
 		`</td><td></td><td class="num" dir="ltr">` + esc(signed(cq-oq)) + `</td><td></td></tr></tbody></table>`)
+}
+
+// eodMeasureLine is the TEC-1243 (K14) split of a product with metered
+// stock: "Closed boxes 12 · Open 2 rolls / 18.40 m · Cut 3 pieces / 9.00 m
+// · Remnant 1.20 m" (the split when the report was written); empty for a
+// product without metered units.
+func eodMeasureLine(x EODBalance, t func(string) string) string {
+	if x.Measures == nil {
+		return ""
+	}
+	m := x.Measures
+	if m.OpenRolls+m.CutPieces+m.Remnants == 0 {
+		return ""
+	}
+	boxes := m.Boxes
+	if x.ClosingBoxes != nil {
+		boxes = *x.ClosingBoxes
+	}
+	parts := []string{t("stock.measure.boxes") + " " + strconv.FormatInt(boxes, 10)}
+	if m.OpenRolls > 0 {
+		parts = append(parts, t("stock.measure.open")+" "+strconv.FormatInt(m.OpenRolls, 10)+" "+t("stock.measure.rolls")+" / "+m.OpenMeters+" m")
+	}
+	if m.CutPieces > 0 {
+		parts = append(parts, t("stock.measure.cut")+" "+strconv.FormatInt(m.CutPieces, 10)+" "+t("stock.measure.pieces")+" / "+m.CutMeters+" m")
+	}
+	if m.Remnants > 0 {
+		parts = append(parts, t("stock.measure.remnant")+" "+m.RemnantMeters+" m")
+	}
+	return strings.Join(parts, " · ")
 }
 
 // eodPendingHTML prints the open work at report time (TEC-1229).

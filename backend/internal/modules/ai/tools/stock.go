@@ -50,7 +50,9 @@ func (StockSummary) Spec() Spec {
 	return Spec{
 		Name: "stock_summary",
 		Description: "On-hand stock per product of your organization (or of an organization within your access): " +
-			"quantity for pieces, meters for rolls. Filter by product name / SKU.",
+			"quantity for pieces, meters for rolls. A product with metered stock (sold by the meter or a roll) is split into " +
+			"closed boxes, open rolls, cut pieces and remnants (remnants are leftovers under the minimum cut, not offered). " +
+			"Filter by product name / SKU.",
 		InputSchema: object(map[string]any{
 			"query":        str("Optional product name or SKU.", 100),
 			"organization": organizationProp,
@@ -70,6 +72,33 @@ type stockRow struct {
 	UnitType string `json:"unit_type"`
 	Quantity int32  `json:"quantity"`
 	Meters   string `json:"meters,omitempty"`
+	// TEC-1243 (K14): the split of a product with metered stock.
+	ClosedBoxes   *int64 `json:"closed_boxes,omitempty"`
+	OpenRolls     *int64 `json:"open_rolls,omitempty"`
+	OpenMeters    string `json:"open_meters,omitempty"`
+	CutPieces     *int64 `json:"cut_pieces,omitempty"`
+	CutMeters     string `json:"cut_meters,omitempty"`
+	Remnants      *int64 `json:"remnants,omitempty"`
+	RemnantMeters string `json:"remnant_meters,omitempty"`
+}
+
+// withMeasures adds the meters and the K14 split of a product that holds
+// metered units (TEC-1243): before, meters were shown for roll_meter
+// products only and an opened box of a piece product was hidden.
+func (row *stockRow) withMeasures(r stockmodel.ProductStock) {
+	if r.Product.UnitType == "roll_meter" {
+		row.Meters = r.Meters
+	}
+	if r.Balance == nil {
+		return
+	}
+	m := r.Balance.Measures
+	if m.OpenRolls+m.CutPieces+m.Remnants == 0 {
+		return
+	}
+	row.Meters = r.Meters
+	row.ClosedBoxes, row.OpenRolls, row.CutPieces, row.Remnants = &m.Boxes, &m.OpenRolls, &m.CutPieces, &m.Remnants
+	row.OpenMeters, row.CutMeters, row.RemnantMeters = m.OpenMeters, m.CutMeters, m.RemnantMeters
 }
 
 // Run implements Tool.
@@ -103,9 +132,7 @@ func (t StockSummary) Run(ctx context.Context, env Env, raw json.RawMessage) (Re
 	for _, r := range rows {
 		row := stockRow{Product: dataText(r.Product.Name, maxNameChars), SKU: r.Product.SKU, UUID: r.Product.UUID.String(),
 			UnitType: r.Product.UnitType, Quantity: r.Quantity}
-		if r.Product.UnitType == "roll_meter" {
-			row.Meters = r.Meters
-		}
+		row.withMeasures(r)
 		out = append(out, row)
 	}
 	return JSONResult(NewList(out, total))

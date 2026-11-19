@@ -116,3 +116,28 @@ func TestPerformanceFixtureShape(t *testing.T) {
 }
 
 func near(a, b float64) bool { return math.Abs(a-b) < 0.015 }
+
+// TEC-1243: a product sold by the meter counts metre sales as box
+// equivalents: 2 boxes + 3 cut pieces (9 m) + 6 m partial use in 15 m
+// boxes = 3 boxes; without a box length the former sum stays.
+func TestBoxEquivalent(t *testing.T) {
+	if got := boxEquivalent(5, 6, 3, 9, 15); got != 3 {
+		t.Fatalf("box equivalent = %v", got)
+	}
+	if got := boxEquivalent(5, 6, 3, 9, 0); got != 11 {
+		t.Fatalf("no box length = %v", got)
+	}
+}
+
+// TEC-1243: days left and the suggestion of a product sold by the meter
+// read the box equivalent on hand (6 boxes + 30 m / 15 m = 8 boxes).
+func TestCalculateBoxEquivalentOnHand(t *testing.T) {
+	got := calculate(calcInput{
+		ComputedOn: time.Date(2026, 11, 19, 0, 0, 0, 0, time.UTC), UnitType: "piece",
+		OnHandQty: 8, OnHandMeters: 30, BoxMeters: 15, OnHandBoxes: 8, OpenBoxes: 1,
+		Avg30: 1, Avg90: 1, Seasonality: 1, DataDays: 120, MinDays: 90, WarningDays: 14, CriticalDays: 7, CoverDays: 30,
+	})
+	if got.DaysLeft.Valid == false || numeric(got.DaysLeft) != 8 || got.Status != StatusWarning || got.SuggestedQty.Int32 != 21 {
+		t.Fatalf("calc = days %v status %s suggested %d", numeric(got.DaysLeft), got.Status, got.SuggestedQty.Int32)
+	}
+}

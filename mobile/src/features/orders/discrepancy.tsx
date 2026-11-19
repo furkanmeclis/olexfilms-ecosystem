@@ -228,7 +228,11 @@ export function PartialShipButton({ order, onReady }: { order: Order; onReady: (
       onPress={() =>
         confirmAction({
           title: t('partial.title'),
-          body: [t('partial.description'), ...short.map((l) => t('partial.line', { name: l.name, picked: l.picked, rest: l.rest }))].join('\n'),
+          body: [t('partial.description'), ...short.map((l) =>
+              l.belowMinCut
+                ? `${t('partial.line', { name: l.name, picked: l.picked, rest: l.rest })}\n⚠ ${t('partial.below_min_cut', { rest: l.rest, min: l.belowMinCut })}`
+                : t('partial.line', { name: l.name, picked: l.picked, rest: l.rest }),
+            )].join('\n'),
           action: t('partial.confirm'),
           onConfirm: () => m.mutate(),
         })

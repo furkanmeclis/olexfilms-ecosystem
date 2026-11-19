@@ -23,7 +23,11 @@ func (s *Service) WarehouseSummary(ctx context.Context, f scopefilter.Filter, or
 	}
 	out := make([]model.WarehouseStockSummary, 0, len(rows))
 	for _, r := range rows {
-		row := model.WarehouseStockSummary{Products: r.Products, Pieces: r.Pieces, Rolls: r.Rolls, Meters: r.Meters}
+		row := model.WarehouseStockSummary{
+			Products: r.Products, Pieces: r.Pieces, Rolls: r.Rolls, Meters: r.Meters,
+			OpenRolls: r.OpenRolls, OpenMeters: r.OpenMeters, CutPieces: r.CutPieces, CutMeters: r.CutMeters,
+			Remnants: r.Remnants, RemnantMeters: r.RemnantMeters,
+		}
 		if r.WarehouseUuid.Valid {
 			row.Warehouse = &model.WarehouseSummaryRef{
 				UUID: uuid.UUID(r.WarehouseUuid.Bytes), Code: r.WarehouseCode.String,

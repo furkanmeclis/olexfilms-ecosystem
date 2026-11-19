@@ -199,5 +199,6 @@
   "measure.pick_hint": "Karton {{box}} m · Mindestzuschnitt {{min}} m. Als Karton oder nach Meter hinzufügen.",
   "errors.below_min_cut": "Mindestens {{value}} m bestellbar (Mindestzuschnitt).",
   "errors.line_credits_invalid": "Das Guthaben muss eine ganze Zahl von 1 bis 1000 sein.",
-  "unit_price_meter": "Stückpreis (m)"
+  "unit_price_meter": "Stückpreis (m)",
+  "partial.below_min_cut": "Die {{rest}} m für den Rückstand sind kürzer als der Mindestschnitt ({{min}} m)."
 }
