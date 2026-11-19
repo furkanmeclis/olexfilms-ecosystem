@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "卷材和固定条码没有使用额度。",
   "codes.ORDER_ALREADY_CLAIMED": "此任务已被他人领取。",
   "codes.ORDER_NOT_CLAIMABLE": "只有已批准且尚未发货的订单才是仓库任务。",
-  "codes.ORDER_SCHEDULE_LOCKED": "此状态下无法更改优先级与截止日期。"
+  "codes.ORDER_SCHEDULE_LOCKED": "此状态下无法更改优先级与截止日期。",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "米数不能少于该产品的最小裁切长度。",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "该产品不按米销售；请按整箱添加。"
 }

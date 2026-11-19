@@ -31,7 +31,21 @@ import { toast } from '@/ui/toast';
 
 import { useCart } from './cart';
 import { PlotterCreditsInput, PlotterSwitch } from './order-edit';
-import { type CartLine, cartIsValid, isRoll, NOTE_MAX, submitPreview, toItemInputs, validateCart } from './order-lines';
+import { AmountStepper, LineCreditsField, MeasureBadge, OtherMeasureButton, WholeBoxHint } from './line-fields';
+import {
+  type CartLine,
+  cartIsValid,
+  isAmountError,
+  isCutLine,
+  lineKey,
+  lineMeasure,
+  NOTE_MAX,
+  otherMeasure,
+  productOf,
+  submitPreview,
+  toItemInputs,
+  validateCart,
+} from './order-lines';
 import { linePrice, type Quote, quoteTotals } from './order-quote';
 import { RecipientNewForm } from './recipient-new-form';
 
@@ -58,16 +72,18 @@ function useDealers(enabled: boolean) {
  * TEC-1065 (API TEC-1064): price preview of the center's order for a dealer:
  * list price, the dealer's default discount and the current TRY rate. Only
  * asked with pricing.sale.read and a chosen dealer; writes nothing.
+ * TEC-1240: `own` asks the buyer's own preview (no dealer; pricing.purchase.read):
+ * only its discounted box and meter prices, for the line amounts of the cart.
  */
-function useQuote(enabled: boolean, buyerUuid: string | undefined, productUuids: string[]) {
-  const key = [...productUuids].sort();
+function useQuote(enabled: boolean, buyerUuid: string | undefined, productUuids: string[], own = false) {
+  const key = [...new Set(productUuids)].sort();
   return useQuery({
-    queryKey: ['orders', 'quote', buyerUuid, key],
-    enabled: enabled && !!buyerUuid && key.length > 0,
+    queryKey: ['orders', 'quote', own ? 'own' : buyerUuid, key],
+    enabled: enabled && (own || !!buyerUuid) && key.length > 0,
     staleTime: 60_000,
     placeholderData: keepPreviousData,
     queryFn: () =>
-      unwrap(api.POST('/v1/orders/quote', { body: { buyer_org_uuid: buyerUuid, product_uuids: key } })) as Promise<Quote>,
+      unwrap(api.POST('/v1/orders/quote', { body: { ...(own ? {} : { buyer_org_uuid: buyerUuid }), product_uuids: key } })) as Promise<Quote>,
   });
 }
 
@@ -174,6 +190,20 @@ function QuoteSummary({ lines, quote, pending }: { lines: CartLine[]; quote: Quo
           {t('quote.incomplete')}
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+/** TEC-1240: the dealer's estimated order amount from its own preview (prices are fixed on approval). */
+function OwnEstimate({ lines, quote }: { lines: CartLine[]; quote: Quote }) {
+  const { t, i18n } = useTranslation('orders');
+  const totals = quoteTotals(lines, quote);
+  return (
+    <View className="gap-1 rounded-lg border border-border bg-card p-3.5">
+      <PriceRow label={t('measure.estimate_total')} value={`≈ ${formatMoney(totals.total, quote.currency, i18n.language)}`} strong />
+      <Text variant="footnote" tone={totals.incomplete ? 'danger' : 'muted'}>
+        {totals.incomplete ? t('quote.incomplete') : t('measure.estimate_hint')}
+      </Text>
     </View>
   );
 }
@@ -337,7 +367,24 @@ function DealerSheet({
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
-  const { lines, note, parent, setAmount, setPrice, setPlotter, setPlotterCredits, setDiscount, setGift, remove, setNote, clear, leaveSupplement } = useCart();
+  const {
+    lines,
+    note,
+    parent,
+    add,
+    setAmount,
+    setPrice,
+    setPlotter,
+    setPlotterCredits,
+    setLineCredits,
+    setDiscount,
+    setGift,
+    toBoxes,
+    remove,
+    setNote,
+    clear,
+    leaveSupplement,
+  } = useCart();
   const me = useSession((s) => s.me);
   // TEC-1024: the center orders for one of its dealers; the order starts approved.
   const center = activeMembership(me)?.type === 'center';
@@ -352,11 +399,23 @@ export function OrderNewScreen() {
   // TEC-1065: list price, discount, gift and totals only with pricing.sale.read.
   const saleRead = useCan('pricing.sale.read');
   const quoting = center && prices && saleRead;
+  // TEC-1240: the dealer sees the amount of each line (meter lines priced per meter) from its own preview.
+  const purchaseRead = useCan('pricing.purchase.read');
+  const ownQuoting = !seller && prices && purchaseRead;
   const quote = useQuote(
-    quoting,
+    quoting || ownQuoting,
     buyer?.uuid,
     lines.map((l) => l.product_uuid),
+    ownQuoting,
   );
+  const { i18n } = useTranslation();
+  const { brand } = useSessionCurrencies();
+  const quoteCurrency = quote.data?.currency ?? brand ?? '';
+  const lineTotal = (l: CartLine) => {
+    if (!(quoting && buyer) && !ownQuoting) return null;
+    const total = linePrice(l, quote.data).total;
+    return total === null ? null : `≈ ${formatMoney(total, quoteCurrency, i18n.language)}`;
+  };
   // TEC-1053 (TEC-1028 API): the center picks the warehouse that prepares the
   // order (seller_warehouse_uuid), the primary one until changed. Without
   // access to the warehouse list the field is hidden and the API uses the primary.
@@ -545,52 +604,50 @@ export function OrderNewScreen() {
             <SectionHeader title={t('lines', { count: lines.length })} />
             <View className="gap-2.5">
               {lines.map((l) => {
-                const err = touched ? errors.lines[l.product_uuid] : undefined;
-                const roll = isRoll(l.unit_type);
+                const k = lineKey(l);
+                const err = errors.lines[k];
+                // K6: a meter amount below the minimum cut is shown at once; the rest after a send attempt.
+                const shown = touched || err === 'below_min_cut' ? err : undefined;
+                const cut = isCutLine(l);
+                const other = otherMeasure(lines, l);
                 return (
-                  <View key={l.product_uuid} className="gap-2 rounded-lg border border-border bg-card p-3.5">
+                  <View key={k} testID={`line-${k}`} className="gap-2.5 rounded-lg border border-border bg-card p-3.5">
                     <View className="flex-row items-start gap-3">
-                      <View className="flex-1 gap-0.5">
+                      <View className="flex-1 gap-1">
                         <Text variant="headline" numberOfLines={2}>
                           {l.name}
                         </Text>
                         <Text variant="footnote" tone="muted" className="font-mono">
                           {l.sku}
                         </Text>
+                        {l.sellable_by_meter || cut ? <MeasureBadge measure={lineMeasure(l)} /> : null}
                       </View>
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t('remove')}
                         hitSlop={8}
-                        onPress={() => remove(l.product_uuid)}
-                        className="size-8 items-center justify-center rounded-md active:bg-muted">
-                        <Icon name="delete" tone="muted-foreground" size={18} />
+                        onPress={() => remove(k)}
+                        className="size-11 items-center justify-center rounded-md active:bg-muted">
+                        <Icon name="delete" tone="muted-foreground" size={20} />
                       </Pressable>
                     </View>
-                    <View className="flex-row items-center gap-3">
-                      <Text variant="callout" tone="muted" className="flex-1">
-                        {roll ? t('amount_meters') : t('amount_pieces')}
-                      </Text>
-                      <TextInput
-                        value={l.amount}
-                        onChangeText={(v) => setAmount(l.product_uuid, v)}
-                        accessibilityLabel={roll ? t('amount_meters') : t('amount_pieces')}
-                        placeholder={roll ? t('placeholder_meters') : t('placeholder_pieces')}
-                        placeholderTextColorClassName="accent-muted-foreground"
-                        keyboardType={roll ? 'decimal-pad' : 'number-pad'}
-                        selectTextOnFocus
-                        className="min-h-11 w-28 rounded-md border border-border bg-background px-3 text-right text-[17px] text-foreground tabular-nums"
-                      />
-                    </View>
+                    <AmountStepper
+                      line={l}
+                      onChange={(v) => setAmount(k, v)}
+                      invalid={isAmountError(shown)}
+                      total={lineTotal(l)}
+                    />
+                    <WholeBoxHint line={l} onConvert={() => toBoxes(k)} />
+                    <LineCreditsField line={l} onChange={(v) => setLineCredits(k, v)} invalid={shown === 'line_credits_invalid'} />
                     {seller && prices && !(quoting && l.is_gift) ? (
                       <View className="flex-row items-center gap-3">
                         <Text variant="callout" tone="muted" className="flex-1">
-                          {t('unit_price')}
+                          {cut ? t('unit_price_meter') : t('unit_price')}
                         </Text>
                         <TextInput
                           value={l.unit_price ?? ''}
-                          onChangeText={(v) => setPrice(l.product_uuid, v)}
-                          accessibilityLabel={t('unit_price')}
+                          onChangeText={(v) => setPrice(k, v)}
+                          accessibilityLabel={cut ? t('unit_price_meter') : t('unit_price')}
                           placeholder={t('unit_price_auto')}
                           placeholderTextColorClassName="accent-muted-foreground"
                           keyboardType="decimal-pad"
@@ -603,27 +660,26 @@ export function OrderNewScreen() {
                       <LineQuote
                         line={l}
                         quote={quote.data}
-                        onDiscount={(v) => setDiscount(l.product_uuid, v)}
-                        onGift={(v) => setGift(l.product_uuid, v)}
+                        onDiscount={(v) => setDiscount(k, v)}
+                        onGift={(v) => setGift(k, v)}
                       />
                     ) : null}
                     {/* TEC-1059: the center tells the line went out plotter cut (information only). */}
-                    {seller ? (
-                      <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => setPlotter(l.product_uuid, v)} />
-                    ) : null}
-                    {/* TEC-1221: the credits of the barcodes shipped on a plotter cut line. */}
-                    {center && l.plotter_cut ? (
+                    {seller ? <PlotterSwitch value={l.plotter_cut === true} onChange={(v) => setPlotter(k, v)} /> : null}
+                    {/* TEC-1221: the credits of the barcodes shipped on a plotter cut line; a meter line shares its line credits (K12). */}
+                    {center && l.plotter_cut && !cut ? (
                       <PlotterCreditsInput
                         value={l.plotter_credits ?? ''}
-                        onChange={(v) => setPlotterCredits(l.product_uuid, v)}
-                        invalid={err === 'credits_invalid'}
+                        onChange={(v) => setPlotterCredits(k, v)}
+                        invalid={shown === 'credits_invalid'}
                       />
                     ) : null}
-                    {err && err !== 'credits_invalid' ? (
+                    {shown && shown !== 'credits_invalid' && shown !== 'line_credits_invalid' ? (
                       <Text variant="footnote" tone="danger">
-                        {t(`errors.${err}`)}
+                        {t(`errors.${shown}`, { value: l.min_cut ?? '' })}
                       </Text>
                     ) : null}
+                    {other ? <OtherMeasureButton measure={other} onPress={() => add(productOf(l), other)} /> : null}
                   </View>
                 );
               })}
@@ -644,6 +700,7 @@ export function OrderNewScreen() {
               multiline
               maxLength={NOTE_MAX}
             />
+            {ownQuoting && quote.data ? <OwnEstimate lines={lines} quote={quote.data} /> : null}
             {quoting ? (
               buyer ? (
                 <QuoteSummary lines={lines} quote={quote.data} pending={quote.isPending} />

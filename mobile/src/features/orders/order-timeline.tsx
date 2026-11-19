@@ -84,7 +84,7 @@ export function OrderTimeline({ timeline }: { timeline: TimelineEntry[] | undefi
                   </Text>
                 ) : null}
                 {/* TEC-1057 / TEC-1059: the lines an edit changed and the plotter marks, one per row. */}
-                {stepParts(s).map((p, k) => (
+                {stepParts(s, { box: t('measure.box'), meter: t('measure.meter') }).map((p, k) => (
                   <Text key={`${p.key}-${k}`} variant="footnote" tone="muted" numberOfLines={2}>
                     {t(p.key, p.params)}
                   </Text>

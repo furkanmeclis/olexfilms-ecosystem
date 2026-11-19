@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulo ve sabit barkodlu birimler kullanım kredisi taşımaz.",
   "codes.ORDER_ALREADY_CLAIMED": "Bu işi başka biri üstlendi.",
   "codes.ORDER_NOT_CLAIMABLE": "Yalnız onaylanmış ve henüz sevk edilmemiş sipariş depo işidir.",
-  "codes.ORDER_SCHEDULE_LOCKED": "Bu durumda öncelik ve termin değiştirilemez."
+  "codes.ORDER_SCHEDULE_LOCKED": "Bu durumda öncelik ve termin değiştirilemez.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "Metre, ürünün minimum kesiminden kısa olamaz.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Bu ürün metreyle satılmıyor; kutu olarak ekleyin."
 }

@@ -188,5 +188,7 @@
   "codes.UNIT_CREDITS_NOT_APPLICABLE": "Rulonlar və sabit barkodlar istifadə krediti daşımır.",
   "codes.ORDER_ALREADY_CLAIMED": "Bu işi başqası götürüb.",
   "codes.ORDER_NOT_CLAIMABLE": "Yalnız təsdiqlənmiş və hələ göndərilməmiş sifariş anbar işidir.",
-  "codes.ORDER_SCHEDULE_LOCKED": "Bu statusda prioritet və müddət dəyişdirilə bilməz."
+  "codes.ORDER_SCHEDULE_LOCKED": "Bu statusda prioritet və müddət dəyişdirilə bilməz.",
+  "codes.ORDER_LINE_BELOW_MIN_CUT": "Metr məhsulun minimum kəsimindən az ola bilməz.",
+  "codes.PRODUCT_NOT_SOLD_BY_METER": "Bu məhsul metrlə satılmır; qutu kimi əlavə edin."
 }

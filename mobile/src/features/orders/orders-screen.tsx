@@ -38,8 +38,9 @@ import { PullRefresh } from '@/ui/pull-refresh';
 import { toast } from '@/ui/toast';
 
 import { useCart } from './cart';
+import { MeasureBadge } from './line-fields';
 import { LinePlotter, OrderLinesEditor } from './order-edit';
-import { creatorOf, liveTryAmount } from './order-summary';
+import { creatorOf, liveTryAmount, showsMeasure } from './order-summary';
 import { OrderTimeline, useActivityText, useAmountText } from './order-timeline';
 import { BackorderRows, DiscrepancySection, ReceiptCheckSheet } from './discrepancy';
 import { canStartSupplement, orderSubtitle, supplementParentOf } from './supplement';
@@ -381,10 +382,13 @@ export function OrderDetailScreen() {
                         <StatusPill tone="problem" label={t('orders.price_missing')} />
                       </View>
                     ) : null}
+                    {showsMeasure(it, arr) ? <MeasureBadge measure={it.sale_measure} /> : null}
                     <View className="flex-row justify-between gap-3">
-                      <Text variant="footnote" tone="muted">
+                      <Text variant="footnote" tone="muted" className="flex-1">
                         {it.product.sku} ·{' '}
                         {it.meters !== null ? t('orders.meters', { value: f.number(it.meters, 2) }) : t('orders.pieces', { count: it.quantity ?? 0 })}
+                        {/* TEC-1240 (K3): the usage credits each cut piece of a meter line carries. */}
+                        {it.line_credits != null ? ` · ${t('orders:measure.credits_value', { value: it.line_credits })}` : ''}
                       </Text>
                       {prices && hasAmount(it.line_total) ? (
                         <Text variant="footnote" className="font-semibold tabular-nums">
@@ -395,11 +399,19 @@ export function OrderDetailScreen() {
                     {it.units?.length ? (
                       <View className="flex-row flex-wrap gap-x-3 gap-y-0.5">
                         {it.units.map((u) => (
-                          <RefText key={u.unit_uuid} kind="stock_unit" value={{ uuid: u.unit_uuid, name: u.barcode }} id={u.barcode} variant="footnote" mono />
+                          <View key={u.unit_uuid} className="flex-row items-center gap-1">
+                            <RefText kind="stock_unit" value={{ uuid: u.unit_uuid, name: u.barcode }} id={u.barcode} variant="footnote" mono />
+                            {/* TEC-1240: the meters of each piece that fulfils a meter line. */}
+                            {it.sale_measure === 'meter' && u.meters != null ? (
+                              <Text variant="footnote" tone="muted" className="tabular-nums">
+                                {t('orders.meters', { value: f.number(u.meters, 2) })}
+                              </Text>
+                            ) : null}
+                          </View>
                         ))}
                       </View>
                     ) : null}
-                    <LinePlotter order={o} item={it} />
+                    <LinePlotter order={o} item={it} credits={it.line_credits == null} />
                   </View>
                 ))}
               </List>
