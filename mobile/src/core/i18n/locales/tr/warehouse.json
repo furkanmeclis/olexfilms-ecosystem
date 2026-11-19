@@ -450,6 +450,7 @@
   "stock.credits.remaining": "Kalan / toplam",
   "stock.credits.used": "Kullanıldığı hizmet sayısı",
   "stock.credits.exhausted": "Kredi kalmadı; barkod yeni bir hizmette seçilemez.",
+  "stock.credits.exhausted_short": "Kredi bitti",
   "stock.credits.services": "Kullanıldığı hizmetler",
   "stock.credits.finished": "Ürün bitirildi",
   "stock.credits.taken": "{{value}} kredi",

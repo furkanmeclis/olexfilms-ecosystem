@@ -71,6 +71,8 @@
   "stock_empty_body": "Yalnız dilerinizdəki vahidlər əlavə edilə bilər.",
   "on_hand": "Mövcud: {{count}}",
   "meters_left": "Qalıb: {{value}} m",
+  "cut_piece": "Kəsilmiş parça · {{value}} m",
+  "cut_piece_info": "{{value}} m kəsilmiş parça: yenidən kəsilmir, xidmətdə bütöv istifadə olunur.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Hissə: {{count}}",

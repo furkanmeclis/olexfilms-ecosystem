@@ -20,6 +20,19 @@ export function hasCreditsLeft(c: CreditsSummary | null | undefined): boolean {
   return !c || c.credits_remaining > 0;
 }
 
+/**
+ * TEC-1242 (K4): a cut piece shipped on a meter line carries that line's
+ * credits; it is used whole (one credit per service), its meters are never
+ * cut. A roll without line credits has none and is still cut.
+ */
+export function isCutPiece(u: {
+  unit_kind: string;
+  remaining_meters: string | null;
+  credits?: CreditsSummary | null;
+}): boolean {
+  return u.unit_kind === 'serial' && u.remaining_meters !== null && !!u.credits;
+}
+
 /** Only serial piece products give their barcodes credits (not a roll, not a fixed barcode). */
 export function productUsesCredits(p: { unit_type: string; uses_fixed_barcode: boolean }): boolean {
   return !p.uses_fixed_barcode && p.unit_type !== 'roll_meter';

@@ -51,6 +51,7 @@
   "quick_sale.empty_cart": "Scan a barcode to add a line.",
   "quick_sale.already_added": "Barcode {{barcode}} is already in the sale.",
   "quick_sale.not_in_stock": "This product is not in your stock.",
+  "quick_sale.cut_piece": "This barcode is a cut piece; cut pieces are not sold, they are only used in services.",
   "quick_sale.not_found": "Product not found.",
   "quick_sale.increase": "Increase quantity",
   "quick_sale.decrease": "Decrease quantity",

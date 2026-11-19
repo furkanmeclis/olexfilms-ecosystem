@@ -44,6 +44,8 @@ type Picked = { uuid: string; label: string };
 
 /** Lookup failures in the cart's words (web QuickSaleForm.lookupError). */
 function lookupMessage(e: unknown) {
+  // TEC-1242 (K13): a cut piece is used only in services.
+  if (isApiError(e, 'CUT_PIECE_NOT_SELLABLE')) return 'quick_sale.cut_piece';
   if (isApiError(e, 'STOCK_UNAVAILABLE')) return 'quick_sale.not_in_stock';
   if (isApiError(e, 'NOT_FOUND')) return 'quick_sale.not_found';
   return null;

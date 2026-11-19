@@ -450,6 +450,7 @@
   "stock.credits.remaining": "باقی‌مانده / کل",
   "stock.credits.used": "سرویس‌های استفاده‌شده",
   "stock.credits.exhausted": "اعتباری باقی نمانده؛ بارکد در سرویس جدید قابل انتخاب نیست.",
+  "stock.credits.exhausted_short": "اعتبار تمام شد",
   "stock.credits.services": "سرویس‌هایی که در آن‌ها استفاده شده است",
   "stock.credits.finished": "محصول تمام شد",
   "stock.credits.taken": "{{value}} اعتبار",

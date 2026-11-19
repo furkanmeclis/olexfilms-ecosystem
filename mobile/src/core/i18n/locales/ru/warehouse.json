@@ -729,6 +729,7 @@
   "stock.credits.amount_invalid": "Введите целое число от 1 до 1000.",
   "stock.credits.amount_placeholder": "Напр. 2",
   "stock.credits.exhausted": "Кредиты закончились; штрихкод нельзя выбрать в новой услуге.",
+  "stock.credits.exhausted_short": "Кредитов нет",
   "stock.credits.finished": "Продукт израсходован",
   "stock.credits.increase": "Добавить кредиты",
   "stock.credits.increase_failed": "Не удалось добавить кредиты",

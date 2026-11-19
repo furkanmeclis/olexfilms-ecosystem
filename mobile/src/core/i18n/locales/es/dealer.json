@@ -71,6 +71,8 @@
   "stock_empty_body": "Solo se pueden añadir unidades de su distribuidor.",
   "on_hand": "Disponible: {{count}}",
   "meters_left": "Quedan: {{value}} m",
+  "cut_piece": "Pieza cortada · {{value}} m",
+  "cut_piece_info": "Pieza cortada de {{value}} m: no se vuelve a cortar, se usa entera en el servicio.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Piezas: {{count}}",

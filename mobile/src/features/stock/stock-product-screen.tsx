@@ -60,15 +60,18 @@ export function StockProductScreen({ base }: { base: string }) {
 
 export function UnitRow({ unit, onPress, showProduct }: { unit: StockUnitRow; onPress: () => void; showProduct?: boolean }) {
   const { t } = useTranslation('warehouse');
-  const amount =
-    unit.remaining_meters !== null
+  // TEC-1221 / TEC-1242: a credit unit (a piece or a cut piece) counts in credits.
+  const credits =
+    unit.credits_total != null && unit.credits_remaining != null
+      ? { credits_total: unit.credits_total, credits_remaining: unit.credits_remaining }
+      : null;
+  const amount = credits
+    ? t('stock.credits.short', { value: creditsText(credits) })
+    : unit.remaining_meters !== null
       ? `${formatNumber(unit.remaining_meters, 2)} m`
       : unit.unit_kind === 'fixed'
         ? `× ${formatNumber(unit.quantity)}`
-        : unit.credits_total != null && unit.credits_remaining != null
-          ? // TEC-1221: credits left on a serial piece unit.
-            t('stock.credits.short', { value: creditsText({ credits_total: unit.credits_total, credits_remaining: unit.credits_remaining }) })
-          : null;
+        : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -89,6 +92,9 @@ export function UnitRow({ unit, onPress, showProduct }: { unit: StockUnitRow; on
         <StatusPill tone={unitStatusTone(unit.status)} label={t(`stock.status.${unit.status}`)} />
         {/* TEC-1243: a remnant ("ragle") is not offered to orders. */}
         {unit.remnant ? <StatusPill tone="progress" label={t('split.remnant')} /> : null}
+        {credits && credits.credits_remaining <= 0 ? (
+          <StatusPill tone="problem" label={t('stock.credits.exhausted_short')} />
+        ) : null}
         <Icon name="location" tone="muted-foreground" size={14} />
         <Text variant="footnote" tone="muted" numberOfLines={1} className="flex-1">
           {unit.location ? unit.location.code || unit.location.name : t('scan.unplaced')}

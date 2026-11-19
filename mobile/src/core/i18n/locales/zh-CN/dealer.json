@@ -71,6 +71,8 @@
   "stock_empty_body": "只能添加您经销商持有的单元。",
   "on_hand": "现有：{{count}}",
   "meters_left": "剩余：{{value}} 米",
+  "cut_piece": "裁切件 · {{value}} 米",
+  "cut_piece_info": "{{value}} 米裁切件：不再裁切，在服务中整件使用。",
   "meters_value": "{{value}} 米",
   "quantity_value": "× {{value}}",
   "parts_count": "部位：{{count}}",

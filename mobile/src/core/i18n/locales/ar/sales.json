@@ -59,6 +59,7 @@
   "quick_sale.empty_cart": "امسح باركود لإضافة بند.",
   "quick_sale.already_added": "الباركود {{barcode}} موجود بالفعل في البيع.",
   "quick_sale.not_in_stock": "هذا المنتج غير موجود في مخزونك.",
+  "quick_sale.cut_piece": "هذا الباركود قطعة مقصوصة؛ القطع المقصوصة لا تُباع وتُستخدم في الخدمات فقط.",
   "quick_sale.not_found": "لم يُعثر على المنتج.",
   "quick_sale.increase": "زيادة الكمية",
   "quick_sale.decrease": "تقليل الكمية",

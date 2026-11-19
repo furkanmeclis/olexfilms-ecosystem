@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { creditsText, hasCreditsLeft, parseCredits, productUsesCredits } from './credits.ts';
+import { creditsText, hasCreditsLeft, isCutPiece, parseCredits, productUsesCredits } from './credits.ts';
 
 test('creditsText: remaining / total, nothing for a roll or a fixed barcode (TEC-1221)', () => {
   assert.equal(creditsText({ credits_total: 5, credits_remaining: 3 }), '3 / 5');
@@ -13,6 +13,14 @@ test('hasCreditsLeft: a unit with 0 credits cannot be selected, one without cred
   assert.equal(hasCreditsLeft({ credits_total: 5, credits_remaining: 0 }), false);
   assert.equal(hasCreditsLeft({ credits_total: 5, credits_remaining: 1 }), true);
   assert.equal(hasCreditsLeft(null), true);
+});
+
+test('isCutPiece: a unit with meters and credits is used whole, a roll without credits is cut (TEC-1242)', () => {
+  const credits = { credits_total: 5, credits_remaining: 4 };
+  assert.equal(isCutPiece({ unit_kind: 'serial', remaining_meters: '3.00', credits }), true);
+  assert.equal(isCutPiece({ unit_kind: 'serial', remaining_meters: '3.00', credits: null }), false);
+  assert.equal(isCutPiece({ unit_kind: 'serial', remaining_meters: null, credits }), false);
+  assert.equal(isCutPiece({ unit_kind: 'fixed', remaining_meters: null, credits: null }), false);
 });
 
 test('productUsesCredits: only serial piece products', () => {

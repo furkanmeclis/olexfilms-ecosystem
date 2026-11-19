@@ -71,6 +71,8 @@
   "stock_empty_body": "Μπορούν να προστεθούν μόνο μονάδες του αντιπροσώπου σας.",
   "on_hand": "Διαθέσιμα: {{count}}",
   "meters_left": "Απομένουν: {{value}} m",
+  "cut_piece": "Κομμένο κομμάτι · {{value}} m",
+  "cut_piece_info": "Κομμένο κομμάτι {{value}} m: δεν κόβεται ξανά, χρησιμοποιείται ολόκληρο στην υπηρεσία.",
   "meters_value": "{{value}} m",
   "quantity_value": "× {{value}}",
   "parts_count": "Τμήματα: {{count}}",

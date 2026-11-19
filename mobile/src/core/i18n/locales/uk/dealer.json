@@ -71,6 +71,8 @@
   "stock_empty_body": "Додати можна лише одиниці вашого дилера.",
   "on_hand": "У наявності: {{count}}",
   "meters_left": "Залишилось: {{value}} м",
+  "cut_piece": "Відрізаний шматок · {{value}} м",
+  "cut_piece_info": "Відрізаний шматок {{value}} м: більше не ріжеться, використовується в послузі цілим.",
   "meters_value": "{{value}} м",
   "quantity_value": "× {{value}}",
   "parts_count": "Деталей: {{count}}",
