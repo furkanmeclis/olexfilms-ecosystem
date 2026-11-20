@@ -44,7 +44,7 @@ type Querier interface {
 	AddWarrantyClaimPart(ctx context.Context, arg AddWarrantyClaimPartParams) (WarrantyClaimPart, error)
 	AddWarrantyClaimPhoto(ctx context.Context, arg AddWarrantyClaimPhotoParams) (WarrantyClaimPhoto, error)
 	// TEC-1259: conversations, messages, WhatsApp LID map, notifications and
-	// leads of the person (migration 000202). Runs before AnonymizeUser clears
+	// leads of the person (migration 000203). Runs before AnonymizeUser clears
 	// the phone and e-mail; returns the masked row count per table.
 	AnonymizeCustomerContacts(ctx context.Context, arg AnonymizeCustomerContactsParams) ([]byte, error)
 	// Clears every personal profile field (identity numbers: ciphertext and

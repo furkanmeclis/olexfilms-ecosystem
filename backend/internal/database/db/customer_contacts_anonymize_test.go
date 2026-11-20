@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TEC-1259: anonymize_customer_contacts (migration 000202) leaves no
+// TEC-1259: anonymize_customer_contacts (migration 000203) leaves no
 // personal data of the person in conversations, messages, AI runs, the
 // WhatsApp LID map, notifications, leads and lead events; another person's
 // rows stay untouched; a second call changes nothing.
