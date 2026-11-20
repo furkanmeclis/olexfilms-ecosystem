@@ -268,9 +268,9 @@ export function LabelsScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('labels.title'), headerLargeTitle: false }} />
-      {!canSharePdf ? (
+      {!canSharePdf() ? (
         <Screen>
-          <EmptyState icon="info" title={t('labels.ios_only_title')} body={t('labels.ios_only_body')} />
+          <EmptyState icon="info" title={t('labels.share_unavailable_title')} body={t('labels.share_unavailable_body')} />
         </Screen>
       ) : modes.length === 0 ? (
         <Screen>
