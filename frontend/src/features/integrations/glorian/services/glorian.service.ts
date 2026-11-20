@@ -34,6 +34,14 @@ export type GlorianLocationMapFilter = NonNullable<
   operations["listGlorianLocationMaps"]["parameters"]["query"]
 >;
 
+export type GlorianDealer = components["schemas"]["GlorianDealer"];
+export type GlorianDealerMatchType = GlorianDealer["match_type"];
+export type GlorianDealerOrganization =
+  components["schemas"]["GlorianDealerOrganization"];
+export type GlorianDealerFilter = NonNullable<
+  operations["listGlorianDealers"]["parameters"]["query"]
+>;
+
 /** List envelope of the sync runs / outbounds (TEC-367). */
 export type GlorianPage<T> = {
   items: T[];
@@ -226,5 +234,55 @@ export const glorianService = {
       SILENT,
     );
     return res.items;
+  },
+
+  /** One page of hub dealers with their organization match (TEC-1265). */
+  async dealersPage(query: GlorianDealerFilter = {}) {
+    return unwrap<GlorianPage<GlorianDealer>>(
+      await apiClient.GET("/v1/platform/integrations/glorian/dealers", {
+        params: { query },
+      }),
+      SILENT,
+    );
+  },
+
+  /** Up to 50 organizations of the brand (dealer link picker). */
+  async dealerOrganizations(q?: string) {
+    const res = await unwrap<{ items: GlorianDealerOrganization[] }>(
+      await apiClient.GET(
+        "/v1/platform/integrations/glorian/dealers/organizations",
+        { params: { query: q ? { q } : {} } },
+      ),
+      SILENT,
+    );
+    return res.items;
+  },
+
+  /** Manual link of a dealer (null clears it). */
+  async linkDealer(uuid: string, organizationUuid: string | null) {
+    return unwrap<GlorianDealer>(
+      await apiClient.PUT(
+        "/v1/platform/integrations/glorian/dealers/{uuid}/link",
+        {
+          params: { path: { uuid } },
+          body: { organization_uuid: organizationUuid },
+        },
+      ),
+      SILENT,
+    );
+  },
+
+  /** An organization's Glorian dealer code (null clears it). */
+  async setDealerCode(organizationUuid: string, code: string | null) {
+    return unwrap<GlorianDealerOrganization>(
+      await apiClient.PUT(
+        "/v1/platform/integrations/glorian/organizations/{uuid}/dealer-code",
+        {
+          params: { path: { uuid: organizationUuid } },
+          body: { glorian_dealer_code: code },
+        },
+      ),
+      SILENT,
+    );
   },
 };

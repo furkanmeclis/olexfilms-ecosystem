@@ -180,24 +180,26 @@ func (q *Queries) ListGlorianOrderUnits(ctx context.Context, orderID int64) ([]L
 	return items, nil
 }
 
-const listGlorianPartiesByPhone = `-- name: ListGlorianPartiesByPhone :many
-SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at FROM integration_external_parties
-WHERE connection_id = $1
-  AND phone_e164 = $2
-  AND active
-ORDER BY id
+const listGlorianPartiesForOrganization = `-- name: ListGlorianPartiesForOrganization :many
+SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.connection_id, p.remote_id, p.name, p.phone_e164, p.active, p.synced_at, p.created_at, p.updated_at, p.dealer_code, p.linked_organization_id, p.linked_at FROM glorian_dealer_matches m
+JOIN integration_external_parties p ON p.id = m.party_id
+WHERE m.connection_id = $1
+  AND m.organization_id = $2::bigint
+  AND p.active
+ORDER BY p.id
 LIMIT 2
 `
 
-type ListGlorianPartiesByPhoneParams struct {
-	ConnectionID int64       `json:"connection_id"`
-	PhoneE164    pgtype.Text `json:"phone_e164"`
+type ListGlorianPartiesForOrganizationParams struct {
+	ConnectionID   int64 `json:"connection_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
-// Active dealers of the connection with the buyer's phone: the order's
-// customer link (exactly one match links, none or several hold).
-func (q *Queries) ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error) {
-	rows, err := q.db.Query(ctx, listGlorianPartiesByPhone, arg.ConnectionID, arg.PhoneE164)
+// TEC-1265 (karar 6): the active dealers the buyer organization matches on
+// the connection (glorian_dealer_matches: manual, then dealer code, then
+// phone). Exactly one row links; none or several hold the order.
+func (q *Queries) ListGlorianPartiesForOrganization(ctx context.Context, arg ListGlorianPartiesForOrganizationParams) ([]IntegrationExternalParty, error) {
+	rows, err := q.db.Query(ctx, listGlorianPartiesForOrganization, arg.ConnectionID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +220,9 @@ func (q *Queries) ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorian
 			&i.SyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DealerCode,
+			&i.LinkedOrganizationID,
+			&i.LinkedAt,
 		); err != nil {
 			return nil, err
 		}

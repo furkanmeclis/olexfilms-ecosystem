@@ -51,6 +51,39 @@ func (q *Queries) CountConnectionLocationMaps(ctx context.Context, arg CountConn
 	return count, err
 }
 
+const countGlorianDealerMatches = `-- name: CountGlorianDealerMatches :one
+SELECT count(*) FROM integration_external_parties p
+JOIN glorian_dealer_matches m ON m.party_id = p.id
+LEFT JOIN organizations o ON o.id = m.organization_id
+WHERE p.connection_id = $1
+  AND ($2::text IS NULL
+       OR p.name ILIKE '%' || $2::text || '%'
+       OR p.dealer_code ILIKE '%' || $2::text || '%'
+       OR p.phone_e164 ILIKE '%' || $2::text || '%'
+       OR o.name ILIKE '%' || $2::text || '%')
+  AND (cardinality($3::text[]) = 0 OR m.match_type = ANY($3::text[]))
+  AND ($4::bool IS NULL OR p.active = $4::bool)
+`
+
+type CountGlorianDealerMatchesParams struct {
+	ConnectionID int64       `json:"connection_id"`
+	Q            pgtype.Text `json:"q"`
+	MatchTypes   []string    `json:"match_types"`
+	Active       pgtype.Bool `json:"active"`
+}
+
+func (q *Queries) CountGlorianDealerMatches(ctx context.Context, arg CountGlorianDealerMatchesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGlorianDealerMatches,
+		arg.ConnectionID,
+		arg.Q,
+		arg.MatchTypes,
+		arg.Active,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createConnectionLocationMap = `-- name: CreateConnectionLocationMap :one
 INSERT INTO connection_location_maps (
     organization_id, brand_id, connection_id, warehouse_id, warehouse_location_id, remote_location_code
@@ -282,6 +315,85 @@ func (q *Queries) FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegr
 	return i, err
 }
 
+const getBrandOrganizationByUUID = `-- name: GetBrandOrganizationByUUID :one
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct, excess_meter_billing, glorian_dealer_code FROM organizations
+WHERE uuid = $1 AND brand_id = $2 AND deleted_at IS NULL
+`
+
+type GetBrandOrganizationByUUIDParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetBrandOrganizationByUUID(ctx context.Context, arg GetBrandOrganizationByUUIDParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, getBrandOrganizationByUUID, arg.Uuid, arg.BrandID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
+		&i.BillingTitle,
+		&i.TaxOffice,
+		&i.TaxNo,
+		&i.BillingAddress,
+		&i.BillingEmail,
+		&i.Iban,
+		&i.BillingUpdatedAt,
+		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
+		&i.ExcessMeterBilling,
+		&i.GlorianDealerCode,
+	)
+	return i, err
+}
+
 const getConnectionLocationMapByRemote = `-- name: GetConnectionLocationMapByRemote :one
 SELECT id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at, uuid, warehouse_id FROM connection_location_maps
 WHERE connection_id = $1 AND remote_location_code = $2
@@ -443,7 +555,7 @@ func (q *Queries) GetIntegrationConnectionForProduct(ctx context.Context, arg Ge
 }
 
 const getIntegrationExternalPartyByRemoteID = `-- name: GetIntegrationExternalPartyByRemoteID :one
-SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at FROM integration_external_parties
+SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at FROM integration_external_parties
 WHERE connection_id = $1 AND remote_id = $2
 `
 
@@ -468,6 +580,42 @@ func (q *Queries) GetIntegrationExternalPartyByRemoteID(ctx context.Context, arg
 		&i.SyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DealerCode,
+		&i.LinkedOrganizationID,
+		&i.LinkedAt,
+	)
+	return i, err
+}
+
+const getIntegrationExternalPartyByUUID = `-- name: GetIntegrationExternalPartyByUUID :one
+SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at FROM integration_external_parties
+WHERE connection_id = $1 AND uuid = $2
+`
+
+type GetIntegrationExternalPartyByUUIDParams struct {
+	ConnectionID int64     `json:"connection_id"`
+	Uuid         uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) GetIntegrationExternalPartyByUUID(ctx context.Context, arg GetIntegrationExternalPartyByUUIDParams) (IntegrationExternalParty, error) {
+	row := q.db.QueryRow(ctx, getIntegrationExternalPartyByUUID, arg.ConnectionID, arg.Uuid)
+	var i IntegrationExternalParty
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ConnectionID,
+		&i.RemoteID,
+		&i.Name,
+		&i.PhoneE164,
+		&i.Active,
+		&i.SyncedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DealerCode,
+		&i.LinkedOrganizationID,
+		&i.LinkedAt,
 	)
 	return i, err
 }
@@ -553,13 +701,13 @@ func (q *Queries) GetProductByConnectionExternalID(ctx context.Context, arg GetP
 
 const insertIntegrationExternalParty = `-- name: InsertIntegrationExternalParty :one
 INSERT INTO integration_external_parties (
-    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active
+    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, dealer_code
 )
 VALUES (
     $1, $2, $3, $4,
-    $5, $6, $7
+    $5, $6, $7, $8
 )
-RETURNING id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at
 `
 
 type InsertIntegrationExternalPartyParams struct {
@@ -570,6 +718,7 @@ type InsertIntegrationExternalPartyParams struct {
 	Name           string      `json:"name"`
 	PhoneE164      pgtype.Text `json:"phone_e164"`
 	Active         bool        `json:"active"`
+	DealerCode     pgtype.Text `json:"dealer_code"`
 }
 
 func (q *Queries) InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error) {
@@ -581,6 +730,7 @@ func (q *Queries) InsertIntegrationExternalParty(ctx context.Context, arg Insert
 		arg.Name,
 		arg.PhoneE164,
 		arg.Active,
+		arg.DealerCode,
 	)
 	var i IntegrationExternalParty
 	err := row.Scan(
@@ -596,6 +746,9 @@ func (q *Queries) InsertIntegrationExternalParty(ctx context.Context, arg Insert
 		&i.SyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DealerCode,
+		&i.LinkedOrganizationID,
+		&i.LinkedAt,
 	)
 	return i, err
 }
@@ -730,6 +883,114 @@ func (q *Queries) ListConnectionLocationMaps(ctx context.Context, arg ListConnec
 	return items, nil
 }
 
+const listGlorianDealerMatches = `-- name: ListGlorianDealerMatches :many
+SELECT p.id, p.uuid, p.remote_id, p.name, p.dealer_code, p.phone_e164, p.active, p.synced_at, p.linked_at,
+       m.match_type::text AS match_type,
+       o.uuid AS org_uuid, o.name AS org_name, o.city AS org_city, o.phone AS org_phone,
+       o.glorian_dealer_code AS org_dealer_code
+FROM integration_external_parties p
+JOIN glorian_dealer_matches m ON m.party_id = p.id
+LEFT JOIN organizations o ON o.id = m.organization_id
+WHERE p.connection_id = $1
+  AND ($2::text IS NULL
+       OR p.name ILIKE '%' || $2::text || '%'
+       OR p.dealer_code ILIKE '%' || $2::text || '%'
+       OR p.phone_e164 ILIKE '%' || $2::text || '%'
+       OR o.name ILIKE '%' || $2::text || '%')
+  AND (cardinality($3::text[]) = 0 OR m.match_type = ANY($3::text[]))
+  AND ($4::bool IS NULL OR p.active = $4::bool)
+  AND ($5::bigint IS NULL OR p.id = $5::bigint)
+ORDER BY
+  CASE WHEN NOT $6::bool THEN CASE $7::text WHEN 'name' THEN lower(p.name) WHEN 'dealer_code' THEN lower(p.dealer_code) WHEN 'match_type' THEN m.match_type END END ASC,
+  CASE WHEN $6::bool THEN CASE $7::text WHEN 'name' THEN lower(p.name) WHEN 'dealer_code' THEN lower(p.dealer_code) WHEN 'match_type' THEN m.match_type END END DESC,
+  CASE WHEN NOT $6::bool THEN CASE $7::text WHEN 'synced_at' THEN p.synced_at END END ASC,
+  CASE WHEN $6::bool THEN CASE $7::text WHEN 'synced_at' THEN p.synced_at END END DESC,
+  CASE WHEN $6::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $9 OFFSET $8
+`
+
+type ListGlorianDealerMatchesParams struct {
+	ConnectionID int64       `json:"connection_id"`
+	Q            pgtype.Text `json:"q"`
+	MatchTypes   []string    `json:"match_types"`
+	Active       pgtype.Bool `json:"active"`
+	PartyID      pgtype.Int8 `json:"party_id"`
+	SortDesc     bool        `json:"sort_desc"`
+	SortKey      string      `json:"sort_key"`
+	PageOffset   int32       `json:"page_offset"`
+	PageLimit    int32       `json:"page_limit"`
+}
+
+type ListGlorianDealerMatchesRow struct {
+	ID            int64              `json:"id"`
+	Uuid          uuid.UUID          `json:"uuid"`
+	RemoteID      string             `json:"remote_id"`
+	Name          string             `json:"name"`
+	DealerCode    pgtype.Text        `json:"dealer_code"`
+	PhoneE164     pgtype.Text        `json:"phone_e164"`
+	Active        bool               `json:"active"`
+	SyncedAt      pgtype.Timestamptz `json:"synced_at"`
+	LinkedAt      pgtype.Timestamptz `json:"linked_at"`
+	MatchType     string             `json:"match_type"`
+	OrgUuid       pgtype.UUID        `json:"org_uuid"`
+	OrgName       pgtype.Text        `json:"org_name"`
+	OrgCity       pgtype.Text        `json:"org_city"`
+	OrgPhone      pgtype.Text        `json:"org_phone"`
+	OrgDealerCode pgtype.Text        `json:"org_dealer_code"`
+}
+
+// TEC-1265 (karar 6): the dealers of a connection with their match
+// (glorian_dealer_matches). List contract: sort name, dealer_code,
+// match_type, synced_at (id tiebreak); q on the dealer name, code, phone
+// and the matched organization name; match_type CSV; active boolean;
+// party_id narrows it to one dealer (the view after a write).
+func (q *Queries) ListGlorianDealerMatches(ctx context.Context, arg ListGlorianDealerMatchesParams) ([]ListGlorianDealerMatchesRow, error) {
+	rows, err := q.db.Query(ctx, listGlorianDealerMatches,
+		arg.ConnectionID,
+		arg.Q,
+		arg.MatchTypes,
+		arg.Active,
+		arg.PartyID,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGlorianDealerMatchesRow{}
+	for rows.Next() {
+		var i ListGlorianDealerMatchesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.RemoteID,
+			&i.Name,
+			&i.DealerCode,
+			&i.PhoneE164,
+			&i.Active,
+			&i.SyncedAt,
+			&i.LinkedAt,
+			&i.MatchType,
+			&i.OrgUuid,
+			&i.OrgName,
+			&i.OrgCity,
+			&i.OrgPhone,
+			&i.OrgDealerCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listIntegrationConnections = `-- name: ListIntegrationConnections :many
 SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE brand_id = $1
@@ -817,7 +1078,7 @@ func (q *Queries) ListIntegrationConnectionsByKey(ctx context.Context, key strin
 }
 
 const listIntegrationExternalParties = `-- name: ListIntegrationExternalParties :many
-SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at FROM integration_external_parties
+SELECT id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at FROM integration_external_parties
 WHERE connection_id = $1
 ORDER BY name, id
 `
@@ -844,6 +1105,9 @@ func (q *Queries) ListIntegrationExternalParties(ctx context.Context, connection
 			&i.SyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DealerCode,
+			&i.LinkedOrganizationID,
+			&i.LinkedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -999,6 +1263,65 @@ func (q *Queries) PromoteIntegrationConnectionPendingKey(ctx context.Context, ar
 	return result.RowsAffected(), nil
 }
 
+const searchGlorianDealerOrganizations = `-- name: SearchGlorianDealerOrganizations :many
+SELECT o.id, o.uuid, o.name, o.city, o.phone, o.type, o.glorian_dealer_code
+FROM organizations o
+WHERE o.brand_id = $1 AND o.deleted_at IS NULL
+  AND ($2::text IS NULL
+       OR o.name ILIKE '%' || $2::text || '%'
+       OR o.city ILIKE '%' || $2::text || '%'
+       OR o.phone ILIKE '%' || $2::text || '%'
+       OR o.glorian_dealer_code ILIKE '%' || $2::text || '%')
+ORDER BY lower(o.name), o.id
+LIMIT $3
+`
+
+type SearchGlorianDealerOrganizationsParams struct {
+	BrandID  int64       `json:"brand_id"`
+	Q        pgtype.Text `json:"q"`
+	RowLimit int32       `json:"row_limit"`
+}
+
+type SearchGlorianDealerOrganizationsRow struct {
+	ID                int64       `json:"id"`
+	Uuid              uuid.UUID   `json:"uuid"`
+	Name              string      `json:"name"`
+	City              string      `json:"city"`
+	Phone             string      `json:"phone"`
+	Type              string      `json:"type"`
+	GlorianDealerCode pgtype.Text `json:"glorian_dealer_code"`
+}
+
+// TEC-1265: organization picker of the dealer link (the brand's live
+// organizations, at most row_limit), with their Glorian dealer code.
+func (q *Queries) SearchGlorianDealerOrganizations(ctx context.Context, arg SearchGlorianDealerOrganizationsParams) ([]SearchGlorianDealerOrganizationsRow, error) {
+	rows, err := q.db.Query(ctx, searchGlorianDealerOrganizations, arg.BrandID, arg.Q, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchGlorianDealerOrganizationsRow{}
+	for rows.Next() {
+		var i SearchGlorianDealerOrganizationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.City,
+			&i.Phone,
+			&i.Type,
+			&i.GlorianDealerCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchWarehouseLocationsForMap = `-- name: SearchWarehouseLocationsForMap :many
 SELECT l.id, l.uuid, l.organization_id, l.parent_id, l.code, l.name, l.active, l.created_at, l.updated_at, l.warehouse_id, l.room_id, l.type, l.full_code, l.sort_order FROM warehouse_locations l
 WHERE l.organization_id = $1 AND l.warehouse_id = $2 AND l.active
@@ -1148,6 +1471,126 @@ func (q *Queries) SetIntegrationConnectionPackage(ctx context.Context, arg SetIn
 		&i.PendingKeyIssuedAt,
 		&i.PackageIssuedAt,
 		&i.PackageExpiresAt,
+	)
+	return i, err
+}
+
+const setIntegrationExternalPartyLink = `-- name: SetIntegrationExternalPartyLink :one
+UPDATE integration_external_parties
+SET linked_organization_id = $1,
+    linked_at = CASE WHEN $1::bigint IS NULL THEN NULL ELSE NOW() END
+WHERE connection_id = $2 AND uuid = $3
+RETURNING id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at
+`
+
+type SetIntegrationExternalPartyLinkParams struct {
+	LinkedOrganizationID pgtype.Int8 `json:"linked_organization_id"`
+	ConnectionID         int64       `json:"connection_id"`
+	Uuid                 uuid.UUID   `json:"uuid"`
+}
+
+// TEC-1265: manual link of a dealer to an organization (NULL clears it).
+func (q *Queries) SetIntegrationExternalPartyLink(ctx context.Context, arg SetIntegrationExternalPartyLinkParams) (IntegrationExternalParty, error) {
+	row := q.db.QueryRow(ctx, setIntegrationExternalPartyLink, arg.LinkedOrganizationID, arg.ConnectionID, arg.Uuid)
+	var i IntegrationExternalParty
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ConnectionID,
+		&i.RemoteID,
+		&i.Name,
+		&i.PhoneE164,
+		&i.Active,
+		&i.SyncedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DealerCode,
+		&i.LinkedOrganizationID,
+		&i.LinkedAt,
+	)
+	return i, err
+}
+
+const setOrganizationGlorianDealerCode = `-- name: SetOrganizationGlorianDealerCode :one
+UPDATE organizations
+SET glorian_dealer_code = $1
+WHERE id = $2 AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id, billing_title, tax_office, tax_no, billing_address, billing_email, iban, billing_updated_at, billing_updated_by_user_id, standard_discount_pct, first_order_discount_pct, excess_meter_billing, glorian_dealer_code
+`
+
+type SetOrganizationGlorianDealerCodeParams struct {
+	GlorianDealerCode pgtype.Text `json:"glorian_dealer_code"`
+	ID                int64       `json:"id"`
+}
+
+// TEC-1265: the organization's Glorian dealer code (NULL clears it).
+func (q *Queries) SetOrganizationGlorianDealerCode(ctx context.Context, arg SetOrganizationGlorianDealerCodeParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, setOrganizationGlorianDealerCode, arg.GlorianDealerCode, arg.ID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
+		&i.BillingTitle,
+		&i.TaxOffice,
+		&i.TaxNo,
+		&i.BillingAddress,
+		&i.BillingEmail,
+		&i.Iban,
+		&i.BillingUpdatedAt,
+		&i.BillingUpdatedByUserID,
+		&i.StandardDiscountPct,
+		&i.FirstOrderDiscountPct,
+		&i.ExcessMeterBilling,
+		&i.GlorianDealerCode,
 	)
 	return i, err
 }
@@ -1409,18 +1852,19 @@ func (q *Queries) UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProdu
 
 const upsertIntegrationExternalParty = `-- name: UpsertIntegrationExternalParty :one
 INSERT INTO integration_external_parties (
-    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active
+    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, dealer_code
 )
 VALUES (
     $1, $2, $3, $4,
-    $5, $6, $7
+    $5, $6, $7, $8
 )
 ON CONFLICT (connection_id, remote_id)
 DO UPDATE SET name = EXCLUDED.name,
               phone_e164 = EXCLUDED.phone_e164,
               active = EXCLUDED.active,
+              dealer_code = EXCLUDED.dealer_code,
               synced_at = NOW()
-RETURNING id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, synced_at, created_at, updated_at, dealer_code, linked_organization_id, linked_at
 `
 
 type UpsertIntegrationExternalPartyParams struct {
@@ -1431,6 +1875,7 @@ type UpsertIntegrationExternalPartyParams struct {
 	Name           string      `json:"name"`
 	PhoneE164      pgtype.Text `json:"phone_e164"`
 	Active         bool        `json:"active"`
+	DealerCode     pgtype.Text `json:"dealer_code"`
 }
 
 func (q *Queries) UpsertIntegrationExternalParty(ctx context.Context, arg UpsertIntegrationExternalPartyParams) (IntegrationExternalParty, error) {
@@ -1442,6 +1887,7 @@ func (q *Queries) UpsertIntegrationExternalParty(ctx context.Context, arg Upsert
 		arg.Name,
 		arg.PhoneE164,
 		arg.Active,
+		arg.DealerCode,
 	)
 	var i IntegrationExternalParty
 	err := row.Scan(
@@ -1457,6 +1903,9 @@ func (q *Queries) UpsertIntegrationExternalParty(ctx context.Context, arg Upsert
 		&i.SyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DealerCode,
+		&i.LinkedOrganizationID,
+		&i.LinkedAt,
 	)
 	return i, err
 }

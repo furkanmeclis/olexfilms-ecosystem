@@ -275,6 +275,7 @@ type Querier interface {
 	CountFleetUsersOfFleet(ctx context.Context, fleetOrgID int64) (int64, error)
 	// Same filter block as ListFleetVehicles.
 	CountFleetVehicles(ctx context.Context, arg CountFleetVehiclesParams) (int64, error)
+	CountGlorianDealerMatches(ctx context.Context, arg CountGlorianDealerMatchesParams) (int64, error)
 	CountGlorianOutbounds(ctx context.Context, arg CountGlorianOutboundsParams) (int64, error)
 	CountGlorianSyncRuns(ctx context.Context, arg CountGlorianSyncRunsParams) (int64, error)
 	CountImportJobsFiltered(ctx context.Context, arg CountImportJobsFilteredParams) (int64, error)
@@ -1027,6 +1028,7 @@ type Querier interface {
 	GetBrandByUUID(ctx context.Context, argUuid uuid.UUID) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
 	GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error)
+	GetBrandOrganizationByUUID(ctx context.Context, arg GetBrandOrganizationByUUIDParams) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetBulkOperationByJobID(ctx context.Context, jobID pgtype.Int8) (BulkOperation, error)
@@ -1178,6 +1180,7 @@ type Querier interface {
 	// The connection of the product's brand with the given key.
 	GetIntegrationConnectionForProduct(ctx context.Context, arg GetIntegrationConnectionForProductParams) (IntegrationConnection, error)
 	GetIntegrationExternalPartyByRemoteID(ctx context.Context, arg GetIntegrationExternalPartyByRemoteIDParams) (IntegrationExternalParty, error)
+	GetIntegrationExternalPartyByUUID(ctx context.Context, arg GetIntegrationExternalPartyByUUIDParams) (IntegrationExternalParty, error)
 	GetIntegrationSyncRunByID(ctx context.Context, id int64) (IntegrationSyncRun, error)
 	GetLabelTemplateByID(ctx context.Context, id int64) (LabelTemplate, error)
 	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
@@ -2290,6 +2293,12 @@ type Querier interface {
 	// Fleets with a report frequency (monthly / quarterly), keyset by
 	// organization id.
 	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
+	// TEC-1265 (karar 6): the dealers of a connection with their match
+	// (glorian_dealer_matches). List contract: sort name, dealer_code,
+	// match_type, synced_at (id tiebreak); q on the dealer name, code, phone
+	// and the matched organization name; match_type CSV; active boolean;
+	// party_id narrows it to one dealer (the view after a write).
+	ListGlorianDealerMatches(ctx context.Context, arg ListGlorianDealerMatchesParams) ([]ListGlorianDealerMatchesRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear. TEC-1252: a meter line goes to the hub with its
@@ -2301,9 +2310,10 @@ type Querier interface {
 	// Order outbounds of a connection with their order (TEC-367 list contract,
 	// keys from usecase.OutboundsSortSpec; default created_at, the replay order).
 	ListGlorianOutbounds(ctx context.Context, arg ListGlorianOutboundsParams) ([]ListGlorianOutboundsRow, error)
-	// Active dealers of the connection with the buyer's phone: the order's
-	// customer link (exactly one match links, none or several hold).
-	ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error)
+	// TEC-1265 (karar 6): the active dealers the buyer organization matches on
+	// the connection (glorian_dealer_matches: manual, then dealer code, then
+	// phone). Exactly one row links; none or several hold the order.
+	ListGlorianPartiesForOrganization(ctx context.Context, arg ListGlorianPartiesForOrganizationParams) ([]IntegrationExternalParty, error)
 	// TEC-1265, kullanıcı kararı 5: the prices pushed to the hub. Products
 	// synced from the connection with a USD list row (the center's
 	// sale_to_distributor_price: what a buyer pays at list) after the keyset
@@ -4046,6 +4056,9 @@ type Querier interface {
 	// account name or the cari counterparty name; id is the tiebreak (an empty
 	// sort_key orders by id only, as the single-entry lookup does).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
+	// TEC-1265: organization picker of the dealer link (the brand's live
+	// organizations, at most row_limit), with their Glorian dealer code.
+	SearchGlorianDealerOrganizations(ctx context.Context, arg SearchGlorianDealerOrganizationsParams) ([]SearchGlorianDealerOrganizationsRow, error)
 	// Member picker: active users of the organization, matched on name,
 	// surname or email (at most row_limit).
 	SearchOrganizationMemberUsers(ctx context.Context, arg SearchOrganizationMemberUsersParams) ([]SearchOrganizationMemberUsersRow, error)
@@ -4141,6 +4154,8 @@ type Querier interface {
 	// pending_api_key_enc until the hub accepts it; without (no key yet) it
 	// becomes the active key at once.
 	SetIntegrationConnectionPackage(ctx context.Context, arg SetIntegrationConnectionPackageParams) (IntegrationConnection, error)
+	// TEC-1265: manual link of a dealer to an organization (NULL clears it).
+	SetIntegrationExternalPartyLink(ctx context.Context, arg SetIntegrationExternalPartyLinkParams) (IntegrationExternalParty, error)
 	SetLeadFollowUp(ctx context.Context, arg SetLeadFollowUpParams) (Lead, error)
 	SetLeadStatus(ctx context.Context, arg SetLeadStatusParams) (Lead, error)
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
@@ -4188,6 +4203,8 @@ type Querier interface {
 	// TEC-1064: the discounts the parent agreed with this buyer organization
 	// (NULL = none). The caller checks the parent and the permission.
 	SetOrganizationDiscounts(ctx context.Context, arg SetOrganizationDiscountsParams) (Organization, error)
+	// TEC-1265: the organization's Glorian dealer code (NULL clears it).
+	SetOrganizationGlorianDealerCode(ctx context.Context, arg SetOrganizationGlorianDealerCodeParams) (Organization, error)
 	// ---------------------------------------------------------------------------
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)

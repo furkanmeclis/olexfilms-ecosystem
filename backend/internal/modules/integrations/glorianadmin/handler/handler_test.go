@@ -165,6 +165,27 @@ func (q *stubQ) CountGlorianOutbounds(_ context.Context, arg db.CountGlorianOutb
 	return n, nil
 }
 
+// TEC-1265 (karar 6): the dealer match stubs (empty connection).
+func (q *stubQ) ListGlorianDealerMatches(context.Context, db.ListGlorianDealerMatchesParams) ([]db.ListGlorianDealerMatchesRow, error) {
+	return []db.ListGlorianDealerMatchesRow{}, nil
+}
+
+func (q *stubQ) CountGlorianDealerMatches(context.Context, db.CountGlorianDealerMatchesParams) (int64, error) {
+	return 0, nil
+}
+
+func (q *stubQ) SearchGlorianDealerOrganizations(context.Context, db.SearchGlorianDealerOrganizationsParams) ([]db.SearchGlorianDealerOrganizationsRow, error) {
+	return []db.SearchGlorianDealerOrganizationsRow{}, nil
+}
+
+func (q *stubQ) GetIntegrationExternalPartyByUUID(context.Context, db.GetIntegrationExternalPartyByUUIDParams) (db.IntegrationExternalParty, error) {
+	return db.IntegrationExternalParty{}, pgx.ErrNoRows
+}
+
+func (q *stubQ) GetBrandOrganizationByUUID(context.Context, db.GetBrandOrganizationByUUIDParams) (db.Organization, error) {
+	return db.Organization{}, pgx.ErrNoRows
+}
+
 func (q *stubQ) GetGlorianOutboundByUUID(_ context.Context, arg db.GetGlorianOutboundByUUIDParams) (db.GetGlorianOutboundByUUIDRow, error) {
 	for _, ob := range q.outbounds {
 		if ob.Uuid == arg.Uuid && arg.ConnectionID == connID {
@@ -302,6 +323,10 @@ func TestUnauthorizedCallerGets403(t *testing.T) {
 		{"GET", "/sync-runs/" + uuid.NewString()}, {"GET", "/outbounds?state=held"},
 		{"POST", "/outbounds/" + held.String() + "/replay"}, {"POST", "/reconcile"},
 		{"POST", "/outbounds/replay"},
+		// TEC-1265 (karar 6).
+		{"GET", "/dealers"}, {"GET", "/dealers/organizations"},
+		{"PUT", "/dealers/" + uuid.NewString() + "/link"},
+		{"PUT", "/organizations/" + uuid.NewString() + "/dealer-code"},
 	}
 	writes := map[string]bool{"PUT": true, "POST": true}
 

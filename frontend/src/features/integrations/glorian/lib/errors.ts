@@ -12,6 +12,9 @@ const CODE_KEYS: Record<string, string> = {
   GLORIAN_CENTER_MISSING: "integrations.glorian.errors.center_missing",
   GLORIAN_REMOTE_LOCATION_TAKEN:
     "integrations.glorian.errors.remote_location_taken",
+  GLORIAN_DEALER_CODE_TAKEN: "integrations.glorian.errors.dealer_code_taken",
+  GLORIAN_ORGANIZATION_LINKED:
+    "integrations.glorian.errors.organization_linked",
   QUEUE_UNAVAILABLE: "integrations.glorian.errors.queue_unavailable",
   VALIDATION_ERROR: "integrations.glorian.errors.validation",
 };

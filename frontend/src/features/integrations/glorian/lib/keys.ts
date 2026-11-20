@@ -9,5 +9,6 @@ export const glorianKeys = {
     [...glorianKeys.all, "location-maps", query] as const,
   mapWarehouses: () =>
     [...glorianKeys.all, "location-maps-warehouses"] as const,
+  dealers: (query: object) => [...glorianKeys.all, "dealers", query] as const,
   reconcile: () => [...glorianKeys.all, "reconcile"] as const,
 };

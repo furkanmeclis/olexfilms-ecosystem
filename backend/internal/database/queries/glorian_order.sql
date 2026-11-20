@@ -46,14 +46,16 @@ ORDER BY id;
 SELECT * FROM order_outbounds
 WHERE id = sqlc.arg(id);
 
--- name: ListGlorianPartiesByPhone :many
--- Active dealers of the connection with the buyer's phone: the order's
--- customer link (exactly one match links, none or several hold).
-SELECT * FROM integration_external_parties
-WHERE connection_id = sqlc.arg(connection_id)
-  AND phone_e164 = sqlc.arg(phone_e164)
-  AND active
-ORDER BY id
+-- name: ListGlorianPartiesForOrganization :many
+-- TEC-1265 (karar 6): the active dealers the buyer organization matches on
+-- the connection (glorian_dealer_matches: manual, then dealer code, then
+-- phone). Exactly one row links; none or several hold the order.
+SELECT p.* FROM glorian_dealer_matches m
+JOIN integration_external_parties p ON p.id = m.party_id
+WHERE m.connection_id = sqlc.arg(connection_id)
+  AND m.organization_id = sqlc.arg(organization_id)::bigint
+  AND p.active
+ORDER BY p.id
 LIMIT 2;
 
 -- name: ListHeldOrderOutbounds :many

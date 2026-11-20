@@ -214,23 +214,20 @@ func ExternalReference(order db.Order) string { return order.Uuid.String() }
 
 // link returns the hub dealer id of the order's buyer on conn, or the hold
 // reason: missing_customer_link before inactive_connection (warehouse
-// CreateOrderOutboundsAction).
+// CreateOrderOutboundsAction). TEC-1265 (karar 6): the dealer comes from
+// glorian_dealer_matches: a manual link first, then the organization's
+// Glorian dealer code, then the phone (only for an organization without a
+// code). Exactly one active dealer links; none or several hold.
 func (o *OrderOutbounder) link(ctx context.Context, conn db.IntegrationConnection, order db.Order) (string, string, error) {
-	buyer, err := o.q.GetOrganizationByID(ctx, order.BuyerOrgID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return "", "", fmt.Errorf("glorian order: buyer: %w", err)
+	parties, err := o.q.ListGlorianPartiesForOrganization(ctx, db.ListGlorianPartiesForOrganizationParams{
+		ConnectionID: conn.ID, OrganizationID: order.BuyerOrgID,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("glorian order: dealer link: %w", err)
 	}
 	dealer := ""
-	if phone := strings.TrimSpace(buyer.Phone); phone != "" {
-		parties, err := o.q.ListGlorianPartiesByPhone(ctx, db.ListGlorianPartiesByPhoneParams{
-			ConnectionID: conn.ID, PhoneE164: pgtype.Text{String: phone, Valid: true},
-		})
-		if err != nil {
-			return "", "", fmt.Errorf("glorian order: dealer link: %w", err)
-		}
-		if len(parties) == 1 {
-			dealer = parties[0].RemoteID
-		}
+	if len(parties) == 1 {
+		dealer = parties[0].RemoteID
 	}
 	switch {
 	case dealer == "":

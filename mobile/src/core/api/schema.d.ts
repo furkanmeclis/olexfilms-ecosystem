@@ -16572,6 +16572,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/integrations/glorian/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Glorian dealers with their organization match
+         * @description TEC-1265 (decision 6): every dealer pulled from the hub with the organization it matches and how (glorian_dealer_matches view, the same rule the order outbound uses). Order per organization: `manual` (an admin linked the dealer), `code` (the organization's Glorian dealer code equals the dealer code, case-insensitive), `phone` (fallback, only for an organization without a code); `ambiguous` when several dealers fall on one organization or a dealer phone fits several organizations (orders hold); `none` otherwise. Needs `integrations.glorian.view`. `sort`: name (default), dealer_code, match_type, synced_at; `q` matches the dealer name, code, phone and the organization name; `match_type` is a CSV filter; `active` a boolean filter.
+         */
+        get: operations["listGlorianDealers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/dealers/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organizations of the Glorian brand (dealer link picker)
+         * @description TEC-1265: at most 50 live organizations of the brand; `q` matches the name, city, phone and Glorian dealer code. Needs `integrations.glorian.view`.
+         */
+        get: operations["listGlorianDealerOrganizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/dealers/{uuid}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Link a Glorian dealer to an organization by hand
+         * @description TEC-1265: the manual link beats the dealer code and the phone. A null `organization_uuid` clears it. The organization must belong to the brand (400) and can be linked by hand to one dealer of the connection (409 GLORIAN_ORGANIZATION_LINKED). Held orders are retried by the replay cron. Needs `integrations.glorian.manage`.
+         */
+        put: operations["linkGlorianDealer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/organizations/{uuid}/dealer-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set an organization's Glorian dealer code
+         * @description TEC-1265 (decision 6): the dealer code the organization has on Glorian; unique in the brand, case-insensitive (409 GLORIAN_DEALER_CODE_TAKEN). Null or empty clears it. An organization with a code never falls back to the phone match. Needs `integrations.glorian.manage`.
+         */
+        put: operations["setGlorianDealerCode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/library/folders": {
         parameters: {
             query?: never;
@@ -26663,6 +26743,70 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["GlorianMapLocation"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        GlorianDealerOrganization: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            city: string;
+            phone: string;
+            type?: string;
+            glorian_dealer_code: string | null;
+        };
+        GlorianDealer: {
+            /** Format: uuid */
+            uuid: string;
+            remote_id: string;
+            name: string;
+            dealer_code: string | null;
+            phone: string | null;
+            active: boolean;
+            /** @enum {string} */
+            match_type: "manual" | "code" | "phone" | "ambiguous" | "none";
+            organization: components["schemas"]["GlorianDealerOrganization"] | null;
+            /** Format: date-time */
+            synced_at: string | null;
+            /** Format: date-time */
+            linked_at: string | null;
+        };
+        GlorianDealerLinkInput: {
+            /** Format: uuid */
+            organization_uuid?: string | null;
+        };
+        GlorianDealerCodeInput: {
+            glorian_dealer_code?: string | null;
+        };
+        EnvelopeGlorianDealer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianDealer"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianDealerPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianDealer"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianDealerOrganization: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianDealerOrganization"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianDealerOrganizationList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianDealerOrganization"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -65679,6 +65823,127 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listGlorianDealers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description CSV of manual, code, phone, ambiguous, none. */
+                match_type?: string;
+                active?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianDealerPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listGlorianDealerOrganizations: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organizations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianDealerOrganizationList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkGlorianDealer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlorianDealerLinkInput"];
+            };
+        };
+        responses: {
+            /** @description Dealer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianDealer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    setGlorianDealerCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlorianDealerCodeInput"];
+            };
+        };
+        responses: {
+            /** @description Organization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianDealerOrganization"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listLibraryFolders: {

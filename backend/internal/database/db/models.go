@@ -1431,6 +1431,13 @@ type GithubAppSetting struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type GlorianDealerMatch struct {
+	PartyID        int64       `json:"party_id"`
+	ConnectionID   int64       `json:"connection_id"`
+	MatchType      interface{} `json:"match_type"`
+	OrganizationID interface{} `json:"organization_id"`
+}
+
 type ImportChange struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`
@@ -1519,18 +1526,21 @@ type IntegrationConnection struct {
 }
 
 type IntegrationExternalParty struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	OrganizationID int64              `json:"organization_id"`
-	BrandID        int64              `json:"brand_id"`
-	ConnectionID   int64              `json:"connection_id"`
-	RemoteID       string             `json:"remote_id"`
-	Name           string             `json:"name"`
-	PhoneE164      pgtype.Text        `json:"phone_e164"`
-	Active         bool               `json:"active"`
-	SyncedAt       pgtype.Timestamptz `json:"synced_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	Uuid                 uuid.UUID          `json:"uuid"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ConnectionID         int64              `json:"connection_id"`
+	RemoteID             string             `json:"remote_id"`
+	Name                 string             `json:"name"`
+	PhoneE164            pgtype.Text        `json:"phone_e164"`
+	Active               bool               `json:"active"`
+	SyncedAt             pgtype.Timestamptz `json:"synced_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	DealerCode           pgtype.Text        `json:"dealer_code"`
+	LinkedOrganizationID pgtype.Int8        `json:"linked_organization_id"`
+	LinkedAt             pgtype.Timestamptz `json:"linked_at"`
 }
 
 type IntegrationSyncRun struct {
@@ -2355,6 +2365,7 @@ type Organization struct {
 	StandardDiscountPct       pgtype.Numeric     `json:"standard_discount_pct"`
 	FirstOrderDiscountPct     pgtype.Numeric     `json:"first_order_discount_pct"`
 	ExcessMeterBilling        string             `json:"excess_meter_billing"`
+	GlorianDealerCode         pgtype.Text        `json:"glorian_dealer_code"`
 }
 
 type OrganizationMember struct {

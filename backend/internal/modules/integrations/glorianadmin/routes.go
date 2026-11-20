@@ -49,4 +49,9 @@ func Mount(mux *http.ServeMux, h *handler.Handler, authn func(http.Handler) http
 	mux.Handle("GET "+Prefix+"/location-maps/warehouses/{uuid}/locations", view(h.MapLocations))
 	mux.Handle("PUT "+Prefix+"/location-maps/{uuid}", manage(h.UpdateLocationMap))
 	mux.Handle("DELETE "+Prefix+"/location-maps/{uuid}", manage(h.DeleteLocationMap))
+	// TEC-1265 (karar 6): dealer <-> organization match.
+	mux.Handle("GET "+Prefix+"/dealers", view(h.ListDealers))
+	mux.Handle("GET "+Prefix+"/dealers/organizations", view(h.DealerOrganizations))
+	mux.Handle("PUT "+Prefix+"/dealers/{uuid}/link", manage(h.LinkDealer))
+	mux.Handle("PUT "+Prefix+"/organizations/{uuid}/dealer-code", manage(h.SetDealerCode))
 }
