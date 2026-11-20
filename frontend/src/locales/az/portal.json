@@ -420,5 +420,18 @@
   "nav.group.vehicles": "Avtomobillər və xidmətlər",
   "nav.group.account": "Hesab",
   "fleet.nav.group.fleet": "Avtopark",
-  "fleet.nav.group.account": "Hesab və hesabatlar"
+  "fleet.nav.group.account": "Hesab və hesabatlar",
+  "legal.kind_label": "Mətn növü",
+  "legal.kind.privacy_policy": "Məxfilik siyasəti",
+  "legal.kind.kvkk_notice": "KVKK məlumatlandırma mətni",
+  "legal.kind.terms_of_use": "İstifadə şərtləri",
+  "delete.title": "Hesabımın silinməsi",
+  "delete.hint": "Hesabınız həmişəlik silinir: adınız, telefonunuz və əlaqə məlumatlarınız geri qaytarılmaz şəkildə anonimləşdirilir və bütün sessiyalarınız bağlanır. Xidmət və zəmanət qeydləri avtomobilin tarixçəsi üçün kimliyiniz olmadan saxlanılır.",
+  "delete.send_code": "Təsdiq kodunu göndər",
+  "delete.code_sent": "Telefonunuza təsdiq kodu göndərdik.",
+  "delete.code_label": "Təsdiq kodu",
+  "delete.confirm": "Hesabımı həmişəlik sil",
+  "delete.failed": "Hesab silinmədi. Yenidən cəhd edin.",
+  "delete.no_phone": "Hesabınızda telefon nömrəsi yoxdur. Hesabınızı silmək üçün bizimlə əlaqə saxlayın.",
+  "delete.panel_account": "Bu hesab həm də təşkilat istifadəçisinə aiddir və tətbiqdən silinə bilməz. Bizimlə əlaqə saxlayın."
 }

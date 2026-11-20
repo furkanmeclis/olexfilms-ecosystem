@@ -420,5 +420,18 @@
   "nav.group.vehicles": "المركبات والخدمات",
   "nav.group.account": "الحساب",
   "fleet.nav.group.fleet": "الأسطول",
-  "fleet.nav.group.account": "الحساب والتقارير"
+  "fleet.nav.group.account": "الحساب والتقارير",
+  "legal.kind_label": "نوع النص",
+  "legal.kind.privacy_policy": "سياسة الخصوصية",
+  "legal.kind.kvkk_notice": "إشعار حماية البيانات الشخصية (KVKK)",
+  "legal.kind.terms_of_use": "شروط الاستخدام",
+  "delete.title": "حذف حسابي",
+  "delete.hint": "سيُحذف حسابك نهائيًا: تُجهَّل بيانات اسمك وهاتفك ووسائل الاتصال بك بشكل لا رجعة فيه، وتُنهى جميع جلساتك. تُحفظ سجلات الخدمة والضمان لتاريخ السيارة دون هويتك.",
+  "delete.send_code": "إرسال رمز التأكيد",
+  "delete.code_sent": "أرسلنا رمز تأكيد إلى هاتفك.",
+  "delete.code_label": "رمز التأكيد",
+  "delete.confirm": "حذف حسابي نهائيًا",
+  "delete.failed": "تعذّر حذف الحساب. حاول مرة أخرى.",
+  "delete.no_phone": "لا يوجد رقم هاتف في حسابك. تواصل معنا لحذف حسابك.",
+  "delete.panel_account": "هذا الحساب يخص أيضًا مستخدمًا في مؤسسة ولا يمكن حذفه من التطبيق. تواصل معنا."
 }

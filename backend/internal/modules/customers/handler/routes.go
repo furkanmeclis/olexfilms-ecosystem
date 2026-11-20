@@ -24,6 +24,8 @@ import (
 // customers.anonymize (center roles only, sensitive) and a fresh step-up;
 // the use case also requires a center organization. The portal export
 // (/v1/portal/me/data-export) is the signed-in customer's own data.
+// TEC-1257: /v1/portal/me/delete(/code) lets the customer anonymize their
+// own account after a phone code (account_delete).
 //
 // TEC-193: the customer merge needs customers.merge (center roles only,
 // sensitive); the preview (dry run) writes nothing, the apply also needs a
@@ -100,6 +102,15 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/customer-data-exports/{uuid}/download", privacy(h.DownloadDataExport))
 
 	mux.Handle("POST /v1/portal/me/data-export", portal(h.RequestPortalDataExport))
+	// TEC-1257: own account deletion (phone code, then anonymization). A
+	// read-only fleet session is refused (403 PORTAL_READ_ONLY): the fleet
+	// account belongs to the organization that opened it.
+	selfDelete := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermCustomersRead),
+			middleware.DenyPortalReadOnly)
+	}
+	mux.Handle("POST /v1/portal/me/delete/code", selfDelete(h.RequestAccountDeleteCode))
+	mux.Handle("POST /v1/portal/me/delete", selfDelete(h.DeleteOwnAccount))
 	mux.Handle("GET /v1/portal/exports/{uuid}", portal(h.GetPortalExport))
 	mux.Handle("GET /v1/portal/exports/{uuid}/download", portal(h.DownloadPortalExport))
 

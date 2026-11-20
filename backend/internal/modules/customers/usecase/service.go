@@ -110,6 +110,10 @@ type Caller struct {
 	// customer themself and reaches only their own vehicles and the
 	// transfers they started, instead of the organization scope.
 	portalUserID int64
+	// selfUserID is set by selfDeleteCaller (TEC-1257): the customer
+	// anonymizes their own account; requireInScope lets exactly that user
+	// through, linked to an organization or not.
+	selfUserID int64
 }
 
 // orgIDs is the organization restriction of the scope (nil: none).

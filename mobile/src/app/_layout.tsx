@@ -71,6 +71,10 @@ export default function RootLayout() {
                 <Stack.Protected guard={!updateRequired && status === 'signedOut'}>
                   <Stack.Screen name="(public)" />
                 </Stack.Protected>
+                {/* TEC-1257: privacy policy, KVKK notice, terms of use; signed in or not. */}
+                <Stack.Protected guard={!updateRequired}>
+                  <Stack.Screen name="legal/[kind]" options={{ headerShown: true, headerBackButtonDisplayMode: 'minimal' }} />
+                </Stack.Protected>
               </Stack>
               {!updateRequired && <UpdateBanner />}
               {!updateRequired && status === 'signedIn' && <FeedbackRoot />}

@@ -50,6 +50,19 @@ func (h *Handler) PendingConsents(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }
 
+// PublicText (GET /v1/public/legal-texts/{kind}?locale=, TEC-1257): the
+// current privacy policy, KVKK notice or terms of use, without a session.
+// Unknown kind or nothing published yet: 404.
+func (h *Handler) PublicText(w http.ResponseWriter, r *http.Request) {
+	t, err := h.svc.Public(r.Context(), r.PathValue("kind"), requestLocale(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	response.JSON(w, r, http.StatusOK, t)
+}
+
 type decideBody struct {
 	Kind     string `json:"kind"`
 	Locale   string `json:"locale"`

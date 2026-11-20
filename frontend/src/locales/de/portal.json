@@ -420,5 +420,18 @@
   "nav.group.vehicles": "Fahrzeuge und Services",
   "nav.group.account": "Konto",
   "fleet.nav.group.fleet": "Flotte",
-  "fleet.nav.group.account": "Konto und Berichte"
+  "fleet.nav.group.account": "Konto und Berichte",
+  "legal.kind_label": "Textart",
+  "legal.kind.privacy_policy": "Datenschutzerklärung",
+  "legal.kind.kvkk_notice": "KVKK-Datenschutzhinweis",
+  "legal.kind.terms_of_use": "Nutzungsbedingungen",
+  "delete.title": "Mein Konto löschen",
+  "delete.hint": "Ihr Konto wird endgültig gelöscht: Name, Telefonnummer und Kontaktdaten werden unwiderruflich anonymisiert und alle Ihre Sitzungen beendet. Service- und Garantiedatensätze bleiben für die Fahrzeughistorie ohne Ihre Identität erhalten.",
+  "delete.send_code": "Bestätigungscode senden",
+  "delete.code_sent": "Wir haben Ihnen einen Bestätigungscode aufs Telefon geschickt.",
+  "delete.code_label": "Bestätigungscode",
+  "delete.confirm": "Konto endgültig löschen",
+  "delete.failed": "Das Konto konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+  "delete.no_phone": "Ihr Konto hat keine Telefonnummer. Wenden Sie sich an uns, um Ihr Konto zu löschen.",
+  "delete.panel_account": "Dieses Konto gehört auch einem Organisationsbenutzer und kann nicht in der App gelöscht werden. Wenden Sie sich an uns."
 }

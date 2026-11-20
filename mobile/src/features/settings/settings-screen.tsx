@@ -11,6 +11,7 @@ import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core
 import { getUpdateInfo } from '@/core/updates';
 import { CallerIdSettings } from '@/features/caller-id/caller-id-settings';
 import { FeedbackSettings } from '@/features/feedback/feedback-settings';
+import { LegalListSection } from '@/features/legal/legal-links';
 import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
 import { ScannerInputSettings } from '@/features/scanner/scanner-settings';
 import { Icon } from '@/ui/icon';
@@ -122,6 +123,9 @@ export function SettingsScreen() {
         {customer ? null : <CallerIdSettings />}
 
         <FeedbackSettings />
+
+        {/* TEC-1257: privacy policy, KVKK notice, terms of use. */}
+        <LegalListSection />
 
         {customer ? null : (
           <>

@@ -420,5 +420,18 @@
   "nav.group.vehicles": "Araçlar ve hizmetler",
   "nav.group.account": "Hesap",
   "fleet.nav.group.fleet": "Filo",
-  "fleet.nav.group.account": "Hesap ve raporlar"
+  "fleet.nav.group.account": "Hesap ve raporlar",
+  "legal.kind_label": "Metin türü",
+  "legal.kind.privacy_policy": "Gizlilik politikası",
+  "legal.kind.kvkk_notice": "KVKK aydınlatma metni",
+  "legal.kind.terms_of_use": "Kullanım koşulları",
+  "delete.title": "Hesabımı sil",
+  "delete.hint": "Hesabınız kalıcı olarak silinir: adınız, telefonunuz ve iletişim bilgileriniz geri alınamaz şekilde anonimleştirilir ve tüm oturumlarınız kapanır. Hizmet ve garanti kayıtları, aracın geçmişi için kimliğiniz olmadan saklanır.",
+  "delete.send_code": "Onay kodunu gönder",
+  "delete.code_sent": "Telefonunuza bir onay kodu gönderdik.",
+  "delete.code_label": "Onay kodu",
+  "delete.confirm": "Hesabımı kalıcı olarak sil",
+  "delete.failed": "Hesap silinemedi. Tekrar deneyin.",
+  "delete.no_phone": "Hesabınızda telefon numarası yok. Hesabınızı silmek için bizimle iletişime geçin.",
+  "delete.panel_account": "Bu hesap bir kurum kullanıcısına da ait; uygulamadan silinemez. Bizimle iletişime geçin."
 }
