@@ -32261,6 +32261,148 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/platform/integrations/glorian/dealers:
+    get:
+      tags: [Platform]
+      operationId: listGlorianDealers
+      summary: List the Glorian dealers with their organization match
+      description: >-
+        TEC-1265 (decision 6): every dealer pulled from the hub with the organization it matches and how (glorian_dealer_matches view, the same rule the order outbound uses). Order per organization: `manual` (an admin linked the dealer), `code` (the organization's Glorian dealer code equals the dealer code, case-insensitive), `phone` (fallback, only for an organization without a code); `ambiguous` when several dealers fall on one organization or a dealer phone fits several organizations (orders hold); `none` otherwise. Needs `integrations.glorian.view`. `sort`: name (default), dealer_code, match_type, synced_at; `q` matches the dealer name, code, phone and the organization name; `match_type` is a CSV filter; `active` a boolean filter.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: match_type
+          in: query
+          description: CSV of manual, code, phone, ambiguous, none.
+          schema: { type: string }
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Dealers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianDealerPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/integrations/glorian/dealers/organizations:
+    get:
+      tags: [Platform]
+      operationId: listGlorianDealerOrganizations
+      summary: Organizations of the Glorian brand (dealer link picker)
+      description: >-
+        TEC-1265: at most 50 live organizations of the brand; `q` matches the name, city, phone and Glorian dealer code. Needs `integrations.glorian.view`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+      responses:
+        "200":
+          description: Organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianDealerOrganizationList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/integrations/glorian/dealers/{uuid}/link:
+    put:
+      tags: [Platform]
+      operationId: linkGlorianDealer
+      summary: Link a Glorian dealer to an organization by hand
+      description: >-
+        TEC-1265: the manual link beats the dealer code and the phone. A null `organization_uuid` clears it. The organization must belong to the brand (400) and can be linked by hand to one dealer of the connection (409 GLORIAN_ORGANIZATION_LINKED). Held orders are retried by the replay cron. Needs `integrations.glorian.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GlorianDealerLinkInput" }
+      responses:
+        "200":
+          description: Dealer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianDealer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/integrations/glorian/organizations/{uuid}/dealer-code:
+    put:
+      tags: [Platform]
+      operationId: setGlorianDealerCode
+      summary: Set an organization's Glorian dealer code
+      description: >-
+        TEC-1265 (decision 6): the dealer code the organization has on Glorian; unique in the brand, case-insensitive (409 GLORIAN_DEALER_CODE_TAKEN). Null or empty clears it. An organization with a code never falls back to the phone match. Needs `integrations.glorian.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GlorianDealerCodeInput" }
+      responses:
+        "200":
+          description: Organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianDealerOrganization"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/library/folders:
     get:
       tags: [Library]
@@ -47041,6 +47183,94 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/GlorianMapLocation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    GlorianDealerOrganization:
+      type: object
+      required: [uuid, name, city, phone, glorian_dealer_code]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        city: { type: string }
+        phone: { type: string }
+        type: { type: string }
+        glorian_dealer_code: { type: [string, "null"] }
+
+    GlorianDealer:
+      type: object
+      required: [uuid, remote_id, name, dealer_code, phone, active, match_type, organization, synced_at, linked_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        remote_id: { type: string }
+        name: { type: string }
+        dealer_code: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
+        active: { type: boolean }
+        match_type: { type: string, enum: [manual, code, phone, ambiguous, none] }
+        organization:
+          oneOf:
+            - $ref: "#/components/schemas/GlorianDealerOrganization"
+            - type: "null"
+        synced_at: { type: [string, "null"], format: date-time }
+        linked_at: { type: [string, "null"], format: date-time }
+
+    GlorianDealerLinkInput:
+      type: object
+      additionalProperties: false
+      properties:
+        organization_uuid: { type: [string, "null"], format: uuid }
+
+    GlorianDealerCodeInput:
+      type: object
+      additionalProperties: false
+      properties:
+        glorian_dealer_code: { type: [string, "null"], maxLength: 64 }
+
+    EnvelopeGlorianDealer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianDealer" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianDealerPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianDealer" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianDealerOrganization:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianDealerOrganization" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianDealerOrganizationList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianDealerOrganization" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     WarehouseMoveInput:

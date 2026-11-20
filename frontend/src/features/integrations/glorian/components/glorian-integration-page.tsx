@@ -20,6 +20,7 @@ import {
 import { permissions } from "@/config/permissions";
 import { GlorianConnectionForm } from "@/features/integrations/glorian/components/glorian-connection-form";
 import { GlorianConnectionPackageButton } from "@/features/integrations/glorian/components/glorian-connection-package";
+import { GlorianDealers } from "@/features/integrations/glorian/components/glorian-dealers";
 import { GlorianLocationMaps } from "@/features/integrations/glorian/components/glorian-location-maps";
 import { GlorianOutbounds } from "@/features/integrations/glorian/components/glorian-outbounds";
 import { GlorianReconcile } from "@/features/integrations/glorian/components/glorian-reconcile";
@@ -147,6 +148,12 @@ function GlorianSections({ canManage }: { canManage: boolean }) {
             description={t("integrations.glorian.outbounds.description")}
           >
             <GlorianOutbounds canManage={canManage} />
+          </Section>
+          <Section
+            title={t("integrations.glorian.dealers.title")}
+            description={t("integrations.glorian.dealers.description")}
+          >
+            <GlorianDealers canManage={canManage} />
           </Section>
           <Section
             title={t("integrations.glorian.location_maps.title")}

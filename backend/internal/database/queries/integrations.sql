@@ -179,26 +179,27 @@ LIMIT sqlc.arg(row_limit);
 
 -- name: InsertIntegrationExternalParty :one
 INSERT INTO integration_external_parties (
-    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active
+    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, dealer_code
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(connection_id), sqlc.arg(remote_id),
-    sqlc.arg(name), sqlc.narg(phone_e164), sqlc.arg(active)
+    sqlc.arg(name), sqlc.narg(phone_e164), sqlc.arg(active), sqlc.narg(dealer_code)
 )
 RETURNING *;
 
 -- name: UpsertIntegrationExternalParty :one
 INSERT INTO integration_external_parties (
-    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active
+    organization_id, brand_id, connection_id, remote_id, name, phone_e164, active, dealer_code
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(connection_id), sqlc.arg(remote_id),
-    sqlc.arg(name), sqlc.narg(phone_e164), sqlc.arg(active)
+    sqlc.arg(name), sqlc.narg(phone_e164), sqlc.arg(active), sqlc.narg(dealer_code)
 )
 ON CONFLICT (connection_id, remote_id)
 DO UPDATE SET name = EXCLUDED.name,
               phone_e164 = EXCLUDED.phone_e164,
               active = EXCLUDED.active,
+              dealer_code = EXCLUDED.dealer_code,
               synced_at = NOW()
 RETURNING *;
 
@@ -210,6 +211,87 @@ WHERE connection_id = sqlc.arg(connection_id) AND remote_id = sqlc.arg(remote_id
 SELECT * FROM integration_external_parties
 WHERE connection_id = sqlc.arg(connection_id)
 ORDER BY name, id;
+
+-- name: ListGlorianDealerMatches :many
+-- TEC-1265 (karar 6): the dealers of a connection with their match
+-- (glorian_dealer_matches). List contract: sort name, dealer_code,
+-- match_type, synced_at (id tiebreak); q on the dealer name, code, phone
+-- and the matched organization name; match_type CSV; active boolean;
+-- party_id narrows it to one dealer (the view after a write).
+SELECT p.id, p.uuid, p.remote_id, p.name, p.dealer_code, p.phone_e164, p.active, p.synced_at, p.linked_at,
+       m.match_type::text AS match_type,
+       o.uuid AS org_uuid, o.name AS org_name, o.city AS org_city, o.phone AS org_phone,
+       o.glorian_dealer_code AS org_dealer_code
+FROM integration_external_parties p
+JOIN glorian_dealer_matches m ON m.party_id = p.id
+LEFT JOIN organizations o ON o.id = m.organization_id
+WHERE p.connection_id = sqlc.arg(connection_id)
+  AND (sqlc.narg(q)::text IS NULL
+       OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR p.dealer_code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR p.phone_e164 ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.name ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (cardinality(sqlc.arg(match_types)::text[]) = 0 OR m.match_type = ANY(sqlc.arg(match_types)::text[]))
+  AND (sqlc.narg(active)::bool IS NULL OR p.active = sqlc.narg(active)::bool)
+  AND (sqlc.narg(party_id)::bigint IS NULL OR p.id = sqlc.narg(party_id)::bigint)
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(p.name) WHEN 'dealer_code' THEN lower(p.dealer_code) WHEN 'match_type' THEN m.match_type END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(p.name) WHEN 'dealer_code' THEN lower(p.dealer_code) WHEN 'match_type' THEN m.match_type END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'synced_at' THEN p.synced_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'synced_at' THEN p.synced_at END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountGlorianDealerMatches :one
+SELECT count(*) FROM integration_external_parties p
+JOIN glorian_dealer_matches m ON m.party_id = p.id
+LEFT JOIN organizations o ON o.id = m.organization_id
+WHERE p.connection_id = sqlc.arg(connection_id)
+  AND (sqlc.narg(q)::text IS NULL
+       OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR p.dealer_code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR p.phone_e164 ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.name ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (cardinality(sqlc.arg(match_types)::text[]) = 0 OR m.match_type = ANY(sqlc.arg(match_types)::text[]))
+  AND (sqlc.narg(active)::bool IS NULL OR p.active = sqlc.narg(active)::bool);
+
+-- name: GetIntegrationExternalPartyByUUID :one
+SELECT * FROM integration_external_parties
+WHERE connection_id = sqlc.arg(connection_id) AND uuid = sqlc.arg(uuid);
+
+-- name: SetIntegrationExternalPartyLink :one
+-- TEC-1265: manual link of a dealer to an organization (NULL clears it).
+UPDATE integration_external_parties
+SET linked_organization_id = sqlc.narg(linked_organization_id),
+    linked_at = CASE WHEN sqlc.narg(linked_organization_id)::bigint IS NULL THEN NULL ELSE NOW() END
+WHERE connection_id = sqlc.arg(connection_id) AND uuid = sqlc.arg(uuid)
+RETURNING *;
+
+-- name: SearchGlorianDealerOrganizations :many
+-- TEC-1265: organization picker of the dealer link (the brand's live
+-- organizations, at most row_limit), with their Glorian dealer code.
+SELECT o.id, o.uuid, o.name, o.city, o.phone, o.type, o.glorian_dealer_code
+FROM organizations o
+WHERE o.brand_id = sqlc.arg(brand_id) AND o.deleted_at IS NULL
+  AND (sqlc.narg(q)::text IS NULL
+       OR o.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.city ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.phone ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.glorian_dealer_code ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY lower(o.name), o.id
+LIMIT sqlc.arg(row_limit);
+
+-- name: GetBrandOrganizationByUUID :one
+SELECT * FROM organizations
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL;
+
+-- name: SetOrganizationGlorianDealerCode :one
+-- TEC-1265: the organization's Glorian dealer code (NULL clears it).
+UPDATE organizations
+SET glorian_dealer_code = sqlc.narg(glorian_dealer_code)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+RETURNING *;
 
 -- name: CreateOrderOutbound :one
 INSERT INTO order_outbounds (

@@ -520,6 +520,7 @@ func (r *connectionPull) upsertDealer(ctx context.Context, d Dealer, counts *Pul
 		return nil
 	}
 	phoneArg := dealerPhone(d)
+	codeArg := dealerCode(d)
 	cur, err := r.p.q.GetIntegrationExternalPartyByRemoteID(ctx, db.GetIntegrationExternalPartyByRemoteIDParams{
 		ConnectionID: r.conn.ID, RemoteID: remoteID,
 	})
@@ -529,13 +530,13 @@ func (r *connectionPull) upsertDealer(ctx context.Context, d Dealer, counts *Pul
 	case err != nil:
 		return fmt.Errorf("dealer %s: %w", remoteID, err)
 	}
-	if exists && cur.Name == name && cur.PhoneE164 == phoneArg && cur.Active == d.IsActive {
+	if exists && cur.Name == name && cur.PhoneE164 == phoneArg && cur.Active == d.IsActive && cur.DealerCode == codeArg {
 		counts.Unchanged++
 		return nil
 	}
 	if _, err := r.p.q.UpsertIntegrationExternalParty(ctx, db.UpsertIntegrationExternalPartyParams{
 		OrganizationID: r.conn.OrganizationID, BrandID: r.conn.BrandID, ConnectionID: r.conn.ID,
-		RemoteID: remoteID, Name: name, PhoneE164: phoneArg, Active: d.IsActive,
+		RemoteID: remoteID, Name: name, PhoneE164: phoneArg, Active: d.IsActive, DealerCode: codeArg,
 	}); err != nil {
 		return fmt.Errorf("upsert dealer %s: %w", remoteID, err)
 	}
@@ -545,6 +546,16 @@ func (r *connectionPull) upsertDealer(ctx context.Context, d Dealer, counts *Pul
 		counts.Created++
 	}
 	return nil
+}
+
+// dealerCode is the hub dealer code (karar 6: the primary dealer match),
+// or NULL when empty or longer than the column.
+func dealerCode(d Dealer) pgtype.Text {
+	code := strings.TrimSpace(deref(d.DealerCode))
+	if code == "" || utf8.RuneCountInString(code) > maxRemoteID {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: code, Valid: true}
 }
 
 // dealerPhone is the dealer phone in E.164 (dealer country as the default
