@@ -102,6 +102,8 @@ type Worker struct {
 	staffPaymentsPostDue StaffPaymentsPostDueFunc
 	// TEC-393: 90-day retention of conversation AI runs.
 	purgeConversationAIRuns ConversationAIRunPurgeFunc
+	// TEC-1259: hourly deletion of expired export files.
+	exportCleanup ExportCleanupFunc
 	// TEC-395: WhatsApp outgoing send, inbound media storage, queue sweep.
 	whatsAppSend  WhatsAppMessageFunc
 	whatsAppMedia WhatsAppMessageFunc
@@ -252,6 +254,7 @@ func (w *Worker) bindings() []binding {
 		{TaskMeasurementPDF, w.handleMeasurementPDF, w.measurementPDF != nil},
 		{TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue, w.staffPaymentsPostDue != nil},
 		{TaskConversationAIRunPurge, w.handleConversationAIRunPurge, w.purgeConversationAIRuns != nil},
+		{TaskExportCleanup, w.handleExportCleanup, w.exportCleanup != nil},
 		{TaskWhatsAppSend, w.handleWhatsAppSend, w.whatsAppSend != nil},
 		{TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore, w.whatsAppMedia != nil},
 		{TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep, w.whatsAppSweep != nil},
