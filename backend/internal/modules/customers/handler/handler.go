@@ -33,6 +33,7 @@ type Handler struct {
 	activity *activity.Recorder
 	exports  Exports
 	limiter  Limiter // TEC-190: transfer endpoints
+	otp      OTP     // TEC-1257: own account deletion
 }
 
 // New creates the handler; rec may be nil.

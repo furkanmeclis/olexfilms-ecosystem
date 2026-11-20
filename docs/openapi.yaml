@@ -17056,6 +17056,91 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/portal/me/delete/code:
+    post:
+      tags: [Portal]
+      operationId: requestPortalAccountDeleteCode
+      summary: Send the account deletion code to the signed-in customer's phone
+      description: >-
+        TEC-1257 (App Store 5.1.1(v), KVKK). Sends a 6-digit code (purpose
+        account_delete, WhatsApp with SMS fallback) to the account's own
+        phone; a sign-in code never deletes an account. A read-only fleet
+        session answers 403 PORTAL_READ_ONLY, an organization user 409
+        CUSTOMER_HAS_PANEL_ACCOUNT, an account without a phone 409
+        ACCOUNT_HAS_NO_PHONE. Errors of delivery and limits are those of
+        POST /v1/auth/otp/request.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locale: { type: string, description: Message language (default the request locale) }
+      responses:
+        "202":
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOTPRequestResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE
+
+  /v1/portal/me/delete:
+    post:
+      tags: [Portal]
+      operationId: deletePortalAccount
+      summary: Delete (anonymize) the signed-in customer's account
+      description: >-
+        TEC-1257. The account_delete code confirms the KVKK anonymization of
+        the account (the same action as POST /v1/customers/{uuid}/anonymize):
+        name, e-mail, phone and profile data are overwritten irreversibly;
+        services, warranties and vehicles stay attached to the anonymous
+        account. Every session of the account ends; the client signs out.
+        Wrong or expired code 401 INVALID_OTP_CODE, five wrong codes 429
+        OTP_LOCKED. Audited (customers.anonymized, customers.self_deleted).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: "123456" }
+      responses:
+        "200":
+          description: Account anonymized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeCustomerAnonymizeResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE
+
   /v1/portal/exports/{uuid}:
     get:
       tags: [Portal]
@@ -18856,6 +18941,35 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/legal-texts/{kind}:
+    get:
+      tags: [Public]
+      operationId: getPublicLegalText
+      summary: Current privacy policy, KVKK notice or terms of use
+      description: >-
+        TEC-1257. No session (sign-in screen, profile links). Locale:
+        `locale` query, else Accept-Language; falls back to tr, then en.
+        Unknown kind or nothing published yet: 404. Cache-Control 5 minutes.
+      security: []
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicLegalTextKind" }
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicLegalText"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/legal-texts/{kind}:
     parameters:
       - name: kind
@@ -18863,7 +18977,7 @@ paths:
         required: true
         schema:
           type: string
-          enum: [ai_guidelines, marketing_consent]
+          enum: [ai_guidelines, marketing_consent, privacy_policy, kvkk_notice, terms_of_use]
     get:
       tags: [Portal]
       operationId: getPlatformLegalTexts
@@ -47699,11 +47813,23 @@ components:
         texts:
           type: array
           description: Latest version per locale
-          items: { $ref: "#/components/schemas/LegalText" }
+          items: { $ref: "#/components/schemas/EditableLegalText" }
         versions:
           type: array
           description: Recent versions, newest first
-          items: { $ref: "#/components/schemas/LegalText" }
+          items: { $ref: "#/components/schemas/EditableLegalText" }
+
+    EditableLegalText:
+      type: object
+      description: A legal text in the admin editor (consent or public kind, TEC-1257).
+      required: [uuid, kind, locale, version, body, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [ai_guidelines, marketing_consent, privacy_policy, kvkk_notice, terms_of_use] }
+        locale: { type: string }
+        version: { type: integer }
+        body: { type: string, description: Markdown }
+        created_at: { type: string, format: date-time }
 
     LegalTextPublishRequest:
       type: object
@@ -47716,7 +47842,7 @@ components:
       type: object
       required: [text, created]
       properties:
-        text: { $ref: "#/components/schemas/LegalText" }
+        text: { $ref: "#/components/schemas/EditableLegalText" }
         created: { type: boolean }
 
     ConsentDecisionRequest:
@@ -47738,6 +47864,30 @@ components:
         text_version: { type: integer }
         accepted: { type: boolean }
         decided_at: { type: string, format: date-time }
+
+    PublicLegalTextKind:
+      type: string
+      enum: [privacy_policy, kvkk_notice, terms_of_use]
+
+    PublicLegalText:
+      type: object
+      description: TEC-1257 public legal text (never answered as a consent).
+      required: [uuid, kind, locale, version, body, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/PublicLegalTextKind" }
+        locale: { type: string }
+        version: { type: integer }
+        body: { type: string, description: Markdown }
+        created_at: { type: string, format: date-time }
+
+    EnvelopePublicLegalText:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicLegalText" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeLegalTextList:
       type: object

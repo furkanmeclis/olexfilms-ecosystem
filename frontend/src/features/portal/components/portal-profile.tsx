@@ -33,6 +33,7 @@ import { routes } from "@/config/routes";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
 import { SessionManager } from "@/features/account/components/session-manager";
 import { TotpManager } from "@/features/account/components/totp-manager";
+import { PortalDeleteAccount } from "@/features/portal/components/portal-delete-account";
 import { PortalPage } from "@/features/portal/components/portal-page";
 import {
   portalAccountApi,
@@ -57,7 +58,8 @@ function isAppLocale(value: string | null | undefined): value is AppLocale {
  * one place, like the panel profile: name and language (PATCH
  * /v1/auth/profile), signed-in devices, password and 2FA for fleet
  * accounts (customers sign in with a phone code), links to notification
- * preferences and contracts, and sign out.
+ * preferences and contracts, and sign out. TEC-1257: a customer can
+ * delete (anonymize) their own account with a phone code.
  */
 export function PortalProfile() {
   const { t } = useLocale();
@@ -169,6 +171,9 @@ export function PortalProfile() {
           queryKey={["portal", "sessions"]}
         />
       </Section>
+
+      {/* TEC-1257: a fleet account belongs to its organization (read only). */}
+      {me.data && !fleet ? <PortalDeleteAccount onDeleted={signOut} /> : null}
     </PortalPage>
   );
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ensureDigitSupport, formatDigits, intlLocale, setDigitStyle, toLatinDigits } from './digits.ts';
+import { ensureDigitSupport, formatDigits, intlLocale, localCount, setDigitStyle, toLatinDigits } from './digits.ts';
 
 describe('digits', () => {
   it('formats Arabic with Arabic-Indic digits by default and Latin by choice', () => {
@@ -61,5 +61,18 @@ describe('digits', () => {
     assert.equal(toLatinDigits('۱۲۳'), '123');
     assert.equal(toLatinDigits('०१२३४५६७८९'), '0123456789');
     assert.equal(toLatinDigits('WBA123'), 'WBA123');
+  });
+});
+
+describe('localCount (TEC-1255, TEC-1253 decision 21)', () => {
+  it('prints Persian and Devanagari digits for fa and hi', () => {
+    assert.equal(localCount(12, 'fa'), '۱۲');
+    assert.equal(localCount(305, 'hi'), '३०५');
+    assert.equal(localCount(7, 'fa-IR'), '۷');
+  });
+  it('leaves other languages (Arabic included) to the interpolator', () => {
+    assert.equal(localCount(12, 'tr'), 12);
+    assert.equal(localCount(12, 'ar'), 12);
+    assert.equal(localCount(12, 'zh-CN'), 12);
   });
 });

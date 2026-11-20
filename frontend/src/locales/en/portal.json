@@ -420,5 +420,18 @@
   "nav.group.vehicles": "Vehicles and services",
   "nav.group.account": "Account",
   "fleet.nav.group.fleet": "Fleet",
-  "fleet.nav.group.account": "Account and reports"
+  "fleet.nav.group.account": "Account and reports",
+  "legal.kind_label": "Text type",
+  "legal.kind.privacy_policy": "Privacy policy",
+  "legal.kind.kvkk_notice": "KVKK privacy notice",
+  "legal.kind.terms_of_use": "Terms of use",
+  "delete.title": "Delete my account",
+  "delete.hint": "Your account is deleted permanently: your name, phone and contact details are anonymized irreversibly and all your sessions end. Service and warranty records are kept for the vehicle's history, without your identity.",
+  "delete.send_code": "Send confirmation code",
+  "delete.code_sent": "We sent a confirmation code to your phone.",
+  "delete.code_label": "Confirmation code",
+  "delete.confirm": "Delete my account permanently",
+  "delete.failed": "The account could not be deleted. Try again.",
+  "delete.no_phone": "Your account has no phone number. Contact us to delete your account.",
+  "delete.panel_account": "This account also belongs to an organization user and cannot be deleted in the app. Contact us."
 }

@@ -13,6 +13,8 @@ const account = vi.hoisted(() => ({
   revokeSession: vi.fn(),
   revokeOtherSessions: vi.fn(),
   changePassword: vi.fn(),
+  requestDeleteCode: vi.fn(),
+  deleteAccount: vi.fn(),
 }));
 const totp = vi.hoisted(() => ({
   getTOTPStatus: vi.fn(),
@@ -179,6 +181,80 @@ describe("PortalProfile (TEC-771)", () => {
       a.getAttribute("href"),
     );
     expect(hrefs).not.toContain("/portal/contracts");
+  });
+
+  it("deletes a customer's own account with a phone code (TEC-1257)", async () => {
+    portal.me.mockResolvedValue({ user: { name: "Ali" }, roles: ["customer"] });
+    account.requestDeleteCode.mockResolvedValue({ status: "sent" });
+    account.deleteAccount.mockResolvedValue({ status: "anonymized" });
+    signOut.mockResolvedValue(undefined);
+    await render();
+    const card = container.querySelector(
+      '[data-testid="portal-delete-account"]',
+    );
+    expect(card?.textContent).toContain("portal.delete.hint");
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="portal-delete-send"]')
+        ?.click();
+    });
+    await flush();
+    expect(account.requestDeleteCode).toHaveBeenCalledWith("en");
+    const code = container.querySelector<HTMLInputElement>(
+      "#portal-delete-code",
+    );
+    await act(async () => setValue(code!, "12a3456"));
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="portal-delete-confirm"]',
+        )
+        ?.click();
+    });
+    await flush();
+    expect(account.deleteAccount).toHaveBeenCalledWith("123456");
+    expect(signOut).toHaveBeenCalled();
+  });
+
+  it("shows the code error and keeps the session", async () => {
+    portal.me.mockResolvedValue({ user: { name: "Ali" }, roles: ["customer"] });
+    account.requestDeleteCode.mockResolvedValue({ status: "sent" });
+    const { PortalApiError } =
+      await import("@/features/portal/lib/portal-client");
+    account.deleteAccount.mockRejectedValue(
+      new PortalApiError("bad", 401, "INVALID_OTP_CODE", []),
+    );
+    await render();
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="portal-delete-send"]')
+        ?.click();
+    });
+    await flush();
+    await act(async () =>
+      setValue(
+        container.querySelector<HTMLInputElement>("#portal-delete-code")!,
+        "000000",
+      ),
+    );
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="portal-delete-confirm"]',
+        )
+        ?.click();
+    });
+    await flush();
+    expect(container.textContent).toContain("portal.errors.invalid_code");
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("offers no account deletion to a fleet account", async () => {
+    portal.me.mockResolvedValue({ user: { name: "Filo" }, roles: ["fleet"] });
+    await render();
+    expect(
+      container.querySelector('[data-testid="portal-delete-account"]'),
+    ).toBeNull();
   });
 
   it("signs out of the portal only", async () => {

@@ -701,6 +701,9 @@ func (s *Service) scopedUser(ctx context.Context, q *db.Queries, c Caller, id uu
 }
 
 func (s *Service) requireInScope(ctx context.Context, q *db.Queries, c Caller, userID int64) error {
+	if c.selfUserID != 0 && c.selfUserID == userID { // TEC-1257: own account deletion
+		return nil
+	}
 	if c.Org.BrandID == 0 {
 		return ErrCustomerNotFound
 	}

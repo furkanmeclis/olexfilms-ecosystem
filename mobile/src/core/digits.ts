@@ -108,3 +108,16 @@ ensureDigitSupport();
 export function formatDigits(value: number, locale: string): string {
   return new Intl.NumberFormat(intlLocale(locale), { useGrouping: Math.abs(value) >= 10000 }).format(value);
 }
+
+/**
+ * TEC-1253 decision 21: Persian (۰-۹) and Hindi (०-९) texts print their own
+ * digits, like Arabic. Applied to new texts first (TEC-1255): the count is
+ * handed to the interpolation already converted. Other languages get the
+ * number back, so Arabic still follows its digit setting.
+ */
+export function localCount(value: number, locale: string): number | string {
+  const lang = locale.split('-')[0]?.toLowerCase();
+  const zero = lang === 'fa' ? 0x06f0 : lang === 'hi' ? 0x0966 : 0;
+  if (!zero || !Number.isFinite(value)) return value;
+  return String(value).replace(/[0-9]/g, (d) => String.fromCharCode(zero + Number(d)));
+}

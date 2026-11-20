@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Markdown } from "@/features/portal/lib/markdown";
 import {
+  LEGAL_TEXT_KINDS,
   legalTextsService,
   type LegalTextAdmin,
   type LegalTextKind,
@@ -37,14 +38,19 @@ import { appToast } from "@/lib/toast";
 
 /** The content languages of the backend (K10 + fa, TEC-1233). */
 const TEXT_LOCALES = SUPPORTED_LOCALES;
-const KIND: LegalTextKind = "ai_guidelines";
-const QUERY_KEY = ["platform", "legal-texts", KIND] as const;
+const queryKey = (kind: LegalTextKind) =>
+  ["platform", "legal-texts", kind] as const;
+
+function isKind(value: string): value is LegalTextKind {
+  return (LEGAL_TEXT_KINDS as readonly string[]).includes(value);
+}
 
 export function LegalTextsPage() {
   const { t } = useLocale();
+  const [kind, setKind] = useState<LegalTextKind>("ai_guidelines");
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: () => legalTextsService.get(KIND),
+    queryKey: queryKey(kind),
+    queryFn: () => legalTextsService.get(kind),
   });
 
   return (
@@ -61,14 +67,38 @@ export function LegalTextsPage() {
           onRetry={() => void refetch()}
         />
       ) : null}
-      {data ? (
-        <Editor key={data.versions[0]?.uuid ?? "empty"} view={data} />
+      <div className="max-w-xs space-y-2">
+        <Label htmlFor="legal-kind">{t("portal.legal.kind_label")}</Label>
+        <Select
+          value={kind}
+          onValueChange={(value) => {
+            if (isKind(value)) setKind(value);
+          }}
+        >
+          <SelectTrigger id="legal-kind" data-testid="legal-kind">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LEGAL_TEXT_KINDS.map((k) => (
+              <SelectItem key={k} value={k}>
+                {t(`portal.legal.kind.${k}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {data && data.kind === kind ? (
+        <Editor
+          key={`${kind}:${data.versions[0]?.uuid ?? "empty"}`}
+          kind={kind}
+          view={data}
+        />
       ) : null}
     </div>
   );
 }
 
-function Editor({ view }: { view: LegalTextAdmin }) {
+function Editor({ kind, view }: { kind: LegalTextKind; view: LegalTextAdmin }) {
   const { t, format, locale: uiLocale } = useLocale();
   const queryClient = useQueryClient();
   const [locale, setLocale] = useState<string>("tr");
@@ -87,9 +117,9 @@ function Editor({ view }: { view: LegalTextAdmin }) {
   }, [uiLocale]);
 
   const publish = useMutation({
-    mutationFn: () => legalTextsService.publish(KIND, locale, body),
+    mutationFn: () => legalTextsService.publish(kind, locale, body),
     onSuccess: async (res) => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKey(kind) });
       if (res.created) {
         appToast.success(
           t("portal.legal.saved", { version: res.text.version }),
@@ -108,7 +138,7 @@ function Editor({ view }: { view: LegalTextAdmin }) {
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>{t("portal.legal.kind.ai_guidelines")}</CardTitle>
+          <CardTitle>{t(`portal.legal.kind.${kind}`)}</CardTitle>
           <CardDescription>
             {current
               ? t("portal.legal.current_version", { version: current.version })

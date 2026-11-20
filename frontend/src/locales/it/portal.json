@@ -420,5 +420,18 @@
   "nav.group.vehicles": "Veicoli e servizi",
   "nav.group.account": "Account",
   "fleet.nav.group.fleet": "Flotta",
-  "fleet.nav.group.account": "Conto e report"
+  "fleet.nav.group.account": "Conto e report",
+  "legal.kind_label": "Tipo di testo",
+  "legal.kind.privacy_policy": "Informativa sulla privacy",
+  "legal.kind.kvkk_notice": "Informativa sulla protezione dei dati (KVKK)",
+  "legal.kind.terms_of_use": "Condizioni d'uso",
+  "delete.title": "Elimina il mio account",
+  "delete.hint": "Il tuo account viene eliminato definitivamente: nome, telefono e recapiti vengono anonimizzati in modo irreversibile e tutte le tue sessioni vengono chiuse. I registri di assistenza e garanzia restano per la storia del veicolo, senza la tua identità.",
+  "delete.send_code": "Invia il codice di conferma",
+  "delete.code_sent": "Abbiamo inviato un codice di conferma al tuo telefono.",
+  "delete.code_label": "Codice di conferma",
+  "delete.confirm": "Elimina definitivamente il mio account",
+  "delete.failed": "Impossibile eliminare l'account. Riprova.",
+  "delete.no_phone": "Il tuo account non ha un numero di telefono. Contattaci per eliminare l'account.",
+  "delete.panel_account": "Questo account appartiene anche a un utente di un'organizzazione e non può essere eliminato dall'app. Contattaci."
 }

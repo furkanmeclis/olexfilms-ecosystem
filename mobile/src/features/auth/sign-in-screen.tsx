@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isApiError } from '@/core/api/errors';
 import { identify } from '@/core/auth/api';
 import { errorMessage } from '@/core/i18n';
+import { LegalFooterLinks } from '@/features/legal/legal-links';
 import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
@@ -72,6 +73,9 @@ export function SignInScreen({ mode }: { mode: SignInMode }) {
         />
 
         {phone ? null : <DevDemoAccounts />}
+
+        {/* TEC-1257: privacy policy, KVKK notice and terms of use before signing in. */}
+        {keyboard ? null : <LegalFooterLinks />}
       </View>
     </KeyboardAvoidingView>
   );

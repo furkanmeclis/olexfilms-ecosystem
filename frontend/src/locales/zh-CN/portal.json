@@ -420,5 +420,18 @@
   "nav.group.vehicles": "车辆与服务",
   "nav.group.account": "账户",
   "fleet.nav.group.fleet": "车队",
-  "fleet.nav.group.account": "账户与报表"
+  "fleet.nav.group.account": "账户与报表",
+  "legal.kind_label": "文本类型",
+  "legal.kind.privacy_policy": "隐私政策",
+  "legal.kind.kvkk_notice": "KVKK 个人数据告知书",
+  "legal.kind.terms_of_use": "使用条款",
+  "delete.title": "删除我的账户",
+  "delete.hint": "您的账户将被永久删除：您的姓名、电话和联系方式将被不可逆地匿名化，所有会话都将结束。服务和质保记录将作为车辆历史保留，但不再包含您的身份信息。",
+  "delete.send_code": "发送确认码",
+  "delete.code_sent": "我们已向您的手机发送确认码。",
+  "delete.code_label": "确认码",
+  "delete.confirm": "永久删除我的账户",
+  "delete.failed": "无法删除账户，请重试。",
+  "delete.no_phone": "您的账户没有电话号码。如需删除账户，请联系我们。",
+  "delete.panel_account": "此账户同时属于机构用户，无法在应用中删除。请联系我们。"
 }

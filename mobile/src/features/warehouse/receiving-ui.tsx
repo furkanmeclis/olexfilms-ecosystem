@@ -630,7 +630,7 @@ export function ReceiptCard({ entry }: { entry: StockEntry }) {
             </View>
           ))
         )}
-        {canSharePdf ? (
+        {canSharePdf() ? (
           <Button
             className="mt-2"
             variant="secondary"
@@ -639,7 +639,11 @@ export function ReceiptCard({ entry }: { entry: StockEntry }) {
             loading={sharing}
             onPress={() => void share()}
           />
-        ) : null}
+        ) : (
+          <Text variant="footnote" tone="muted" className="mt-2">
+            {t('documents.share_unavailable')}
+          </Text>
+        )}
       </Card>
     </View>
   );

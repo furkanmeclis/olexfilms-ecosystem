@@ -31,14 +31,20 @@ function pdfDir() {
   return dir;
 }
 
-/** Whether this device can hand a PDF to the system share sheet (print, Files, AirDrop). */
-export const canSharePdf = Platform.OS === 'ios';
+/**
+ * Whether this device can hand a PDF to the system share sheet (print, Files,
+ * AirDrop). TEC-1255: Android shares through expo-sharing, like the label
+ * print and order documents; React Native's Share takes a file URL on iOS only.
+ */
+export function canSharePdf() {
+  return canShareDocument();
+}
 
 /**
- * Downloads a panel PDF (label sheet, end-of-day report) with the session
- * token and opens the system share sheet, where it can be printed, saved to
- * Files or sent. No extra native module: expo-file-system ships with expo,
- * React Native's Share takes a file URL on iOS.
+ * Downloads a panel PDF (label sheet, end-of-day report, receiving record)
+ * with the session token and opens the system share sheet, where it can be
+ * printed, saved or sent. expo-sharing when the binary has it (Android needs
+ * it: a content URI from its FileProvider), React Native's Share otherwise.
  */
 export async function sharePanelPdf(path: string, query: Query, filename: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
@@ -67,8 +73,13 @@ export async function sharePanelPdf(path: string, query: Query, filename: string
     file.delete();
     signal.throwIfAborted();
   }
+  const sharing = loadSharing();
   try {
-    await Share.share({ url: file.uri, title: safe });
+    if (sharing) {
+      await sharing.shareAsync(file.uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: safe });
+    } else {
+      await Share.share({ url: file.uri, title: safe });
+    }
   } finally {
     // iOS hands the file over before resolving; Android keeps it until the next download clears the folder.
     if (Platform.OS === 'ios' && file.exists) file.delete();

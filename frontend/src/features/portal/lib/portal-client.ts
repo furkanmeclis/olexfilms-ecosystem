@@ -568,6 +568,20 @@ export const portalAccountApi = {
       body,
     });
   },
+  /** TEC-1257: the account deletion code goes to the account's own phone. */
+  requestDeleteCode(locale: string) {
+    return portalRequest<OTPRequestResult>("portal/me/delete/code", {
+      method: "POST",
+      body: { locale },
+    });
+  },
+  /** TEC-1257: the code confirms the anonymization; every session ends. */
+  deleteAccount(code: string) {
+    return portalRequest<{ uuid: string; status: string; changed: boolean }>(
+      "portal/me/delete",
+      { method: "POST", body: { code } },
+    );
+  },
 };
 
 /**

@@ -6,6 +6,7 @@ import { useModule } from '@/core/modules';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
+import { LegalListSection } from '@/features/legal/legal-links';
 import { errorText } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
@@ -16,7 +17,7 @@ import { PullRefresh } from '@/ui/pull-refresh';
 import { toast } from '@/ui/toast';
 
 import { portalFiles, useExportDownload } from './files';
-import { isHidden, type NotificationPreferences, retryPortal } from './lib';
+import { isHidden, type NotificationPreferences, retryPortal, useFleetRoles } from './lib';
 
 type Flag = 'push_enabled' | 'email_enabled' | 'inapp_enabled';
 const FLAGS: Flag[] = ['push_enabled', 'email_enabled', 'inapp_enabled'];
@@ -83,6 +84,9 @@ function NotificationPrefs() {
 
 export function CustomerProfileScreen() {
   const { t } = useTranslation('customer');
+  const { t: tl } = useTranslation('legal');
+  // TEC-1257: a read-only fleet account belongs to its organization.
+  const { readOnly } = useFleetRoles();
   const claimsOn = useModule('warranty_claims');
   const qc = useQueryClient();
   const user = useSession((s) => s.me?.user);
@@ -146,8 +150,20 @@ export function CustomerProfileScreen() {
         <List>
           <ListRow title={t('settings')} subtitle={t('settings_hint')} onPress={() => router.push('/settings')} last />
         </List>
+        <LegalListSection />
+
         <List>
-          <ListRow title={t('sign_out')} tone="danger" onPress={confirmSignOut} last />
+          <ListRow title={t('sign_out')} tone="danger" onPress={confirmSignOut} last={readOnly} />
+          {readOnly ? null : (
+            <ListRow
+              title={tl('delete_title')}
+              subtitle={tl('delete_row_hint')}
+              icon="delete"
+              tone="danger"
+              onPress={() => router.push('/musteri/profile/delete-account')}
+              last
+            />
+          )}
         </List>
       </Screen>
     </>
