@@ -2,12 +2,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CameraView } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router, useIsFocused } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { localCount } from '@/core/digits';
 import { useScannerInput } from '@/features/scanner/input-mode';
+import { createScanQueue, type ScanQueue, ScanTimeoutError } from '@/features/scanner/scan-queue';
 import { WedgeInput } from '@/features/scanner/wedge-input';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
@@ -26,20 +28,17 @@ import { WarehouseChip } from './warehouse-picker';
 import type { IconName } from '@/ui/icons';
 import { toast } from '@/ui/toast';
 
-const REPEAT_MS = 2500;
-
-/** Wall clock for the repeat window (scan callbacks only, never during render). */
-const clock = () => Date.now();
-
 type State = { kind: 'idle' } | { kind: 'busy'; code: string } | { kind: 'ok'; result: ScanResult } | { kind: 'error'; code: string; message: string };
 
 /**
  * Warehouse scan tab: the camera keeps running; every new code is resolved
  * (POST /v1/mobile/warehouse/scan) and shown in the card with what can be
  * done next (add to an open transfer or count, open stock or history).
+ * TEC-1255: codes scanned while one is resolving wait in a FIFO queue (the
+ * count is shown); a lookup without an answer in 10 s times out.
  */
 export function WarehouseScan() {
-  const { t } = useTranslation('warehouse');
+  const { t, i18n } = useTranslation('warehouse');
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const qc = useQueryClient();
@@ -52,8 +51,8 @@ export function WarehouseScan() {
   const [typing, setTyping] = useState(false);
   const [manual, setManual] = useState('');
   const [acting, setActing] = useState<string | null>(null);
-  const lock = useRef(false);
-  const last = useRef({ code: '', at: 0 });
+  const [pending, setPending] = useState(0);
+  const latest = useRef({ t });
 
   // Open documents the scanned unit can go into (cached lists, refreshed in the background).
   // Only the current warehouse's documents (TEC-1049): drafts leave from it, counts run in it.
@@ -63,34 +62,49 @@ export function WarehouseScan() {
   const draftList = drafts.data?.pages.flatMap((p) => p.items) ?? [];
   const countList = counting.data?.pages.flatMap((p) => p.items) ?? [];
 
-  const onCode = async (raw: string, force = false) => {
-    const code = raw.trim();
-    if (!code || lock.current) return;
-    const now = clock();
-    if (!force && code === last.current.code && now - last.current.at < REPEAT_MS) return;
-    last.current = { code, at: now };
+  // One queue per tab; its callbacks read the latest translator through `latest`.
+  // Created on the first code (never during render).
+  const queueRef = useRef<ScanQueue | null>(null);
+  const getQueue = () =>
+    (queueRef.current ??= createScanQueue<ScanResult>({
+      run: (code, signal) => resolveScan(code, { signal }),
+      onStart: (code) => {
+        setState({ kind: 'busy', code });
+        void Haptics.selectionAsync();
+      },
+      onChange: (s) => setPending(s.pending),
+      onSettled: (code, r) => {
+        if (r.ok) {
+          void Haptics.notificationAsync(
+            r.value.status === 'ok' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
+          );
+          setState({ kind: 'ok', result: r.value });
+          return;
+        }
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        const message = r.error instanceof ScanTimeoutError ? latest.current.t('scan.timeout') : whError(r.error);
+        setState({ kind: 'error', code, message });
+      },
+    }));
+  useEffect(() => {
+    latest.current = { t };
+  });
+  // Waiting codes do not survive leaving the tab.
+  useEffect(() => {
+    if (!focused) queueRef.current?.clear();
+  }, [focused]);
+  useEffect(() => () => queueRef.current?.clear(), []);
 
+  const onCode = (raw: string, force = false) => {
+    const code = raw.trim();
+    if (!code) return;
     const kind = classifyCode(code);
     if (kind.kind === 'qr_login') {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({ pathname: '/qr-login/[code]', params: { code: kind.code } });
       return;
     }
-    lock.current = true;
-    setState({ kind: 'busy', code });
-    void Haptics.selectionAsync();
-    try {
-      const result = await resolveScan(code);
-      void Haptics.notificationAsync(
-        result.status === 'ok' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
-      );
-      setState({ kind: 'ok', result });
-    } catch (e) {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setState({ kind: 'error', code, message: whError(e) });
-    } finally {
-      lock.current = false;
-    }
+    getQueue().push(code, { repeat: !force });
   };
 
   const addToTransfer = (barcode: string) => {
@@ -146,14 +160,14 @@ export function WarehouseScan() {
   return (
     <View className="flex-1 bg-black">
       {wedge ? (
-        focused ? <WedgeInput paused={typing} onCode={(c) => void onCode(c)} /> : null
+        focused ? <WedgeInput paused={typing} onCode={(c) => onCode(c)} /> : null
       ) : focused ? (
         <CameraView
           style={{ flex: 1 }}
           facing="back"
           enableTorch={torch}
           barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
-          onBarcodeScanned={typing ? undefined : ({ data }) => void onCode(data)}
+          onBarcodeScanned={typing ? undefined : ({ data }) => onCode(data)}
         />
       ) : null}
 
@@ -189,7 +203,7 @@ export function WarehouseScan() {
               placeholder={t('scan.placeholder')}
               placeholderTextColorClassName="accent-muted-foreground"
               onSubmitEditing={() => {
-                void onCode(manual, true);
+                onCode(manual, true);
                 setManual('');
               }}
               className="min-h-11 flex-1 px-2 font-mono text-[17px] text-foreground"
@@ -197,7 +211,7 @@ export function WarehouseScan() {
             <Button
               title={t('scan.submit')}
               onPress={() => {
-                void onCode(manual, true);
+                onCode(manual, true);
                 setManual('');
               }}
             />
@@ -212,9 +226,14 @@ export function WarehouseScan() {
                   {state.kind === 'busy' ? (
                     <View className="flex-row items-center gap-2">
                       <ActivityIndicator />
-                      <Text variant="callout" className="font-mono">
+                      <Text variant="callout" className="flex-1 font-mono">
                         {state.code}
                       </Text>
+                      {pending > 0 ? (
+                        <Text variant="footnote" tone="muted" className="font-semibold">
+                          {t('m.queued', { n: localCount(pending, i18n.language) })}
+                        </Text>
+                      ) : null}
                     </View>
                   ) : state.kind === 'error' ? (
                     <View className="gap-1">
@@ -233,7 +252,7 @@ export function WarehouseScan() {
                   hitSlop={8}
                   onPress={() => {
                     setState({ kind: 'idle' });
-                    last.current = { code: '', at: 0 };
+                    queueRef.current?.resetRepeat();
                   }}
                   className="size-8 items-center justify-center rounded-full bg-secondary">
                   <Icon name="close" size={16} />
