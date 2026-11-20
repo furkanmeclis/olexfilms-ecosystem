@@ -270,6 +270,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (RegisterResul
 	if in.OrganizationName == "" {
 		return RegisterResult{}, fmt.Errorf("%w: organization_name is required", ErrInvalidRequest)
 	}
+	if err := checkOrgDisplayText("organization_name", in.OrganizationName); err != nil {
+		return RegisterResult{}, err
+	}
 	if strings.TrimSpace(in.Password) == "" {
 		return RegisterResult{}, fmt.Errorf("%w: password is required", ErrInvalidRequest)
 	}
@@ -366,6 +369,9 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	in.OrganizationName = strings.TrimSpace(in.OrganizationName)
 	if in.OrganizationName == "" {
 		return RegisterResult{}, fmt.Errorf("%w: organization_name is required", ErrInvalidRequest)
+	}
+	if err := checkOrgDisplayText("organization_name", in.OrganizationName); err != nil {
+		return RegisterResult{}, err
 	}
 	place, err := s.placement(ctx, in)
 	if err != nil {
@@ -544,7 +550,11 @@ func (s *Service) Patch(ctx context.Context, id uuid.UUID, in PatchInput) (Organ
 		params.Timezone = pgtype.Text{String: tz, Valid: true}
 	}
 	if in.Name != nil {
-		params.Name = pgtype.Text{String: strings.TrimSpace(*in.Name), Valid: true}
+		name := strings.TrimSpace(*in.Name)
+		if err := checkOrgDisplayText("name", name); err != nil {
+			return Organization{}, err
+		}
+		params.Name = pgtype.Text{String: name, Valid: true}
 	}
 	if in.City != nil {
 		params.City = pgtype.Text{String: strings.TrimSpace(*in.City), Valid: true}
@@ -886,4 +896,15 @@ func accessAllowed(row db.Organization) bool {
 		return false
 	}
 	return true
+}
+
+// checkOrgDisplayText rejects markup in organization names (TEC-1259): the
+// names are shown on public pages, in JSON-LD and in documents, so '<' and
+// '>' (an HTML tag or a "</script>") are refused; real company names do not
+// need them.
+func checkOrgDisplayText(field, v string) error {
+	if strings.ContainsAny(v, "<>") {
+		return fmt.Errorf("%w: %s must not contain < or >", ErrInvalidRequest, field)
+	}
+	return nil
 }

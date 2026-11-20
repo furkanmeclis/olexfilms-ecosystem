@@ -195,6 +195,9 @@ func (s *Service) PatchTenantSettings(ctx context.Context, orgID int64, in Lette
 		if len([]rune(name)) > MaxServicePointName {
 			return TenantSettings{}, ErrInvalidRequest
 		}
+		if err := checkOrgDisplayText("service_point_name", name); err != nil {
+			return TenantSettings{}, err
+		}
 		spName = pgtype.Text{String: name, Valid: name != ""}
 	}
 	if spPatch {
