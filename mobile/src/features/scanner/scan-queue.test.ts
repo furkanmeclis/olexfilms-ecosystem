@@ -89,7 +89,9 @@ describe('createScanQueue (TEC-1255)', () => {
     const h = harness({ timeoutMs: 20 });
     h.q.push('A');
     h.q.push('B');
-    await new Promise((r) => setTimeout(r, 40));
+    // Checked right after A gives up, before B's own limit can run out on a slow runner.
+    while (h.settled.length === 0) await flush();
+    assert.equal(h.settled.length, 1);
     assert.equal(h.settled[0].code, 'A');
     assert.equal(h.settled[0].r.ok, false);
     assert.ok(!h.settled[0].r.ok && h.settled[0].r.error instanceof ScanTimeoutError);
