@@ -25,6 +25,18 @@ const (
 	KindMarketingConsent = "marketing_consent"
 )
 
+// Public legal texts (TEC-1257): privacy policy, KVKK notice and terms of
+// use. They are read without a session (sign-in screen, profile links) and
+// are never asked as a consent.
+const (
+	KindPrivacyPolicy = "privacy_policy"
+	KindKVKKNotice    = "kvkk_notice"
+	KindTermsOfUse    = "terms_of_use"
+)
+
+// PublicKinds are the kinds GET /v1/public/legal-texts/{kind} serves.
+var PublicKinds = []string{KindPrivacyPolicy, KindKVKKNotice, KindTermsOfUse}
+
 // MaxBodyBytes bounds an admin text.
 const MaxBodyBytes = 64 << 10
 
@@ -55,8 +67,34 @@ type Service struct {
 // New creates the service.
 func New(store Store) *Service { return &Service{store: store} }
 
-// IsKind reports whether kind is a known legal text kind.
-func IsKind(kind string) bool { return kind == KindAIGuidelines || kind == KindMarketingConsent }
+// IsKind reports whether kind is a known legal text kind (admin editor).
+func IsKind(kind string) bool { return IsConsentKind(kind) || IsPublicKind(kind) }
+
+// IsConsentKind reports whether kind is answered as a consent.
+func IsConsentKind(kind string) bool { return kind == KindAIGuidelines || kind == KindMarketingConsent }
+
+// IsPublicKind reports whether kind is a public legal text.
+func IsPublicKind(kind string) bool {
+	for _, k := range PublicKinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// Public returns the current text of a public kind in locale (falling back
+// to tr, then en). ErrNotFound: unknown kind or nothing published yet.
+func (s *Service) Public(ctx context.Context, kind string, locale i18n.Locale) (Text, error) {
+	if !IsPublicKind(kind) {
+		return Text{}, ErrNotFound
+	}
+	t, err := s.currentText(ctx, kind, locale)
+	if err != nil {
+		return Text{}, err
+	}
+	return toText(t), nil
+}
 
 // Text is a published legal text version.
 type Text struct {
@@ -181,7 +219,7 @@ type DecideInput struct {
 // Decide records the user's answer to the current text version. Answering a
 // version twice keeps the first decision (asked once).
 func (s *Service) Decide(ctx context.Context, userID int64, in DecideInput) (Consent, error) {
-	if !IsKind(in.Kind) || in.Version < 1 {
+	if !IsConsentKind(in.Kind) || in.Version < 1 {
 		return Consent{}, ErrInvalidRequest
 	}
 	locale, ok := i18n.Parse(in.Locale)

@@ -2,6 +2,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
 import { useModule } from '@/core/modules';
 import { useFleetRoles } from '@/features/customer-space/lib';
+import { ConsentGate } from '@/features/legal/consent-gate';
 import { useTabTint } from '@/features/shell/tab-tint';
 
 /**
@@ -16,7 +17,10 @@ export default function MusteriTabs() {
   const appointments = useModule('appointments');
   const fleetModule = useModule('fleet');
   return (
-    <NativeTabs tintColor={tint}>
+    <>
+      {/* TEC-1257: pending legal texts after sign-in (web portal's consent dialog). */}
+      <ConsentGate />
+      <NativeTabs tintColor={tint}>
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
@@ -37,6 +41,7 @@ export default function MusteriTabs() {
         <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="account_circle" />
         <NativeTabs.Trigger.Label>{t('profile')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-    </NativeTabs>
+      </NativeTabs>
+    </>
   );
 }

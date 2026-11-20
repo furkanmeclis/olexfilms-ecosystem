@@ -214,3 +214,41 @@ func TestAIConsentRequired(t *testing.T) {
 		t.Fatalf("new version = %+v", txt)
 	}
 }
+
+// TEC-1257: the public kinds are editable and readable without a session,
+// fall back to tr, and are never pending or answerable as a consent.
+func TestPublicLegalTexts(t *testing.T) {
+	ctx := context.Background()
+	svc := New(&memStore{})
+	for _, k := range PublicKinds {
+		if !IsKind(k) || !IsPublicKind(k) || IsConsentKind(k) {
+			t.Fatalf("kind %s", k)
+		}
+	}
+	if IsPublicKind(KindAIGuidelines) || IsPublicKind(KindMarketingConsent) {
+		t.Fatal("consent kinds are not public")
+	}
+	if _, err := svc.Public(ctx, KindPrivacyPolicy, i18n.Locale("en")); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unpublished: %v", err)
+	}
+	if _, _, err := svc.AdminPublish(ctx, KindPrivacyPolicy, "tr", "gizlilik", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.AdminPublish(ctx, KindAIGuidelines, "tr", "yönerge", nil); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Public(ctx, KindPrivacyPolicy, i18n.Locale("de"))
+	if err != nil || got.Locale != "tr" || got.Body != "gizlilik" {
+		t.Fatalf("public = %+v %v", got, err)
+	}
+	if _, err := svc.Public(ctx, KindAIGuidelines, i18n.Locale("tr")); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ai_guidelines must not be public: %v", err)
+	}
+	pending, err := svc.Pending(ctx, 9, i18n.Locale("tr"))
+	if err != nil || len(pending) != 1 || pending[0].Kind != KindAIGuidelines {
+		t.Fatalf("pending = %+v %v", pending, err)
+	}
+	if _, err := svc.Decide(ctx, 9, DecideInput{Kind: KindPrivacyPolicy, Locale: "tr", Version: 1, Accepted: true}); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("decide public kind: %v", err)
+	}
+}

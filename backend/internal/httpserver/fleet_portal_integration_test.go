@@ -112,6 +112,9 @@ func TestIntegrationFleetPortal(t *testing.T) {
 		{"/v1/portal/services/" + svcA + "/review", map[string]any{"rating": 5}},
 		{"/v1/portal/appointments", map[string]any{}},
 		{"/v1/portal/vehicles/" + vA + "/transfers", map[string]any{"phone": itPhone()}},
+		// TEC-1257: the fleet account belongs to its organization.
+		{"/v1/portal/me/delete/code", map[string]any{}},
+		{"/v1/portal/me/delete", map[string]any{"code": "123456"}},
 	} {
 		if code, env := it.do("POST", c.path, hostOlex, tokA, c.body); code != http.StatusForbidden || errCode(env) != "PORTAL_READ_ONLY" {
 			t.Fatalf("fleet POST %s = %d %s, want 403 PORTAL_READ_ONLY", c.path, code, errCode(env))

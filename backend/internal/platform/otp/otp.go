@@ -34,6 +34,9 @@ const (
 	PurposeCustomerLogin = "customer_login"
 	PurposeMobileLogin   = "mobile_login"
 	PurposeContractSign  = "contract_sign"
+	// PurposeAccountDelete confirms a customer's own account deletion
+	// (TEC-1257); a sign-in code never deletes an account.
+	PurposeAccountDelete = "account_delete"
 )
 
 // Limit reasons.
@@ -176,7 +179,8 @@ type Verified struct {
 }
 
 func validPurpose(p string) bool {
-	return p == PurposeCustomerLogin || p == PurposeContractSign || p == PurposeMobileLogin
+	return p == PurposeCustomerLogin || p == PurposeContractSign || p == PurposeMobileLogin ||
+		p == PurposeAccountDelete
 }
 
 // NormalizeLocale maps a locale to a supported one ("de-DE" -> de); every

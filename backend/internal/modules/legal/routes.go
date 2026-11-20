@@ -25,6 +25,9 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/consents/pending", middleware.Chain(http.HandlerFunc(h.PendingConsents), authn))
 	mux.Handle("POST /v1/consents", middleware.Chain(http.HandlerFunc(h.DecideConsent), authn))
 
+	// TEC-1257: privacy policy, KVKK notice, terms of use (no session).
+	mux.HandleFunc("GET /v1/public/legal-texts/{kind}", h.PublicText)
+
 	mux.Handle("GET /v1/platform/legal-texts/{kind}", middleware.Chain(http.HandlerFunc(h.AdminGet), authn, write))
 	mux.Handle("PUT /v1/platform/legal-texts/{kind}", middleware.Chain(http.HandlerFunc(h.AdminPut), authn, write))
 }

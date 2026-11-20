@@ -520,7 +520,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},
 		customersusecase.TransferConfig{Key: otp.DeriveKey(cfg.Encryption.Key), AppName: cfg.App.Name},
 	)
-	customersH := customershandler.New(customersSvc, activityRec).WithLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
+	customersH := customershandler.New(customersSvc, activityRec).WithLimiter(ratelimit.New(deps.Redis, cfg.App.Env)).
+		WithOTP(otpSvc) // TEC-1257: own account deletion
 	customershandler.RegisterRoutes(mux, customersH, tokens, loader, deps.Queries, featureSvc, stepUpSvc)
 	ratesmodule.RegisterRoutes(mux, rateshandler.New(ratesSvc, activityRec), tokens, loader)
 	// TEC-1214: brand currency (preview + change) and the price conversion tool.

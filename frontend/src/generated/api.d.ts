@@ -9073,6 +9073,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portal/me/delete/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send the account deletion code to the signed-in customer's phone
+         * @description TEC-1257 (App Store 5.1.1(v), KVKK). Sends a 6-digit code (purpose account_delete, WhatsApp with SMS fallback) to the account's own phone; a sign-in code never deletes an account. A read-only fleet session answers 403 PORTAL_READ_ONLY, an organization user 409 CUSTOMER_HAS_PANEL_ACCOUNT, an account without a phone 409 ACCOUNT_HAS_NO_PHONE. Errors of delivery and limits are those of POST /v1/auth/otp/request.
+         */
+        post: operations["requestPortalAccountDeleteCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete (anonymize) the signed-in customer's account
+         * @description TEC-1257. The account_delete code confirms the KVKK anonymization of the account (the same action as POST /v1/customers/{uuid}/anonymize): name, e-mail, phone and profile data are overwritten irreversibly; services, warranties and vehicles stay attached to the anonymous account. Every session of the account ends; the client signs out. Wrong or expired code 401 INVALID_OTP_CODE, five wrong codes 429 OTP_LOCKED. Audited (customers.anonymized, customers.self_deleted).
+         */
+        post: operations["deletePortalAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/exports/{uuid}": {
         parameters: {
             query?: never;
@@ -9988,12 +10028,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/legal-texts/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current privacy policy, KVKK notice or terms of use
+         * @description TEC-1257. No session (sign-in screen, profile links). Locale: `locale` query, else Accept-Language; falls back to tr, then en. Unknown kind or nothing published yet: 404. Cache-Control 5 minutes.
+         */
+        get: operations["getPublicLegalText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/legal-texts/{kind}": {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines" | "marketing_consent";
+                kind: "ai_guidelines" | "marketing_consent" | "privacy_policy" | "kvkk_notice" | "terms_of_use";
             };
             cookie?: never;
         };
@@ -27177,9 +27237,22 @@ export interface components {
         LegalTextAdmin: {
             kind: string;
             /** @description Latest version per locale */
-            texts: components["schemas"]["LegalText"][];
+            texts: components["schemas"]["EditableLegalText"][];
             /** @description Recent versions, newest first */
-            versions: components["schemas"]["LegalText"][];
+            versions: components["schemas"]["EditableLegalText"][];
+        };
+        /** @description A legal text in the admin editor (consent or public kind, TEC-1257). */
+        EditableLegalText: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "ai_guidelines" | "marketing_consent" | "privacy_policy" | "kvkk_notice" | "terms_of_use";
+            locale: string;
+            version: number;
+            /** @description Markdown */
+            body: string;
+            /** Format: date-time */
+            created_at: string;
         };
         LegalTextPublishRequest: {
             locale: string;
@@ -27187,7 +27260,7 @@ export interface components {
             body: string;
         };
         LegalTextPublish: {
-            text: components["schemas"]["LegalText"];
+            text: components["schemas"]["EditableLegalText"];
             created: boolean;
         };
         ConsentDecisionRequest: {
@@ -27207,6 +27280,26 @@ export interface components {
             accepted: boolean;
             /** Format: date-time */
             decided_at: string;
+        };
+        /** @enum {string} */
+        PublicLegalTextKind: "privacy_policy" | "kvkk_notice" | "terms_of_use";
+        /** @description TEC-1257 public legal text (never answered as a consent). */
+        PublicLegalText: {
+            /** Format: uuid */
+            uuid: string;
+            kind: components["schemas"]["PublicLegalTextKind"];
+            locale: string;
+            version: number;
+            /** @description Markdown */
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopePublicLegalText: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicLegalText"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeLegalTextList: {
             /** @enum {boolean} */
@@ -51797,6 +51890,83 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    requestPortalAccountDeleteCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Message language (default the request locale) */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Code sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOTPRequestResult"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            /** @description OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deletePortalAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example 123456 */
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Account anonymized */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCustomerAnonymizeResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+            /** @description OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getPortalExport: {
         parameters: {
             query?: never;
@@ -53470,12 +53640,37 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getPublicLegalText: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                kind: components["schemas"]["PublicLegalTextKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicLegalText"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     getPlatformLegalTexts: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines" | "marketing_consent";
+                kind: "ai_guidelines" | "marketing_consent" | "privacy_policy" | "kvkk_notice" | "terms_of_use";
             };
             cookie?: never;
         };
@@ -53501,7 +53696,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines" | "marketing_consent";
+                kind: "ai_guidelines" | "marketing_consent" | "privacy_policy" | "kvkk_notice" | "terms_of_use";
             };
             cookie?: never;
         };
