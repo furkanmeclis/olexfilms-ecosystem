@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 )
@@ -88,6 +90,11 @@ type Options struct {
 	MaxRetryAfter time.Duration
 	HTTPClient    *http.Client
 	Clock         Clock
+	// PendingAPIKey (TEC-1265) is tried once when APIKey is answered with
+	// 401: the hub activated a newer connection package. When it works the
+	// client keeps using it and calls PendingAccepted (promote the key).
+	PendingAPIKey   string
+	PendingAccepted func(ctx context.Context) error
 }
 
 // HTTPClient implements InventoryClient over the hub's REST contract.
@@ -96,6 +103,8 @@ type HTTPClient struct {
 	opts  Options
 	http  *http.Client
 	clock Clock
+
+	keyMu sync.Mutex
 }
 
 var _ InventoryClient = (*HTTPClient)(nil)
@@ -325,6 +334,12 @@ func (c *HTTPClient) call(ctx context.Context, req request, out any, meta *envel
 	}
 	for attempt := 1; ; attempt++ {
 		env, err := c.once(ctx, req, payload)
+		if previous, ok := c.switchToPendingKey(err); ok {
+			// 401 is answered before the hub touches anything, so a write is
+			// safe to send again with the pending key.
+			env, err = c.once(ctx, req, payload)
+			c.pendingKeyResult(ctx, err, previous)
+		}
 		if err == nil {
 			if meta != nil {
 				*meta = env.Meta
@@ -346,6 +361,43 @@ func (c *HTTPClient) call(ctx context.Context, req request, out any, meta *envel
 		if err := c.clock.Sleep(ctx, wait); err != nil {
 			return err
 		}
+	}
+}
+
+// switchToPendingKey swaps in the pending key after a 401 with the active
+// key and returns the key it replaced. ok is false when there is no
+// pending key (or it was already tried).
+func (c *HTTPClient) switchToPendingKey(err error) (previous string, ok bool) {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusUnauthorized {
+		return "", false
+	}
+	c.keyMu.Lock()
+	defer c.keyMu.Unlock()
+	if strings.TrimSpace(c.opts.PendingAPIKey) == "" {
+		return "", false
+	}
+	previous = c.opts.APIKey
+	c.opts.APIKey, c.opts.PendingAPIKey = c.opts.PendingAPIKey, ""
+	return previous, true
+}
+
+// pendingKeyResult promotes the pending key once the hub let it through
+// (any answer but 401). Still 401 (or no answer): the previous key comes
+// back and the error stands.
+func (c *HTTPClient) pendingKeyResult(ctx context.Context, err error, previous string) {
+	var apiErr *APIError
+	if (errors.As(err, &apiErr) && apiErr.Status == http.StatusUnauthorized) || errors.Is(err, ErrTransport) || ctx.Err() != nil {
+		c.keyMu.Lock()
+		c.opts.PendingAPIKey, c.opts.APIKey = c.opts.APIKey, previous
+		c.keyMu.Unlock()
+		return
+	}
+	if c.opts.PendingAccepted == nil {
+		return
+	}
+	if perr := c.opts.PendingAccepted(ctx); perr != nil {
+		slog.WarnContext(ctx, "glorian: promote pending api key", "err", perr)
 	}
 }
 
@@ -399,8 +451,11 @@ func (c *HTTPClient) once(ctx context.Context, req request, payload []byte) (env
 	if payload != nil {
 		hreq.Header.Set("Content-Type", "application/json")
 	}
-	hreq.Header.Set("Authorization", "Bearer "+c.opts.APIKey)
-	hreq.Header.Set(HeaderAPIKey, c.opts.APIKey)
+	c.keyMu.Lock()
+	apiKey := c.opts.APIKey
+	c.keyMu.Unlock()
+	hreq.Header.Set("Authorization", "Bearer "+apiKey)
+	hreq.Header.Set(HeaderAPIKey, apiKey)
 	hreq.Header.Set(HeaderAPIVersion, APIVersion)
 	if req.idempotencyKey != "" {
 		hreq.Header.Set(HeaderIdempotencyKey, req.idempotencyKey)

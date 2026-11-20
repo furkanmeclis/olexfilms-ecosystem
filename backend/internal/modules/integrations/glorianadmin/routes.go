@@ -33,6 +33,8 @@ func Mount(mux *http.ServeMux, h *handler.Handler, authn func(http.Handler) http
 	mux.Handle("GET "+Prefix, view(h.Get))
 	mux.Handle("PUT "+Prefix, manage(h.Put))
 	mux.Handle("POST "+Prefix+"/test", manage(h.Test))
+	// TEC-1265: encrypted connection package with a new API key.
+	mux.Handle("POST "+Prefix+"/connection-package", manage(h.CreatePackage))
 	mux.Handle("GET "+Prefix+"/sync-runs", view(h.ListSyncRuns))
 	mux.Handle("POST "+Prefix+"/sync-runs", manage(h.TriggerSync))
 	mux.Handle("GET "+Prefix+"/sync-runs/{uuid}", view(h.GetSyncRun))

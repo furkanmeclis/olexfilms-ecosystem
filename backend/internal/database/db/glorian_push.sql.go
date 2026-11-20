@@ -65,7 +65,7 @@ func (q *Queries) GetGlorianPushMovement(ctx context.Context, id int64) (GetGlor
 
 const getIntegrationConnectionByID = `-- name: GetIntegrationConnectionByID :one
 
-SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at FROM integration_connections
+SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE id = $1
 `
 
@@ -88,6 +88,10 @@ func (q *Queries) GetIntegrationConnectionByID(ctx context.Context, id int64) (I
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }

@@ -18,6 +18,11 @@ type Connection struct {
 	BaseURL string
 	APIKey  string
 	Active  bool
+	// PendingAPIKey is the key of a newer connection package (TEC-1265)
+	// that the hub may not have activated yet. The client tries it when
+	// APIKey gets 401 and reports success through PendingAccepted.
+	PendingAPIKey   string
+	PendingAccepted func(ctx context.Context) error
 }
 
 // usable reports whether the connection may be called at all.
@@ -52,6 +57,8 @@ func HTTPClientFactory(base Options) ClientFactory {
 		opts := base
 		opts.BaseURL = conn.BaseURL
 		opts.APIKey = conn.APIKey
+		opts.PendingAPIKey = conn.PendingAPIKey
+		opts.PendingAccepted = conn.PendingAccepted
 		return NewHTTPClient(opts)
 	}
 }

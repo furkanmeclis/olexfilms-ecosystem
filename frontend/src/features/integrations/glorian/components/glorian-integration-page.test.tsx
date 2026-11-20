@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   reconcile: vi.fn(),
   locationMapsPage: vi.fn(),
   mapWarehouses: vi.fn(),
+  createPackage: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
 
@@ -95,6 +96,9 @@ const connection: GlorianConnection = {
   default_warehouse_uuid: null,
   api_key_set: true,
   api_key_masked: "********",
+  pending_key: false,
+  package_issued_at: null,
+  package_expires_at: null,
   created_at: NOW,
   updated_at: NOW,
 };
@@ -368,6 +372,60 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
     expect(input("api_key").placeholder).toBe(
       "integrations.glorian.form.api_key_placeholder",
     );
+  });
+
+  it("creates a connection package and downloads it (TEC-1265)", async () => {
+    state.grants = new Set([VIEW, MANAGE]);
+    const createObjectURL = vi.fn(() => "blob:paket");
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+    api.createPackage.mockResolvedValue({
+      filename: "glorian-baglanti-20261120-1300.json",
+      package: { format: "olexfilms.glorian-connection", version: 1 },
+      key_fingerprint: "3c4bff14e533",
+      rotated: true,
+      expires_at: "2026-11-21T13:00:00Z",
+      connection: { ...connection, pending_key: true },
+    });
+    await render();
+    await click(byTestId("glorian-package-open"));
+    const doc = (id: string) =>
+      document.querySelector<HTMLElement>(`[data-testid='${id}']`);
+    const submit = doc("glorian-package-submit") as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    await type(doc("glorian-package-password") as HTMLInputElement, "kisa");
+    expect(document.body.textContent).toContain(
+      "integrations.glorian.package.password_short",
+    );
+    await type(
+      doc("glorian-package-password") as HTMLInputElement,
+      "uzun-bir-sahte-sifre",
+    );
+    await type(
+      doc("glorian-package-confirm") as HTMLInputElement,
+      "uzun-bir-sahte-sifre",
+    );
+    expect(submit.disabled).toBe(false);
+    api.get.mockResolvedValue({ ...connection, pending_key: true });
+    await click(submit);
+
+    expect(api.createPackage).toHaveBeenCalledWith({
+      base_url: "https://hub.example.com",
+      password: "uzun-bir-sahte-sifre",
+      dealer_write: false,
+      order_status_actions: true,
+      rate_limit_per_minute: 300,
+      ip_allowlist: [],
+      ttl_hours: 24,
+    });
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const result = doc("glorian-package-result");
+    expect(result?.textContent).toContain(
+      "integrations.glorian.package.done_rotated",
+    );
+    expect(result?.textContent).toContain("3c4bff14e533");
+    expect(byTestId("glorian-pending-key")).not.toBeNull();
   });
 
   it("does not load without integrations.glorian.view", async () => {

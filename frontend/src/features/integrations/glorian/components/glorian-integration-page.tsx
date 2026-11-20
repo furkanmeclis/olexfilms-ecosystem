@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { GlorianConnectionForm } from "@/features/integrations/glorian/components/glorian-connection-form";
+import { GlorianConnectionPackageButton } from "@/features/integrations/glorian/components/glorian-connection-package";
 import { GlorianLocationMaps } from "@/features/integrations/glorian/components/glorian-location-maps";
 import { GlorianOutbounds } from "@/features/integrations/glorian/components/glorian-outbounds";
 import { GlorianReconcile } from "@/features/integrations/glorian/components/glorian-reconcile";
@@ -124,7 +125,12 @@ function GlorianSections({ canManage }: { canManage: boolean }) {
               await save.mutateAsync(values);
             }}
           />
-          {canManage && data.configured ? <TestConnection /> : null}
+          {canManage ? (
+            <div className="flex flex-wrap items-start gap-3 border-t pt-4">
+              <GlorianConnectionPackageButton connection={data} />
+              {data.configured ? <TestConnection /> : null}
+            </div>
+          ) : null}
         </div>
       </Section>
 
@@ -212,6 +218,11 @@ function ConnectionBadges({ connection }: { connection: GlorianConnection }) {
           ? t("integrations.glorian.connection.key_set")
           : t("integrations.glorian.connection.key_missing")}
       </Badge>
+      {connection.pending_key ? (
+        <Badge variant="warning" data-testid="glorian-pending-key">
+          {t("integrations.glorian.package.pending_badge")}
+        </Badge>
+      ) : null}
     </div>
   );
 }
@@ -229,7 +240,7 @@ function TestConnection() {
   });
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+    <div className="flex flex-wrap items-center gap-3">
       <Button
         type="button"
         variant="outline"
@@ -242,6 +253,15 @@ function TestConnection() {
           ? t("integrations.glorian.test.running")
           : t("integrations.glorian.test.button")}
       </Button>
+      {result?.key_rotated ? (
+        <Badge variant="success" data-testid="glorian-test-rotated">
+          {t("integrations.glorian.test.key_rotated")}
+        </Badge>
+      ) : result?.pending_key ? (
+        <span className="text-muted-foreground text-sm">
+          {t("integrations.glorian.test.pending")}
+        </span>
+      ) : null}
       {result ? (
         <div className="text-sm" data-testid="glorian-test-result">
           {result.ok ? (

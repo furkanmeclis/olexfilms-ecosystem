@@ -107,7 +107,7 @@ VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8
 )
-RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at
 `
 
 type CreateIntegrationConnectionParams struct {
@@ -148,6 +148,10 @@ func (q *Queries) CreateIntegrationConnection(ctx context.Context, arg CreateInt
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }
@@ -335,7 +339,7 @@ func (q *Queries) GetConnectionLocationMapByUUID(ctx context.Context, arg GetCon
 }
 
 const getIntegrationConnectionByKey = `-- name: GetIntegrationConnectionByKey :one
-SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at FROM integration_connections
+SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE brand_id = $1 AND key = $2
 `
 
@@ -360,12 +364,16 @@ func (q *Queries) GetIntegrationConnectionByKey(ctx context.Context, arg GetInte
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }
 
 const getIntegrationConnectionByUUID = `-- name: GetIntegrationConnectionByUUID :one
-SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at FROM integration_connections
+SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -390,12 +398,16 @@ func (q *Queries) GetIntegrationConnectionByUUID(ctx context.Context, arg GetInt
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }
 
 const getIntegrationConnectionForProduct = `-- name: GetIntegrationConnectionForProduct :one
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.key, c.base_url, c.api_key_enc, c.default_warehouse_id, c.active, c.api_version, c.created_at, c.updated_at FROM integration_connections c
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.key, c.base_url, c.api_key_enc, c.default_warehouse_id, c.active, c.api_version, c.created_at, c.updated_at, c.pending_api_key_enc, c.pending_key_issued_at, c.package_issued_at, c.package_expires_at FROM integration_connections c
 JOIN products p ON p.brand_id = c.brand_id
 WHERE p.uuid = $1 AND c.key = $2
 `
@@ -422,6 +434,10 @@ func (q *Queries) GetIntegrationConnectionForProduct(ctx context.Context, arg Ge
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }
@@ -715,7 +731,7 @@ func (q *Queries) ListConnectionLocationMaps(ctx context.Context, arg ListConnec
 }
 
 const listIntegrationConnections = `-- name: ListIntegrationConnections :many
-SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at FROM integration_connections
+SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE brand_id = $1
 ORDER BY key
 `
@@ -742,6 +758,10 @@ func (q *Queries) ListIntegrationConnections(ctx context.Context, brandID int64)
 			&i.ApiVersion,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PendingApiKeyEnc,
+			&i.PendingKeyIssuedAt,
+			&i.PackageIssuedAt,
+			&i.PackageExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -754,7 +774,7 @@ func (q *Queries) ListIntegrationConnections(ctx context.Context, brandID int64)
 }
 
 const listIntegrationConnectionsByKey = `-- name: ListIntegrationConnectionsByKey :many
-SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at FROM integration_connections
+SELECT id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at FROM integration_connections
 WHERE key = $1
 ORDER BY id
 `
@@ -781,6 +801,10 @@ func (q *Queries) ListIntegrationConnectionsByKey(ctx context.Context, key strin
 			&i.ApiVersion,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PendingApiKeyEnc,
+			&i.PendingKeyIssuedAt,
+			&i.PackageIssuedAt,
+			&i.PackageExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -950,6 +974,31 @@ func (q *Queries) LockOrderOutbound(ctx context.Context, id int64) (OrderOutboun
 	return i, err
 }
 
+const promoteIntegrationConnectionPendingKey = `-- name: PromoteIntegrationConnectionPendingKey :execrows
+UPDATE integration_connections
+SET api_key_enc = pending_api_key_enc,
+    pending_api_key_enc = '',
+    pending_key_issued_at = NULL
+WHERE id = $1
+  AND pending_api_key_enc <> ''
+  AND pending_api_key_enc = $2
+`
+
+type PromoteIntegrationConnectionPendingKeyParams struct {
+	ID               int64  `json:"id"`
+	PendingApiKeyEnc string `json:"pending_api_key_enc"`
+}
+
+// TEC-1265: the hub accepted the pending key. Compare-and-swap on the
+// pending ciphertext so a newer package issued meanwhile is not lost.
+func (q *Queries) PromoteIntegrationConnectionPendingKey(ctx context.Context, arg PromoteIntegrationConnectionPendingKeyParams) (int64, error) {
+	result, err := q.db.Exec(ctx, promoteIntegrationConnectionPendingKey, arg.ID, arg.PendingApiKeyEnc)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const searchWarehouseLocationsForMap = `-- name: SearchWarehouseLocationsForMap :many
 SELECT l.id, l.uuid, l.organization_id, l.parent_id, l.code, l.name, l.active, l.created_at, l.updated_at, l.warehouse_id, l.room_id, l.type, l.full_code, l.sort_order FROM warehouse_locations l
 WHERE l.organization_id = $1 AND l.warehouse_id = $2 AND l.active
@@ -1011,9 +1060,11 @@ func (q *Queries) SearchWarehouseLocationsForMap(ctx context.Context, arg Search
 
 const setIntegrationConnectionAPIKey = `-- name: SetIntegrationConnectionAPIKey :one
 UPDATE integration_connections
-SET api_key_enc = $1
+SET api_key_enc = $1,
+    pending_api_key_enc = '',
+    pending_key_issued_at = NULL
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at
 `
 
 type SetIntegrationConnectionAPIKeyParams struct {
@@ -1021,6 +1072,7 @@ type SetIntegrationConnectionAPIKeyParams struct {
 	ID        int64  `json:"id"`
 }
 
+// A key typed in by hand replaces a pending package key too (TEC-1265).
 func (q *Queries) SetIntegrationConnectionAPIKey(ctx context.Context, arg SetIntegrationConnectionAPIKeyParams) (IntegrationConnection, error) {
 	row := q.db.QueryRow(ctx, setIntegrationConnectionAPIKey, arg.ApiKeyEnc, arg.ID)
 	var i IntegrationConnection
@@ -1037,6 +1089,65 @@ func (q *Queries) SetIntegrationConnectionAPIKey(ctx context.Context, arg SetInt
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
+	)
+	return i, err
+}
+
+const setIntegrationConnectionPackage = `-- name: SetIntegrationConnectionPackage :one
+UPDATE integration_connections
+SET api_key_enc = CASE WHEN $1::bool THEN api_key_enc ELSE $2::text END,
+    pending_api_key_enc = CASE WHEN $1::bool THEN $2::text ELSE '' END,
+    pending_key_issued_at = CASE WHEN $1::bool THEN $3::timestamptz ELSE NULL END,
+    base_url = $4,
+    package_issued_at = $3::timestamptz,
+    package_expires_at = $5::timestamptz
+WHERE id = $6
+RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at
+`
+
+type SetIntegrationConnectionPackageParams struct {
+	Rotate    bool               `json:"rotate"`
+	ApiKeyEnc string             `json:"api_key_enc"`
+	IssuedAt  pgtype.Timestamptz `json:"issued_at"`
+	BaseUrl   string             `json:"base_url"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	ID        int64              `json:"id"`
+}
+
+// TEC-1265: a new connection package. With rotate the new key waits in
+// pending_api_key_enc until the hub accepts it; without (no key yet) it
+// becomes the active key at once.
+func (q *Queries) SetIntegrationConnectionPackage(ctx context.Context, arg SetIntegrationConnectionPackageParams) (IntegrationConnection, error) {
+	row := q.db.QueryRow(ctx, setIntegrationConnectionPackage,
+		arg.Rotate,
+		arg.ApiKeyEnc,
+		arg.IssuedAt,
+		arg.BaseUrl,
+		arg.ExpiresAt,
+		arg.ID,
+	)
+	var i IntegrationConnection
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Key,
+		&i.BaseUrl,
+		&i.ApiKeyEnc,
+		&i.DefaultWarehouseID,
+		&i.Active,
+		&i.ApiVersion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }
@@ -1127,7 +1238,7 @@ SET base_url = $1,
     active = $3,
     api_version = $4
 WHERE id = $5
-RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, key, base_url, api_key_enc, default_warehouse_id, active, api_version, created_at, updated_at, pending_api_key_enc, pending_key_issued_at, package_issued_at, package_expires_at
 `
 
 type UpdateIntegrationConnectionParams struct {
@@ -1160,6 +1271,10 @@ func (q *Queries) UpdateIntegrationConnection(ctx context.Context, arg UpdateInt
 		&i.ApiVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PendingApiKeyEnc,
+		&i.PendingKeyIssuedAt,
+		&i.PackageIssuedAt,
+		&i.PackageExpiresAt,
 	)
 	return i, err
 }

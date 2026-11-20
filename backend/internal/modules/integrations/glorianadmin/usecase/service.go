@@ -146,15 +146,22 @@ type ConnectionView struct {
 	DefaultWarehouseUUID *uuid.UUID `json:"default_warehouse_uuid"`
 	APIKeySet            bool       `json:"api_key_set"`
 	APIKeyMasked         *string    `json:"api_key_masked"`
-	CreatedAt            *time.Time `json:"created_at"`
-	UpdatedAt            *time.Time `json:"updated_at"`
+	// TEC-1265: a connection package was issued and its key waits until
+	// the hub activates the package (the next 401 switches to it).
+	PendingKey       bool       `json:"pending_key"`
+	PackageIssuedAt  *time.Time `json:"package_issued_at"`
+	PackageExpiresAt *time.Time `json:"package_expires_at"`
+	CreatedAt        *time.Time `json:"created_at"`
+	UpdatedAt        *time.Time `json:"updated_at"`
 }
 
 func (s *Service) view(ctx context.Context, conn db.IntegrationConnection) (ConnectionView, error) {
 	v := ConnectionView{
 		Configured: true, UUID: &conn.Uuid, Key: conn.Key, BaseURL: conn.BaseUrl,
 		Active: conn.Active, APIVersion: conn.ApiVersion, APIKeySet: conn.ApiKeyEnc != "",
-		CreatedAt: ts(conn.CreatedAt), UpdatedAt: ts(conn.UpdatedAt),
+		PendingKey: conn.PendingApiKeyEnc != "", PackageIssuedAt: ts(conn.PackageIssuedAt),
+		PackageExpiresAt: ts(conn.PackageExpiresAt),
+		CreatedAt:        ts(conn.CreatedAt), UpdatedAt: ts(conn.UpdatedAt),
 	}
 	if v.APIKeySet {
 		m := MaskedAPIKey
@@ -291,6 +298,11 @@ type TestResult struct {
 	HTTPStatus *int    `json:"http_status"`
 	Code       *string `json:"code"`
 	Message    *string `json:"message"`
+	// KeyRotated (TEC-1265): the hub refused the old key and accepted the
+	// pending package key, which is now the active key.
+	KeyRotated bool `json:"key_rotated"`
+	// PendingKey: a package key still waits (the hub has not activated it).
+	PendingKey bool `json:"pending_key"`
 }
 
 // Test codes of a ping that did not reach a hub answer.
@@ -319,17 +331,24 @@ func (s *Service) Test(ctx context.Context, brand db.Brand) (TestResult, error) 
 	start := s.now()
 	_, err = client.ListCategories(ctx, glorian.ListParams{PerPage: 1})
 	took := s.now().Sub(start).Milliseconds()
-	if err == nil {
-		return TestResult{OK: true, DurationMS: took}, nil
-	}
+	res := TestResult{OK: true, DurationMS: took}
 	var apiErr *glorian.APIError
-	if errors.As(err, &apiErr) {
-		res := failed(took, apiErr.Code, apiErr.Error())
+	switch {
+	case err == nil:
+	case errors.As(err, &apiErr):
+		res = failed(took, apiErr.Code, apiErr.Error())
 		status := apiErr.Status
 		res.HTTPStatus = &status
-		return res, nil
+	default:
+		res = failed(took, TestCodeTransport, err.Error())
 	}
-	return failed(took, TestCodeTransport, err.Error()), nil
+	if conn.PendingApiKeyEnc != "" {
+		if after, aerr := s.connection(ctx, brand.ID); aerr == nil {
+			res.PendingKey = after.PendingApiKeyEnc != ""
+			res.KeyRotated = after.PendingApiKeyEnc == "" && after.ApiKeyEnc != conn.ApiKeyEnc
+		}
+	}
+	return res, nil
 }
 
 func failed(took int64, code, msg string) TestResult {

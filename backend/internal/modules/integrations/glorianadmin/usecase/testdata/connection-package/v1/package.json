@@ -1,0 +1,17 @@
+{
+    "format": "olexfilms.glorian-connection",
+    "version": 1,
+    "kdf": {
+        "algorithm": "argon2id",
+        "version": 19,
+        "memory_kib": 65536,
+        "iterations": 3,
+        "parallelism": 1,
+        "salt": "AAECAwQFBgcICQoLDA0ODw=="
+    },
+    "cipher": {
+        "algorithm": "aes-256-gcm",
+        "nonce": "EBESExQVFhcYGRob"
+    },
+    "ciphertext": "KY5N1u5cgqAXPYaNw9Shp3947+BLnSPxKiqQcchS0ZXaUOaf2E99dHpRx5HWq0xy36wfBE5gFQzszDEKra+2NEzymUP2XJNHSQXbsm1uvyASDYJtJb95s5+pHUAM0uz6DT1HW76MOUdlXvrZEw8kZk15P5jzuZVbTCXjrAFoUSxHoTIYjNagjkdn19dPAC8txTuHyhI8tImFByRRTFyjZ5le/ZeohLrqys29Y4l7A8SnsFM0bkacLxlV7pJvoOKz2xNrytChW+cXBku3tu9G7XgHFIZIMz4bS4XM+J8qPOVEsYxTsn/EtDlqCoi2BPuUkttPy/OF5W6n+qB0Vu3R4SbWzcPPIcXea0CHh/w+vEj4Cz5HS3sT822GjiUbLxNhBrQSfJVkGvw6DtkyF0u6t3rZmyA7xVyZLOQqKYO+43CxwkTal8Ulx+WyWs1/KdYbwz2Hak518K7LGogXqv1nTmmOQZ8A6ZhUYjr58uXoYgXgJcpKGF/ANMwALw6aVMgL0Ki2mCsgOE2OABzCu9/AGvu9UwBQKSMd6tQ0gvOZagrBgdIeJZWHx4NA8dqXYlCGJpje1jhSsIEd8CRAi/V0kFFCSNXXZ7edpaT97gwkGJ7ML4g="
+}

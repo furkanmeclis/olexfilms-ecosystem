@@ -1199,7 +1199,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-273: Glorian admin API (connection settings, sync runs, outbound
 	// replay, reconcile); glorian.Store is wired here.
 	glorianadminmodule.RegisterRoutes(mux, glorianadminhandler.New(glorianadminusecase.New(deps.Queries, secretBox,
-		glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), glorianQueue, log), activityRec), tokens, loader)
+		glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), glorianQueue, log), activityRec).WithIssuerURL(cfg.Auth.FrontendURL), tokens, loader)
 
 	var brandResolver *brandctx.Resolver
 	if deps.Queries != nil {
