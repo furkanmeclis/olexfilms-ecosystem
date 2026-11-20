@@ -179,6 +179,12 @@ func (s *Service) Create(ctx context.Context, c Caller, in model.CreateInput) (m
 	if err != nil {
 		return model.ClaimView{}, fmt.Errorf("warranty claims: warranty: %w", err)
 	}
+	// TEC-1259: the warranty must be in the caller's warranty_claims.write
+	// scope (a dealer only claims warranties its organizations issued);
+	// out of scope reads as not found.
+	if !c.Filter.AllowsOrg(w.OrganizationID, w.BrandID) {
+		return model.ClaimView{}, ErrNotFound
+	}
 	coverage, err := s.coverage(ctx, w, in.Parts)
 	if err != nil {
 		return model.ClaimView{}, err
