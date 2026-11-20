@@ -117,3 +117,18 @@ WHERE actor_id = sqlc.arg(actor_id)
   )
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- TEC-1259: export jobs past expires_at that still hold a file or are not
+-- yet marked expired (oldest first, in batches).
+-- name: ListExpiredExportJobs :many
+SELECT id, file_key FROM export_jobs
+WHERE expires_at IS NOT NULL AND expires_at <= NOW()
+  AND status <> 'expired'
+  AND status NOT IN ('queued', 'processing')
+ORDER BY expires_at, id
+LIMIT sqlc.arg(limit_count);
+
+-- name: MarkExportJobExpired :exec
+UPDATE export_jobs
+SET status = 'expired', file_key = NULL
+WHERE id = $1 AND status <> 'expired';

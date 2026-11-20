@@ -12,6 +12,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const anonymizeCustomerContacts = `-- name: AnonymizeCustomerContacts :one
+SELECT anonymize_customer_contacts(
+    $1::bigint, $2::text, $3::text
+)::jsonb AS counts
+`
+
+type AnonymizeCustomerContactsParams struct {
+	UserID pgtype.Int8 `json:"user_id"`
+	Phone  pgtype.Text `json:"phone"`
+	Email  pgtype.Text `json:"email"`
+}
+
+// TEC-1259: conversations, messages, WhatsApp LID map, notifications and
+// leads of the person (migration 000202). Runs before AnonymizeUser clears
+// the phone and e-mail; returns the masked row count per table.
+func (q *Queries) AnonymizeCustomerContacts(ctx context.Context, arg AnonymizeCustomerContactsParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, anonymizeCustomerContacts, arg.UserID, arg.Phone, arg.Email)
+	var counts []byte
+	err := row.Scan(&counts)
+	return counts, err
+}
+
 const anonymizeCustomerProfile = `-- name: AnonymizeCustomerProfile :one
 UPDATE customer_profiles
 SET company_name       = NULL,
@@ -119,6 +141,78 @@ func (q *Queries) CustomerLinkedToBrand(ctx context.Context, arg CustomerLinkedT
 	var linked bool
 	err := row.Scan(&linked)
 	return linked, err
+}
+
+const listCustomerContactLeadUUIDs = `-- name: ListCustomerContactLeadUUIDs :many
+SELECT uuid FROM leads
+WHERE ($1::bigint IS NOT NULL AND customer_user_id = $1)
+   OR ($2::text IS NOT NULL AND candidate_phone_e164 = $2)
+   OR ($3::text IS NOT NULL AND lower(candidate_email) = lower($3))
+`
+
+type ListCustomerContactLeadUUIDsParams struct {
+	UserID pgtype.Int8 `json:"user_id"`
+	Phone  pgtype.Text `json:"phone"`
+	Email  pgtype.Text `json:"email"`
+}
+
+// Leads touched by AnonymizeCustomerContacts (search documents refreshed
+// after commit).
+func (q *Queries) ListCustomerContactLeadUUIDs(ctx context.Context, arg ListCustomerContactLeadUUIDsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listCustomerContactLeadUUIDs, arg.UserID, arg.Phone, arg.Email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var uuid uuid.UUID
+		if err := rows.Scan(&uuid); err != nil {
+			return nil, err
+		}
+		items = append(items, uuid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCustomerContactMediaKeys = `-- name: ListCustomerContactMediaKeys :many
+SELECT m.media_storage_key::text AS media_storage_key
+FROM messages m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE m.media_storage_key IS NOT NULL
+  AND (($1::bigint IS NOT NULL
+        AND (c.user_id = $1 OR c.identity_user_id = $1))
+    OR ($2::text IS NOT NULL AND c.contact_e164 = $2))
+`
+
+type ListCustomerContactMediaKeysParams struct {
+	UserID pgtype.Int8 `json:"user_id"`
+	Phone  pgtype.Text `json:"phone"`
+}
+
+// Stored media of the person's WhatsApp messages; read before
+// AnonymizeCustomerContacts clears the keys, deleted from storage after commit.
+func (q *Queries) ListCustomerContactMediaKeys(ctx context.Context, arg ListCustomerContactMediaKeysParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listCustomerContactMediaKeys, arg.UserID, arg.Phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var media_storage_key string
+		if err := rows.Scan(&media_storage_key); err != nil {
+			return nil, err
+		}
+		items = append(items, media_storage_key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCustomerExportServices = `-- name: ListCustomerExportServices :many

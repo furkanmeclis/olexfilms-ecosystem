@@ -225,6 +225,42 @@ func (q *Queries) GetReusablePortalServiceJob(ctx context.Context, arg GetReusab
 	return i, err
 }
 
+const listExpiredExportJobs = `-- name: ListExpiredExportJobs :many
+SELECT id, file_key FROM export_jobs
+WHERE expires_at IS NOT NULL AND expires_at <= NOW()
+  AND status <> 'expired'
+  AND status NOT IN ('queued', 'processing')
+ORDER BY expires_at, id
+LIMIT $1
+`
+
+type ListExpiredExportJobsRow struct {
+	ID      int64       `json:"id"`
+	FileKey pgtype.Text `json:"file_key"`
+}
+
+// TEC-1259: export jobs past expires_at that still hold a file or are not
+// yet marked expired (oldest first, in batches).
+func (q *Queries) ListExpiredExportJobs(ctx context.Context, limitCount int32) ([]ListExpiredExportJobsRow, error) {
+	rows, err := q.db.Query(ctx, listExpiredExportJobs, limitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListExpiredExportJobsRow{}
+	for rows.Next() {
+		var i ListExpiredExportJobsRow
+		if err := rows.Scan(&i.ID, &i.FileKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listExportJobsFiltered = `-- name: ListExportJobsFiltered :many
 SELECT e.id, e.uuid, e.resource, e.actor_id, e.format, e.query_json, e.locale, e.status, e.file_key, e.row_count, e.error, e.expires_at, e.created_at, e.updated_at, e.organization_id, u.uuid AS actor_uuid, u.name AS actor_name, u.surname AS actor_surname
 FROM export_jobs e
@@ -380,6 +416,17 @@ func (q *Queries) MarkExportJobCompleted(ctx context.Context, arg MarkExportJobC
 		&i.OrganizationID,
 	)
 	return i, err
+}
+
+const markExportJobExpired = `-- name: MarkExportJobExpired :exec
+UPDATE export_jobs
+SET status = 'expired', file_key = NULL
+WHERE id = $1 AND status <> 'expired'
+`
+
+func (q *Queries) MarkExportJobExpired(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markExportJobExpired, id)
+	return err
 }
 
 const markExportJobFailed = `-- name: MarkExportJobFailed :one
