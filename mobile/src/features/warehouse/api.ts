@@ -74,11 +74,12 @@ export function useRooms(warehouse: string | undefined) {
 
 // --- scan ----------------------------------------------------------------------
 
-export function resolveScan(code: string, opts: { expect?: ScanExpect; warehouse?: string } = {}) {
+export function resolveScan(code: string, opts: { expect?: ScanExpect; warehouse?: string; signal?: AbortSignal } = {}) {
   return unwrap(
     api.POST('/v1/mobile/warehouse/scan', {
       params: mobile,
       body: { code, expect: opts.expect ?? 'any', warehouse_uuid: opts.warehouse },
+      signal: opts.signal,
     }),
   );
 }

@@ -262,7 +262,7 @@ export function EodDetailScreen() {
               </>
             ) : null}
 
-            {canSharePdf ? (
+            {canSharePdf() ? (
               <Button
                 title={t('eod.share_pdf')}
                 icon="share"
@@ -272,9 +272,9 @@ export function EodDetailScreen() {
                 onPress={() => void share()}
               />
             ) : (
-              // The share sheet for PDFs is iOS only: say so instead of hiding it silently.
+              // A binary without expo-sharing cannot share files: say so instead of hiding it silently.
               <Text variant="footnote" tone="muted">
-                {t('eod.pdf_ios_only')}
+                {t('documents.share_unavailable')}
               </Text>
             )}
           </>

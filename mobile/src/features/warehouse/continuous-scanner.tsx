@@ -1,12 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScopedTheme } from 'uniwind';
 
+import { localCount } from '@/core/digits';
 import { useScannerInput } from '@/features/scanner/input-mode';
+import { createScanQueue, type ScanQueue, ScanTimeoutError } from '@/features/scanner/scan-queue';
 import { WedgeInput } from '@/features/scanner/wedge-input';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
@@ -17,12 +19,6 @@ import { ToastHost } from '@/ui/toast';
 
 export const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'itf14'] as const;
 
-/** Same code again within this window is the camera seeing it twice, not a second scan. */
-const REPEAT_MS = 2500;
-
-/** Wall clock for the repeat window (scan callbacks only, never during render). */
-const clock = () => Date.now();
-
 export type ScanOutcome = { ok: boolean; title: string; detail?: string };
 
 type FeedItem = ScanOutcome & { id: number; code: string };
@@ -31,6 +27,10 @@ type FeedItem = ScanOutcome & { id: number; code: string };
  * Full-screen camera that keeps scanning: each code is handed to `onCode`,
  * its outcome is shown in a short feed with haptics, and the camera stays
  * open for the next code. A keyboard entry covers damaged labels.
+ *
+ * TEC-1255: codes that arrive while one is being handled wait in a FIFO
+ * queue (the count is shown) instead of being dropped; a code that gets no
+ * answer within 10 s is reported as timed out and the queue moves on.
  */
 export function ContinuousScanner({
   visible,
@@ -60,54 +60,68 @@ export function ContinuousScanner({
    */
   overlay?: React.ReactNode;
 }) {
-  const { t } = useTranslation('warehouse');
+  const { t, i18n } = useTranslation('warehouse');
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   // TEC-1230: a hardware reader (keyboard wedge) instead of the camera.
   const wedge = useScannerInput((s) => s.mode) === 'wedge';
   const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [queue, setQueue] = useState<{ active: string | null; pending: number }>({ active: null, pending: 0 });
   const [torch, setTorch] = useState(false);
   const [typing, setTyping] = useState(false);
   const [manual, setManual] = useState('');
-  const lock = useRef(false);
-  const last = useRef<{ code: string; at: number }>({ code: '', at: 0 });
   const seq = useRef(0);
+  // The latest props for the queue's callbacks (the queue lives across renders).
+  const latest = useRef({ onCode, single, t, close: () => {} });
 
-  const handle = async (raw: string) => {
-    const code = raw.trim();
-    if (!code || lock.current) return;
-    const now = clock();
-    // A reader trigger is deliberate: only the camera sees a code twice.
-    if (!wedge && code === last.current.code && now - last.current.at < REPEAT_MS) return;
-    last.current = { code, at: now };
-    lock.current = true;
-    setBusy(true);
-    void Haptics.selectionAsync();
-    let outcome: ScanOutcome;
-    try {
-      outcome = await onCode(code);
-    } catch {
-      outcome = { ok: false, title: t('scan.failed') };
-    }
-    void Haptics.notificationAsync(
-      outcome.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
-    );
-    seq.current += 1;
-    setFeed((f) => [{ ...outcome, code, id: seq.current }, ...f].slice(0, 4));
-    setBusy(false);
-    lock.current = false;
-    if (outcome.ok && single) close();
+  // One queue per scanner; its callbacks read the latest props through `latest`.
+  // Created on the first code (never during render).
+  const queueRef = useRef<ScanQueue | null>(null);
+  const getQueue = () =>
+    (queueRef.current ??= createScanQueue<ScanOutcome>({
+      run: (code) => latest.current.onCode(code),
+      onStart: () => void Haptics.selectionAsync(),
+      onChange: setQueue,
+      onSettled: (code, r) => {
+        const outcome: ScanOutcome = r.ok
+          ? r.value
+          : { ok: false, title: latest.current.t(r.error instanceof ScanTimeoutError ? 'scan.timeout' : 'scan.failed') };
+        void Haptics.notificationAsync(
+          outcome.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
+        );
+        seq.current += 1;
+        const id = seq.current;
+        setFeed((f) => [{ ...outcome, code, id }, ...f].slice(0, 4));
+        if (outcome.ok && latest.current.single) latest.current.close();
+      },
+    }));
+
+  // TEC-1241: a confirmation over the feed waits for the user, not the network.
+  useEffect(() => {
+    if (overlay) queueRef.current?.holdTimeout();
+  }, [overlay]);
+  // Codes left in the queue never outlive the scanner.
+  useEffect(() => {
+    if (!visible) queueRef.current?.clear();
+  }, [visible]);
+  useEffect(() => () => queueRef.current?.clear(), []);
+
+  // A reader trigger is deliberate: only the camera sees a code twice.
+  const handle = (raw: string, repeat = !wedge) => {
+    getQueue().push(raw, { repeat });
   };
 
   const close = () => {
+    queueRef.current?.clear();
     setFeed([]);
     setTorch(false);
     setTyping(false);
     setManual('');
-    last.current = { code: '', at: 0 };
     onClose();
   };
+  useEffect(() => {
+    latest.current = { onCode, single, t, close };
+  });
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}>
@@ -123,7 +137,7 @@ export function ContinuousScanner({
             <Text variant="footnote" className="text-center text-white/70">
               {t('scan:input.ready_hint')}
             </Text>
-            {visible ? <WedgeInput paused={typing || !!overlay} onCode={(c) => void handle(c)} /> : null}
+            {visible ? <WedgeInput paused={typing || !!overlay} onCode={(c) => handle(c)} /> : null}
           </View>
         ) : !permission ? null : !permission.granted ? (
           <View className="flex-1 justify-center bg-black">
@@ -144,7 +158,7 @@ export function ContinuousScanner({
             facing="back"
             enableTorch={torch}
             barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
-            onBarcodeScanned={typing || overlay ? undefined : ({ data }) => void handle(data)}
+            onBarcodeScanned={typing || overlay ? undefined : ({ data }) => handle(data)}
           />
         ) : null}
 
@@ -194,8 +208,7 @@ export function ContinuousScanner({
                 onSubmitEditing={() => {
                   const v = manual;
                   setManual('');
-                  last.current = { code: '', at: 0 };
-                  void handle(v);
+                  handle(v, false);
                 }}
                 className="min-h-11 flex-1 px-2 font-mono text-[17px] text-foreground"
               />
@@ -205,8 +218,7 @@ export function ContinuousScanner({
                 onPress={() => {
                   const v = manual;
                   setManual('');
-                  last.current = { code: '', at: 0 };
-                  void handle(v);
+                  handle(v, false);
                 }}
                 className="min-h-11 justify-center rounded-md bg-primary px-4">
                 <Text variant="callout" tone="onPrimary" className="font-semibold">
@@ -215,10 +227,15 @@ export function ContinuousScanner({
               </Pressable>
             </View>
           ) : null}
-          {busy ? (
+          {queue.active !== null ? (
             <View className="flex-row items-center gap-2 self-center rounded-full bg-card/90 px-3 py-1.5">
               <ActivityIndicator size="small" />
               <Text variant="footnote">{t('m.checking')}</Text>
+              {queue.pending > 0 ? (
+                <Text variant="footnote" className="font-semibold">
+                  {`· ${t('m.queued', { n: localCount(queue.pending, i18n.language) })}`}
+                </Text>
+              ) : null}
             </View>
           ) : null}
           {complete ? (
