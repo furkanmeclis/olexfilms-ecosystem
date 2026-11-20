@@ -60,12 +60,35 @@ Başlangıç sırası `depends_on` ile şöyledir: altyapı servisleri healthy o
 ## 4. Yedek ve geri yükleme
 
 ```bash
-NAME_PREFIX=olexfilms BACKUP_DIR=/srv/backups scripts/backup.sh   # cron ile günlük; dizini sunucu dışına kopyalayın
+NAME_PREFIX=olexfilms BACKUP_DIR=/srv/backups scripts/backup.sh   # cron ile günlük; OFFSITE_TARGET ile sunucu dışına kopyalar
 NAME_PREFIX=olexfilms scripts/restore.sh /srv/backups/<stamp>      # YIKICI, onay ister
 scripts/dr-drill.sh                                                # geçici container'larda backup → silme → restore → doğrulama
 ```
 
 Yedek şunları kapsar: app DB (`db.dump`), wuzapi DB (`wuzapi.dump`), SeaweedFS volume'ü, Meilisearch volume'ü ve wuzapi medya volume'ü. Her parça `SHA256SUMS` ile doğrulanır.
+
+**Sunucu dışı kopya (TEC-1259).** Sunucudaki yedek tek başına yedek sayılmaz; disk ya da sunucu kaybında yedekle birlikte gider. `OFFSITE_TARGET` tanımlıysa betik, yedek bittikten ve `SHA256SUMS` yazıldıktan sonra dizini `<hedef>/<stamp>` altına kopyalar:
+
+```bash
+# S3 uyumlu depo (aws CLI; kimlik bilgisi aws'nin kendi yapılandırmasından)
+OFFSITE_TARGET=s3://olexfilms-yedek/prod NAME_PREFIX=olexfilms BACKUP_DIR=/srv/backups scripts/backup.sh
+# rclone uzak hedefi (istemci tarafı şifreleme için crypt remote önerilir)
+OFFSITE_TARGET=yedek-crypt:prod NAME_PREFIX=olexfilms BACKUP_DIR=/srv/backups scripts/backup.sh
+```
+
+- Araç hedeften seçilir (`s3://` → aws, diğerleri → rclone); `OFFSITE_TOOL=aws|rclone` ile zorlanabilir.
+- Kopya başarısız olursa betik sıfırdan farklı kodla çıkar (cron e-postası), yerel yedek silinmez. `OFFSITE_TARGET` yoksa uyarı yazar.
+- Hedef kovada sürümleme ve yaşam döngüsü kuralı (ör. 30 gün) açık olmalı; sunucudaki kimlik bilgisi yalnız yazma (silme yok) yetkili olmalı.
+
+**Yedeğin tazeliği.** `scripts/backup.sh --check` yedek almaz; en yeni yedeğin `MAX_AGE_HOURS` (varsayılan 26) saatten eski olmadığını, `SHA256SUMS` dosyasının bulunduğunu ve sağlamaların tuttuğunu denetler, aksi halde 1 ile çıkar. Ayrı bir cron ile (ör. her sabah) çalıştırılıp hata e-postası izlenmelidir:
+
+```bash
+0 9 * * * BACKUP_DIR=/srv/backups /opt/olexfilms/scripts/backup.sh --check
+```
+
+**Şifreleme anahtarları yedeğin içinde değildir.** `CUSTOMER_PII_KEY` (TC kimlik/vergi no şifresi), `APP_ENCRYPTION_KEY` (veritabanında şifreli duran entegrasyon sırları: Glorian, GitHub App vb.) ve `WUZAPI_GLOBAL_ENCRYPTION_KEY` (WhatsApp oturumları) olmadan yedekten dönülen veritabanındaki şifreli alanlar okunamaz. Bu üç anahtar `.env.server`'dan ayrı, sunucu dışındaki bir kasada (parola yöneticisi / secret manager; en az iki yetkili kişi erişebilir) saklanmalı ve her değişiklikte kasadaki kopya güncellenmelidir. Anahtarlar yedek kovasına konmaz: yedek ve anahtar aynı yerde olursa yedeğe erişen her şeye erişir.
+
+Kurulum (cron satırları, kova/rclone yapılandırması, kasa) sunucu sahibinin işidir; betik yalnız seçenekleri sağlar.
 
 ## 5. Lokal
 

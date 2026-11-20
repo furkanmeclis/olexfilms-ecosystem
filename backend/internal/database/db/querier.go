@@ -43,6 +43,10 @@ type Querier interface {
 	AddWarrantyClaimEvent(ctx context.Context, arg AddWarrantyClaimEventParams) (WarrantyClaimEvent, error)
 	AddWarrantyClaimPart(ctx context.Context, arg AddWarrantyClaimPartParams) (WarrantyClaimPart, error)
 	AddWarrantyClaimPhoto(ctx context.Context, arg AddWarrantyClaimPhotoParams) (WarrantyClaimPhoto, error)
+	// TEC-1259: conversations, messages, WhatsApp LID map, notifications and
+	// leads of the person (migration 000203). Runs before AnonymizeUser clears
+	// the phone and e-mail; returns the masked row count per table.
+	AnonymizeCustomerContacts(ctx context.Context, arg AnonymizeCustomerContactsParams) ([]byte, error)
 	// Clears every personal profile field (identity numbers: ciphertext and
 	// mask together); anonymized_at keeps the first anonymization instant.
 	AnonymizeCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
@@ -2064,6 +2068,12 @@ type Querier interface {
 	// precision is lost between NUMERIC and Go.
 	ListCurrencies(ctx context.Context, activeOnly bool) ([]Currency, error)
 	ListCustomerCariAccounts(ctx context.Context, arg ListCustomerCariAccountsParams) ([]CariAccount, error)
+	// Leads touched by AnonymizeCustomerContacts (search documents refreshed
+	// after commit).
+	ListCustomerContactLeadUUIDs(ctx context.Context, arg ListCustomerContactLeadUUIDsParams) ([]uuid.UUID, error)
+	// Stored media of the person's WhatsApp messages; read before
+	// AnonymizeCustomerContacts clears the keys, deleted from storage after commit.
+	ListCustomerContactMediaKeys(ctx context.Context, arg ListCustomerContactMediaKeysParams) ([]string, error)
 	// Services of a customer for the data export (brand_id NULL: every brand).
 	ListCustomerExportServices(ctx context.Context, arg ListCustomerExportServicesParams) ([]ListCustomerExportServicesRow, error)
 	// Warranties held by a customer for the data export.
@@ -2173,6 +2183,9 @@ type Querier interface {
 	// The products of an entry's lines that are not placed yet.
 	ListEntryLineProducts(ctx context.Context, entryID int64) ([]int64, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
+	// TEC-1259: export jobs past expires_at that still hold a file or are not
+	// yet marked expired (oldest first, in batches).
+	ListExpiredExportJobs(ctx context.Context, limitCount int32) ([]ListExpiredExportJobsRow, error)
 	// TEC-308: open subscriptions past ends_on (scheduled ones that never
 	// started included), oldest end first.
 	ListExpiringServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListExpiringServiceSubscriptionIDsRow, error)
@@ -3417,6 +3430,7 @@ type Querier interface {
 	MarkDocumentRenderReady(ctx context.Context, arg MarkDocumentRenderReadyParams) (DocumentRender, error)
 	MarkDueNoShowAppointments(ctx context.Context, cutoff pgtype.Timestamptz) ([]Appointment, error)
 	MarkExportJobCompleted(ctx context.Context, arg MarkExportJobCompletedParams) (ExportJob, error)
+	MarkExportJobExpired(ctx context.Context, id int64) error
 	MarkExportJobFailed(ctx context.Context, arg MarkExportJobFailedParams) (ExportJob, error)
 	MarkExportJobProcessing(ctx context.Context, id int64) (ExportJob, error)
 	MarkFleetReportEmailed(ctx context.Context, id int64) (FleetReport, error)

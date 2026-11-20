@@ -508,6 +508,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersSvc.SetRevoker(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
 	}
 	customersSvc.SetSearchIndexer(searchIndexer)
+	// TEC-1259: stored WhatsApp media of an anonymized person is deleted.
+	if deps.Storage != nil {
+		customersSvc.SetMediaDeleter(deps.Storage)
+	}
 	// TEC-164: q searches the customers index; customer.created links /portal.
 	if listFinder != nil {
 		customersSvc.SetFinder(listFinder)

@@ -24,6 +24,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -52,6 +53,16 @@ type SearchIndexer interface {
 	EnqueueDelete(ctx context.Context, spec, id string)
 }
 
+// ObjectDeleter removes a stored object (storage.Driver).
+type ObjectDeleter interface {
+	Delete(ctx context.Context, path string) error
+}
+
+// SetMediaDeleter enables deleting the stored WhatsApp media of an
+// anonymized person after commit (TEC-1259; nil: the keys are cleared, the
+// objects stay).
+func (s *Service) SetMediaDeleter(d ObjectDeleter) { s.media = d }
+
 // SetRevoker enables immediate access token revocation (nil: refresh tokens
 // are still revoked and the identity loader refuses anonymized users).
 func (s *Service) SetRevoker(r Revoker) { s.revoker = r }
@@ -78,6 +89,8 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 	}
 	var res AnonymizeResult
 	var userUUID uuid.UUID
+	var mediaKeys []string
+	var leadUUIDs []uuid.UUID
 	err := s.inTx(ctx, func(q *db.Queries) error {
 		user, err := q.LockUserByUUID(ctx, id)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -115,6 +128,21 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 			UserID: pgtype.Int8{Int64: user.ID, Valid: true}, Phone: user.PhoneE164,
 		}); err != nil {
 			return fmt.Errorf("customers: anonymize legacy messages: %w", err)
+		}
+		// TEC-1259: WhatsApp conversations and messages, LID map,
+		// notifications and leads of the person (by account, phone and
+		// e-mail, read before they are cleared).
+		contact := contactKeys(user)
+		if mediaKeys, err = q.ListCustomerContactMediaKeys(ctx, db.ListCustomerContactMediaKeysParams{
+			UserID: contact.UserID, Phone: contact.Phone,
+		}); err != nil {
+			return fmt.Errorf("customers: list message media: %w", err)
+		}
+		if leadUUIDs, err = q.ListCustomerContactLeadUUIDs(ctx, db.ListCustomerContactLeadUUIDsParams(contact)); err != nil {
+			return fmt.Errorf("customers: list leads: %w", err)
+		}
+		if _, err := q.AnonymizeCustomerContacts(ctx, contact); err != nil {
+			return fmt.Errorf("customers: anonymize contacts: %w", err)
 		}
 		hash, err := unusablePasswordHash()
 		if err != nil {
@@ -157,9 +185,31 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 			// TEC-209: the services / warranties documents lose the
 			// person, the vehicles leave the index (K19).
 			s.indexCustomerRecords(ctx, userUUID)
+			for _, u := range leadUUIDs {
+				s.search.EnqueueUpsert(ctx, searchengine.SpecLeads, u.String())
+			}
+		}
+		if s.media != nil {
+			// Best effort: the database no longer references the objects.
+			for _, k := range mediaKeys {
+				_ = s.media.Delete(ctx, k)
+			}
 		}
 	}
 	return res, nil
+}
+
+// contactKeys is the match key set of anonymize_customer_contacts: the
+// account, its E.164 phone and its e-mail (empty values are ignored).
+func contactKeys(u db.User) db.AnonymizeCustomerContactsParams {
+	p := db.AnonymizeCustomerContactsParams{UserID: pgtype.Int8{Int64: u.ID, Valid: true}}
+	if u.PhoneE164.Valid && u.PhoneE164.String != "" {
+		p.Phone = u.PhoneE164
+	}
+	if u.Email.Valid && u.Email.String != "" {
+		p.Email = u.Email
+	}
+	return p
 }
 
 // requireCustomerOnly refuses users with an organization membership or a

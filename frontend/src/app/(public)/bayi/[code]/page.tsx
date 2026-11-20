@@ -17,6 +17,7 @@ import {
 } from "@/features/dealers/lib/dealer-showcase";
 import { loadMessages, translate } from "@/lib/i18n/messages";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
+import { serializeJsonLd } from "@/lib/seo/json-ld";
 import {
   clientIpFromHeaders,
   fetchUpstream,
@@ -133,7 +134,7 @@ export default async function DealerShowcasePage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(dealerJsonLd(result.dealer)),
+            __html: serializeJsonLd(dealerJsonLd(result.dealer)),
           }}
         />
       ) : null}

@@ -444,6 +444,11 @@ func (s *Service) openExportFile(ctx context.Context, row db.ExportJob) (io.Read
 	if !row.FileKey.Valid || row.Status != "completed" {
 		return nil, "", "", ErrNotFound
 	}
+	// TEC-1259: an expired file is not served even before the hourly
+	// cleanup deletes it.
+	if row.ExpiresAt.Valid && !row.ExpiresAt.Time.After(time.Now()) {
+		return nil, "", "", ErrNotFound
+	}
 	rc, _, err := s.storage.Download(ctx, row.FileKey.String)
 	if err != nil {
 		return nil, "", "", err
@@ -560,4 +565,43 @@ func (s *Service) renderDocument(
 		return nil, err
 	}
 	return data, nil
+}
+
+// exportCleanupBatch is the number of expired jobs handled per query.
+const exportCleanupBatch = 200
+
+// CleanupExpired deletes the stored files of export jobs past expires_at and
+// marks the jobs expired (TEC-1259, hourly task). A file whose deletion fails
+// keeps its job unchanged and is retried on the next run. Returns the number
+// of jobs marked expired.
+func (s *Service) CleanupExpired(ctx context.Context) (int, error) {
+	total := 0
+	for {
+		rows, err := s.q.ListExpiredExportJobs(ctx, exportCleanupBatch)
+		if err != nil {
+			return total, fmt.Errorf("exports: list expired: %w", err)
+		}
+		done := 0
+		for _, r := range rows {
+			if r.FileKey.Valid && r.FileKey.String != "" {
+				if s.storage == nil {
+					return total, errors.New("exports: storage not configured")
+				}
+				if err := s.storage.Delete(ctx, r.FileKey.String); err != nil {
+					s.log.WarnContext(ctx, "export_file_delete_failed", "job_id", r.ID, "error", err)
+					continue
+				}
+			}
+			if err := s.q.MarkExportJobExpired(ctx, r.ID); err != nil {
+				return total, fmt.Errorf("exports: mark expired: %w", err)
+			}
+			done++
+		}
+		total += done
+		// A short batch is the last one; a batch without progress (every
+		// delete failed) is retried on the next run.
+		if len(rows) < exportCleanupBatch || done == 0 {
+			return total, nil
+		}
+	}
 }

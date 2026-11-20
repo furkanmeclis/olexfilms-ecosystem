@@ -388,6 +388,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 			glorian.NewReconciler(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log).ReconcileTask,
 			glorianOrders.ReplayOneTask,
 		).
+		// TEC-1259: hourly deletion of expired export files.
+		WithExportCleanup(exportSvc.CleanupExpired).
 		// TEC-393: 90-day retention of WhatsApp conversation AI runs.
 		WithConversationAIRunPurge(whatsapprepo.New(pool).PurgeExpiredAIRuns).
 		// TEC-387: AI confirmation card expiry and stale run cleanup.

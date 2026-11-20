@@ -135,8 +135,9 @@ type Service struct {
 	search  SearchIndexer
 	finder  CustomerFinder // TEC-164: customers index search (nil: SQL only)
 	out     outbox.Enqueuer
-	portal  string     // TEC-164: portal URL of the customer.created message
-	tr      *transfers // TEC-190: vehicle transfer (nil: disabled)
+	portal  string        // TEC-164: portal URL of the customer.created message
+	tr      *transfers    // TEC-190: vehicle transfer (nil: disabled)
+	media   ObjectDeleter // TEC-1259: WhatsApp media of anonymized people (nil: kept)
 }
 
 // New creates the service. pii may be nil (CUSTOMER_PII_KEY unset in

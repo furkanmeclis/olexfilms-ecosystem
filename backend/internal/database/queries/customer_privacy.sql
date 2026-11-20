@@ -74,3 +74,30 @@ SELECT EXISTS (
     SELECT 1 FROM customer_organizations
     WHERE user_id = sqlc.arg(user_id) AND brand_id = sqlc.arg(brand_id)
 )::boolean AS linked;
+
+-- TEC-1259: conversations, messages, WhatsApp LID map, notifications and
+-- leads of the person (migration 000203). Runs before AnonymizeUser clears
+-- the phone and e-mail; returns the masked row count per table.
+-- name: AnonymizeCustomerContacts :one
+SELECT anonymize_customer_contacts(
+    sqlc.narg(user_id)::bigint, sqlc.narg(phone)::text, sqlc.narg(email)::text
+)::jsonb AS counts;
+
+-- Stored media of the person's WhatsApp messages; read before
+-- AnonymizeCustomerContacts clears the keys, deleted from storage after commit.
+-- name: ListCustomerContactMediaKeys :many
+SELECT m.media_storage_key::text AS media_storage_key
+FROM messages m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE m.media_storage_key IS NOT NULL
+  AND ((sqlc.narg(user_id)::bigint IS NOT NULL
+        AND (c.user_id = sqlc.narg(user_id) OR c.identity_user_id = sqlc.narg(user_id)))
+    OR (sqlc.narg(phone)::text IS NOT NULL AND c.contact_e164 = sqlc.narg(phone)));
+
+-- Leads touched by AnonymizeCustomerContacts (search documents refreshed
+-- after commit).
+-- name: ListCustomerContactLeadUUIDs :many
+SELECT uuid FROM leads
+WHERE (sqlc.narg(user_id)::bigint IS NOT NULL AND customer_user_id = sqlc.narg(user_id))
+   OR (sqlc.narg(phone)::text IS NOT NULL AND candidate_phone_e164 = sqlc.narg(phone))
+   OR (sqlc.narg(email)::text IS NOT NULL AND lower(candidate_email) = lower(sqlc.narg(email)));
