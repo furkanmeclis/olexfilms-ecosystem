@@ -22,6 +22,9 @@
 --     note / call / message events of those leads get the masked payload
 --     {"anonymized": true}: the only change lead_events now allows.
 --
+-- lead_events_append_only keeps the org merge bypass that 000152 added
+-- (TEC-1003: olex.org_merge moves rows to the target organization).
+--
 -- Kept on purpose: contact_opt_outs (the record of an objection must
 -- outlive the person, KVKK md. 11 / ETK) and activity_events (no personal
 -- data in the anonymization audit payload).
@@ -29,6 +32,7 @@
 CREATE OR REPLACE FUNCTION lead_events_append_only() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
+    IF TG_OP = 'UPDATE' AND current_setting('olex.org_merge', true) = 'on' THEN RETURN NEW; END IF; -- TEC-1003 org merge
     IF TG_OP = 'UPDATE'
        AND current_setting('olex.lead_events_anonymize', true) = 'on'
        AND NEW.payload = '{"anonymized": true}'::jsonb
