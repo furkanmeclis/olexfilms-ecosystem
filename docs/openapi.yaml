@@ -31809,7 +31809,7 @@ paths:
           required: false
           description: >-
             Comma-separated kinds (pull_categories, pull_products, pull_dealers,
-            pull_stock, push_barcodes, outbound, reconcile). Unknown value → 400.
+            pull_stock, push_barcodes, push_prices, outbound, reconcile). Unknown value → 400.
           schema: { type: string }
         - name: status
           in: query
@@ -31851,6 +31851,7 @@ paths:
       description: >-
         Needs integrations.glorian.manage. `pull` (default) queues the
         catalog, dealer and stock pull, `push_barcodes` the barcode push,
+        `push_prices` the USD list price push (TEC-1265, karar 5),
         `outbound_replay` the replay of held order outbounds. The runs appear
         in the list when the worker takes the task. 422
         GLORIAN_CONNECTION_INACTIVE for an inactive connection, 503
@@ -56067,7 +56068,7 @@ components:
         uuid: { type: string, format: uuid }
         kind:
           type: string
-          enum: [pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile]
+          enum: [pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, push_prices, outbound, reconcile]
         status: { type: string, enum: [running, succeeded, failed] }
         started_at: { type: string, format: date-time }
         finished_at: { type: [string, "null"], format: date-time }
@@ -56082,13 +56083,13 @@ components:
       type: object
       additionalProperties: false
       properties:
-        kind: { type: string, enum: [pull, push_barcodes, outbound_replay], default: pull }
+        kind: { type: string, enum: [pull, push_barcodes, push_prices, outbound_replay], default: pull }
 
     GlorianSyncQueued:
       type: object
       required: [kind, task]
       properties:
-        kind: { type: string, enum: [pull, push_barcodes, outbound_replay] }
+        kind: { type: string, enum: [pull, push_barcodes, push_prices, outbound_replay] }
         task: { type: string, example: "glorian:pull_catalog" }
 
     GlorianOutbound:

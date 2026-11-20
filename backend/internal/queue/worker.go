@@ -87,6 +87,8 @@ type Worker struct {
 	// TEC-270: Glorian barcode push (bulk upsert) and outbound PATCH.
 	glorianPush  GlorianPushBarcodesFunc
 	glorianPatch GlorianPatchStockItemFunc
+	// TEC-1265: Glorian price push.
+	glorianPrices GlorianPushPricesFunc
 	// TEC-271: Glorian order outbound and held replay.
 	glorianOrder  GlorianOrderOutboundFunc
 	glorianReplay GlorianOrderReplayFunc
@@ -247,6 +249,7 @@ func (w *Worker) bindings() []binding {
 		{TaskGlorianPullCatalog, w.handleGlorianPull, w.glorianPull != nil},
 		{TaskGlorianPushBarcodes, w.handleGlorianPush, w.glorianPush != nil},
 		{TaskGlorianPatchStockItem, w.handleGlorianPatch, w.glorianPatch != nil},
+		{TaskGlorianPushPrices, w.handleGlorianPrices, w.glorianPrices != nil},
 		{TaskGlorianOrderOutbound, w.handleGlorianOrderOutbound, w.glorianOrder != nil},
 		{TaskGlorianOrderReplay, w.handleGlorianOrderReplay, w.glorianReplay != nil},
 		{TaskGlorianReconcile, w.handleGlorianReconcile, w.glorianReconcile != nil},

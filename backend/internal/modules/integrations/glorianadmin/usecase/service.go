@@ -47,6 +47,7 @@ const (
 const (
 	SyncPull           = "pull"
 	SyncPushBarcodes   = "push_barcodes"
+	SyncPushPrices     = "push_prices"
 	SyncOutboundReplay = "outbound_replay"
 )
 
@@ -385,7 +386,7 @@ func syncRunView(r db.IntegrationSyncRun) SyncRunView {
 // SyncRunKinds are the kinds of chk_integration_sync_runs_kind.
 var SyncRunKinds = []string{
 	glorian.KindPullCategories, glorian.KindPullProducts, glorian.KindPullDealers, glorian.KindPullStock,
-	glorian.KindPushBarcodes, glorian.KindOutbound, glorian.KindReconcile,
+	glorian.KindPushBarcodes, glorian.KindPushPrices, glorian.KindOutbound, glorian.KindReconcile,
 }
 
 // SyncRunStatuses are the statuses of a sync run.
@@ -471,7 +472,7 @@ func (s *Service) GetSyncRun(ctx context.Context, brand db.Brand, id uuid.UUID) 
 }
 
 // SyncKinds are the kinds POST /sync-runs accepts.
-var SyncKinds = []string{SyncPull, SyncPushBarcodes, SyncOutboundReplay}
+var SyncKinds = []string{SyncPull, SyncPushBarcodes, SyncPushPrices, SyncOutboundReplay}
 
 // SyncQueued answers a manual sync: the task is queued, its runs show up
 // in the sync run list when the worker takes it.
@@ -509,6 +510,10 @@ func (s *Service) TriggerSync(ctx context.Context, brand db.Brand, kind string) 
 		// Same debounce window as the placement listener: a pending push
 		// of the window is reused.
 		opts = queue.GlorianPushBarcodesOpts(conn.ID, s.now())
+	case SyncPushPrices:
+		// TEC-1265, karar 5: the USD list prices of the synced products.
+		task, err = queue.NewGlorianPushPricesTask(conn.ID)
+		opts = queue.GlorianPushPricesOpts()
 	case SyncOutboundReplay:
 		task, err = queue.NewGlorianOrderReplayTask(conn.ID)
 		opts = queue.GlorianOrderReplayOpts()

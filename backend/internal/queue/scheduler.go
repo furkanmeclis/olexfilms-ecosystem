@@ -62,6 +62,8 @@ func Schedules() []Periodic {
 		{Cron: glorianPullCron, Type: TaskGlorianPullCatalog, Queue: QueueMaintenance, Opts: glorianPullOpts(), New: NewGlorianPullCatalogTask},
 		// TEC-270: Glorian barcode push safety net (every active connection).
 		{Cron: glorianPushCron, Type: TaskGlorianPushBarcodes, Queue: QueueMaintenance, Opts: glorianPushCronOpts(), New: NewGlorianPushAllTask},
+		// TEC-1265: Glorian price push (the ecosystem owns prices).
+		{Cron: glorianPricesCron, Type: TaskGlorianPushPrices, Queue: QueueMaintenance, Opts: glorianPricesCronOpts(), New: NewGlorianPushPricesAllTask},
 		// TEC-271: replay of held Glorian order outbounds (every connection).
 		{Cron: glorianOrderReplayCron, Type: TaskGlorianOrderReplay, Queue: QueueMaintenance, Opts: glorianOrderReplayCronOpts(), New: NewGlorianOrderReplayAllTask},
 		// TEC-381: hourly booking of planned staff payments due (idempotent).

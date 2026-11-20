@@ -2304,6 +2304,12 @@ type Querier interface {
 	// Active dealers of the connection with the buyer's phone: the order's
 	// customer link (exactly one match links, none or several hold).
 	ListGlorianPartiesByPhone(ctx context.Context, arg ListGlorianPartiesByPhoneParams) ([]IntegrationExternalParty, error)
+	// TEC-1265, kullanıcı kararı 5: the prices pushed to the hub. Products
+	// synced from the connection with a USD list row (the center's
+	// sale_to_distributor_price: what a buyer pays at list) after the keyset
+	// id. Glorian keeps 2 decimals; meter_price is '' when the list row has
+	// none (the hub then clears it and falls back to box price ÷ box meters).
+	ListGlorianPriceRows(ctx context.Context, arg ListGlorianPriceRowsParams) ([]ListGlorianPriceRowsRow, error)
 	// Serial units entered or placed into a warehouse bin after the keyset
 	// (created_at, id), for the products synced from the connection. A unit
 	// placed twice comes twice; the caller deduplicates by barcode.
