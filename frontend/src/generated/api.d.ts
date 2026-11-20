@@ -16371,7 +16371,7 @@ export interface paths {
         put?: never;
         /**
          * Queue a manual Glorian sync (TEC-273)
-         * @description Needs integrations.glorian.manage. `pull` (default) queues the catalog, dealer and stock pull, `push_barcodes` the barcode push, `outbound_replay` the replay of held order outbounds. The runs appear in the list when the worker takes the task. 422 GLORIAN_CONNECTION_INACTIVE for an inactive connection, 503 QUEUE_UNAVAILABLE when the task queue is off.
+         * @description Needs integrations.glorian.manage. `pull` (default) queues the catalog, dealer and stock pull, `push_barcodes` the barcode push, `push_prices` the USD list price push (TEC-1265, karar 5), `outbound_replay` the replay of held order outbounds. The runs appear in the list when the worker takes the task. 422 GLORIAN_CONNECTION_INACTIVE for an inactive connection, 503 QUEUE_UNAVAILABLE when the task queue is off.
          */
         post: operations["triggerGlorianSync"];
         delete?: never;
@@ -33768,7 +33768,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             /** @enum {string} */
-            kind: "pull_categories" | "pull_products" | "pull_dealers" | "pull_stock" | "push_barcodes" | "outbound" | "reconcile";
+            kind: "pull_categories" | "pull_products" | "pull_dealers" | "pull_stock" | "push_barcodes" | "push_prices" | "outbound" | "reconcile";
             /** @enum {string} */
             status: "running" | "succeeded" | "failed";
             /** Format: date-time */
@@ -33789,11 +33789,11 @@ export interface components {
              * @default pull
              * @enum {string}
              */
-            kind: "pull" | "push_barcodes" | "outbound_replay";
+            kind: "pull" | "push_barcodes" | "push_prices" | "outbound_replay";
         };
         GlorianSyncQueued: {
             /** @enum {string} */
-            kind: "pull" | "push_barcodes" | "outbound_replay";
+            kind: "pull" | "push_barcodes" | "push_prices" | "outbound_replay";
             /** @example glorian:pull_catalog */
             task: string;
         };
@@ -65253,7 +65253,7 @@ export interface operations {
     listGlorianSyncRuns: {
         parameters: {
             query?: {
-                /** @description Comma-separated kinds (pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile). Unknown value → 400. */
+                /** @description Comma-separated kinds (pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, push_prices, outbound, reconcile). Unknown value → 400. */
                 kind?: string;
                 /** @description Comma-separated statuses (running, succeeded, failed). Unknown value → 400. */
                 status?: string;

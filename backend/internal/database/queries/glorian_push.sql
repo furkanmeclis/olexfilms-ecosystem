@@ -88,3 +88,23 @@ WHERE connection_id = sqlc.arg(connection_id)
   AND watermark IS NOT NULL
 ORDER BY started_at DESC, id DESC
 LIMIT 1;
+
+-- name: ListGlorianPriceRows :many
+-- TEC-1265, kullanıcı kararı 5: the prices pushed to the hub. Products
+-- synced from the connection with a USD list row (the center's
+-- sale_to_distributor_price: what a buyer pays at list) after the keyset
+-- id. Glorian keeps 2 decimals; meter_price is '' when the list row has
+-- none (the hub then clears it and falls back to box price ÷ box meters).
+SELECT p.id,
+       p.external_id::text AS product_external_id,
+       round(pp.sale_to_distributor_price, 2)::text AS price,
+       COALESCE(round(pp.meter_price, 2)::text, '')::text AS meter_price
+FROM products p
+JOIN product_prices pp ON pp.product_id = p.id AND pp.brand_id = p.brand_id AND pp.currency = 'USD'
+WHERE p.brand_id = sqlc.arg(brand_id)
+  AND p.connection_id = sqlc.arg(connection_id)::bigint
+  AND p.external_id IS NOT NULL
+  AND pp.sale_to_distributor_price IS NOT NULL
+  AND p.id > sqlc.arg(after_id)::bigint
+ORDER BY p.id
+LIMIT sqlc.arg(row_limit);

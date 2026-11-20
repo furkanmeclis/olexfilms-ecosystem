@@ -149,6 +149,71 @@ func (q *Queries) LastIntegrationSyncRunWatermark(ctx context.Context, arg LastI
 	return watermark, err
 }
 
+const listGlorianPriceRows = `-- name: ListGlorianPriceRows :many
+SELECT p.id,
+       p.external_id::text AS product_external_id,
+       round(pp.sale_to_distributor_price, 2)::text AS price,
+       COALESCE(round(pp.meter_price, 2)::text, '')::text AS meter_price
+FROM products p
+JOIN product_prices pp ON pp.product_id = p.id AND pp.brand_id = p.brand_id AND pp.currency = 'USD'
+WHERE p.brand_id = $1
+  AND p.connection_id = $2::bigint
+  AND p.external_id IS NOT NULL
+  AND pp.sale_to_distributor_price IS NOT NULL
+  AND p.id > $3::bigint
+ORDER BY p.id
+LIMIT $4
+`
+
+type ListGlorianPriceRowsParams struct {
+	BrandID      int64 `json:"brand_id"`
+	ConnectionID int64 `json:"connection_id"`
+	AfterID      int64 `json:"after_id"`
+	RowLimit     int32 `json:"row_limit"`
+}
+
+type ListGlorianPriceRowsRow struct {
+	ID                int64  `json:"id"`
+	ProductExternalID string `json:"product_external_id"`
+	Price             string `json:"price"`
+	MeterPrice        string `json:"meter_price"`
+}
+
+// TEC-1265, kullanıcı kararı 5: the prices pushed to the hub. Products
+// synced from the connection with a USD list row (the center's
+// sale_to_distributor_price: what a buyer pays at list) after the keyset
+// id. Glorian keeps 2 decimals; meter_price is ” when the list row has
+// none (the hub then clears it and falls back to box price ÷ box meters).
+func (q *Queries) ListGlorianPriceRows(ctx context.Context, arg ListGlorianPriceRowsParams) ([]ListGlorianPriceRowsRow, error) {
+	rows, err := q.db.Query(ctx, listGlorianPriceRows,
+		arg.BrandID,
+		arg.ConnectionID,
+		arg.AfterID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGlorianPriceRowsRow{}
+	for rows.Next() {
+		var i ListGlorianPriceRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductExternalID,
+			&i.Price,
+			&i.MeterPrice,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGlorianPushUnits = `-- name: ListGlorianPushUnits :many
 SELECT m.id AS movement_id,
        m.created_at,

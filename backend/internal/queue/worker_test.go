@@ -40,6 +40,7 @@ func wireAll(w *Worker, hits map[string]int, tag string) *Worker {
 			func(context.Context, int64) error { hit(TaskGlorianPushBarcodes); return nil },
 			func(context.Context, int64) error { hit(TaskGlorianPatchStockItem); return nil },
 		).
+		WithGlorianPrices(func(context.Context, int64) error { hit(TaskGlorianPushPrices); return nil }).
 		WithGlorianOrderOutbound(
 			func(context.Context, int64) error { hit(TaskGlorianOrderOutbound); return nil },
 			func(context.Context, int64) error { hit(TaskGlorianOrderReplay); return nil },
@@ -81,7 +82,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 		wireAll(w, hits, "second")
 	}()
 
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF, TaskMeasurementPDF, TaskStaffPaymentsPostDue, TaskConversationAIRunPurge, TaskCertificateExpiryScan, TaskStockForecastDaily, TaskPerformanceDaily, TaskFleetReportsSchedule, TaskFleetReportGenerate, TaskEinvoicePDF, TaskServiceSubscriptionsExpire, TaskServiceSubscriptionsPostPeriods} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskLogPurgeSweep, TaskRatesFetch, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskWarrantyRepairScan, TaskVehicleTransferExpire, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianPushPrices, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskContractPDF, TaskMeasurementPDF, TaskStaffPaymentsPostDue, TaskConversationAIRunPurge, TaskCertificateExpiryScan, TaskStockForecastDaily, TaskPerformanceDaily, TaskFleetReportsSchedule, TaskFleetReportGenerate, TaskEinvoicePDF, TaskServiceSubscriptionsExpire, TaskServiceSubscriptionsPostPeriods} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}
@@ -94,7 +95,7 @@ func TestWorkerSettersAreIdempotent(t *testing.T) {
 // Unwired periodic tasks are acknowledged, not failed.
 func TestWorkerMissingPeriodicHandlersAreNoops(t *testing.T) {
 	w := NewWorker(config.Config{Redis: config.RedisConfig{Addr: "127.0.0.1:0"}}, nil, nil)
-	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskStaffPaymentsPostDue, TaskConversationAIRunPurge, TaskOAuthCleanup, TaskAIActionSweep, TaskCertificateExpiryScan, TaskStockForecastDaily, TaskPerformanceDaily, TaskFleetReportsSchedule, TaskFleetReportGenerate, TaskServiceSubscriptionsExpire, TaskServiceSubscriptionsPostPeriods} {
+	for _, typ := range []string{TaskNotificationPurge, TaskWhatsAppStatusPoll, TaskWarrantyExpire, TaskWarrantyExpiringScan, TaskAppointmentNoShowScan, TaskWarehouseEODReports, TaskGlorianPullCatalog, TaskGlorianPushBarcodes, TaskGlorianPatchStockItem, TaskGlorianPushPrices, TaskGlorianOrderOutbound, TaskGlorianOrderReplay, TaskGlorianReconcile, TaskGlorianOutboundReplayOne, TaskStaffPaymentsPostDue, TaskConversationAIRunPurge, TaskOAuthCleanup, TaskAIActionSweep, TaskCertificateExpiryScan, TaskStockForecastDaily, TaskPerformanceDaily, TaskFleetReportsSchedule, TaskFleetReportGenerate, TaskServiceSubscriptionsExpire, TaskServiceSubscriptionsPostPeriods} {
 		if err := w.mux.ProcessTask(context.Background(), asynq.NewTask(typ, []byte("{}"))); err != nil {
 			t.Fatalf("%s: %v", typ, err)
 		}

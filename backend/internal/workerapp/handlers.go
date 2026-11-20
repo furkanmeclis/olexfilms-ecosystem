@@ -381,6 +381,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		WithGlorianPull(glorian.NewPuller(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), searchIndexer, log).Task).
 		// TEC-270: Glorian barcode bulk push and outbound PATCH by barcode.
 		WithGlorianPush(glorianPusher.PushTask, glorianPusher.PatchTask).
+		// TEC-1265: Glorian price push (karar 5: the ecosystem owns prices).
+		WithGlorianPrices(glorian.NewPricePusher(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log).PushPricesTask).
 		// TEC-271: Glorian order outbound (POST /orders, ship/receive/cancel) and held replay.
 		WithGlorianOrderOutbound(glorianOrders.OrderTask, glorianOrders.ReplayTask).
 		// TEC-273: admin-triggered reconcile run and single outbound replay.

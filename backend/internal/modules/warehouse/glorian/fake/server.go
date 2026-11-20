@@ -105,6 +105,7 @@ type Server struct {
 	orders    map[string]Row
 	orderRefs map[string]string
 	nextOrder int
+	prices    map[string]Price // by product id (TEC-1265)
 }
 
 // New starts a fake hub and closes it when the test ends.
@@ -118,6 +119,7 @@ func New(t testing.TB) *Server {
 		stock:     map[string]Row{},
 		orders:    map[string]Row{},
 		orderRefs: map[string]string{},
+		prices:    map[string]Price{},
 		nextStock: 1000,
 		nextOrder: 1,
 	}
@@ -200,6 +202,21 @@ func (s *Server) StockItem(barcode string) (Row, bool) {
 	defer s.mu.Unlock()
 	r, ok := s.stock[barcode]
 	return r, ok
+}
+
+// Price is the hub's stored price of a product (TEC-1265). MeterPrice is
+// nil when cleared.
+type Price struct {
+	Price      string
+	MeterPrice *string
+}
+
+// ProductPrice returns the stored price of a hub product id.
+func (s *Server) ProductPrice(id string) (Price, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.prices[id]
+	return p, ok
 }
 
 // Order returns the current row of an order id.
@@ -285,6 +302,8 @@ func (s *Server) route(w http.ResponseWriter, method, path string, q url.Values,
 		s.list(w, s.stockRows(), q, reqID)
 	case method == http.MethodGet && path == "/orders":
 		s.list(w, s.orderRows(), q, reqID)
+	case method == http.MethodPut && path == "/products/prices":
+		s.updatePrices(w, body, reqID)
 	case method == http.MethodPost && path == "/stock-items/bulk":
 		s.bulkUpsert(w, body, reqID)
 	case len(seg) == 3 && seg[0] == "stock-items" && seg[1] == "by-barcode":
@@ -514,6 +533,65 @@ func (s *Server) bulkUpsert(w http.ResponseWriter, body []byte, reqID string) {
 		created = append(created, it.Barcode)
 	}
 	s.ok(w, http.StatusOK, Row{"created": created, "updated": updated, "conflicts": conflicts}, reqID)
+}
+
+// updatePrices mirrors PUT /products/prices (glorian docs/inventory-api.md
+// §10.7): USD only, absolute values, unknown products in not_found, a
+// missing meter_price key leaves the stored one.
+func (s *Server) updatePrices(w http.ResponseWriter, body []byte, reqID string) {
+	var in struct {
+		Currency string                       `json:"currency"`
+		Items    []map[string]json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(body, &in); err != nil || in.Currency != "USD" {
+		s.validation(w, "currency", "The selected currency is invalid.", reqID)
+		return
+	}
+	if len(in.Items) == 0 || len(in.Items) > glorian.MaxBulkItems {
+		s.validation(w, "items", "The items field must have between 1 and 500 items.", reqID)
+		return
+	}
+	known := map[string]bool{}
+	for _, r := range s.fixtures[FixtureProducts] {
+		known[str(r["id"])] = true
+	}
+	updated, unchanged, notFound := []string{}, []string{}, []string{}
+	for i, it := range in.Items {
+		var id, price string
+		if json.Unmarshal(it["product_id"], &id) != nil || json.Unmarshal(it["price"], &price) != nil || id == "" || price == "" {
+			s.validation(w, fmt.Sprintf("items.%d", i), "product_id and price are required.", reqID)
+			return
+		}
+		if !known[id] {
+			notFound = append(notFound, id)
+			continue
+		}
+		next := s.prices[id]
+		before := next
+		next.Price = price
+		if raw, ok := it["meter_price"]; ok {
+			var mp *string
+			if err := json.Unmarshal(raw, &mp); err != nil {
+				s.validation(w, fmt.Sprintf("items.%d.meter_price", i), "meter_price must be a string or null.", reqID)
+				return
+			}
+			next.MeterPrice = mp
+		}
+		if before.Price == next.Price && equalPtr(before.MeterPrice, next.MeterPrice) {
+			unchanged = append(unchanged, id)
+			continue
+		}
+		s.prices[id] = next
+		updated = append(updated, id)
+	}
+	s.ok(w, http.StatusOK, Row{"currency": "USD", "updated": updated, "unchanged": unchanged, "not_found": notFound}, reqID)
+}
+
+func equalPtr(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func (s *Server) patchStock(w http.ResponseWriter, barcode string, body []byte, reqID string) {

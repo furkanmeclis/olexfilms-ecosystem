@@ -27,6 +27,7 @@ type InventoryClient interface {
 
 	UpsertBarcodes(ctx context.Context, items []BarcodeUpsert) (BulkUpsertResult, error)
 	PatchStockItemByBarcode(ctx context.Context, barcode string, patch StockItemPatch) (StockItem, error)
+	UpdateProductPrices(ctx context.Context, items []ProductPrice) (ProductPricesResult, error)
 
 	ListOrders(ctx context.Context, p ListParams) (Page[Order], error)
 	CreateOrder(ctx context.Context, in CreateOrderInput) (Order, error)
@@ -187,6 +188,29 @@ func (c *HTTPClient) UpsertBarcodes(ctx context.Context, items []BarcodeUpsert) 
 		Items []BarcodeUpsert `json:"items"`
 	}{items}
 	err := c.call(ctx, request{method: http.MethodPost, path: "/stock-items/bulk", body: body}, &out, nil)
+	return out, err
+}
+
+// UpdateProductPrices sends PUT /products/prices (TEC-1265, kullanıcı kararı
+// 5: the ecosystem owns prices, the hub only stores them). The call sets
+// absolute prices, so a repeated or lost-and-resent request is harmless
+// and it is retried like a GET.
+func (c *HTTPClient) UpdateProductPrices(ctx context.Context, items []ProductPrice) (ProductPricesResult, error) {
+	var out ProductPricesResult
+	if len(items) == 0 || len(items) > MaxBulkItems {
+		return out, fmt.Errorf("%w: price update takes 1..%d items, got %d", ErrInvalidInput, MaxBulkItems, len(items))
+	}
+	for i, it := range items {
+		if strings.TrimSpace(it.ProductID) == "" || strings.TrimSpace(it.Price) == "" {
+			return out, fmt.Errorf("%w: item %d needs product_id and price", ErrInvalidInput, i)
+		}
+	}
+	body := struct {
+		Currency string         `json:"currency"`
+		Items    []ProductPrice `json:"items"`
+	}{PriceCurrency, items}
+	// Absolute values: safe to retry like a GET.
+	err := c.call(ctx, request{method: http.MethodPut, path: "/products/prices", body: body, retry: true}, &out, nil)
 	return out, err
 }
 

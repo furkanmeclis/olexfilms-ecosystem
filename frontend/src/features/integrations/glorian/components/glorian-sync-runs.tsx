@@ -36,6 +36,7 @@ export const RUN_KINDS: GlorianSyncRunKind[] = [
   "pull_dealers",
   "pull_stock",
   "push_barcodes",
+  "push_prices",
   "outbound",
   "reconcile",
 ];
@@ -47,6 +48,7 @@ export const RUN_STATUSES: GlorianSyncRunStatus[] = [
 const SYNC_KINDS: GlorianSyncKind[] = [
   "pull",
   "push_barcodes",
+  "push_prices",
   "outbound_replay",
 ];
 

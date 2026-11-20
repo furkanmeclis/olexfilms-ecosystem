@@ -194,6 +194,26 @@ type BulkUpsertResult struct {
 	Conflicts []BulkConflict `json:"conflicts"`
 }
 
+// PriceCurrency is the only currency the hub keeps prices in.
+const PriceCurrency = "USD"
+
+// ProductPrice is one item of PUT /products/prices (TEC-1265, kullanıcı
+// kararı 5): the hub product id, the box price and the meter list price
+// with at most 2 decimals. A nil MeterPrice clears the hub's meter price.
+type ProductPrice struct {
+	ProductID  string  `json:"product_id"`
+	Price      string  `json:"price"`
+	MeterPrice *string `json:"meter_price"`
+}
+
+// ProductPricesResult answers PUT /products/prices with hub product ids.
+type ProductPricesResult struct {
+	Currency  string   `json:"currency"`
+	Updated   []string `json:"updated"`
+	Unchanged []string `json:"unchanged"`
+	NotFound  []string `json:"not_found"`
+}
+
 // StockItemPatch is the body of PATCH /stock-items/by-barcode/{barcode}.
 // TEC-1252: RemainingMeters (absolute) is accepted on an available unit.
 type StockItemPatch struct {
