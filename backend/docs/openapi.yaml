@@ -31746,6 +31746,52 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /v1/platform/integrations/glorian/connection-package:
+    post:
+      tags: [Platform]
+      operationId: createGlorianConnectionPackage
+      summary: Issue a new hub API key in an encrypted connection package (TEC-1265)
+      description: >-
+        Needs integrations.glorian.manage. Generates a new API key and seals it
+        with the settings (permissions, rate limit, IP allowlist, expiry) into a
+        password-encrypted JSON package (Argon2id + AES-256-GCM; format in
+        docs/design.md "Glorian bağlantı paketi"). The super admin uploads it in
+        the Glorian panel with the same password. A connection without a key
+        gets the new key as its active key (a missing connection is created
+        inactive); otherwise the key waits as the pending key and the client
+        switches to it the first time the old key gets 401 from the hub.
+        The password and the key are neither stored in plain text nor logged.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGlorianConnectionPackageRequest"
+      responses:
+        "201":
+          description: Package to download
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianConnectionPackage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: GLORIAN_CENTER_MISSING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /v1/platform/integrations/glorian/sync-runs:
     get:
       tags: [Platform]
@@ -55920,7 +55966,7 @@ components:
     GlorianConnection:
       type: object
       description: The API key is never returned; `api_key_set` and `api_key_masked` stand in for it.
-      required: [configured, uuid, key, base_url, active, api_version, default_warehouse_uuid, api_key_set, api_key_masked, created_at, updated_at]
+      required: [configured, uuid, key, base_url, active, api_version, default_warehouse_uuid, api_key_set, api_key_masked, pending_key, package_issued_at, package_expires_at, created_at, updated_at]
       properties:
         configured: { type: boolean }
         uuid: { type: [string, "null"], format: uuid }
@@ -55931,6 +55977,11 @@ components:
         default_warehouse_uuid: { type: [string, "null"], format: uuid }
         api_key_set: { type: boolean }
         api_key_masked: { type: [string, "null"], example: "********" }
+        pending_key:
+          type: boolean
+          description: TEC-1265. A connection package key waits until the hub activates the package.
+        package_issued_at: { type: [string, "null"], format: date-time }
+        package_expires_at: { type: [string, "null"], format: date-time }
         created_at: { type: [string, "null"], format: date-time }
         updated_at: { type: [string, "null"], format: date-time }
 
@@ -55954,15 +56005,60 @@ components:
 
     GlorianTestResult:
       type: object
-      required: [ok, duration_ms, http_status, code, message]
+      required: [ok, duration_ms, http_status, code, message, key_rotated, pending_key]
       properties:
         ok: { type: boolean }
+        key_rotated:
+          type: boolean
+          description: TEC-1265. The hub refused the old key and accepted the pending package key, now the active key.
+        pending_key:
+          type: boolean
+          description: A package key still waits; the hub has not activated the package yet.
         duration_ms: { type: integer, format: int64 }
         http_status: { type: [integer, "null"] }
         code:
           type: [string, "null"]
           description: Hub error code (e.g. UNAUTHORIZED), MISCONFIGURED or TRANSPORT_ERROR.
         message: { type: [string, "null"] }
+
+    CreateGlorianConnectionPackageRequest:
+      type: object
+      additionalProperties: false
+      required: [base_url, password]
+      properties:
+        base_url: { type: string, maxLength: 500, description: "http(s) root of the Glorian hub the package is for" }
+        password: { type: string, minLength: 12, maxLength: 256, writeOnly: true }
+        dealer_write: { type: [boolean, "null"], default: false }
+        order_status_actions: { type: [boolean, "null"], default: true }
+        rate_limit_per_minute: { type: [integer, "null"], minimum: 1, maximum: 10000, default: 300 }
+        ip_allowlist:
+          type: [array, "null"]
+          maxItems: 50
+          items: { type: string }
+          description: Client IPs the hub accepts; empty = no restriction.
+        ttl_hours: { type: [integer, "null"], minimum: 1, maximum: 72, default: 24 }
+
+    GlorianConnectionPackage:
+      type: object
+      required: [filename, package, key_fingerprint, rotated, expires_at, connection]
+      properties:
+        filename: { type: string, example: glorian-baglanti-20261120-1300.json }
+        package:
+          type: object
+          additionalProperties: true
+          description: The encrypted envelope to save as the file (format, version, kdf, cipher, ciphertext).
+        key_fingerprint: { type: string, description: "First 12 hex characters of SHA-256 of the key; Glorian shows the same" }
+        rotated: { type: boolean, description: The connection had a key; the new one is pending until the hub accepts it. }
+        expires_at: { type: string, format: date-time }
+        connection: { $ref: "#/components/schemas/GlorianConnection" }
+
+    EnvelopeGlorianConnectionPackage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianConnectionPackage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     GlorianSyncRun:
       type: object

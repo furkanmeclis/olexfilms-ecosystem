@@ -16334,6 +16334,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/integrations/glorian/connection-package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new hub API key in an encrypted connection package (TEC-1265)
+         * @description Needs integrations.glorian.manage. Generates a new API key and seals it with the settings (permissions, rate limit, IP allowlist, expiry) into a password-encrypted JSON package (Argon2id + AES-256-GCM; format in docs/design.md "Glorian bağlantı paketi"). The super admin uploads it in the Glorian panel with the same password. A connection without a key gets the new key as its active key (a missing connection is created inactive); otherwise the key waits as the pending key and the client switches to it the first time the old key gets 401 from the hub. The password and the key are neither stored in plain text nor logged.
+         */
+        post: operations["createGlorianConnectionPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/integrations/glorian/sync-runs": {
         parameters: {
             query?: never;
@@ -33666,6 +33686,12 @@ export interface components {
             api_key_set: boolean;
             /** @example ******** */
             api_key_masked: string | null;
+            /** @description TEC-1265. A connection package key waits until the hub activates the package. */
+            pending_key: boolean;
+            /** Format: date-time */
+            package_issued_at: string | null;
+            /** Format: date-time */
+            package_expires_at: string | null;
             /** Format: date-time */
             created_at: string | null;
             /** Format: date-time */
@@ -33691,12 +33717,52 @@ export interface components {
         };
         GlorianTestResult: {
             ok: boolean;
+            /** @description TEC-1265. The hub refused the old key and accepted the pending package key, now the active key. */
+            key_rotated: boolean;
+            /** @description A package key still waits; the hub has not activated the package yet. */
+            pending_key: boolean;
             /** Format: int64 */
             duration_ms: number;
             http_status: number | null;
             /** @description Hub error code (e.g. UNAUTHORIZED), MISCONFIGURED or TRANSPORT_ERROR. */
             code: string | null;
             message: string | null;
+        };
+        CreateGlorianConnectionPackageRequest: {
+            /** @description http(s) root of the Glorian hub the package is for */
+            base_url: string;
+            password: string;
+            /** @default false */
+            dealer_write: boolean | null;
+            /** @default true */
+            order_status_actions: boolean | null;
+            /** @default 300 */
+            rate_limit_per_minute: number | null;
+            /** @description Client IPs the hub accepts; empty = no restriction. */
+            ip_allowlist?: string[] | null;
+            /** @default 24 */
+            ttl_hours: number | null;
+        };
+        GlorianConnectionPackage: {
+            /** @example glorian-baglanti-20261120-1300.json */
+            filename: string;
+            /** @description The encrypted envelope to save as the file (format, version, kdf, cipher, ciphertext). */
+            package: {
+                [key: string]: unknown;
+            };
+            /** @description First 12 hex characters of SHA-256 of the key; Glorian shows the same */
+            key_fingerprint: string;
+            /** @description The connection had a key; the new one is pending until the hub accepts it. */
+            rotated: boolean;
+            /** Format: date-time */
+            expires_at: string;
+            connection: components["schemas"]["GlorianConnection"];
+        };
+        EnvelopeGlorianConnectionPackage: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianConnectionPackage"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         GlorianSyncRun: {
             /** Format: uuid */
@@ -65143,6 +65209,44 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createGlorianConnectionPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGlorianConnectionPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description Package to download */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianConnectionPackage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description GLORIAN_CENTER_MISSING */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };
