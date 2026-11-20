@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/google/uuid"
@@ -174,13 +175,47 @@ func (s *Store) Decrypt(row db.IntegrationConnection) (Connection, error) {
 	if err != nil {
 		return Connection{}, fmt.Errorf("glorian: decrypt api key of connection %s: %w", row.Uuid, err)
 	}
-	return Connection{
+	conn := Connection{
 		ID:      row.Uuid.String(),
 		Key:     row.Key,
 		BaseURL: row.BaseUrl,
 		APIKey:  key,
 		Active:  row.Active,
-	}, nil
+	}
+	if row.PendingApiKeyEnc != "" {
+		pending, err := s.box.Decrypt(row.PendingApiKeyEnc)
+		if err != nil {
+			return Connection{}, fmt.Errorf("glorian: decrypt pending api key of connection %s: %w", row.Uuid, err)
+		}
+		conn.PendingAPIKey = pending
+		id, enc := row.ID, row.PendingApiKeyEnc
+		conn.PendingAccepted = func(ctx context.Context) error {
+			_, err := s.q.PromoteIntegrationConnectionPendingKey(ctx, db.PromoteIntegrationConnectionPendingKeyParams{
+				ID: id, PendingApiKeyEnc: enc,
+			})
+			return err
+		}
+	}
+	return conn, nil
+}
+
+// PackageKey stores the API key of a new connection package (TEC-1265).
+// With rotate the key waits as the pending key until the hub accepts it;
+// without, it becomes the active key (the connection had none).
+func (s *Store) PackageKey(ctx context.Context, id int64, baseURL, apiKey string, rotate bool, issuedAt, expiresAt time.Time) (db.IntegrationConnection, error) {
+	enc, err := s.encrypt(apiKey)
+	if err != nil {
+		return db.IntegrationConnection{}, err
+	}
+	if enc == "" {
+		return db.IntegrationConnection{}, fmt.Errorf("glorian: package key is empty")
+	}
+	row, err := s.q.SetIntegrationConnectionPackage(ctx, db.SetIntegrationConnectionPackageParams{
+		ID: id, Rotate: rotate, ApiKeyEnc: enc, BaseUrl: strings.TrimSpace(baseURL),
+		IssuedAt:  pgtype.Timestamptz{Time: issuedAt, Valid: true},
+		ExpiresAt: pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+	return row, mapStoreError(err)
 }
 
 // ConnectionForProduct implements ConnectionSource: the glorian connection

@@ -32,12 +32,21 @@ const (
 	activitySyncQueued    = "integrations.glorian.sync_queued"
 	activityReplayQueued  = "integrations.glorian.outbound_replay_queued"
 	activityReconcileOpen = "integrations.glorian.reconcile_started"
+	activityPackage       = "integrations.glorian.package_created"
 )
 
 // Handler exposes the endpoints.
 type Handler struct {
-	svc      *usecase.Service
-	activity *activity.Recorder
+	svc       *usecase.Service
+	activity  *activity.Recorder
+	issuerURL string
+}
+
+// WithIssuerURL sets the ecosystem address written into connection
+// packages (TEC-1265); Glorian shows it in the package preview.
+func (h *Handler) WithIssuerURL(u string) *Handler {
+	h.issuerURL = u
+	return h
 }
 
 // New creates the handler; rec may be nil.
@@ -119,6 +128,34 @@ func (h *Handler) Test(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, res)
+}
+
+// CreatePackage (POST /v1/platform/integrations/glorian/connection-package)
+// issues a new hub API key sealed in a password-encrypted connection
+// package (TEC-1265). The password and the key never reach the activity
+// log; only the key fingerprint does.
+func (h *Handler) CreatePackage(w http.ResponseWriter, r *http.Request) {
+	b, ok := h.brand(w, r, rbac.PermIntegrationsGlorianManage)
+	if !ok {
+		return
+	}
+	var in usecase.PackageInput
+	if !decode(w, r, &in) {
+		return
+	}
+	res, err := h.svc.CreatePackage(r.Context(), b, in, h.issuerURL)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, activityPackage, res.Connection.UUID, map[string]any{
+		"key_fingerprint": res.KeyFingerprint, "rotated": res.Rotated, "base_url": res.Connection.BaseURL,
+		"expires_at": res.ExpiresAt, "ip_allowlist": in.IPAllowlist,
+		"dealer_write": in.DealerWrite, "order_status_actions": in.OrderStatusActions,
+		"rate_limit_per_minute": in.RateLimitPerMinute,
+	})
+	w.Header().Set("Cache-Control", "no-store")
+	response.JSON(w, r, http.StatusCreated, res)
 }
 
 // ListSyncRuns (GET .../sync-runs?kind=&status=&started_from=&started_to=&sort=&limit=&offset=).

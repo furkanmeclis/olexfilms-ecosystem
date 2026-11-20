@@ -46,10 +46,38 @@ WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: SetIntegrationConnectionAPIKey :one
+-- A key typed in by hand replaces a pending package key too (TEC-1265).
 UPDATE integration_connections
-SET api_key_enc = sqlc.arg(api_key_enc)
+SET api_key_enc = sqlc.arg(api_key_enc),
+    pending_api_key_enc = '',
+    pending_key_issued_at = NULL
 WHERE id = sqlc.arg(id)
 RETURNING *;
+
+-- name: SetIntegrationConnectionPackage :one
+-- TEC-1265: a new connection package. With rotate the new key waits in
+-- pending_api_key_enc until the hub accepts it; without (no key yet) it
+-- becomes the active key at once.
+UPDATE integration_connections
+SET api_key_enc = CASE WHEN sqlc.arg(rotate)::bool THEN api_key_enc ELSE sqlc.arg(api_key_enc)::text END,
+    pending_api_key_enc = CASE WHEN sqlc.arg(rotate)::bool THEN sqlc.arg(api_key_enc)::text ELSE '' END,
+    pending_key_issued_at = CASE WHEN sqlc.arg(rotate)::bool THEN sqlc.arg(issued_at)::timestamptz ELSE NULL END,
+    base_url = sqlc.arg(base_url),
+    package_issued_at = sqlc.arg(issued_at)::timestamptz,
+    package_expires_at = sqlc.arg(expires_at)::timestamptz
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: PromoteIntegrationConnectionPendingKey :execrows
+-- TEC-1265: the hub accepted the pending key. Compare-and-swap on the
+-- pending ciphertext so a newer package issued meanwhile is not lost.
+UPDATE integration_connections
+SET api_key_enc = pending_api_key_enc,
+    pending_api_key_enc = '',
+    pending_key_issued_at = NULL
+WHERE id = sqlc.arg(id)
+  AND pending_api_key_enc <> ''
+  AND pending_api_key_enc = sqlc.arg(pending_api_key_enc);
 
 -- name: DeleteIntegrationConnection :execrows
 DELETE FROM integration_connections

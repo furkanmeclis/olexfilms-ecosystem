@@ -1512,6 +1512,10 @@ type IntegrationConnection struct {
 	ApiVersion         string             `json:"api_version"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	PendingApiKeyEnc   string             `json:"pending_api_key_enc"`
+	PendingKeyIssuedAt pgtype.Timestamptz `json:"pending_key_issued_at"`
+	PackageIssuedAt    pgtype.Timestamptz `json:"package_issued_at"`
+	PackageExpiresAt   pgtype.Timestamptz `json:"package_expires_at"`
 }
 
 type IntegrationExternalParty struct {

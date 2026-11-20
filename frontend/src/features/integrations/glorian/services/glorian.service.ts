@@ -5,6 +5,10 @@ export type GlorianConnection = components["schemas"]["GlorianConnection"];
 export type GlorianConnectionInput =
   components["schemas"]["PutGlorianConnectionRequest"];
 export type GlorianTestResult = components["schemas"]["GlorianTestResult"];
+export type GlorianPackageInput =
+  components["schemas"]["CreateGlorianConnectionPackageRequest"];
+export type GlorianConnectionPackage =
+  components["schemas"]["GlorianConnectionPackage"];
 export type GlorianSyncRun = components["schemas"]["GlorianSyncRun"];
 export type GlorianSyncRunKind = GlorianSyncRun["kind"];
 export type GlorianSyncRunStatus = GlorianSyncRun["status"];
@@ -62,6 +66,17 @@ export const glorianService = {
   async test() {
     return unwrap<GlorianTestResult>(
       await apiClient.POST("/v1/platform/integrations/glorian/test"),
+      SILENT,
+    );
+  },
+
+  /** TEC-1265: new API key sealed in an encrypted connection package. */
+  async createPackage(body: GlorianPackageInput) {
+    return unwrap<GlorianConnectionPackage>(
+      await apiClient.POST(
+        "/v1/platform/integrations/glorian/connection-package",
+        { body },
+      ),
       SILENT,
     );
   },

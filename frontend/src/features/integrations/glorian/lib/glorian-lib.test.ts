@@ -82,6 +82,9 @@ describe("glorian connection form schema (TEC-274)", () => {
       default_warehouse_uuid: null,
       api_key_set: true,
       api_key_masked: "********",
+      pending_key: false,
+      package_issued_at: null,
+      package_expires_at: null,
       created_at: null,
       updated_at: null,
     });

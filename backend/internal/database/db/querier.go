@@ -3823,6 +3823,9 @@ type Querier interface {
 	// of the sold lines (lines without a cost snapshot count as zero cost and
 	// are reported separately).
 	ProductSaleProfitByProduct(ctx context.Context, arg ProductSaleProfitByProductParams) ([]ProductSaleProfitByProductRow, error)
+	// TEC-1265: the hub accepted the pending key. Compare-and-swap on the
+	// pending ciphertext so a newer package issued meanwhile is not lost.
+	PromoteIntegrationConnectionPendingKey(ctx context.Context, arg PromoteIntegrationConnectionPendingKeyParams) (int64, error)
 	// CAS from_status → published and writes the snapshot the public endpoint
 	// reads. reviewer_user_id is set when the center approved a pending
 	// showcase, NULL when the owner published directly (approval off).
@@ -4126,7 +4129,12 @@ type Querier interface {
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
 	SetImportJobPreview(ctx context.Context, arg SetImportJobPreviewParams) (ImportJob, error)
+	// A key typed in by hand replaces a pending package key too (TEC-1265).
 	SetIntegrationConnectionAPIKey(ctx context.Context, arg SetIntegrationConnectionAPIKeyParams) (IntegrationConnection, error)
+	// TEC-1265: a new connection package. With rotate the new key waits in
+	// pending_api_key_enc until the hub accepts it; without (no key yet) it
+	// becomes the active key at once.
+	SetIntegrationConnectionPackage(ctx context.Context, arg SetIntegrationConnectionPackageParams) (IntegrationConnection, error)
 	SetLeadFollowUp(ctx context.Context, arg SetLeadFollowUpParams) (Lead, error)
 	SetLeadStatus(ctx context.Context, arg SetLeadStatusParams) (Lead, error)
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
