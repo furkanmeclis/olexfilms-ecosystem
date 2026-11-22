@@ -119,6 +119,7 @@ Müşteri (global user) ── hizmet alır: herhangi bir bayi/distribütör/mer
 
 - İzin scope'ları: `own`, `assigned`, `managed`, `subtree` (technowide-ecosystem `backend/migrations/000021_permission_scopes` referans; `subtree` yeni).
 - Bir user birden fazla org'da üye olabilir; org değiştirici üstte. Impersonation yalnızca super_admin.
+- Süper admin bir distribütör ya da bayi panelinde çalışırken kayıt kapsamı o panelin kapsamıyla sınırlanır (TEC-1266): distribütörde subtree, bayide managed. Merkez panelinde ve organizasyonsuz platform panelinde tüm sistemi görür. Tüm ağın analizi yalnız merkez panelindedir. Daraltılacak bir seviyesi olmayan, yalnız platform genelinde çalışan izinler değişmez.
 - Fiyat görünürlüğü role değil izne bağlı: `pricing.purchase.read`, `pricing.sale.write`.
 
 **Sözleşme süresi:** her bayi ve distribütör merkezle sözleşmelidir; PDF ve geçerlilik tarihi yalnızca admin yükler (distribütör süre ekleyemez). Bitiş öncesi 30/7 gün uyarı; bitişte salt okunur (yeni hizmet, sipariş, garanti başlatılamaz; mevcut kayıtlar ve portal görünür); grace süresi admin ayarı. Distribütör süresi dolarsa alt bayiler etkilenmez.

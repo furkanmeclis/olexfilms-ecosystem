@@ -23,8 +23,12 @@ type Principal struct {
 	Permissions []string
 	// PermissionScopes maps each held permission to the broadest scope
 	// granted by the user's global roles and the active organization roles.
-	PermissionScopes   map[string]rbac.Scope
-	IsSuperAdmin       bool
+	PermissionScopes map[string]rbac.Scope
+	IsSuperAdmin     bool
+	// ScopeCeiling caps a super admin's record scopes to the reach of the
+	// active organization (TEC-1266): subtree in a distributor, managed in a
+	// dealer. Empty means no cap (center, platform panel).
+	ScopeCeiling       rbac.Scope
 	ImpersonatorUserID *uuid.UUID
 	SessionID          uuid.UUID
 	OrganizationUUID   *uuid.UUID
@@ -65,14 +69,24 @@ func (p Principal) HasPermission(slug string) bool {
 }
 
 // ScopeFor returns the broadest scope the principal holds for a permission.
-// Super admins hold every permission at its broadest catalog scope. A
+// Super admins hold every permission at its broadest catalog scope, capped to
+// ScopeCeiling inside a distributor or dealer organization (TEC-1266). A
 // permission listed without a recorded scope counts as its broadest scope.
 func (p Principal) ScopeFor(slug string) (rbac.Scope, bool) {
 	if p.IsSuperAdmin {
-		if def, ok := rbac.PermissionBySlug(slug); ok {
-			return rbac.Broadest(def.Scopes), true
+		def, known := rbac.PermissionBySlug(slug)
+		if !known {
+			if p.ScopeCeiling != "" {
+				return p.ScopeCeiling, true
+			}
+			return rbac.ScopeAll, true
 		}
-		return rbac.ScopeAll, true
+		if p.ScopeCeiling != "" {
+			if capped, ok := rbac.CapScope(def.Scopes, p.ScopeCeiling); ok {
+				return capped, true
+			}
+		}
+		return rbac.Broadest(def.Scopes), true
 	}
 	if rbac.SuperAdminOnly(slug) {
 		return "", false

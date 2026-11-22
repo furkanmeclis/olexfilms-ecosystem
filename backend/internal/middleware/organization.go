@@ -138,7 +138,16 @@ func RequireOrganizationResolver(tokens *jwt.Manager, resolver OrganizationResol
 				BrandID:    row.OrganizationBrandID,
 				BrandSlug:  row.BrandSlug,
 			}
-			next.ServeHTTP(w, r.WithContext(orgctx.WithScope(r.Context(), scope)))
+			ctx := orgctx.WithScope(r.Context(), scope)
+			// TEC-1266: a super admin working in a distributor or dealer panel
+			// sees that organization's reach, not the whole network.
+			if p.IsSuperAdmin {
+				if ceiling := rbac.OrgCeiling(row.OrganizationType); ceiling != "" {
+					p.ScopeCeiling = ceiling
+					ctx = authctx.WithPrincipal(ctx, p)
+				}
+			}
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
