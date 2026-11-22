@@ -131,3 +131,31 @@ func Broadest(scopes []Scope) Scope {
 	}
 	return out
 }
+
+// OrgCeiling is the broadest record scope an organization type reaches
+// (TEC-1266): a distributor its subtree, a dealer its own records. Center
+// organizations (and unknown types) have no ceiling ("").
+func OrgCeiling(orgType string) Scope {
+	switch orgType {
+	case OrgTypeDistributor:
+		return ScopeSubtree
+	case OrgTypeDealer:
+		return ScopeManaged
+	default:
+		return ""
+	}
+}
+
+// CapScope returns the broadest of the allowed scopes that ceiling covers.
+// ok is false when no allowed internal scope fits under the ceiling (the
+// permission is platform wide); callers then keep the uncapped scope.
+func CapScope(allowed []Scope, ceiling Scope) (Scope, bool) {
+	var out Scope
+	for _, s := range allowed {
+		if s == ScopeCustomer || !ceiling.Covers(s) {
+			continue
+		}
+		out = Broader(out, s)
+	}
+	return out, out != ""
+}
