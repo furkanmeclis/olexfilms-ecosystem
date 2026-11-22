@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Store, ShoppingCart } from "lucide-react";
+import { Plus, Store, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
@@ -28,6 +28,18 @@ import { usePermission } from "@/providers/permission-provider";
 export const DEALER_DIRECTORY_PERSIST_KEY = "tenant-dealer-directory-v1";
 const DIRECTORY_TYPES = ["dealer", "distributor"] as const;
 
+/**
+ * TEC-1267: the center and a distributor open a dealer under themselves
+ * (organizations.write) straight from the directory, not only from
+ * settings. Same rule as the "Yeni bayi" settings entry.
+ */
+export function canCreateDealer(
+  orgType: string | undefined,
+  canWrite: boolean,
+): boolean {
+  return canWrite && (orgType === "center" || orgType === "distributor");
+}
+
 /** Orders list of the active organization filtered on one buyer. */
 export function dealerOrdersHref(slug: string, uuid: string): string {
   return `${routes.tenant.orders.list(slug)}?buyer_org_uuid=${encodeURIComponent(uuid)}`;
@@ -46,6 +58,10 @@ export function DealerDirectoryPage({ slug }: { slug: string }) {
   const router = useRouter();
   const org = useActiveOrganization(slug);
   const canOrders = can(permissions.orders.read);
+  const showCreate = canCreateDealer(
+    org?.type,
+    can(permissions.organizations.tenantWrite),
+  );
   const list = useQuery({
     queryKey: ["organizations", "tenant", "directory"] as const,
     queryFn: () => organizationsService.listInScope(),
@@ -154,6 +170,16 @@ export function DealerDirectoryPage({ slug }: { slug: string }) {
         title={title}
         icon={<Store className="size-6" />}
         description={t("organizations.directory.description")}
+        actions={
+          showCreate ? (
+            <Button asChild data-testid="dealer-directory-create">
+              <Link href={routes.tenant.settings.dealerNew(slug)}>
+                <Plus className="size-4" />
+                {t("layout.nav_dealer_new")}
+              </Link>
+            </Button>
+          ) : undefined
+        }
         breadcrumbs={[
           {
             label: t("layout.breadcrumb_home"),

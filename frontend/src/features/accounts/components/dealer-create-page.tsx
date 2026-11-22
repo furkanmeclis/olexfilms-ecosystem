@@ -57,6 +57,8 @@ export function DealerCreatePage({ slug }: { slug: string }) {
       // The dealer pickers (orders, network) list it from now on.
       void qc.invalidateQueries({ queryKey: ["orders"] });
       void qc.invalidateQueries({ queryKey: ["tenant", "organizations"] });
+      // TEC-1267: the dealer directory (Bayiler) lists it at once.
+      void qc.invalidateQueries({ queryKey: ["organizations", "tenant"] });
       toast.success(t("organizations.accounts.dealer_created"));
     },
     onError: (err) =>
